@@ -491,9 +491,10 @@ trait Environment extends SMT with Logger {
 
   // Show the program state graphically
   def showGraph() {
+    val f = (x:Algorithm) => x.toString.lines.next
     GraphViz.display { 
-      refines.map(s => (s._1, s._2.toString, s._3)) ::: 
-      restricts.map(s => (s._1, "?split", s._2))
+      refines.map(s => (f(s._1), s._2.toString, f(s._3))) ::: 
+      restricts.map(s => (f(s._1), "?split", f(s._2)))
     }
   }
 
@@ -1095,9 +1096,9 @@ trait Lowering extends Environment {
 
   def compile(main: Algorithm, out: PrintStream = Console.out, 
       printer: PythonPrinter = Python) {
-    //showGraph()    
+    showGraph()    
     println("compiling")
-    val all = main :: inputs ::: offsettify(inlineAll(refineAll()))
+    val all = algorithms; //main :: inputs ::: offsettify(inlineAll(refineAll()))
     printer.print(all, out) 
     out.flush()
   }

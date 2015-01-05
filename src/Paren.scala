@@ -203,7 +203,7 @@ object Parenthesis {
     )(d11)
 
     // create imperative code generator; 2 makes it use (i, j) for table dimensions
-    val py = new NumPython(proof, 2)    
+    val py = Python; //new NumPython(proof, 2)    
 
     // refine all functions to finest level, inline, introduce offsets,
     // eliminate common sub-expressions, introduce valid memory overwrites

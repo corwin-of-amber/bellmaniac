@@ -1,3 +1,7 @@
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
+
 trait Logger {
   // throw on exception on error
   var STRICT = true
@@ -29,6 +33,11 @@ object GraphViz {
   type Graph[V, L] = List[(V, L, V)]
   import java.io.{PrintStream, File}
 
+  val DOT_OUTPUT_FMT = "pdf"
+  
+  private val filext = DOT_OUTPUT_FMT;
+  private val dotflags = f"-T$DOT_OUTPUT_FMT"
+  
   def clean(s: Any) = 
     s.toString.replace("\n", "\\l").replace("\"", "'") + "\\l"
 
@@ -37,7 +46,7 @@ object GraphViz {
     out println  "  node [shape=box] "
    
     for ((from, l, to) <-g)
-      out.println("\"" + clean(from) + "\"->\"" + clean(to) + "\" [label=\"" + l +"\"]");
+      out.println("\"" + clean(from) + "\"->\"" + clean(to) + "\" [label=\"" + clean(l) +"\"]");
     out println "}";
   }
 
@@ -50,19 +59,21 @@ object GraphViz {
   }
 
   private[this] def executeDot(in: File) = {
-    // write to a png file
-    val out = File.createTempFile("graph", ".svg");
+    // render to a file (according to select format DOT_OUTPUT_FORMAT)
+    val out = File.createTempFile("graph", f".$filext");
     out.deleteOnExit;
-    val dot = Runtime.getRuntime.exec("dot -Tsvg -o " + out.getAbsolutePath + " " + in.getAbsolutePath);
+    val dot = Runtime.getRuntime.exec(f"dot $dotflags -o ${out.getAbsolutePath} ${in.getAbsolutePath}");
     
     if (dot.waitFor != 0)
-      println("dot failed to produce: " + out.getAbsolutePath);    
+      println("dot failed to process: " + in.getAbsolutePath);    
     
     out
   }
 
   private[this] def showDot(out: File) {
-    Runtime.getRuntime.exec("eog " + out.getAbsolutePath);
+    val open = f"/tmp/open.$filext";
+    Files.copy(out.toPath, Paths.get(open), StandardCopyOption.REPLACE_EXISTING)
+    Runtime.getRuntime.exec(f"open $open"); // + out.getAbsolutePath);
   }
 
   def createDot[V, L](g: Graph[V, L]) = {
