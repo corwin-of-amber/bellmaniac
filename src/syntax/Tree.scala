@@ -23,6 +23,12 @@ class Tree[T] (val root: T, val subtrees: List[Tree[T]] = List()) {
       t => if (t.root == root) t.unfold.subtrees else List(t)
     })
   
+  def unfoldRight = unfoldRightN(1)
+  def unfoldRightN(N: Int): Tree[T] = new Tree(root, (subtrees dropRight N) ++ 
+      (subtrees takeRight N) flatMap { 
+      t => if (t.root == root) t.unfoldRightN(N).subtrees else List(t)
+    })
+  
   override def toString(): String = {
     if (subtrees.isEmpty) root.toString
     else {

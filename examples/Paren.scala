@@ -19,21 +19,13 @@ object Paren {
   val R = T(S("R"))
   val J = T(S("J"))
   val J0 = T(S("J₀"))
+  val J1 = T(S("J₁"))
   
   val scope = new Scope
   scope.declareSort(R.root)
   scope.declareSort(J.root)
   scope.declareSort(J0.root :<: J.root)
 
-  implicit class DSL(private val term: Term) extends AnyVal {
-    def ::(that: Term) = Paren.::(that, term)
-    def -:(that: Term) = TI(":")(term, that)
-    def ->(that: Term) = TI("->")(term, that)
-    def ->:(that: Term) = TI("->")(that, term)
-    def x(that: Term) = TI("x")(term, that)
-    def +(that: Term) = :@(:@(TI("+"), term), that)
-  }
-  
   def θ = TV("θ")
   def i = TV("i")
   def j = TV("j")

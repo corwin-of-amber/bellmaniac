@@ -242,6 +242,7 @@ object TypeInference {
       
     val ns = new Namespace[Id[Tree[Identifier]]]
     val resolve = new ConservativeResolve
+    //val resolve = new DualResolve
     resolve.scope = Paren.scope
 
     val (rootvar, assign) = infer(Paren.tree, ns)(resolve)

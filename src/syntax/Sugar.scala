@@ -15,16 +15,53 @@ object AstSugar {
   
   implicit class TreeBuild[A](private val t: Tree[A]) extends AnyVal {
     def apply(subtrees: Tree[A]*) = new Tree(t.root, t.subtrees ++ subtrees)
+    def apply(subtrees: List[Tree[A]]) = new Tree(t.root, t.subtrees ++ subtrees)
   }
   
   implicit class FormulaDisplay(private val term: Term) extends AnyVal {
     def toPretty: String = Formula.display(term)
   }
+  
+  // --------
+  // DSL Part
+  // --------
+  
+  val :@ = TI("@")
+  
+  def ∀(vars: Term*)(body: Term): Term = ∀(vars.toList)(body)
+  def ∀(vars: List[Term])(body: Term) = TI("∀")(vars)(body).foldRight
+
+  implicit class DSL(private val term: Term) extends AnyVal {
+    def ::(that: Term) = TI("::")(that, term)
+    def -:(that: Term) = TI(":")(term, that)
+    def ->(that: Term) = TI("->")(term, that)
+    def ->:(that: Term) = TI("->")(that, term)
+    def &(that: Term) = TI("&")(term, that)
+    def <->(that: Term) = TI("<->")(term, that)
+    def unary_~ = TI("~")(term)
+    def x(that: Term) = TI("x")(term, that)
+    def +(that: Term) = :@(:@(TI("+"), term), that)
+    def ∩(that: Term) = TI("∩")(term, that)
+    
+    def ~>[A](that: A) = if (term.isLeaf) term.root -> that
+      else throw new Exception(s"mapping from non-leaf '$term'")
+  }
+  
+  def &&(conjuncts: Term*): Term = &&(conjuncts.toList)
+  def &&(conjuncts: List[Term]) = TI("&")(conjuncts).foldLeft
+  
+  class Uid {}
+  def $_ = new Identifier("", "placeholder", new Uid)
+      
+  implicit class Piper[X](private val x: X) extends AnyVal {
+    def |>[Y](f: X => Y) = f(x)
+  }
+  
 }
 
 
 object Formula {
-  val INFIX = Map("->" -> 1, "<->" -> 1, "&" -> 1, "<" -> 1)
+  val INFIX = Map("->" -> 1, "<->" -> 1, "&" -> 1, "<" -> 1, "=" -> 1)
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
   
   def display(term: AstSugar.Term): String =

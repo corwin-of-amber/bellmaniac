@@ -29,6 +29,7 @@ object Z3Sugar {
     def ->(other: Expr) = ctx mkImplies (!!(e), !!(other))
     def ->:(other: Expr) = other -> e
     def <->(other: Expr) = ctx mkIff (!!(e), !!(other))
+    def =:=(other: Expr) = ctx mkEq (e, other)
     def unary_~ = ctx mkNot (!!(e))
   }
   
@@ -47,6 +48,9 @@ object Z3Sugar {
   def forall(i: Seq[Expr], body: Expr) = ctx mkForall (i.toArray, body, 0, null, null, null, null)
   def forall(vars: Expr*): (Expr => Quantifier) = (body: Expr) => forall(vars, body)
   def ∀(vars: Expr*) = forall(vars:_*)
+  
+  def conjunction(conjuncts: Expr*) = ctx mkAnd ((conjuncts map !!):_*)
+  def disjunction(disjuncts: Expr*) = ctx mkOr((disjuncts map !!):_*)
   
   def const(name: Symbol, sort: Sort) = ctx mkConst (name, sort)
   def const(namesort: (Symbol, Sort)) = ctx mkConst (namesort._1, namesort._2)

@@ -2,6 +2,7 @@ package syntax
 
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.ListMap
+import semantics.Namespace
 
 
 
@@ -79,7 +80,10 @@ class Unify(implicit resolve: Resolve = Resolve.NULL) {
     if (isVar(y) && !isVar(x))
       makeMgu(y, x, key)
     else if (isFreeVar(x)) {
-      matchUp(x.root, y)
+      /*if (isFreeVar(y))
+        tie(x.root, y.root)
+      else*/
+        matchUp(x.root, y)
     }
     else if (isVar(x)) {
       assignment get x.root match {
@@ -115,6 +119,15 @@ class Unify(implicit resolve: Resolve = Resolve.NULL) {
     assignment += (rootVar(freeVar) -> term)
   }
   
+  def tie(x: Identifier, y: Identifier) {
+    val (rx, ry) = (rootVar(x), rootVar(y))
+    if (rx != ry) {
+      val fresh = new Tree(new Identifier(Unify.uniq, "variable", new Namespace))
+      Unify.uniq += 1
+      assignment += (rx -> fresh) += (ry -> fresh)
+    }
+  }
+  
   def conflict(x: Tree[Identifier], y: Tree[Identifier], key: Identifier) {
     resolve.conflict(x,y,key) match { 
       case Some(u) => for ((k,v)<-u) assignment += (k->v)
@@ -125,6 +138,8 @@ class Unify(implicit resolve: Resolve = Resolve.NULL) {
 }
 
 object Unify {
+  
+  var uniq: Int = 0;
   
   class CannotUnify(e: String) extends Exception(e) { }
   

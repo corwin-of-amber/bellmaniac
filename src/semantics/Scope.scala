@@ -24,7 +24,7 @@ object Domains {
 class Scope {
   
   import Domains._
-  import AstSugar._
+  import AstSugar.{T,TreeBuild,Term}
   import Scope.TypingException
   
   var sorts = new Tree(⊤, List(new Tree(⊥)))
