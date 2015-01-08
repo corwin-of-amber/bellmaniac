@@ -52,18 +52,6 @@ object TypeInference {
 
   import syntax.AstSugar._
 
-  /*
-   * Helper class that makes objects equatable by reference
-   * rather than .equals() for use in HashMap 
-   */
-  implicit class Id[A <: AnyRef](private val a: A) {
-    override def equals(other: Any) = other match {
-      case b: Id[_] => a eq b.a
-      case b: AnyRef => a eq b
-      case _ => false
-    }
-    override def hashCode = a.hashCode
-  }
 
   val TREE_PRED = new Identifier("T")
   
@@ -188,9 +176,9 @@ object TypeInference {
   }
   
  
-  class DualResolve extends ResolveLattice {
+  class DualResolve(val scope: Scope) extends ResolveLattice {
     
-    var scope = new Scope;
+    def this() = this(new Scope)
     
     override val join = new ResolveBase {
       override def conflict(x:Tree[Identifier], y:Tree[Identifier], key: Identifier): Option[Map[Identifier, Tree[Identifier]]] = {
@@ -229,7 +217,8 @@ object TypeInference {
   }
   
   
-  class ConservativeResolve extends DualResolve {
+  class ConservativeResolve(scope: Scope) extends DualResolve(scope: Scope) {
+    def this() = this(new Scope)
     override val meet = join
   }
   
@@ -237,13 +226,11 @@ object TypeInference {
   def main(args: Array[String]): Unit = {
 
     import examples.Paren
-    import Domains.SubsortAssoc
-
       
     val ns = new Namespace[Id[Tree[Identifier]]]
-    val resolve = new ConservativeResolve
-    //val resolve = new DualResolve
-    resolve.scope = Paren.scope
+    val resolve = new ConservativeResolve(Paren.scope)
+    //val resolve = new DualResolve(Paren.scope)
+    
 
     val (rootvar, assign) = infer(Paren.tree, ns)(resolve)
     

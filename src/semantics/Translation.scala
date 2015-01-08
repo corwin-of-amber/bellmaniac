@@ -43,11 +43,24 @@ object TypeTranslation {
                    s"${precondition map (_.untype.toPretty) mkString ", "})"
   }
   
-  type Environment = Map[Identifier, Declaration]
+  class Environment(val scope: Scope, val decl: Map[Identifier, Declaration]) {
+    def ++(that: Environment) =
+      if (scope eq that.scope) E(scope, decl ++ that.decl)
+      else throw new Exception("incompatible scopes for environment merge")
+    
+    def ++(that: Map[_ <: Identifier, Declaration]) =  E(scope, decl ++ that)
+    def +(that: (_ <: Identifier, Declaration)) =      E(scope, decl + that)
+    
+    def apply(symbol: Identifier) = decl(symbol)
+    
+    def where(facts: Term*) = this + ($_ -> Declaration(List(), facts.toList))
+  }
   
+  private def E(scope: Scope, decl: Map[Identifier, Declaration]=Map()) =
+    new Environment(scope, decl)
   
   def decl(scope: Scope, types: Map[Identifier, Term]): Environment =
-    types map { case (k,v) => k -> decl(scope, k, v) }
+    E(scope, types map { case (k,v) => k -> decl(scope, k, v) })
   
   def decl(scope: Scope, symbol: Identifier, typ: Term): Declaration =
     decl(symbol, emit(scope, typ))
@@ -87,22 +100,23 @@ object TypeTranslation {
     (vars.toList, ret, assertions.toList)
   }
   
-  def subsorts(scope: Scope) = {
+  def subsorts(scope: Scope) = E(scope, {
     import TypingSugar._
     val masterTypes = scope.sorts.subtrees
     def pred(dom: Identifier) = TI("->")(T(dom), T(S("")))
     for (master <- masterTypes; slave <- master.nodes if slave.root != Domains.⊥)
       yield slave.root -> Declaration(List(TypedIdentifier(slave.root, pred(master.root))), 
           if (slave eq master) List(∀:(T(master.root), x => T(master.root)(x))) else List()) 
-  }.toMap
+  }.toMap)
   
   /**
    * Used to associate more restrictive types with an existing definitions.
    * Each new symbol will converge with the existing one, where it is defined;
    * an will have the more restrictive semantic type.
    */
-  def shrink(scope: Scope, env: Environment, types: Map[Identifier, Term]): Environment =
-    types map { case (k,v) => k -> shrink(env(k), emit(scope, v)) }
+  def shrink(env: Environment, types: Map[Identifier, Term]): Environment =
+    E(env.scope,
+      types map { case (k,v) => k -> shrink(env.decl(k), emit(env.scope, v)) })
   
   def shrink(decl: Declaration, subdecl: List[TypeTranslation.MicroCode]) = {
     // Create a second version of the support predicate
@@ -194,6 +208,23 @@ object TypeTranslation {
     }
   }
 
+  // -----------
+  // Z3Gate part
+  // -----------
+  
+  def toSmt(env: List[Environment]) = {
+    import semantics.smt.SmtNotFirstOrder
+    
+    val smt = new Z3Gate
+    for (e <- env; d <- e.decl.values; s <- d.symbols)
+      try smt.declare(s.untype, s.typ)
+      catch { case _: SmtNotFirstOrder =>  }
+      
+    val assumptions = 
+      for (e <- env; d <- e.decl.values; a <- d.precondition) yield a
+
+    (smt, assumptions map smt.formula)
+  }
 }
 
 
@@ -233,20 +264,44 @@ object TermTranslation {
           ))
     }
     
+    def retype(scope: Scope, value: Declaration, typ: Term) = {
+      val redecl = TypeTranslation.shrink(value, TypeTranslation.emit(scope, typ))
+      if (redecl eq value) (value.head, value)
+      else ($_, redecl)
+    }
+    
   }
   
-  def term(env: Environment, term: Term): (Identifier, Environment) = {
+  def term(env: Environment, term: Term, annot: Map[Id[Term], Term] = Map()): (Identifier, Environment) = {
+    (term0(env, term, annot), annot get term) match {
+      case ((va, va_env), Some(typ)) => 
+        val (aid, a) = combine.retype(env.scope, va_env(va), typ)
+        (aid, va_env + (aid -> a))
+      case (v0, _) => v0
+    }
+  }
+  
+  def term0(env: Environment, term: Term, annot: Map[Id[Term], Term]): (Identifier, Environment) = {
     val r = term.root
     val arity = term.subtrees.length
-    def recurse = term.subtrees map (TermTranslation.term(env, _))
-    if (term.isLeaf) env get term.root match {
+    def rechild(x: Term) = TermTranslation.term(env, x, annot)
+    def recurse = term.subtrees map rechild
+    if (term.isLeaf) env.decl get term.root match {
       case Some(decl) => (r, env)
       case _ => throw new Exception(s"undeclared identifier '$term'")
     }
     else if (r == "@" && arity == 2) {
       val List((f, f_env), (arg, arg_env)) = recurse
       val a = combine.app(f_env(f), arg_env(arg))
-      (a.head, Map(a.head -> a) ++ f_env ++ arg_env)
+      (a.head, f_env ++ arg_env + (a.head -> a))
+    }
+    else if (r == "::" && arity == 2) {
+      val ((va, va_env), typ) = (rechild(term.subtrees(0)), term.subtrees(1))
+      val (aid, a) = combine.retype(env.scope, va_env(va), typ)
+      (aid, va_env + (aid -> a))
+    }
+    else if (r == ":" && arity == 2) {
+      rechild(term.subtrees(1))
     }
     else throw new Exception(s"Cannot translate term '${term.toPretty}'")
   }
@@ -254,67 +309,51 @@ object TermTranslation {
   
   def main(args: Array[String]): Unit = {
 
-    import examples.Paren.{scope,R,J,J0,J1}
+    import examples.Paren._
     import com.microsoft.z3.Expr
     
     val B = T(S(""))
 
-    val lt = TI("<")
-    val f = TI("f")
-    val i = TI("i")
-    val j = TI("j")
-    
-    def transitive(r: Term, elType: Term) = 
-      ∀:(elType, (x,y,z) => (r(x,y) ->: r(y,z) ->: r(x,z)))
-    
-    import syntax.Scheme
+    def f = TI("f")
+
+    import Prelude._
     import syntax.Scheme._
-      
-    def antirefl(r: Scheme, elType: Term) = ∀:(elType, x => ~r(x,x))
-    def antisymm(r: Scheme, elType: Term) = ∀:(elType, (x,y) => r(x,y) -> ~r(y,x))
-    def compl(P: Scheme, nP: Scheme, elType: Term) = ∀:(elType, x => nP(x) <-> ~P(x))
-    def allToAll(P: Scheme, r: Scheme, Q: Scheme, elType: Term) = ∀:(elType, (x,y) => P(x) ->: Q(y) ->: r(x,y))
-    
-    def where(facts: Term*) = $_ -> Declaration(List(), facts.toList)
-    
+          
     val prelude = TypeTranslation.subsorts(scope) ++
-      TypeTranslation.decl(scope, Map(lt ~> ((J x J) -> B))) +
-      where(transitive(lt, J), antisymm(lt, J),
-            compl(J0, J1, J), allToAll(J0, lt, J1, J))
+      TypeTranslation.decl(scope, Map(< ~> ((J x J) -> B))) where
+      (transitive(<, J), antisymm(<, J),
+            compl(J0, J1, J), allToAll(J0, <, J1, J))
       
     
     val env = prelude ++ TypeTranslation.decl(scope, 
         Map(f ~> (((J x J) ∩ TV("<")) -> R),
-            i ~> J, j ~> J0) )
+            i ~> J, j ~> J) )
     
-    for ((k,v) <- env) println(s"$k -> ${v.toPretty}")
+    for ((k,v) <- env.decl) println(s"$k -> ${v.toPretty}")
     
-    val (fij, fij_env) = term(env, :@(f, i, j).foldLeft)
+    val ff = f
+    val annot = Map(new Id(ff) -> (J ->: J0 ->: R))
+    val (fij, fij_env) = term(env, :@(ff, i, j).foldLeft, annot)
     
-    val alt_env = (TypeTranslation.shrink(scope, env, Map(i ~> J0)))
+    val alt_env = (TypeTranslation.shrink(env, Map(i ~> J0, j ~> J0)))
 
-    for ((k,v) <- alt_env) println(s"$k -> ${v.toPretty}")
+    for ((k,v) <- alt_env.decl) println(s"$k -> ${v.toPretty}")
     println("-" * 80)
 
     val (alt_fij, alt_fij_env) = term(env ++ alt_env, :@(f, i, j).foldLeft)
 
-    val declared_symbols = fij_env.values.toList ++ alt_fij_env.values.toList
-    
     // Put it to the test... with SMT!
-    val smt = new Z3Gate
-    for (d <- declared_symbols; s <- d.symbols)
-      smt.declare(s.untype, s.typ)
-      
-    import semantics.smt.Z3Sugar._
-      
-    val assumptions = 
-      for (d <- declared_symbols; a <- d.precondition) yield a |> smt.formula
-
-    for ((k,v) <- smt.declarations) println(s"$k -> $v    // :: ${smt.typeOf(v).toPretty}")
+    proveAndPrint(List(fij_env, alt_fij_env),
+        List(T(fij_env(fij).support) <-> T(alt_fij_env(alt_fij).support)))
+  }
+  
+  def proveAndPrint(env: List[Environment], goals: List[Term]) {
+    val (smt, assumptions) = TypeTranslation.toSmt(env)
     
-    val goal = T(fij_env(fij).support) <-> T(alt_fij_env(alt_fij).support) |> smt.formula
-      
-    solveAndPrint(assumptions, List(goal))
+    for ((k,v) <- smt.declarations) println(s"$k -> $v    // :: ${smt.typeOf(v).toPretty}")
+    println("-" * 80)
+    
+    smt solveAndPrint (assumptions, goals map smt.formula)
   }
   
 }

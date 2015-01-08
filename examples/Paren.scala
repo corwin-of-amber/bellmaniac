@@ -25,6 +25,7 @@ object Paren {
   scope.declareSort(R.root)
   scope.declareSort(J.root)
   scope.declareSort(J0.root :<: J.root)
+  scope.declareSort(J1.root :<: J.root)
 
   def θ = TV("θ")
   def i = TV("i")
@@ -34,18 +35,20 @@ object Paren {
   def < = TV("<")
   val ∩ = TI("∩")
   
+  def ? = T(new Identifier("?", "variable", new Uid))
+  
   val tree = TI("program")(
       TV("+") :: (R x R) ->: R ,
 
-      TI("↦")(
-        θ :: ∩(J0 x J, <) ->: R , i , j ,
+      (TI("↦")(
+        θ :: ∩(J x J, <) ->: R , i , j ,
 
         TI("min")(
           TI("↦")(
             k,
-            (:@(:@(θ, i), k) + :@(:@(θ, k), j)  + :@(:@(:@(w, i), k), j)) -: TV("item")
+            (:@(:@(θ, i), k) + :@(:@(θ, k), j) + :@(:@(:@(w, i), k), j)) -: TV("item")
           ) 
         ) -: TV("compute")
-      ).foldRight
+      ).foldRight :: (? ->: J0 ->: J0 ->: R)) -: TV("A|nw")
     )
 }

@@ -64,3 +64,21 @@ class Scope {
 object Scope {
   class TypingException(msg: String) extends Exception(msg) {}
 }
+
+
+
+object `package` {
+  /*
+   * Helper class that makes objects equatable by reference
+   * rather than .equals() for use in HashMap 
+   */
+  implicit class Id[A <: AnyRef](private val a: A) {
+    override def equals(other: Any) = other match {
+      case b: Id[_] => a eq b.a
+      case b: AnyRef => a eq b
+      case _ => false
+    }
+    override def hashCode = a.hashCode
+  }
+  
+}

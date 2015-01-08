@@ -40,28 +40,43 @@ object AstSugar {
     def <->(that: Term) = TI("<->")(term, that)
     def unary_~ = TI("~")(term)
     def x(that: Term) = TI("x")(term, that)
-    def +(that: Term) = :@(:@(TI("+"), term), that)
     def ∩(that: Term) = TI("∩")(term, that)
+    def +(that: Term) = :@(:@(TI("+"), term), that)
+    def =:=(that: Term) = TI("=")(term, that)
     
     def ~>[A](that: A) = if (term.isLeaf) term.root -> that
       else throw new Exception(s"mapping from non-leaf '$term'")
+    
+    def =~(root: Any, arity: Int) =
+      term.root == root && term.subtrees.length == arity
+      
+    def :/(label: Any) =
+      term.nodes find (t => t =~ (":", 2) && t.subtrees(0).root == label) getOrElse
+      { throw new Exception(s"label '$label' not found in '$term'") }
+    
+    def :/(label: Any, subst: Term): Term =
+      term.replaceDescendant((term :/ label).subtrees(1) → subst)
   }
   
   def &&(conjuncts: Term*): Term = &&(conjuncts.toList)
   def &&(conjuncts: List[Term]) = TI("&")(conjuncts).foldLeft
   
   class Uid {}
-  def $_ = new Identifier("", "placeholder", new Uid)
+  def $_ = new Identifier("_", "placeholder", new Uid)
       
   implicit class Piper[X](private val x: X) extends AnyVal {
     def |>[Y](f: X => Y) = f(x)
+  }
+  
+  implicit class PiedPiper[X,Y](private val f: X => Y) extends AnyVal {
+    def |>:(x: X) = f(x)
   }
   
 }
 
 
 object Formula {
-  val INFIX = Map("->" -> 1, "<->" -> 1, "&" -> 1, "<" -> 1, "=" -> 1)
+  val INFIX = Map("->" -> 1, "<->" -> 1, "&" -> 1, "<" -> 1, "=" -> 1, "↦" -> 1, ":" -> 1, "::" -> 1)
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
   
   def display(term: AstSugar.Term): String =

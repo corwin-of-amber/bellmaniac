@@ -8,6 +8,8 @@ import syntax.Identifier
 import syntax.AstSugar
 import com.microsoft.z3.FuncDecl
 import semantics.TypeTranslation.TypedIdentifier
+import semantics.TypeTranslation.TypedIdentifier
+import com.microsoft.z3.BoolExpr
 
 
 class Z3Gate {
@@ -39,7 +41,7 @@ class Z3Gate {
     else if (typ.root == "->") {
       val sorts = typ.unfold.subtrees
       if (sorts forall (_.isLeaf)) sorts map (x => getSort(x.root))
-      else throw new SmtException(s"not first-order: type '${typ.toPretty}'")
+      else throw new SmtNotFirstOrder(s"not first-order: type '${typ.toPretty}'")
     }
     else throw new SmtException(s"cannot handle type '${typ.toPretty}'")
   
@@ -125,7 +127,10 @@ class Z3Gate {
     else {
       declarations get r match {
         case Some(decl) => decl(recurse:_*)
-        case _ => const("?" -> sorts(S("")))
+        case _ => r match {
+          case rt: TypedIdentifier => declare(rt)(recurse:_*)
+          case _=> throw new SmtException(s"undeclared '$r'")
+        }
       }
     }
   }
@@ -146,7 +151,11 @@ class Z3Gate {
     finally rollback
   }
   
+  def solveAndPrint(assumptions: List[BoolExpr], goals: List[BoolExpr]) =
+    Z3Sugar.solveAndPrint(assumptions, goals)
+  
 }
 
 
 class SmtException(msg: String) extends Exception(msg) {}
+class SmtNotFirstOrder(msg: String) extends SmtException(msg) {}
