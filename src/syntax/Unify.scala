@@ -76,7 +76,7 @@ class Unify(implicit resolve: Resolve = Resolve.NULL) {
     
 
   def makeMgu0(x: Tree[Identifier], y: Tree[Identifier], key: Identifier) {
-    println(s"makeMgu    $x     $y     ($key)")
+    //println(s"makeMgu    $x     $y     ($key)")
     if (isVar(y) && !isVar(x))
       makeMgu(y, x, key)
     else if (isFreeVar(x)) {
@@ -88,6 +88,7 @@ class Unify(implicit resolve: Resolve = Resolve.NULL) {
     else if (isVar(x)) {
       assignment get x.root match {
         case Some(v) => makeMgu(v, y, if (key != null) key else x.root)
+          if (key != null) assignment += (x.root -> new Tree(key))
         case _ => assert(false) /* should not happen since ! isFreeVar(x) */
       }
     }
@@ -104,6 +105,13 @@ class Unify(implicit resolve: Resolve = Resolve.NULL) {
     for ((k, vy) <- y) assignment get k match {
       case None => assignment += (k -> vy)
       case Some(vx) => makeMgu(vx, vy, k)
+    }
+  }
+  
+  def digest(x: Map[Identifier, Tree[Identifier]]) {
+    for ((k,v) <- x) assignment get k match {
+      case None => assignment += (k -> v)
+      case Some(vx) => makeMgu(vx, v, k)
     }
   }
   

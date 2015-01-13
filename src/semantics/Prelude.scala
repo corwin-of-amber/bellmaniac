@@ -9,6 +9,8 @@ object Prelude {
   import syntax.AstSugar._
   import TypeTranslation.TypingSugar._
   
+  val B = T(S(""))
+  
   def transitive(r: Term, elType: Term) = 
     ∀:(elType, (x,y,z) => (r(x,y) ->: r(y,z) ->: r(x,z)))
   

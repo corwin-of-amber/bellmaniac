@@ -223,8 +223,16 @@ object TypeTranslation {
     val assumptions = 
       for (e <- env; d <- e.decl.values; a <- d.precondition) yield a
 
-    (smt, assumptions map smt.formula)
+    (smt, assumptions flatMap (x => try Some(smt.formula(x)) 
+        catch { case e: SmtNotFirstOrder => println("WARN " + e.getMessage) ; None}))
   }
+  
+  def solveAndPrint(assumptionEnvs: List[Environment], goals: List[Term]) {
+    val (smt, assumptions) = toSmt(assumptionEnvs)
+    smt solveAndPrint (assumptions, goals map smt.formula)
+  }
+  
+  
 }
 
 

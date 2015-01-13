@@ -12,6 +12,7 @@ import semantics.TypeTranslation.TypedIdentifier
 import com.microsoft.z3.BoolExpr
 
 
+
 class Z3Gate {
   
   import AstSugar._
@@ -135,7 +136,8 @@ class Z3Gate {
     }
   }
   
-  def formula(term: Term) = expression(term) |> !!
+  def formula(term: Term) = try expression(term) |> !!
+    catch { case x: SmtException => throw x.at(term) }
   
   def quantifiedVar(va: Term) = {
       if (va.isLeaf)
@@ -157,5 +159,15 @@ class Z3Gate {
 }
 
 
-class SmtException(msg: String) extends Exception(msg) {}
+class SmtException(msg: String) extends Exception(msg) { 
+  import syntax.AstSugar._
+  
+  var formula: Term = null;
+  def at(formula: Term): SmtException = {
+    this.formula = formula; this
+  }
+  
+  override def getMessage = if (formula == null) super.getMessage 
+    else s"$msg\n\tin: ${formula.toPretty}"
+}
 class SmtNotFirstOrder(msg: String) extends SmtException(msg) {}

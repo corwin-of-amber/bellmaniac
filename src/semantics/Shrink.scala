@@ -17,13 +17,14 @@ import syntax.transform.TreeSubstitution
 import semantics.TypeTranslation.Declaration
 import semantics.TypeTranslation.TypedIdentifier
 import semantics.Scope.TypingException
+import semantics.smt.Z3Gate
+import semantics.TypeTranslation.Environment
 
 
 
 object Shrink {
   
   import AstSugar._
-  //import Z3Sugar._
 
   
   def equivCheck(v0: TypedIdentifier, v1: TypedIdentifier): List[Term] = {
@@ -43,57 +44,61 @@ object Shrink {
     equivCheck(v0.head, v1.head) ++
     equivCheck(v0.support, v1.support)
   
+    
+  def shrinkCheck(env: Environment, assign: Map[Identifier, Term], expr: Term,
+      retypes: Map[Identifier, Term]): (List[Environment], List[Term]) =
+    shrinkCheck(env ++ TypeTranslation.decl(env.scope, assign), expr, retypes)
+  
+  def shrinkCheck(env: Environment, expr: Term, 
+                  retypes: Map[Identifier, Term]) = {
+    val (eval, eval_env) = TermTranslation.term(env, expr)
+    
+    val alt_env = TypeTranslation.shrink(env, retypes)
+    val (alt_eval, alt_eval_env) = TermTranslation.term(env ++ alt_env, expr)
+    
+    (List(eval_env, alt_eval_env), equivCheck(eval_env(eval), alt_eval_env(alt_eval)))
+  }
+  
+    
   def main(args: Array[String]): Unit = {
 
     import examples.Paren
       
-    val ns = new Namespace[Id[Term]]
     val resolve = new ConservativeResolve(Paren.scope)
 
     val program = Paren.tree
     
-    val (rootvar, assign) = TypeInference.infer(program, ns)(resolve)
+    val (rootvar, assign) = TypeInference.infer(program)(resolve)
     
     println("-" * 80)
-      
     for ((k,v) <- assign)
-      (k.kind, k.literal) match {
-      case ("variable", x:String) =>
-        println(s"$k :: $v")
-      case _ =>
-    }
+      (k.kind, k.literal) match { case ("variable", x:String) => println(s"$k :: ${v.toPretty}") case _ => }
 
     val Anw = program :/ "A|nw"
     val item = program :/ "item"
 
     for (stmt <- List(Anw, item)) println(stmt.toPretty)
+    println("=" * 80)
     
     import Paren._
-    import Prelude._
-    import syntax.Scheme._
+    import TypeTranslation.solveAndPrint
           
-    val B = T(S(""))
-    
-    val prelude = TypeTranslation.subsorts(scope) ++
-      TypeTranslation.decl(scope, Map(< ~> ((J x J) -> B))) where
-      (transitive(<, J), antisymm(<, J),
-            compl(J0, J1, J), allToAll(J0, <, J1, J))
-      
     val assign0 = assign + (i ~> J0, j ~> J0)
-    val env = prelude ++ TypeTranslation.decl(scope, assign0)
-    val (item_expr, item_expr_env) = TermTranslation.term(env, item)
     
-    val alt_env = TypeTranslation.shrink(env, Map(θ ~> new TreeSubstitution(List(J → J0))(assign0(θ.root))))
-    val (alt_item_expr, alt_item_expr_env) = TermTranslation.term(env ++ alt_env, item)
-    
-    val (smt, assumptions) = TypeTranslation.toSmt(List(item_expr_env, alt_item_expr_env))
-    val goal = equivCheck(item_expr_env(item_expr), alt_item_expr_env(alt_item_expr))
-    smt.solveAndPrint(assumptions, goal map smt.formula)
+    // Current typing is:
+    //   θ :: ((J x J) ∩ <) -> R
+    // desired typing is:
+    //   θ :: ((J₀ x J₀) ∩ <) -> R
+    val (assumptions, goals) =
+      shrinkCheck(env, assign0, item, Map(θ ~> (assign0(θ.root)\(J → J0))))
+      
+    solveAndPrint(assumptions, goals)
   }
   
   
   
   /*
+  import Z3Sugar._
   def main(args: Array[String]): Unit = {
     val J = ctx mkUninterpretedSort "J"
     val R = ctx getRealSort

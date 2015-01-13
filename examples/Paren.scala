@@ -12,7 +12,6 @@ object Paren {
   import syntax.AstSugar._
   import semantics.Domains._
   
-  val :@ = TI("@")
   val :: = TI("::")
 
   
@@ -49,6 +48,17 @@ object Paren {
             (:@(:@(θ, i), k) + :@(:@(θ, k), j) + :@(:@(:@(w, i), k), j)) -: TV("item")
           ) 
         ) -: TV("compute")
-      ).foldRight :: (? ->: J0 ->: J0 ->: R)) -: TV("A|nw")
+      ).foldRight :: (? ->: J0 ->: J0 ->: R)  ) -: TV("A|nw")
     )
+    
+    
+  def env = {
+    import semantics.Prelude._
+    import semantics.TypeTranslation
+    TypeTranslation.subsorts(scope) ++
+          TypeTranslation.decl(scope, Map(< ~> ((J x J) -> B))) where
+          (transitive(<, J), antisymm(<, J),
+                compl(J0, J1, J), allToAll(J0, <, J1, J))
+  } 
+          
 }

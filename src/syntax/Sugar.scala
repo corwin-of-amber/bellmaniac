@@ -56,6 +56,9 @@ object AstSugar {
     
     def :/(label: Any, subst: Term): Term =
       term.replaceDescendant((term :/ label).subtrees(1) → subst)
+      
+     def \(whatWith: (Term, Term)): Term =
+       new syntax.transform.TreeSubstitution(List(whatWith))(term)
   }
   
   def &&(conjuncts: Term*): Term = &&(conjuncts.toList)
@@ -63,6 +66,8 @@ object AstSugar {
   
   class Uid {}
   def $_ = new Identifier("_", "placeholder", new Uid)
+  def $v = { c += 1 ; new Identifier("?" + c, "variable", new Uid) }
+  private var c: Int = 0;
       
   implicit class Piper[X](private val x: X) extends AnyVal {
     def |>[Y](f: X => Y) = f(x)

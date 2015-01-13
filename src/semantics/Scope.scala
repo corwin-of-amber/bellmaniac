@@ -79,6 +79,7 @@ object `package` {
       case _ => false
     }
     override def hashCode = a.hashCode
+    def get = a
   }
   
 }
