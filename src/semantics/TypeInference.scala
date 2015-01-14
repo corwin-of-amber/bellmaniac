@@ -110,7 +110,7 @@ object TypeInference {
     val ns = new Namespace[Id[Tree[Identifier]]]
     
     def infer(expr: Tree[Identifier]): (Identifier, Map[Identifier, Tree[Identifier]]) = {
-      val freshvar = new Identifier(ns.declare(expr), "variable")
+      val freshvar = new Identifier(ns.declare(expr), "variable", ns)
       if (expr.isLeaf) {
         (freshvar, Map(expr.root -> new Tree(freshvar)))
       }
@@ -143,7 +143,7 @@ object TypeInference {
       }
       else if (expr.root == "::") {
         /**/ assume(expr.subtrees.length == 2) /**/
-        val (va, tpe) = (infer(expr.subtrees(0)), expr.subtrees(1))
+        val (va, tpe) = (infer(expr.subtrees(0)), mark(expr.subtrees(1)))
         implicit val meet = resolve.meet;
         (freshvar, Unify.mgu(va._2, Map(freshvar -> T(va._1), va._1 -> tpe) + (freshvar -> tpe)))
       }
@@ -157,15 +157,30 @@ object TypeInference {
       else if (expr.root == "min") {
         /**/ assume(expr.subtrees.length == 1) /**/
         val vec = infer(expr.subtrees(0))
-        val domainvar = new Identifier(ns.fresh, "variable")
+        val domainvar = new Identifier(ns.fresh, "variable", ns)
         implicit val meet = resolve.meet;
         (freshvar, Unify.mgu(vec._2, Map(vec._1 -> TI("->")(T(domainvar), T(freshvar)))))
       }
       else
         throw new Exception(s"don't quite know what to do with '${expr.root}'  (in $expr)")
     }
-  
+    
   }
+  
+  def mark(tpe: Term) =
+    tpe map (id => id.kind match {
+      case "type variable" => new Identifier(id.literal, "variable", id.ns)
+      case "variable" => new Identifier(id.literal, "predicate", id.ns)
+      case _ => id
+    })
+  
+  def unmark(tpe: Term) =
+    tpe map (id => id.kind match {
+      case "variable" => new Identifier(id.literal, "type variable", id.ns)
+      case "predicate" => new Identifier(id.literal, "variable", id.ns)
+      case _ => id
+    })
+
   
   /**
    * Improves a coarse assignment of types to tree nodes by detecting slack
@@ -190,6 +205,7 @@ object TypeInference {
               for ((k,v) <- List(n, n.subtrees(0)) zip force)
                 retype(k, v)
             }
+          case _ =>
         }
       }
       else if (n =~ ("↦", 2)) {
@@ -202,6 +218,7 @@ object TypeInference {
               for ((k,v) <- List(n) ++ n.subtrees zip moreForce)
                 retype(k, v)
             }
+          case _ =>
         }
         val arg = n.subtrees(0)
         (nodeType(arg), getVariable(arg)) match {
@@ -230,20 +247,20 @@ object TypeInference {
       }
     }
 
+    def NV(index: Int) = new Identifier(index, "variable", ns)
+    
     def nodeType(t: Term) = ns lookup t match {
-      case Some(index) => assign get V(index)
+      case Some(index) => assign get NV(index)
       case None => None
     }
     
     def retype(t: Term, newType: Term) {
-      retype(V(ns declare t), newType)
+      retype(NV(ns declare t), newType)
     }
     
     def retype(id: Identifier, newType: Term) {
-      if ((assign get id) != Some(newType)) {
-        println(s"  SET! $id -> $newType")
+      if ((assign get id) != Some(newType))
         assign += (id -> newType)
-      }
     }
     
     def getVariable(t: Term): Option[Identifier] = {
@@ -264,7 +281,6 @@ object TypeInference {
       }
       val u = new Unify()(resolve.meet)
       abstypes foreach (u digest _._2)
-      println(u.canonicalize)
       abstypes map (u canonicalize _._1)
     }
     
@@ -378,9 +394,20 @@ object TypeInference {
     override val meet = join
   }
   
-      
-  def infer(term: Term)(implicit resolve: ResolveLattice) =
-    new CoarseGrained(resolve).infer(term)
+  /**
+   * Combines coarse-grained and fine-grained    
+   */
+  def infer(scope: Scope, term: Term) = {
+    val conservative = new ConservativeResolve(scope)
+    val dual = new DualResolve(scope)
+    val coarse =  new CoarseGrained(conservative)
+    val (rootvar, assign) = coarse.infer(term)
+    val fine = new FineGrained(coarse.ns, assign)(dual)
+    val reassign = fine.improve(term) map (kv => (kv._1, unmark(kv._2)))
+    (reassign filter ((kv) => kv._1.ns ne coarse.ns), 
+        { for ((k,v) <- coarse.ns; tpe <- reassign get fine.NV(k)) yield (v, tpe) } .toMap
+    )
+  }
   
   def main(args: Array[String]): Unit = {
 

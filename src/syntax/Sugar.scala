@@ -34,6 +34,7 @@ object AstSugar {
   implicit class DSL(private val term: Term) extends AnyVal {
     def ::(that: Term) = TI("::")(that, term)
     def -:(that: Term) = TI(":")(term, that)
+    def :-(that: Term) = TI(":")(term, that)
     def ->(that: Term) = TI("->")(term, that)
     def ->:(that: Term) = TI("->")(that, term)
     def &(that: Term) = TI("&")(term, that)
@@ -66,8 +67,7 @@ object AstSugar {
   
   class Uid {}
   def $_ = new Identifier("_", "placeholder", new Uid)
-  def $v = { c += 1 ; new Identifier("?" + c, "variable", new Uid) }
-  private var c: Int = 0;
+  def $v = new Identifier("?", "variable", new Uid)
       
   implicit class Piper[X](private val x: X) extends AnyVal {
     def |>[Y](f: X => Y) = f(x)

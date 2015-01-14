@@ -11,6 +11,7 @@ object Paren {
   
   import syntax.AstSugar._
   import semantics.Domains._
+  import semantics.Prelude.B
   
   val :: = TI("::")
 
@@ -26,6 +27,7 @@ object Paren {
   scope.declareSort(J0.root :<: J.root)
   scope.declareSort(J1.root :<: J.root)
 
+  def A = TV("A")
   def θ = TV("θ")
   def i = TV("i")
   def j = TV("j")
@@ -34,12 +36,13 @@ object Paren {
   def < = TV("<")
   val ∩ = TI("∩")
   
-  def ? = T(new Identifier("?", "variable", new Uid))
+  def ? = T(new Identifier("?", "type variable", new Uid))
   
   val tree = TI("program")(
       TV("+") :: (R x R) ->: R ,
-
-      (TI("↦")(
+      < :: (J x J) ->: B , 
+      
+      TI("↦")(
         θ :: ∩(J x J, <) ->: R , i , j ,
 
         TI("min")(
@@ -48,17 +51,18 @@ object Paren {
             (:@(:@(θ, i), k) + :@(:@(θ, k), j) + :@(:@(:@(w, i), k), j)) -: TV("item")
           ) 
         ) -: TV("compute")
-      ).foldRight :: (? ->: J0 ->: J0 ->: R)  ) -: TV("A|nw")
+      ).foldRight -: A,
+      
+      TV("A|nw") :- ( A :: (? ->: J0 ->: J0 ->: R) ) 
     )
     
     
   def env = {
     import semantics.Prelude._
     import semantics.TypeTranslation
-    TypeTranslation.subsorts(scope) ++
-          TypeTranslation.decl(scope, Map(< ~> ((J x J) -> B))) where
+    TypeTranslation.subsorts(scope) where 
           (transitive(<, J), antisymm(<, J),
-                compl(J0, J1, J), allToAll(J0, <, J1, J))
+           compl(J0, J1, J), allToAll(J0, <, J1, J))
   } 
           
 }

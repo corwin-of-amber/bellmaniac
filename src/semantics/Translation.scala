@@ -173,13 +173,15 @@ object TypeTranslation {
     else if (term.root == "∩") {
       if (dir == InOut.IN) {
         val (subemit, subassert) = term.subtrees map {
+          //x => (x, emit(scope, x, dir)) } partition (x => ! isPredicateType(x._2))
           x => (x, try Some(emit(scope, x, dir))
                    catch { case _: Scope.TypingException => None }) } partition (_._2.isDefined)
         if (subemit.isEmpty) throw new Scope.TypingException(s"non of '${term.subtrees mkString "' '"}' is a type")
         else {
           val (_, Some(x)) = subemit.head
           val arity = x count { case In(_) => true case _ => false }
-          for (y <- subemit.tail) ???   /* merge two type domains (interleave checks) */
+          for (y <- subemit.tail) 
+            ???   /* merge two type domains (interleave checks) */
           x ::: (subassert map (x => Check(x._1, arity)))
         }
       }

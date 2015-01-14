@@ -19,6 +19,7 @@ import semantics.TypeTranslation.TypedIdentifier
 import semantics.Scope.TypingException
 import semantics.smt.Z3Gate
 import semantics.TypeTranslation.Environment
+import syntax.transform.GenTreeSubstitution
 
 
 
@@ -44,20 +45,42 @@ object Shrink {
     equivCheck(v0.head, v1.head) ++
     equivCheck(v0.support, v1.support)
   
-    
-  def shrinkCheck(env: Environment, assign: Map[Identifier, Term], expr: Term,
-      retypes: Map[Identifier, Term]): (List[Environment], List[Term]) =
-    shrinkCheck(env ++ TypeTranslation.decl(env.scope, assign), expr, retypes)
   
-  def shrinkCheck(env: Environment, expr: Term, 
-                  retypes: Map[Identifier, Term]) = {
-    val (eval, eval_env) = TermTranslation.term(env, expr)
+  class ShrinkCheck(env: Environment, vassign: Map[Identifier, Term], tassign: Map[Id[Term], Term]) {
     
-    val alt_env = TypeTranslation.shrink(env, retypes)
-    val (alt_eval, alt_eval_env) = TermTranslation.term(env ++ alt_env, expr)
+    def apply(expr: Term, retypes: Map[Identifier, Term]): (List[Environment], List[Term]) =
+      apply(env ++ TypeTranslation.decl(env.scope, vassign), expr, retypes)
     
-    (List(eval_env, alt_eval_env), equivCheck(eval_env(eval), alt_eval_env(alt_eval)))
+    private def apply(env: Environment, expr: Term, retypes: Map[Identifier, Term]) = {
+      val (eval, eval_env) = TermTranslation.term(env, expr, tassign)
+      
+      val alt_env = TypeTranslation.shrink(env, retypes)
+      val (alt_eval, alt_eval_env) = TermTranslation.term(env ++ alt_env, expr, tassign)
+      
+      (List(eval_env, alt_eval_env), equivCheck(eval_env(eval), alt_eval_env(alt_eval)))
+    }
   }
+  
+  import syntax.Tree
+  
+  def inline(definitions: List[(Term, Term)], program: Term): Term = {
+    val self = (inline(definitions, _:Term))
+    if (program =~ (":", 2))
+      new Tree(program.root, program.subtrees(0) +: (program.subtrees drop 1 map self))
+    else definitions find (program == _._1) match {
+      case Some((x,y)) => y map (x => x)
+      case _ => new Tree(program.root, program.subtrees map self)
+    }
+  }
+  
+  def inline(definitions: Term, program: Term): Term = {
+    val labeled = definitions.nodes filter (_ =~ (":", 2)) map 
+      (x => (x.subtrees(0), x.subtrees(1)))
+    
+    inline(labeled.toList, program)
+  }
+  
+  def inline(program: Term): Term = inline(program, program)
   
     
   def main(args: Array[String]): Unit = {
@@ -66,13 +89,13 @@ object Shrink {
       
     val resolve = new ConservativeResolve(Paren.scope)
 
-    val program = Paren.tree
+    val program = inline(Paren.tree)
     
-    val (rootvar, assign) = TypeInference.infer(program)(resolve)
+    val (vassign, tassign) = TypeInference.infer(Paren.scope, program)
     
     println("-" * 80)
-    for ((k,v) <- assign)
-      (k.kind, k.literal) match { case ("variable", x:String) => println(s"$k :: ${v.toPretty}") case _ => }
+    for ((k,v) <- vassign)
+      println(s"$k :: ${v.toPretty}")
 
     val Anw = program :/ "A|nw"
     val item = program :/ "item"
@@ -83,14 +106,13 @@ object Shrink {
     import Paren._
     import TypeTranslation.solveAndPrint
           
-    val assign0 = assign + (i ~> J0, j ~> J0)
-    
     // Current typing is:
     //   θ :: ((J x J) ∩ <) -> R
     // desired typing is:
     //   θ :: ((J₀ x J₀) ∩ <) -> R
     val (assumptions, goals) =
-      shrinkCheck(env, assign0, item, Map(θ ~> (assign0(θ.root)\(J → J0))))
+      new ShrinkCheck(env, vassign, tassign)(item, Map(θ ~> (vassign(θ.root)\(J → J0))))
+      //shrinkCheck(env, vassign, item, tassign, Map(θ ~> (vassign(θ.root)\(J → J0))))
       
     solveAndPrint(assumptions, goals)
   }
