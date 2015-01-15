@@ -20,6 +20,7 @@ import semantics.Scope.TypingException
 import semantics.smt.Z3Gate
 import semantics.TypeTranslation.Environment
 import syntax.transform.GenTreeSubstitution
+import semantics.Scope.TypingException
 
 
 
@@ -63,33 +64,15 @@ object Shrink {
   
   import syntax.Tree
   
-  def inline(definitions: List[(Term, Term)], program: Term): Term = {
-    val self = (inline(definitions, _:Term))
-    if (program =~ (":", 2))
-      new Tree(program.root, program.subtrees(0) +: (program.subtrees drop 1 map self))
-    else definitions find (program == _._1) match {
-      case Some((x,y)) => y map (x => x)
-      case _ => new Tree(program.root, program.subtrees map self)
-    }
-  }
-  
-  def inline(definitions: Term, program: Term): Term = {
-    val labeled = definitions.nodes filter (_ =~ (":", 2)) map 
-      (x => (x.subtrees(0), x.subtrees(1)))
-    
-    inline(labeled.toList, program)
-  }
-  
-  def inline(program: Term): Term = inline(program, program)
-  
     
   def main(args: Array[String]): Unit = {
 
     import examples.Paren
+    import Binding.{inline,prebind}
       
     val resolve = new ConservativeResolve(Paren.scope)
 
-    val program = inline(Paren.tree)
+    val program = inline( prebind(Paren.tree) )
     
     val (vassign, tassign) = TypeInference.infer(Paren.scope, program)
     
@@ -98,7 +81,7 @@ object Shrink {
       println(s"$k :: ${v.toPretty}")
 
     val Anw = program :/ "A|nw"
-    val item = program :/ "item"
+    val item = Anw :/ "item"
 
     for (stmt <- List(Anw, item)) println(stmt.toPretty)
     println("=" * 80)
@@ -106,6 +89,8 @@ object Shrink {
     import Paren._
     import TypeTranslation.solveAndPrint
           
+    val θ = item ? "θ"
+    
     // Current typing is:
     //   θ :: ((J x J) ∩ <) -> R
     // desired typing is:

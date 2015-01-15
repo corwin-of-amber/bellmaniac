@@ -21,44 +21,72 @@ object Domains {
 }
 
 
-class Scope {
-  
+
+class Domains {
+
   import Domains._
   import AstSugar.{T,TreeBuild,Term}
   import Scope.TypingException
-  
-  var sorts = new Tree(⊤, List(new Tree(⊥)))
-  var signature = Map[Identifier,Term]()
-  
-  def findSortHie(sort: Identifier) = sorts.nodes find (_.root == sort)
+
+  var hierarchy = new Tree(⊤, List(new Tree(⊥)))
+
+  def findSortHie(sort: Identifier) = hierarchy.nodes find (_.root == sort)
   
   private def hei_⊥ = findSortHie(⊥) getOrElse {assert(false, "⊥ is missing!") ; null}
   
-  def declareSort(ext: Extends) {
+  def declare(ext: Extends) {
     findSortHie(ext.sup) match {
       case Some(hie) =>
         val hie0 = if (hie.subtrees exists (_.root == ⊥)) T(hie.root)(T(ext.sub)(hei_⊥))
           else hie(T(ext.sub)(hei_⊥))
-        sorts = new TreeSubstitution[Identifier](List(hie -> hie0))(sorts)
+        hierarchy = new TreeSubstitution[Identifier](List(hie -> hie0))(hierarchy)
       case None =>
         throw new TypingException(s"undefined supertype '${ext.sup}'")
     }
   }
 
-  def declareSort(id: Identifier) {
-    declareSort(id :<: ⊤)
+  def declare(id: Identifier) {
+    declare(id :<: ⊤)
   }
   
-  def containsSort(sort: Identifier) = findSortHie(sort).isDefined
+  def contains(sort: Identifier) = findSortHie(sort).isDefined
   
-  def getDomainsOf(sort: Identifier) =
-    for (s <- sorts.subtrees if s.nodes exists (_.root == sort)) yield s.root
+  def masters = hierarchy.subtrees
+  
+  def getMastersOf(sort: Identifier) =
+    for (s <- hierarchy.subtrees if s.nodes exists (_.root == sort)) yield s.root
 
-  def getDomainOf(sort: Identifier) = getDomainsOf(sort) match {
+  def getMasterOf(sort: Identifier) = getMastersOf(sort) match {
       case List() => throw new TypingException(s"undefined sort '$sort'")
       case List(x) => x
       case multi => throw new TypingException(s"ambiguous top-level sort for '$sort': $multi")
     }
+  
+  def supers(sort: Identifier) = {
+    def f(t: Tree[Identifier]): List[Identifier] = 
+      if (t.root == sort) List(t.root)
+      else t.subtrees flatMap f match {
+        case Nil => Nil
+        case l => t.root :: l
+      }
+    f(hierarchy)
+  }
+  
+  def join(sort1: Identifier, sort2: Identifier) = {
+    val (supers1, supers2) = (supers(sort1), supers(sort2))
+    supers1.reverseIterator find supers2.contains _ getOrElse 
+      { assert(false, s"$sort1 and $sort2 do not have a common supertype!") ; null }
+  }
+
+}
+
+class Scope {
+  
+  import AstSugar._
+  
+  val sorts = new Domains
+  //var signature = Map[Identifier,Term]()
+  
 }
 
 object Scope {

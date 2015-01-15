@@ -101,6 +101,43 @@ object TypeInference {
     }
   }
   
+  def getDeclaredVariable(t: Term): Option[Identifier] = {
+    if (t.isLeaf) Some(t.root)
+    else if (t =~ ("::", 2)) getDeclaredVariable(t.subtrees(0))
+    else None
+  }
+    
+  /**
+   * Demotes type variables to regular variables and variables to predicates
+   * (for use inside a type term when unifying)
+   */
+  def mark(tpe: Term) =
+    tpe map (id => id.kind match {
+      case "type variable" => new Identifier(id.literal, "variable", id.ns)
+      case "variable" => new Identifier(id.literal, "predicate", id.ns)
+      case _ => id
+    })
+  
+  /**
+   * Reverses the effect of "mark".
+   */
+  def unmark(tpe: Term) =
+    tpe map (id => id.kind match {
+      case "variable" => new Identifier(id.literal, "type variable", id.ns)
+      case "predicate" => new Identifier(id.literal, "variable", id.ns)
+      case _ => id
+    })
+
+  class AbsTypeUid extends Uid
+  var c = 0;
+  def $v = new Identifier("'" + { c += 1 ; c }, "variable", new AbsTypeUid)
+
+  def abstype(tpe: Term) = {
+      val a = tpe map (id => if (id.kind == "set") $v else id)
+      (a, Unify.mgu(tpe, a)(Resolve.NULL))
+  }
+    
+  
   /**
    * Provides a conservative type assignment to be used as a starting
    * point.
@@ -109,78 +146,73 @@ object TypeInference {
     
     val ns = new Namespace[Id[Tree[Identifier]]]
     
-    def infer(expr: Tree[Identifier]): (Identifier, Map[Identifier, Tree[Identifier]]) = {
+    def infer(expr: Tree[Identifier]) = {
+      val (rootvar, assign) = infer0(expr)
+      // - canonicalize result
+      val u = new Unify
+      u digest assign
+      (rootvar, u.canonicalize filter (_._1.ns match { case _:AbsTypeUid=>false case _=>true }))
+    }
+    
+    def infer0(expr: Tree[Identifier]): (Identifier, Map[Identifier, Tree[Identifier]]) = {
       val freshvar = new Identifier(ns.declare(expr), "variable", ns)
       if (expr.isLeaf) {
         (freshvar, Map(expr.root -> new Tree(freshvar)))
       }
       else if (expr.root == "program") {
-        val children = for (s <- expr.subtrees) yield infer(s)._2
+        val children = for (s <- expr.subtrees) yield infer0(s)._2
         implicit val join = resolve.join;
         for (c <- children) println(" ; " + c)
-        val mgu = children reduce ((x, y) => Unify.mgu(x,y))
+        val mgu = children reduce ((x, y) => Unify.mgu0(x,y))
         (freshvar, mgu)
       }
       else if (expr.root == "@") {
-        val children = for (s <- expr.subtrees) yield infer(s)
+        val children = for (s <- expr.subtrees) yield infer0(s)
         /**/ assume(children.length == 2) /**/
         val (f, a) = (children get 0, children get 1)
         val t1 = a._1; val t2 = freshvar
         val beta = Map(f._1 -> TI("->")(T(t1), T(t2)))
         implicit val meet = resolve.meet;
-        val mgu = List(beta) ++ (children map (_._2)) reduce ((x, y) => Unify.mgu(x,y))
+        val mgu = List(beta) ++ (children map (_._2)) reduce ((x, y) => Unify.mgu0(x,y))
         (t2, mgu)
       }
       else if (expr.root == "↦") {
-        val children = for (s <- expr.subtrees) yield infer(s)
+        val children = for (s <- expr.subtrees) yield infer0(s)
         /**/ assume(children.length == 2) /**/
         val List(v, e) = children
         val t1 = v._1; val t2 = e._1
         val abs = Map(freshvar -> TI("->")(T(t1), T(t2)))
         implicit val meet = resolve.meet;
-        val mgu = List(abs) ++ (children map (_._2)) reduce ((x, y) => Unify.mgu(x,y))
+        val mgu = List(abs) ++ (children map (_._2)) reduce ((x, y) => Unify.mgu0(x,y))
         (freshvar, mgu)
       }
       else if (expr.root == "::") {
         /**/ assume(expr.subtrees.length == 2) /**/
-        val (va, tpe) = (infer(expr.subtrees(0)), mark(expr.subtrees(1)))
+        val (va, tpe) = (infer0(expr.subtrees(0)), mark(expr.subtrees(1)))
+        val (atpe, components) = abstype(tpe)
         implicit val meet = resolve.meet;
-        (freshvar, Unify.mgu(va._2, Map(freshvar -> T(va._1), va._1 -> tpe) + (freshvar -> tpe)))
+        (freshvar, Unify.mgu0(va._2, Map(va._1 -> atpe, freshvar -> tpe) ++ components))
       }
       else if (expr.root == ":") {
         /**/ assume(expr.subtrees.length == 2) /**/
-        val (lbl, va) = (expr.subtrees(0), infer(expr.subtrees(1)))
+        val (lbl, va) = (expr.subtrees(0), infer0(expr.subtrees(1)))
         if (!lbl.isLeaf) throw new Exception(s"invalid label '$lbl'")
         implicit val meet = resolve.meet;
-        (va._1, Unify.mgu(va._2, Map(freshvar -> T(va._1), lbl.root -> T(va._1))))
+        val labelvar = lbl.root //new Identifier(lbl.root.literal, "label", new Uid)
+        (va._1, Unify.mgu0(va._2, Map(freshvar -> T(va._1), labelvar -> T(va._1))))
       }
       else if (expr.root == "min") {
         /**/ assume(expr.subtrees.length == 1) /**/
-        val vec = infer(expr.subtrees(0))
+        val vec = infer0(expr.subtrees(0))
         val domainvar = new Identifier(ns.fresh, "variable", ns)
         implicit val meet = resolve.meet;
-        (freshvar, Unify.mgu(vec._2, Map(vec._1 -> TI("->")(T(domainvar), T(freshvar)))))
+        (freshvar, Unify.mgu0(vec._2, Map(vec._1 -> TI("->")(T(domainvar), T(freshvar)))))
       }
       else
         throw new Exception(s"don't quite know what to do with '${expr.root}'  (in $expr)")
     }
     
   }
-  
-  def mark(tpe: Term) =
-    tpe map (id => id.kind match {
-      case "type variable" => new Identifier(id.literal, "variable", id.ns)
-      case "variable" => new Identifier(id.literal, "predicate", id.ns)
-      case _ => id
-    })
-  
-  def unmark(tpe: Term) =
-    tpe map (id => id.kind match {
-      case "variable" => new Identifier(id.literal, "type variable", id.ns)
-      case "predicate" => new Identifier(id.literal, "variable", id.ns)
-      case _ => id
-    })
-
   
   /**
    * Improves a coarse assignment of types to tree nodes by detecting slack
@@ -207,7 +239,7 @@ object TypeInference {
             }
           case _ =>
         }
-      }
+      } 
       else if (n =~ ("↦", 2)) {
         List(n) ++ n.subtrees map nodeType match {
           case List(Some(f), Some(x), Some(y)) =>
@@ -221,7 +253,7 @@ object TypeInference {
           case _ =>
         }
         val arg = n.subtrees(0)
-        (nodeType(arg), getVariable(arg)) match {
+        (nodeType(arg), getDeclaredVariable(arg)) match {
           case (Some(declType), Some(id)) => assign get id match {
             case Some(varType) =>
               if (declType != varType) {
@@ -240,7 +272,7 @@ object TypeInference {
             if (refType != varType) {
               val force = step0(n, refType, varType)
               retype(n, force(0))
-              retype(n.root, force(1))
+              //retype(n.root, force(1))
             }
           case _ =>
         }
@@ -263,15 +295,9 @@ object TypeInference {
         assign += (id -> newType)
     }
     
-    def getVariable(t: Term): Option[Identifier] = {
-      if (t.isLeaf) Some(t.root)
-      else if (t =~ ("::", 2)) getVariable(t.subtrees(0))
-      else None
-    }
-    
     /**
      * Unifies the proposed type terms with "meet" in order to
-     * try to force lower (more restrictive) types.
+     * try to force lower (more restrictive) types on the components.
      */
     def useForce(types: List[Term]) = {
       val root = $v
@@ -353,33 +379,27 @@ object TypeInference {
     def this() = this(new Scope)
     
     override val join = new ResolveBase {
-      override def conflict(x:Tree[Identifier], y:Tree[Identifier], key: Identifier): Option[Map[Identifier, Tree[Identifier]]] = {
-        if (x.isLeaf && y.isLeaf) (scope.findSortHie(x.root), scope.findSortHie(y.root)) match {
-          case (Some(xh), Some(yh)) =>
-            if (xh.subtrees exists (_.root == y.root)) {
-              if (key == null) Some(Map()) else Some(Map(key -> x))          
-            }
-            else if (yh.subtrees exists (_.root == x.root)) {
-              if (key == null) Some(Map()) else Some(Map(key -> y))
-            }
-            else None
-          case _ => None
+      override def conflict(x:Tree[Identifier], y:Tree[Identifier], keys: List[Identifier]): Option[Map[Identifier, Tree[Identifier]]] = {
+        if (x.isLeaf && y.isLeaf && (scope.sorts contains x.root) && (scope.sorts contains y.root)) {
+          val join = scope.sorts.join(x.root, y.root)
+          if (join == Domains.⊤) None
+          else Some(keys map (_ -> T(join)) toMap)
         }
         else None
       }
     }
       
     override val meet = new ResolveBase {
-      override def conflict(x:Tree[Identifier], y:Tree[Identifier], key: Identifier): Option[Map[Identifier, Tree[Identifier]]] = {
-        if (x.isLeaf && y.isLeaf) (scope.findSortHie(x.root), scope.findSortHie(y.root)) match {
+      override def conflict(x:Tree[Identifier], y:Tree[Identifier], keys: List[Identifier]): Option[Map[Identifier, Tree[Identifier]]] = {
+        if (x.isLeaf && y.isLeaf) (scope.sorts.findSortHie(x.root), scope.sorts.findSortHie(y.root)) match {
           case (Some(xh), Some(yh)) =>
             if (xh.subtrees exists (_.root == y.root)) {
-              if (key == null) Some(Map()) else Some(Map(key -> y))          
+              Some(keys map (_ -> y) toMap)
             }
             else if (yh.subtrees exists (_.root == x.root)) {
-              if (key == null) Some(Map()) else Some(Map(key -> x))
+              Some(keys map (_ -> x) toMap)
             }
-            else None
+            else Some(keys map (_ -> T(Domains.⊥)) toMap)
           case _ => None
         }
         else None
@@ -413,13 +433,16 @@ object TypeInference {
 
     import examples.Paren
       
-    //val ns = new Namespace[Id[Tree[Identifier]]]
+    import Binding.{prebind,inline}
+    
+    val program = inline(prebind(Paren.tree))
+    
     val conservative = new ConservativeResolve(Paren.scope)
     val dual = new DualResolve(Paren.scope)
     
     val coarse = new CoarseGrained(conservative)
 
-    val (rootvar, assign) = coarse.infer(Paren.tree)
+    val (rootvar, assign) = coarse.infer(program)
     
     //println(assign)
     //println(ns)
@@ -428,18 +451,18 @@ object TypeInference {
 
     val scope = Paren.scope
     
-    println(scope.sorts)
+    println(scope.sorts.hierarchy)
     
     for ((k,v) <- assign)
       (k.kind, k.literal) match {
       case ("variable", x:String) =>
-        println(s"$k :: $v" +
-          s"     <: ${TypeTranslation.decl(scope, k, v).toPretty}")
+        println(s"$k :: $v")// +
+          //s"     <: ${TypeTranslation.decl(scope, k, v).toPretty}")
       case _ =>
     }
     
     val fine = new FineGrained(coarse.ns, assign)(dual)
-    val reassign = fine.improve(Paren.tree)
+    val reassign = fine.improve(program)
 
     println("-" * 80)
     
@@ -451,7 +474,7 @@ object TypeInference {
     }
     
     val format = new NestedListTextFormat[Identifier]
-    format.layOutAndAnnotate(Paren.tree, 
+    format.layOutAndAnnotate(program, 
         ((x) => fine.nodeType(x) map (_.toPretty)), (_.toPretty))
   }
     

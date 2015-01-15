@@ -33,6 +33,7 @@ object AstSugar {
 
   implicit class DSL(private val term: Term) extends AnyVal {
     def ::(that: Term) = TI("::")(that, term)
+    def :::(that: Term) = TI("|_")(that, term)
     def -:(that: Term) = TI(":")(term, that)
     def :-(that: Term) = TI(":")(term, that)
     def ->(that: Term) = TI("->")(term, that)
@@ -50,6 +51,10 @@ object AstSugar {
     
     def =~(root: Any, arity: Int) =
       term.root == root && term.subtrees.length == arity
+      
+    def ?(symbol: Any) =
+      term.nodes find (_ =~ (symbol, 0)) getOrElse
+      { throw new Exception(s"variable '$symbol' not found in '$term'") }
       
     def :/(label: Any) =
       term.nodes find (t => t =~ (":", 2) && t.subtrees(0).root == label) getOrElse

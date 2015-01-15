@@ -102,7 +102,7 @@ object TypeTranslation {
   
   def subsorts(scope: Scope) = E(scope, {
     import TypingSugar._
-    val masterTypes = scope.sorts.subtrees
+    val masterTypes = scope.sorts.masters
     def pred(dom: Identifier) = TI("->")(T(dom), T(S("")))
     for (master <- masterTypes; slave <- master.nodes if slave.root != Domains.⊥)
       yield slave.root -> Declaration(List(TypedIdentifier(slave.root, pred(master.root))), 
@@ -150,8 +150,8 @@ object TypeTranslation {
    * value (Out), and any contracts (Check).
    */
   def emit(scope: Scope, term: Term, dir: InOut.Value = InOut.OUT): List[MicroCode] = {
-    if (term.isLeaf && scope.containsSort(term.root)) {
-      val master = T(scope getDomainOf term.root)
+    if (term.isLeaf && (scope.sorts contains term.root)) {
+      val master = T(scope.sorts getMasterOf term.root)
       val check = if (master != term) List(Check(term, 1)) else List()
       List(if (dir == InOut.IN) In(master) else Out(master)) ++ check
     }
