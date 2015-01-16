@@ -33,11 +33,14 @@ object AstSugar {
 
   implicit class DSL(private val term: Term) extends AnyVal {
     def ::(that: Term) = TI("::")(that, term)
-    def :::(that: Term) = TI("|_")(that, term)
     def -:(that: Term) = TI(":")(term, that)
     def :-(that: Term) = TI(":")(term, that)
+    def |:(that: Term) = TI("|_")(that, term)
+    def |!(that: Term) = TI("|!")(term, that)
+    def /:(that: Term) = TI("/")(that, term)
     def ->(that: Term) = TI("->")(term, that)
     def ->:(that: Term) = TI("->")(that, term)
+    def ↦(that: Term) = TI("↦")(term, that)
     def &(that: Term) = TI("&")(term, that)
     def <->(that: Term) = TI("<->")(term, that)
     def unary_~ = TI("~")(term)

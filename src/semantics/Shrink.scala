@@ -87,17 +87,19 @@ object Shrink {
     println("=" * 80)
     
     import Paren._
+    import TypeInference.LatticeOps._
     import TypeTranslation.solveAndPrint
           
     val θ = item ? "θ"
+    
+    implicit val scope = Paren.scope
     
     // Current typing is:
     //   θ :: ((J x J) ∩ <) -> R
     // desired typing is:
     //   θ :: ((J₀ x J₀) ∩ <) -> R
     val (assumptions, goals) =
-      new ShrinkCheck(env, vassign, tassign)(item, Map(θ ~> (vassign(θ.root)\(J → J0))))
-      //shrinkCheck(env, vassign, item, tassign, Map(θ ~> (vassign(θ.root)\(J → J0))))
+      new ShrinkCheck(env, vassign, tassign)(item, Map(θ ~> ⊓(vassign(θ.root), (J0 x J0) -> R)))
       
     solveAndPrint(assumptions, goals)
   }

@@ -137,7 +137,27 @@ object TypeInference {
       (a, Unify.mgu(tpe, a)(Resolve.NULL))
   }
     
-  
+
+  /**
+   * Unifies the proposed type terms with "meet" in order to
+   * try to force lower (more restrictive) types on the components.
+   */
+  def reinforce(types: List[Term])(meet: Resolve) = {
+    val root = $v
+    val abstypes = types map abstype map { case (a, m) => (a, m + (root -> a)) }
+    val u = new Unify()(meet)
+    abstypes foreach (u digest _._2)
+    abstypes map (u canonicalize _._1)
+  }
+
+  object LatticeOps {
+    def ⊓(types: Term*)(implicit scope: Scope) = {
+      val dual = new TypeInference.DualResolve(scope)
+      TypeInference.reinforce(types toList)(dual.meet)(0)
+      // - ⊓ is not symmetric?!
+    }
+  }
+    
   /**
    * Provides a conservative type assignment to be used as a starting
    * point.
@@ -207,6 +227,17 @@ object TypeInference {
         val domainvar = new Identifier(ns.fresh, "variable", ns)
         implicit val meet = resolve.meet;
         (freshvar, Unify.mgu0(vec._2, Map(vec._1 -> TI("->")(T(domainvar), T(freshvar)))))
+      }
+      else if (expr.root == "/") {
+        /**/ assume(expr.subtrees.length == 2) /**/
+        val (br1, br2) = (infer0(expr.subtrees(0)), infer0(expr.subtrees(1)))
+        implicit val meet = resolve.meet;
+        (freshvar, Unify.mgu0(br1._2 + (freshvar -> T(br1._1)), br2._2 + (freshvar -> T(br2._1))))        
+      }
+      else if (expr.root == "|!") {
+        /**/ assume(expr.subtrees.length == 2) /**/
+        val va = infer0(expr.subtrees(0))  /* ignore condition for now */
+        (freshvar, va._2 + (freshvar -> T(va._1)))
       }
       else
         throw new Exception(s"don't quite know what to do with '${expr.root}'  (in $expr)")
@@ -296,26 +327,11 @@ object TypeInference {
     }
     
     /**
-     * Unifies the proposed type terms with "meet" in order to
-     * try to force lower (more restrictive) types on the components.
-     */
-    def useForce(types: List[Term]) = {
-      val root = $v
-      val abstypes = types map { t =>
-        val a = t map (id => if (id.kind == "set") $v else id)
-        (a, Unify.mgu(t, a)(Resolve.NULL) + (root -> a)) 
-      }
-      val u = new Unify()(resolve.meet)
-      abstypes foreach (u digest _._2)
-      abstypes map (u canonicalize _._1)
-    }
-    
-    /**
-     * Calls useForce and prints the results nicely
+     * Calls reinforce with "meet" and prints the results nicely
      */
     private def step0(node: Term, terms: Term*) = {
       /**/ assume(!terms.isEmpty) /**/
-      val force = useForce(terms.toList)
+      val force = reinforce(terms.toList)(resolve.meet)
       /**/ assert(force.length == terms.length) /**/
       _printNicely(node, terms, force)
       force
