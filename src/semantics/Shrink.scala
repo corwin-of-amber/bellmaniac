@@ -1,17 +1,6 @@
 package semantics
 
-import com.microsoft.z3.Context
-import com.microsoft.z3.Sort
-import com.microsoft.z3.Expr
-import com.microsoft.z3.BoolExpr
-import com.microsoft.z3.FuncDecl
-import com.microsoft.z3.Quantifier
-import com.microsoft.z3.Symbol
-import com.microsoft.z3.Status
-import com.microsoft.z3.Solver
-import com.microsoft.z3.ArithExpr
 import syntax.{Identifier,AstSugar}
-import smt.Z3Sugar
 import semantics.TypeInference.ConservativeResolve
 import syntax.transform.TreeSubstitution
 import semantics.TypeTranslation.Declaration
@@ -47,6 +36,8 @@ object Shrink {
     equivCheck(v0.support, v1.support)
   
   
+  case class Context(env: Environment, vassign: Map[Identifier, Term], tassign: Map[Id[Term], Term])
+    
   class ShrinkCheck(env: Environment, vassign: Map[Identifier, Term], tassign: Map[Id[Term], Term]) {
     
     def apply(expr: Term, retypes: Map[Identifier, Term]): (List[Environment], List[Term]) =
@@ -62,14 +53,60 @@ object Shrink {
     }
   }
   
-  import syntax.Tree
+  class ShrinkStep(context: Context, term: Term, constraints: Map[String, Term]) {
+    
+    private val shrink =
+        new ShrinkCheck(context.env, context.vassign, context.tassign)
+
+    private var _verbose = false
+    
+    def verbose = { _verbose = true; this }
+    
+    private var retypes: Map[Identifier, Term] = null
+    private var assumptions: List[Environment] = null
+    private var goals: List[Term] = null
+    
+    def prepare = {
+      import TypeInference.{mark,unmark, reinforce}
+      val scope = context.env.scope
+      val dual = new TypeInference.DualResolve(scope)
+      retypes = constraints map { case (name, constraint) =>
+          val id = (term ? name).root
+          val List(x,y) = reinforce(List(context.vassign(id),constraint) map mark)(dual.meet) map unmark
+          id -> TypeTranslation.intersection(scope, List(x,y))
+        }
+      shrink(term, retypes) match { case (a,g) =>
+        assumptions = a; goals = g; 
+      }
+    }
+    
+    def solve = {
+      /**/ assume(retypes != null && assumptions != null && goals != null) /**/
+      import smt.Z3Sugar.ProverStatus._
+      if (TypeTranslation.solve(assumptions, goals, _verbose) forall (_ == VALID)) {
+        if (_verbose) {
+          println
+          for ((k,v) <- retypes) println(s"$k :: ${v.toPretty}")
+        }
+        Context(context.env, context.vassign ++ retypes, context.tassign)
+      }
+      else context
+    }
+    
+    def apply() = { prepare ; solve }
+  }
   
+  def shrinkStep(context: Context, term: Term, constraints: Map[String, Term]) = {
+    val step = new ShrinkStep(context, term, constraints)
+    step()
+  }
     
   def main(args: Array[String]): Unit = {
 
     import examples.Paren
     import Binding.{inline,prebind}
-      
+    import smt.Z3Sugar.ProverStatus._
+            
     val resolve = new ConservativeResolve(Paren.scope)
 
     val program = inline( prebind(Paren.tree) )
@@ -77,36 +114,57 @@ object Shrink {
     val (vassign, tassign) = TypeInference.infer(Paren.scope, program)
     
     println("-" * 80)
-    for ((k,v) <- vassign)
-      println(s"$k :: ${v.toPretty}")
 
-    val Anw = program :/ "A|nw"
-    val item = Anw :/ "item"
+    val context = Context(Paren.env, vassign, tassign)
+    
+    val defn = program :/ "f|nw"
+    val item = defn :/ "item"
 
-    for (stmt <- List(Anw, item)) println(stmt.toPretty)
+    for (stmt <- List(defn, item)) println(stmt.toPretty)
+
+    println("~" * 40)
+    
+    for (symbol <- symbols(defn); tpe <- vassign get symbol)
+      println(s"$symbol :: ${tpe.toPretty}")
+
     println("=" * 80)
     
     import Paren._
-    import TypeInference.LatticeOps._
-    import TypeTranslation.solveAndPrint
           
-    val θ = item ? "θ"
-    
-    implicit val scope = Paren.scope
-    
     // Current typing is:
     //   θ :: ((J x J) ∩ <) -> R
     // desired typing is:
     //   θ :: ((J₀ x J₀) ∩ <) -> R
-    val (assumptions, goals) =
-      new ShrinkCheck(env, vassign, tassign)(item, Map(θ ~> ⊓(vassign(θ.root), (J0 x J0) -> R)))
-      
-    solveAndPrint(assumptions, goals)
+    val context1 =
+      new ShrinkStep(context, item, 
+          Map("θ" -> ((J0 x J0) -> R))).verbose()
+    
+    // Current typing is:
+    //   θ :: ((J x J) ∩ <) -> R
+    // desired typing is:
+    //   θ :: ((K₁⋃K₂ x K₁⋃K₂) ∩ <) -> R
+    val context2 =
+      new ShrinkStep(context1, program :/ "g|sw" :/ "item", 
+          Map("θ" -> (((? x ?) ∩ P1) -> ?))).verbose()
+          
+    println("=" * 80)
+    for (piece <- List("f|nw", "g|sw"))
+      println(s"$piece ? θ  ::  " + context2.vassign(((program :/ piece) ? "θ").root).toPretty)
   }
   
   
+/*  
+import com.microsoft.z3.Context
+import com.microsoft.z3.Sort
+import com.microsoft.z3.Expr
+import com.microsoft.z3.BoolExpr
+import com.microsoft.z3.FuncDecl
+import com.microsoft.z3.Quantifier
+import com.microsoft.z3.Symbol
+import com.microsoft.z3.Status
+import com.microsoft.z3.Solver
+import com.microsoft.z3.ArithExpr
   
-  /*
   import Z3Sugar._
   def main(args: Array[String]): Unit = {
     val J = ctx mkUninterpretedSort "J"

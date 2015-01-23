@@ -12,6 +12,8 @@ object AstSugar {
   def T(a: Identifier, b: List[Tree[Identifier]]=List()) = new Tree(a, b)
   def TI(a: Any, b: List[Tree[Identifier]]=List()) = T(I(a), b)
   def TV(a: Any, b: List[Tree[Identifier]]=List()) = T(V(a), b)
+
+  def symbols[T](t: Tree[T]) = (t.nodes map (_.root) toSet)
   
   implicit class TreeBuild[A](private val t: Tree[A]) extends AnyVal {
     def apply(subtrees: Tree[A]*) = new Tree(t.root, t.subtrees ++ subtrees)
@@ -42,6 +44,7 @@ object AstSugar {
     def ->:(that: Term) = TI("->")(that, term)
     def ↦(that: Term) = TI("↦")(term, that)
     def &(that: Term) = TI("&")(term, that)
+    def |(that: Term) = TI("|")(term, that)
     def <->(that: Term) = TI("<->")(term, that)
     def unary_~ = TI("~")(term)
     def x(that: Term) = TI("x")(term, that)
@@ -57,7 +60,7 @@ object AstSugar {
       
     def ?(symbol: Any) =
       term.nodes find (_ =~ (symbol, 0)) getOrElse
-      { throw new Exception(s"variable '$symbol' not found in '$term'") }
+      { throw new Exception(s"symbol '$symbol' not found in '$term'") }
       
     def :/(label: Any) =
       term.nodes find (t => t =~ (":", 2) && t.subtrees(0).root == label) getOrElse
@@ -77,19 +80,12 @@ object AstSugar {
   def $_ = new Identifier("_", "placeholder", new Uid)
   def $v = new Identifier("?", "variable", new Uid)
       
-  implicit class Piper[X](private val x: X) extends AnyVal {
-    def |>[Y](f: X => Y) = f(x)
-  }
-  
-  implicit class PiedPiper[X,Y](private val f: X => Y) extends AnyVal {
-    def |>:(x: X) = f(x)
-  }
-  
 }
 
 
 object Formula {
-  val INFIX = Map("->" -> 1, "<->" -> 1, "&" -> 1, "<" -> 1, "=" -> 1, "↦" -> 1, ":" -> 1, "::" -> 1)
+  val INFIX = Map("->" -> 1, "<->" -> 1, "&" -> 1, "<" -> 1, "=" -> 1, "↦" -> 1, ":" -> 1, "::" -> 1,
+      "/" -> 1, "|_" -> 1, "|!" -> 1, "∩" -> 1, "x" -> 1)
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
   
   def display(term: AstSugar.Term): String =
@@ -106,11 +102,27 @@ object Formula {
     }
   
   def display(term: AstSugar.Term, pri: Int): String = {
-    val subpri = (INFIX get term.root.toString) getOrElse 0
-    if (subpri < pri) display(term) else s"(${display(term)})"
+    if (term.subtrees.length != 2) term.toString
+    else {
+      val subpri = (INFIX get term.root.toString) getOrElse 0
+      if (subpri < pri) display(term) else s"(${display(term)})"
+    }
   }
 
   def displayQuantifier(term: AstSugar.Term) =
     s"${term.root}${term.subtrees dropRight 1 map display mkString " "} (${display(term.subtrees.last)})"
   
+}
+
+
+object Piping {
+  
+  implicit class Piper[X](private val x: X) extends AnyVal {
+    def |>[Y](f: X => Y) = f(x)
+  }
+  
+  implicit class PiedPiper[X,Y](private val f: X => Y) extends AnyVal {
+    def |>:(x: X) = f(x)
+  }
+ 
 }

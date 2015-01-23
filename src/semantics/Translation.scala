@@ -110,7 +110,7 @@ object TypeTranslation {
   }.toMap)
   
   /**
-   * Used to associate more restrictive types with an existing definitions.
+   * Used to associate more restrictive types with existing definitions.
    * Each new symbol will converge with the existing one, where it is defined;
    * an will have the more restrictive semantic type.
    */
@@ -190,6 +190,77 @@ object TypeTranslation {
     else throw new Scope.TypingException(s"'$term' is not a type")
   }
   
+  def intersection(decls: List[List[MicroCode]]): List[MicroCode] = {
+    def isCheck(mc: MicroCode) = mc match { case Check(_,_) => true case _ => false }
+    def isLeaf(mc: MicroCode) = (mc match { case In(t) => Some(t) case Out(t) => Some(t) case _ => None }) exists (_.isLeaf)
+    def dir(mc: MicroCode) = mc match { case In(_) => InOut.IN case Out(_) => InOut.OUT }
+    /*def common(x: Term, y: Term) = 
+      if (x == y || x == T(Domains.⊤)) y else if (y ==  T(Domains.⊤)) x
+      else throw new Scope.TypingException(s"incompatible types: $x, $y")
+    def *(mc1: MicroCode, mc2: MicroCode) = (mc1, mc2) match {
+      case (In(x), In(y)) => In(common(x,y))
+      case (Out(x), Out(y)) => Out(common(x,y))
+      case _ =>
+       throw new Scope.TypingException(s"incompatible type instructions: $mc1, $mc2")
+    }*/
+    if (decls forall (_.isEmpty)) List()
+    else if (decls.exists (l => !l.isEmpty && isCheck(l(0))))
+      (decls flatMap (_ takeWhile isCheck)) ++ intersection(decls map (_ dropWhile isCheck))
+    else {
+      val heads = decls map (_.head)
+      if (heads forall (_==heads.head)) heads.head :: intersection(decls map (_ drop 1))
+      else if (heads forall isLeaf) throw new Scope.TypingException(s"incompatible type instructions: $heads")
+      else ??? /*{
+        heads groupBy dir toList match {
+          case List((k, v)) =>
+        }
+        
+      } */ 
+    }
+  }
+  
+  def canonical(micro: List[MicroCode]): Term = {
+    val args = new ArrayBuffer[(Int, Term)]
+    var ret: Option[Term] = None
+    def insort(it: List[MicroCode]): List[MicroCode] = it match {
+      case (x@Check(a,i)) :: (y@Check(b,j)) :: xs =>
+        if (i > j) y :: insort(x :: xs)
+        else x :: insort(y :: xs)
+      case x :: xs => x :: insort(xs)
+      case Nil => Nil
+    }
+    for (ins <- insort(micro)) ins match {
+      case In(tpe) => args += ((1, tpe))
+      case Out(tpe) => ret = Some(tpe)
+      case Check(pred, arity) => 
+        val popped = new ArrayBuffer[(Int, Term)]
+        while ((popped map (_._1) sum) < arity) {
+          popped.insert(0, args.last)
+          args.trimEnd(1)
+        }
+        if ((popped map (_._1) sum) > arity) throw new Scope.TypingException(s"overlapping checks in '$micro'")
+        args += ((arity, TI("∩")(TI("x")(popped.toList map (_._2)).foldLeft, pred)))
+    }
+    TI("->")((args.toList map (_._2)) :+ (ret.get)).foldRight
+  }
+  
+  def simplify(scope: Scope, tpe: Term): Term = {
+    if (tpe.root == "∩") {
+      val tset = (tpe.unfold.subtrees map (simplify(scope, _)) toSet)
+      val (types, nontypes) = tset partition (x => x.isLeaf && scope.sorts.contains(x.root))
+      val meet = if (types.isEmpty) None
+        else Some(T(types map (_.root) reduce scope.sorts.meet _))
+      T(tpe.root)(meet ++: (nontypes toList)).foldLeft
+    }
+    else T(tpe.root)(tpe.subtrees map (simplify(scope, _)))
+  }
+  
+  def intersection(scope: Scope, types: List[Term]): Term = {
+    import syntax.Piping._
+    val emits = types map (emit(scope, _))
+    intersection(emits) |> canonical |> (simplify(scope, _))
+  }
+  
   // --------
   // DSL part
   // --------
@@ -229,11 +300,15 @@ object TypeTranslation {
         catch { case e: SmtNotFirstOrder => println("WARN " + e.getMessage) ; None}))
   }
   
-  def solveAndPrint(assumptionEnvs: List[Environment], goals: List[Term]) {
+  def solveAndPrint(assumptionEnvs: List[Environment], goals: List[Term]) = {
     val (smt, assumptions) = toSmt(assumptionEnvs)
     smt solveAndPrint (assumptions, goals map smt.formula)
   }
   
+  def solve(assumptionEnvs: List[Environment], goals: List[Term], verbose: Boolean=false) = {
+    val (smt, assumptions) = toSmt(assumptionEnvs)
+    smt solve (assumptions, goals map smt.formula, verbose)
+  }
   
 }
 
@@ -331,8 +406,8 @@ object TermTranslation {
           
     val prelude = TypeTranslation.subsorts(scope) ++
       TypeTranslation.decl(scope, Map(< ~> ((J x J) -> B))) where
-      (transitive(<, J), antisymm(<, J),
-            compl(J0, J1, J), allToAll(J0, <, J1, J))
+      (transitive(J)(<), antisymm(J)(<),
+            compl(J)(J0, J1), allToAll(J)(J0, <, J1))
       
     
     val env = prelude ++ TypeTranslation.decl(scope, 

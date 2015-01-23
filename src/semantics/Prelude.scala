@@ -10,13 +10,19 @@ object Prelude {
   import TypeTranslation.TypingSugar._
   
   val B = T(S(""))
-  
-  def transitive(r: Term, elType: Term) = 
+
+  val ∩ = TI("∩")
+  val min = TI("min")
+  val fix = TI("fix")
+  val ω = TI("ω")
+
+  def transitive(elType: Term)(r: Term) = 
     ∀:(elType, (x,y,z) => (r(x,y) ->: r(y,z) ->: r(x,z)))
   
-  def antirefl(r: Scheme, elType: Term) = ∀:(elType, x => ~r(x,x))
-  def antisymm(r: Scheme, elType: Term) = ∀:(elType, (x,y) => r(x,y) -> ~r(y,x))
-  def compl(P: Scheme, nP: Scheme, elType: Term) = ∀:(elType, x => nP(x) <-> ~P(x))
-  def allToAll(P: Scheme, r: Scheme, Q: Scheme, elType: Term) = ∀:(elType, (x,y) => P(x) ->: Q(y) ->: r(x,y))
+  def antirefl(elType: Term)(r: Scheme) = ∀:(elType, x => ~r(x,x))
+  def antisymm(elType: Term)(r: Scheme) = ∀:(elType, (x,y) => r(x,y) -> ~r(y,x))
+  def compl(elType: Term)(P: Scheme, nP: Scheme) = ∀:(elType, x => nP(x) <-> ~P(x))
+  def partition(elType: Term)(U: Scheme, P: Scheme, nP: Scheme) = ∀:(elType, x => (U(x) <-> (nP(x) | P(x))) & ~(P(x) & nP(x)))
+  def allToAll(elType: Term)(P: Scheme, r: Scheme, Q: Scheme) = ∀:(elType, (x,y) => P(x) ->: Q(y) ->: r(x,y))
  
 }

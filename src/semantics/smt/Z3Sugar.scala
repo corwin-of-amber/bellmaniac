@@ -64,8 +64,28 @@ object Z3Sugar {
   // Solver part
   // -----------
 
+  object ProverStatus extends Enumeration {
+    type ProverStatus = Value
+    val VALID, INVALID, UNKNOWN = Value
 
-  def solveAndPrint(assumptions: List[BoolExpr], goals: List[BoolExpr]) {
+    def fromStatus(status: Status) = {
+      status match {
+        case Status.UNSATISFIABLE => VALID 
+        case Status.SATISFIABLE => INVALID
+        case Status.UNKNOWN => UNKNOWN
+      }
+    }
+  }
+  
+  import ProverStatus._
+
+  def solve(assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
+    val s = ctx mkSolver()
+    assumptions foreach (s.add(_))
+    goals map (check(s, _))
+  }
+  
+  def solveAndPrint(assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
     val s = ctx mkSolver()
     
     for (a <- assumptions) {
@@ -73,28 +93,40 @@ object Z3Sugar {
       s add a
     }
       
-    for (g <- goals) {
+    for (g <- goals) yield {
       println("-" * 80)
       println(s" ? $g")
       checkAndPrint(s, g)
     }
   }
   
-  def checkAndPrint(s: Solver, goal: BoolExpr) {
-      s.push
-      s add ~goal
-      checkAndPrint(s)
-      s.pop
+  def check(s: Solver, goal: BoolExpr) = {
+    s.push
+    s add ~goal
+    try ProverStatus.fromStatus(s.check)
+    finally s.pop
+  }
+  
+  def checkAndPrint(s: Solver, goal: BoolExpr): ProverStatus = {
+    s.push
+    s add ~goal
+    try checkAndPrint(s)
+    finally s.pop
   }
 
-  def checkAndPrint(s: Solver) {
-      val check = s.check
-      check match {
-        case Status.UNSATISFIABLE => println("valid")
-        case Status.SATISFIABLE =>
-          println("invalid")
-          println(s.getModel)
-        case Status.UNKNOWN => println(s"unknown (${s.getReasonUnknown})")
-      }
+  def checkAndPrint(s: Solver): ProverStatus = {
+    val status = s.check
+    status match {
+      case Status.UNSATISFIABLE => 
+        println("valid")
+        ProverStatus.VALID
+      case Status.SATISFIABLE =>
+        println("invalid")
+        println(s.getModel)
+        ProverStatus.INVALID
+      case Status.UNKNOWN => 
+        println(s"unknown (${s.getReasonUnknown})")
+        ProverStatus.UNKNOWN
+    }
   }  
 }

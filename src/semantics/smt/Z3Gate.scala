@@ -130,13 +130,13 @@ class Z3Gate {
         case Some(decl) => decl(recurse:_*)
         case _ => r match {
           case rt: TypedIdentifier => declare(rt)(recurse:_*)
-          case _=> throw new SmtException(s"undeclared '$r'")
+          case _=> throw new SmtException(s"undeclared '$r' ($arity-ary)")
         }
       }
     }
   }
   
-  def formula(term: Term) = try expression(term) |> !!
+  def formula(term: Term) = try !! ( expression(term) )
     catch { case x: SmtException => throw x.at(term) }
   
   def quantifiedVar(va: Term) = {
@@ -156,6 +156,11 @@ class Z3Gate {
   def solveAndPrint(assumptions: List[BoolExpr], goals: List[BoolExpr]) =
     Z3Sugar.solveAndPrint(assumptions, goals)
   
+  def solve(assumptions: List[BoolExpr], goals: List[BoolExpr], verbose: Boolean=false) =
+    if (verbose)
+      Z3Sugar.solveAndPrint(assumptions, goals)
+    else      
+      Z3Sugar.solve(assumptions, goals)
 }
 
 

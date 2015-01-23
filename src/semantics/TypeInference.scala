@@ -209,9 +209,10 @@ object TypeInference {
       else if (expr.root == "::") {
         /**/ assume(expr.subtrees.length == 2) /**/
         val (va, tpe) = (infer0(expr.subtrees(0)), mark(expr.subtrees(1)))
-        val (atpe, components) = abstype(tpe)
+        val (atpe, acomponents) = abstype(tpe)
+        val (btpe, bcomponents) = abstype(tpe) // allow a gap for fine-grained later to fill
         implicit val meet = resolve.meet;
-        (freshvar, Unify.mgu0(va._2, Map(va._1 -> atpe, freshvar -> tpe) ++ components))
+        (freshvar, Unify.mgu0(va._2, Map(va._1 -> atpe, freshvar -> btpe) ++ acomponents ++ bcomponents))
       }
       else if (expr.root == ":") {
         /**/ assume(expr.subtrees.length == 2) /**/
@@ -231,13 +232,26 @@ object TypeInference {
       else if (expr.root == "/") {
         /**/ assume(expr.subtrees.length == 2) /**/
         val (br1, br2) = (infer0(expr.subtrees(0)), infer0(expr.subtrees(1)))
-        implicit val meet = resolve.meet;
+        implicit val join = resolve.join;
         (freshvar, Unify.mgu0(br1._2 + (freshvar -> T(br1._1)), br2._2 + (freshvar -> T(br2._1))))        
       }
       else if (expr.root == "|!") {
         /**/ assume(expr.subtrees.length == 2) /**/
         val va = infer0(expr.subtrees(0))  /* ignore condition for now */
         (freshvar, va._2 + (freshvar -> T(va._1)))
+      }
+      else if (expr.root == "fix") {
+        /**/ assume(expr.subtrees.length == 1) /**/
+        val f = infer0(expr.subtrees(0))
+        implicit val join = resolve.join;
+        (freshvar, Unify.mgu0(f._2, Map(f._1 -> TI("->")(T(freshvar), T(freshvar)))))
+      }
+      else if (expr.root == "ω") {
+        /**/ assume(expr.subtrees.length == 1) /**/
+        val f = infer0(expr.subtrees(0))
+        val domainvar = new Identifier(ns.fresh, "variable", ns)
+        implicit val join = resolve.join;
+        (freshvar, Unify.mgu0(f._2, Map(freshvar -> T(f._1), f._1 -> TI("->")(T(domainvar), T(domainvar)))))
       }
       else
         throw new Exception(s"don't quite know what to do with '${expr.root}'  (in $expr)")
@@ -263,11 +277,11 @@ object TypeInference {
       if (n =~ ("::", 2)) {
         List(n, n.subtrees(0)) map nodeType match {
           case List(Some(tpe), Some(va)) =>
-            if (tpe != va) {
-              val force = step0(n, tpe, va)
+            //if (tpe != va) {
+              val force = step0(n, tpe, va, mark(n.subtrees(1)))
               for ((k,v) <- List(n, n.subtrees(0)) zip force)
                 retype(k, v)
-            }
+            //}
           case _ =>
         }
       } 
@@ -297,13 +311,22 @@ object TypeInference {
           case _ =>
         }
       }
+      else if (n =~ ("/", 2)) {
+        n +: n.subtrees map nodeType match {
+          case List(Some(tpe), Some(ltpe), Some(rtpe)) =>
+            val join = reinforce(List(ltpe, rtpe))(resolve.join)
+            if (join exists (_ != tpe)) {
+              val force = step0(n, tpe, join(0), join(1))
+              retype(n, force(0))
+            }
+        }
+      }
       else if (n.isLeaf) {
         (nodeType(n), assign get n.root) match { 
           case (Some(refType), Some(varType)) =>
             if (refType != varType) {
               val force = step0(n, refType, varType)
               retype(n, force(0))
-              //retype(n.root, force(1))
             }
           case _ =>
         }
@@ -407,16 +430,9 @@ object TypeInference {
       
     override val meet = new ResolveBase {
       override def conflict(x:Tree[Identifier], y:Tree[Identifier], keys: List[Identifier]): Option[Map[Identifier, Tree[Identifier]]] = {
-        if (x.isLeaf && y.isLeaf) (scope.sorts.findSortHie(x.root), scope.sorts.findSortHie(y.root)) match {
-          case (Some(xh), Some(yh)) =>
-            if (xh.subtrees exists (_.root == y.root)) {
-              Some(keys map (_ -> y) toMap)
-            }
-            else if (yh.subtrees exists (_.root == x.root)) {
-              Some(keys map (_ -> x) toMap)
-            }
-            else Some(keys map (_ -> T(Domains.⊥)) toMap)
-          case _ => None
+        if (x.isLeaf && y.isLeaf && (scope.sorts contains x.root) && (scope.sorts contains y.root)) {
+          val meet = scope.sorts.meet(x.root, y.root)
+          Some(keys map (_ -> T(meet)) toMap)
         }
         else None
       }

@@ -54,7 +54,9 @@ class Domains {
   def masters = hierarchy.subtrees
   
   def getMastersOf(sort: Identifier) =
-    for (s <- hierarchy.subtrees if s.nodes exists (_.root == sort)) yield s.root
+    if (sort == ⊤) List(⊤)
+    else
+      for (s <- hierarchy.subtrees if s.nodes exists (_.root == sort)) yield s.root
 
   def getMasterOf(sort: Identifier) = getMastersOf(sort) match {
       case List() => throw new TypingException(s"undefined sort '$sort'")
@@ -72,12 +74,23 @@ class Domains {
     f(hierarchy)
   }
   
+  def subs(sort: Identifier) = findSortHie(sort) match {
+    case Some(hie) => hie.bfs map (_.root)
+    case None => throw new TypingException(s"undefined sort '$sort'")
+  }
+  
   def join(sort1: Identifier, sort2: Identifier) = {
     val (supers1, supers2) = (supers(sort1), supers(sort2))
     supers1.reverseIterator find supers2.contains _ getOrElse 
-      { assert(false, s"$sort1 and $sort2 do not have a common supertype!") ; null }
+      { assert(false, s"$sort1 and $sort2 do not have any common supertype!") ; null }
   }
 
+  def meet(sort1: Identifier, sort2: Identifier) = {
+    val (subs1, subs2) = (subs(sort1), subs(sort2))
+    subs1 find subs2.contains _ getOrElse
+      { assert(false, s"$sort1 and $sort2 do not have any common subtype!") ; null }
+  }
+  
 }
 
 class Scope {

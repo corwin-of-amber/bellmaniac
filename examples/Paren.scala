@@ -11,7 +11,7 @@ object Paren {
   
   import syntax.AstSugar._
   import semantics.Domains._
-  import semantics.Prelude.B
+  import semantics.Prelude._
   
   val R = T(S("R"))
   val J = T(S("J"))
@@ -33,14 +33,16 @@ object Paren {
   scope.sorts.declare(K3.root :<: J1.root)
 
   def A = TV("A")
+  def `A'` = TV("A'")
+  def f = TV("f")
+  def g = TV("g")
   def θ = TV("θ")
   def i = TV("i")
   def j = TV("j")
   def k = TV("k")
   def w = TV("w")
   def < = TV("<")
-  val ∩ = TI("∩")
-  val min = TI("min")
+  def P1 = TV("P1")
   
   def x = TV("x")
   def _1 = TI(1)
@@ -54,27 +56,44 @@ object Paren {
       TV("+") :: (R x R) ->: R ,
       < :: (J x J) ->: B , 
       
-      ( TI("↦")(
-        θ :: ∩(J x J, <) ->: R , i , j ,
-
-        (:@(x, i) |! ((i+_1) =:= j)) /:
-        min(k ↦
-            ((:@(:@(θ, i), k) + :@(:@(θ, k), j) + :@(:@(:@(w, i), k), j)) -: TV("item"))
-        ) -: TV("compute")
-      ).foldRight ) -: A ,
+      P1 :: (J x J) ->: B ,
       
-      TV("A|nw") :- ( A :: (? ->: J0 ->: J0 ->: R) ) , 
-      TV("A|ne") :- ( A :: (? ->: J0 ->: J1 ->: R) ) ,
-      TV("A|se") :- ( A :: (? ->: J1 ->: J1 ->: R) )
+      A :- fix( 
+        TI("↦")(
+          θ :: ∩(J x J, <) ->: R , i , j ,
+  
+          (:@(x, i) |! ((i+_1) =:= j)) /:
+          min(k ↦
+              ((:@(:@(θ, i), k) + :@(:@(θ, k), j) + :@(:@(:@(w, i), k), j)) -: TV("item"))
+          ) -: TV("compute")
+        ).foldRight -: f ) ,
+      
+      TV("f|nw") :- ( f :: (? ->: (J0 x J0) ->: ?) ) ,
+      TV("f|ne") :- ( f :: (? ->: (J0 x J1) ->: ?) ) ,
+      TV("f|sw") :- ( f :: (? ->: (J1 x J0) ->: ?) ) ,
+      TV("f|se") :- ( f :: (? ->: (J1 x J1) ->: ?) ) ,
+      
+      //`A'` :- fix( TV("f|nw") /: TV("f|ne") /: TV("f|se") ) ,
+      
+      
+      g :- TV("f|ne") ,
+      
+      TV("g|nw") :- ( g :: (? ->: (K0 x K2) ->: ?) ) ,
+      TV("g|sw") :- ( g :: (? ->: (K1 x K2) ->: ?) ) 
     )
     
     
   def env = {
     import semantics.Prelude._
     import semantics.TypeTranslation
+    import semantics.TypeTranslation.TypingSugar._
+
     TypeTranslation.subsorts(scope) where 
-          (transitive(<, J), antisymm(<, J),
-           compl(J0, J1, J), allToAll(J0, <, J1, J))
+         ( transitive(J)(<), antisymm(J)(<),
+           compl(J)(J0, J1), allToAll(J)(J0, <, J1),
+           partition(J)(J0, K0, K1), partition(J)(J1, K2, K3),
+           allToAll(J)(K0, <, K1), allToAll(J)(K2, <, K3),
+           ∀:( J, (x,y) => P1(x,y) <-> ((K1(x) | K2(x)) & (K1(y) | K2(y))) ) )
   } 
           
 }

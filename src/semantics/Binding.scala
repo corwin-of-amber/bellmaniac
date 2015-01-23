@@ -54,7 +54,7 @@ class Binding(val left: Set[Identifier], val right: Set[Identifier]) {
     if (program =~ (":", 2))
       new Tree(program.root, program.subtrees(0) +: (program.subtrees drop 1 map self))
     else definitions find (program == _._1) match {
-      case Some((x,y)) => bind(y)
+      case Some((x,y)) => self(bind(y))
       case _ => new Tree(program.root, program.subtrees map self)
     }
   }
