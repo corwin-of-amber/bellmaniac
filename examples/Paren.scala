@@ -17,10 +17,10 @@ object Paren {
   val J = T(S("J"))
   val J0 = T(S("J₀"))
   val J1 = T(S("J₁"))
-  val K0 = T(S("K0"))
-  val K1 = T(S("K1"))
-  val K2 = T(S("K2"))
-  val K3 = T(S("K3"))
+  val K0 = T(S("K₀"))
+  val K1 = T(S("K₁"))
+  val K2 = T(S("K₂"))
+  val K3 = T(S("K₃"))
   
   val scope = new Scope
   scope.sorts.declare(R.root)
@@ -42,7 +42,13 @@ object Paren {
   def k = TV("k")
   def w = TV("w")
   def < = TV("<")
+  
+  def K12 = TV("K₁₊₂")
+  def K02 = TV("K₀₊₂")
+  def K012 = TV("K₀₊₁₊₂")
+  def K12sq = TV("K₁₊₂²")
   def P1 = TV("P1")
+  def Q0 = TV("Q0")
   
   def x = TV("x")
   def _1 = TI(1)
@@ -56,7 +62,10 @@ object Paren {
       TV("+") :: (R x R) ->: R ,
       < :: (J x J) ->: B , 
       
-      P1 :: (J x J) ->: B ,
+      K012   :: J ->: B ,
+      K12    :: J ->: B ,
+      K12sq  :: (J x J) ->: B ,
+      P1     :: (J x J) ->: B ,
       
       A :- fix( 
         TI("↦")(
@@ -79,8 +88,24 @@ object Paren {
       g :- TV("f|ne") ,
       
       TV("g|nw") :- ( g :: (? ->: (K0 x K2) ->: ?) ) ,
-      TV("g|sw") :- ( g :: (? ->: (K1 x K2) ->: ?) ) 
-    )
+      TV("g|sw") :- ( g :: (? ->: (K1 x K2) ->: ?) ) , 
+
+      TV("g|nw'") :-  
+        TI("↦")(
+          θ :: (((J x J) ∩ <) ∩ P1) ->: R , i , j ,
+  
+          min(
+            cons(
+              min(k ↦
+                  ((:@(:@(θ, i), k) + :@(:@(θ, k), j) + :@(:@(:@(w, i), k), j)) -: TV("item1"))),
+              cons(
+                min((k :: K1) ↦
+                    ((:@(:@(θ, i), k) + :@(:@(θ, k), j) + :@(:@(:@(w, i), k), j)) -: TV("item2"))),
+                (nil :: (J -> ?)) ))
+          ) -: TV("compute")
+        ).foldRight
+  
+  )
     
     
   def env = {
@@ -93,7 +118,11 @@ object Paren {
            compl(J)(J0, J1), allToAll(J)(J0, <, J1),
            partition(J)(J0, K0, K1), partition(J)(J1, K2, K3),
            allToAll(J)(K0, <, K1), allToAll(J)(K2, <, K3),
-           ∀:( J, (x,y) => P1(x,y) <-> ((K1(x) | K2(x)) & (K1(y) | K2(y))) ) )
+           ∀:( J, x => K12(x) <-> (K1(x) | K2(x)) ),
+           ∀:( J, x => K012(x) <-> (K0(x) | K1(x) | K2(x)) ),
+           ∀:( J, (x,y) => K12sq(x,y) <-> (K12(x) & K12(y)) ),
+           ∀:( J, (x,y) => P1(x,y) <-> ((K0(x) & K0(y)) | (K0(x) & K1(y)) | (K0(x) & K2(y)) | (K1(x) & K2(y)) | (K2(x) & K2(y))) )
+         )
   } 
           
 }

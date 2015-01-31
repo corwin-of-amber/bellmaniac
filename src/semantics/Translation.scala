@@ -171,38 +171,27 @@ object TypeTranslation {
       else throw new Scope.TypingException(s"tuple type '$term' not permitted here")
     }
     else if (term.root == "∩") {
-      if (dir == InOut.IN) {
-        val (subemit, subassert) = term.subtrees map {
-          //x => (x, emit(scope, x, dir)) } partition (x => ! isPredicateType(x._2))
-          x => (x, try Some(emit(scope, x, dir))
-                   catch { case _: Scope.TypingException => None }) } partition (_._2.isDefined)
-        if (subemit.isEmpty) throw new Scope.TypingException(s"non of '${term.subtrees mkString "' '"}' is a type")
-        else {
-          val (_, Some(x)) = subemit.head
-          val arity = x count { case In(_) => true case _ => false }
-          for (y <- subemit.tail) 
-            ???   /* merge two type domains (interleave checks) */
-          x ::: (subassert map (x => Check(x._1, arity)))
-        }
-      }
-      else ???  /* intersection as return type */
+      val (subemit, subassert) = term.subtrees map {
+        x => (x, try Some(emit(scope, x, dir))
+                 catch { case _: Scope.TypingException => None }) } partition (_._2.isDefined)
+      if (subemit.isEmpty) 
+        throw new Scope.TypingException(s"non of '${term.subtrees mkString "' '"}' is a type")
+      val (_, Some(x)) = subemit.head
+      val arity = dir match { case InOut.IN => x count { case In(_) => true case _ => false } case InOut.OUT => 1 }
+      for (y <- subemit.tail) 
+        ???   /* merge two type domains (interleave checks) */
+      x ::: (subassert map (x => Check(x._1, arity)))
     }
     else throw new Scope.TypingException(s"'$term' is not a type")
   }
-  
+
+  /**
+   * Computes an intersection type in MicroCode form.
+   */
   def intersection(decls: List[List[MicroCode]]): List[MicroCode] = {
     def isCheck(mc: MicroCode) = mc match { case Check(_,_) => true case _ => false }
     def isLeaf(mc: MicroCode) = (mc match { case In(t) => Some(t) case Out(t) => Some(t) case _ => None }) exists (_.isLeaf)
     def dir(mc: MicroCode) = mc match { case In(_) => InOut.IN case Out(_) => InOut.OUT }
-    /*def common(x: Term, y: Term) = 
-      if (x == y || x == T(Domains.⊤)) y else if (y ==  T(Domains.⊤)) x
-      else throw new Scope.TypingException(s"incompatible types: $x, $y")
-    def *(mc1: MicroCode, mc2: MicroCode) = (mc1, mc2) match {
-      case (In(x), In(y)) => In(common(x,y))
-      case (Out(x), Out(y)) => Out(common(x,y))
-      case _ =>
-       throw new Scope.TypingException(s"incompatible type instructions: $mc1, $mc2")
-    }*/
     if (decls forall (_.isEmpty)) List()
     else if (decls.exists (l => !l.isEmpty && isCheck(l(0))))
       (decls flatMap (_ takeWhile isCheck)) ++ intersection(decls map (_ dropWhile isCheck))
@@ -210,12 +199,7 @@ object TypeTranslation {
       val heads = decls map (_.head)
       if (heads forall (_==heads.head)) heads.head :: intersection(decls map (_ drop 1))
       else if (heads forall isLeaf) throw new Scope.TypingException(s"incompatible type instructions: $heads")
-      else ??? /*{
-        heads groupBy dir toList match {
-          case List((k, v)) =>
-        }
-        
-      } */ 
+      else ???  /* high-order arguments? */
     }
   }
   
@@ -233,13 +217,20 @@ object TypeTranslation {
       case In(tpe) => args += ((1, tpe))
       case Out(tpe) => ret = Some(tpe)
       case Check(pred, arity) => 
-        val popped = new ArrayBuffer[(Int, Term)]
-        while ((popped map (_._1) sum) < arity) {
-          popped.insert(0, args.last)
-          args.trimEnd(1)
+        ret match { 
+          case Some(t) =>
+            if (arity == 1) ret = Some(t ∩ pred)
+            else throw new Scope.TypingException(s"check arity mismatch in '$micro'")
+          case _ =>
+            if ((args map (_._1) sum) < arity) throw new Scope.TypingException(s"check underflow in '$micro'")
+            val popped = new ArrayBuffer[(Int, Term)]
+            while ((popped map (_._1) sum) < arity) {
+              popped.insert(0, args.last)
+              args.trimEnd(1)
+            }
+            if ((popped map (_._1) sum) > arity) throw new Scope.TypingException(s"overlapping checks in '$micro'")
+            args += ((arity, TI("∩")(TI("x")(popped.toList map (_._2)).foldLeft, pred)))
         }
-        if ((popped map (_._1) sum) > arity) throw new Scope.TypingException(s"overlapping checks in '$micro'")
-        args += ((arity, TI("∩")(TI("x")(popped.toList map (_._2)).foldLeft, pred)))
     }
     TI("->")((args.toList map (_._2)) :+ (ret.get)).foldRight
   }

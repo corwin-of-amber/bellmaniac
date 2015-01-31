@@ -103,16 +103,16 @@ class Unify(implicit resolve: Resolve = Resolve.NULL) {
   
   def makeMgu(x: Map[Identifier, Tree[Identifier]], y: Map[Identifier, Tree[Identifier]]) {
     for ((k, vx) <- x) 
-      assignment += (k -> vx)
+      this += (k -> vx)
     for ((k, vy) <- y) assignment get k match {
-      case None => assignment += (k -> vy)
+      case None => this += (k -> vy)
       case Some(vx) => makeMgu(vx, vy, List(k))
     }
   }
   
   def digest(x: Map[Identifier, Tree[Identifier]]) {
     for ((k,v) <- x) assignment get k match {
-      case None => assignment += (k -> v)
+      case None => this += (k -> v)
       case Some(vx) => makeMgu(vx, v, List(k))
     }
   }
@@ -122,12 +122,20 @@ class Unify(implicit resolve: Resolve = Resolve.NULL) {
     case Some(y) => rootVar(y.root)
   }
   
-  def matchUp(freeVar: Identifier, term: Tree[Identifier]) {
+  def +=(kv: (Identifier, Tree[Identifier])) {
+    matchUp0(kv._1, kv._2)
+  }
+  
+  def matchUp0(freeVar: Identifier, term: Tree[Identifier]) {
     val key = rootVar(freeVar)
-    if (term.isLeaf && term.root == key) return  // do nothing
+    if (term.isLeaf && rootVar(term.root) == key) return // do nothing (prevent cycles)
+    assignment += (rootVar(freeVar) -> term)
+  }
+
+  def matchUp(freeVar: Identifier, term: Tree[Identifier]) {
     if (!resolve.isUnitary(term))
       throw new Unify.CannotUnify(s"cannot assign non-unitary $term to $freeVar")
-    assignment += (rootVar(freeVar) -> term)
+    matchUp0(freeVar, term)
   }
   
   def tie(x: Identifier, y: Identifier) {

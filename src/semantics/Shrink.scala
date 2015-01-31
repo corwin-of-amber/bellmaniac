@@ -137,7 +137,7 @@ object Shrink {
     //   θ :: ((J₀ x J₀) ∩ <) -> R
     val context1 =
       new ShrinkStep(context, item, 
-          Map("θ" -> ((J0 x J0) -> R))).verbose()
+          Map("θ" -> ((J0 x J0) -> R), "k" -> J0)).verbose()
     
     // Current typing is:
     //   θ :: ((J x J) ∩ <) -> R
@@ -145,11 +145,21 @@ object Shrink {
     //   θ :: ((K₁⋃K₂ x K₁⋃K₂) ∩ <) -> R
     val context2 =
       new ShrinkStep(context1, program :/ "g|sw" :/ "item", 
-          Map("θ" -> (((? x ?) ∩ P1) -> ?))).verbose()
+          Map("θ" -> (((? x ?) ∩ K12sq) -> ?), "k" -> (? ∩ K12))).verbose()
+          
+    // Current typing is:
+    //   θ :: ((J x J) ∩ <) -> R
+    // desired typing is:
+    //   θ :: ((K₀⋃K₁⋃K₂ x K₀⋃K₁⋃K₂) ∩ <) -> R
+    val context3 =
+      new ShrinkStep(context2, program :/ "g|nw" :/ "item", 
+          Map("θ" -> (((? x ?) ∩ P1) -> ?), "k" -> (? ∩ K012))).verbose()
           
     println("=" * 80)
-    for (piece <- List("f|nw", "g|sw"))
-      println(s"$piece ? θ  ::  " + context2.vassign(((program :/ piece) ? "θ").root).toPretty)
+    for (piece <- List("f|nw", "g|sw", "g|nw")) {
+      println(s"$piece ? θ  ::  " + context3.vassign(((program :/ piece) ? "θ").root).toPretty)
+      println(s"$piece ? k  ::  " + context3.vassign(((program :/ piece) ? "k").root).toPretty)
+    }
   }
   
   

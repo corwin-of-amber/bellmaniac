@@ -15,6 +15,8 @@ object Prelude {
   val min = TI("min")
   val fix = TI("fix")
   val ω = TI("ω")
+  def nil = TI("nil")
+  val cons = TI("cons")
 
   def transitive(elType: Term)(r: Term) = 
     ∀:(elType, (x,y,z) => (r(x,y) ->: r(y,z) ->: r(x,z)))

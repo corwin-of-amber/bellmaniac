@@ -10,6 +10,7 @@ import com.microsoft.z3.FuncDecl
 import semantics.TypeTranslation.TypedIdentifier
 import semantics.TypeTranslation.TypedIdentifier
 import com.microsoft.z3.BoolExpr
+import com.microsoft.z3.Z3Exception
 
 
 
@@ -137,7 +138,10 @@ class Z3Gate {
   }
   
   def formula(term: Term) = try !! ( expression(term) )
-    catch { case x: SmtException => throw x.at(term) }
+    catch { 
+      case x: SmtException => throw x.at(term)
+      case z: Z3Exception => throw new SmtException(z.toString()).at(term)
+    }
   
   def quantifiedVar(va: Term) = {
       if (va.isLeaf)
