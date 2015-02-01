@@ -158,6 +158,15 @@ object TypeInference {
     }
   }
     
+  val POLYMORPHIC = {
+    import Prelude.{min,cons,nil}
+    def ? = T($v)
+    def __[A](gen: => A) = (() => gen)
+    Map(min ~>  __ { val b = ?; (? -> b) -> b },                    // min :: ('a -> 'b) -> 'b
+        cons ~> __ { val a, b = ?; b -> ((a -> b) -> (a -> b)) },   // cons :: 'b -> ('a -> 'b) -> 'a -> 'b
+        nil ~>  __ { ? -> ? })                                      // nil :: 'a -> 'b
+  }
+  
   /**
    * Provides a conservative type assignment to be used as a starting
    * point.
@@ -177,7 +186,11 @@ object TypeInference {
     def infer0(expr: Tree[Identifier]): (Identifier, Map[Identifier, Tree[Identifier]]) = {
       val freshvar = new Identifier(ns.declare(expr), "variable", ns)
       if (expr.isLeaf) {
-        (freshvar, Map(expr.root -> new Tree(freshvar)))
+        (freshvar, Map(
+          POLYMORPHIC get expr.root match {
+            case Some(gen) => freshvar -> gen()
+            case _ => expr.root -> new Tree(freshvar)
+          }))
       }
       else if (expr.root == "program") {
         val children = for (s <- expr.subtrees) yield infer0(s)._2
@@ -221,29 +234,6 @@ object TypeInference {
         implicit val meet = resolve.meet;
         val labelvar = lbl.root //new Identifier(lbl.root.literal, "label", new Uid)
         (va._1, Unify.mgu0(va._2, Map(freshvar -> T(va._1), labelvar -> T(va._1))))
-      }
-      else if (expr.root == "min") {                    // min :: ('a -> 'b) -> 'b
-        /**/ assume(expr.subtrees.length == 1) /**/
-        val vec = infer0(expr.subtrees(0))
-        val domainvar = new Identifier(ns.fresh, "variable", ns)
-        implicit val meet = resolve.meet;
-        (freshvar, Unify.mgu0(vec._2, Map(vec._1 -> TI("->")(T(domainvar), T(freshvar)))))
-      }
-      else if (expr.root == "nil") {                    // nil :: 'a -> 'b
-        /**/ assume(expr.subtrees.length == 0) /**/
-        val domainvar = new Identifier(ns.fresh, "variable", ns)
-        val rangevar = new Identifier(ns.fresh, "variable", ns)
-        implicit val meet = resolve.meet;
-        (freshvar, Map(freshvar -> TI("->")(T(domainvar), T(rangevar))))
-      }
-      else if (expr.root == "cons") {                   // cons :: 'b -> ('a -> 'b) -> 'a -> 'b
-        /**/ assume(expr.subtrees.length == 2) /**/
-        val (el, li) = (infer0(expr.subtrees(0)), infer0(expr.subtrees(1)))
-        val domainvar = new Identifier(ns.fresh, "variable", ns)
-        val rangevar = el._1
-        val arrow = TI("->")(T(domainvar), T(rangevar))
-        implicit val meet = resolve.meet;
-        (freshvar, Unify.mgu0(el._2, Unify.mgu0(li._2,  Map(freshvar -> arrow, li._1 -> arrow))))
       }
       else if (expr.root == "/") {
         /**/ assume(expr.subtrees.length == 2) /**/

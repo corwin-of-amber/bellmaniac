@@ -382,6 +382,15 @@ object TermTranslation {
     else throw new Exception(s"Cannot translate term '${term.toPretty}'")
   }
   
+  def proveAndPrint(env: List[Environment], goals: List[Term]) {
+    val (smt, assumptions) = TypeTranslation.toSmt(env)
+    
+    for ((k,v) <- smt.declarations) println(s"$k -> $v    // :: ${smt.typeOf(v).toPretty}")
+    println("-" * 80)
+    
+    smt solveAndPrint (assumptions, goals map smt.formula)
+  }
+  
   
   def main(args: Array[String]): Unit = {
 
@@ -409,27 +418,18 @@ object TermTranslation {
     
     val ff = f
     val annot = Map(new Id(ff) -> (J ->: J0 ->: R))
-    val (fij, fij_env) = term(env, :@(ff, i, j).foldLeft, annot)
+    val (fij, fij_env) = term(env, ff:@(i, j), annot)
     
     val alt_env = (TypeTranslation.shrink(env, Map(i ~> J0, j ~> J0)))
 
     for ((k,v) <- alt_env.decl) println(s"$k -> ${v.toPretty}")
     println("-" * 80)
 
-    val (alt_fij, alt_fij_env) = term(env ++ alt_env, :@(f, i, j).foldLeft)
+    val (alt_fij, alt_fij_env) = term(env ++ alt_env, f:@(i, j))
 
     // Put it to the test... with SMT!
     proveAndPrint(List(fij_env, alt_fij_env),
         List(T(fij_env(fij).support) <-> T(alt_fij_env(alt_fij).support)))
-  }
-  
-  def proveAndPrint(env: List[Environment], goals: List[Term]) {
-    val (smt, assumptions) = TypeTranslation.toSmt(env)
-    
-    for ((k,v) <- smt.declarations) println(s"$k -> $v    // :: ${smt.typeOf(v).toPretty}")
-    println("-" * 80)
-    
-    smt solveAndPrint (assumptions, goals map smt.formula)
   }
   
 }

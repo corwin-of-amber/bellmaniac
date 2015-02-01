@@ -12,11 +12,11 @@ object Prelude {
   val B = T(S(""))
 
   val ∩ = TI("∩")
-  val min = TI("min")
+  def min = TI("min")
   val fix = TI("fix")
   val ω = TI("ω")
   def nil = TI("nil")
-  val cons = TI("cons")
+  def cons = TI("cons")
 
   def transitive(elType: Term)(r: Term) = 
     ∀:(elType, (x,y,z) => (r(x,y) ->: r(y,z) ->: r(x,z)))

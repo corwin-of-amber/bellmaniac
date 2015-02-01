@@ -66,14 +66,15 @@ object Paren {
       K12    :: J ->: B ,
       K12sq  :: (J x J) ->: B ,
       P1     :: (J x J) ->: B ,
+      Q0     :: (J x J) ->: B ,
       
       A :- fix( 
         TI("↦")(
           θ :: ∩(J x J, <) ->: R , i , j ,
   
-          (:@(x, i) |! ((i+_1) =:= j)) /:
-          min(k ↦
-              ((:@(:@(θ, i), k) + :@(:@(θ, k), j) + :@(:@(:@(w, i), k), j)) -: TV("item"))
+          (@:(x, i) |! ((i+_1) =:= j)) /:
+          (min:@(k ↦
+              (((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item")))
           ) -: TV("compute")
         ).foldRight -: f ) ,
       
@@ -88,22 +89,22 @@ object Paren {
       g :- TV("f|ne") ,
       
       TV("g|nw") :- ( g :: (? ->: (K0 x K2) ->: ?) ) ,
-      TV("g|sw") :- ( g :: (? ->: (K1 x K2) ->: ?) ) , 
+      TV("g|sw") :- ( g :: (? ->: (K1 x K2) ->: ?) ) ,
 
-      TV("g|nw'") :-  
+      TV("g|nw'") :- (
         TI("↦")(
           θ :: (((J x J) ∩ <) ∩ P1) ->: R , i , j ,
   
-          min(
-            cons(
-              min(k ↦
-                  ((:@(:@(θ, i), k) + :@(:@(θ, k), j) + :@(:@(:@(w, i), k), j)) -: TV("item1"))),
-              cons(
-                min((k :: K1) ↦
-                    ((:@(:@(θ, i), k) + :@(:@(θ, k), j) + :@(:@(:@(w, i), k), j)) -: TV("item2"))),
+          min:@(
+            cons:@(
+              min:@(k ↦
+                    (((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item1"))),
+              cons:@(
+                min:@((k :: K1) ↦
+                    (((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item2"))),
                 (nil :: (J -> ?)) ))
-          ) -: TV("compute")
-        ).foldRight
+          )// -: TV("compute")
+        ).foldRight :: (? ->: (K0 x K2) ->: ?) )
   
   )
     
@@ -121,7 +122,8 @@ object Paren {
            ∀:( J, x => K12(x) <-> (K1(x) | K2(x)) ),
            ∀:( J, x => K012(x) <-> (K0(x) | K1(x) | K2(x)) ),
            ∀:( J, (x,y) => K12sq(x,y) <-> (K12(x) & K12(y)) ),
-           ∀:( J, (x,y) => P1(x,y) <-> ((K0(x) & K0(y)) | (K0(x) & K1(y)) | (K0(x) & K2(y)) | (K1(x) & K2(y)) | (K2(x) & K2(y))) )
+           ∀:( J, (x,y) => P1(x,y) <-> ((K0(x) & K0(y)) | (K0(x) & K1(y)) | (K0(x) & K2(y)) | (K1(x) & K2(y)) | (K2(x) & K2(y))) ),
+           ∀:( J, (x,y) => Q0(x,y) <-> ((K0(x) & K1(y)) | (K1(x) & K2(y))) )
          )
   } 
           

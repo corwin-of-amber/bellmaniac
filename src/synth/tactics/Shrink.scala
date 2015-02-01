@@ -1,15 +1,17 @@
-package semantics
+package synth.tactics
 
-import syntax.{Identifier,AstSugar}
+import syntax.Identifier
 import semantics.TypeInference.ConservativeResolve
-import syntax.transform.TreeSubstitution
 import semantics.TypeTranslation.Declaration
 import semantics.TypeTranslation.TypedIdentifier
 import semantics.Scope.TypingException
-import semantics.smt.Z3Gate
 import semantics.TypeTranslation.Environment
-import syntax.transform.GenTreeSubstitution
 import semantics.Scope.TypingException
+import semantics.TermTranslation
+import semantics.TypeInference
+import semantics.TypeTranslation
+import semantics.Id
+import syntax.AstSugar
 
 
 
@@ -82,7 +84,7 @@ object Shrink {
     
     def solve = {
       /**/ assume(retypes != null && assumptions != null && goals != null) /**/
-      import smt.Z3Sugar.ProverStatus._
+      import semantics.smt.Z3Sugar.ProverStatus._
       if (TypeTranslation.solve(assumptions, goals, _verbose) forall (_ == VALID)) {
         if (_verbose) {
           println
@@ -104,8 +106,7 @@ object Shrink {
   def main(args: Array[String]): Unit = {
 
     import examples.Paren
-    import Binding.{inline,prebind}
-    import smt.Z3Sugar.ProverStatus._
+    import semantics.Binding.{inline,prebind}
             
     val resolve = new ConservativeResolve(Paren.scope)
 
@@ -115,7 +116,7 @@ object Shrink {
     
     println("-" * 80)
 
-    val context = Context(Paren.env, vassign, tassign)
+    val context0 = Context(Paren.env, vassign, tassign)
     
     val defn = program :/ "f|nw"
     val item = defn :/ "item"
@@ -136,7 +137,7 @@ object Shrink {
     // desired typing is:
     //   θ :: ((J₀ x J₀) ∩ <) -> R
     val context1 =
-      new ShrinkStep(context, item, 
+      new ShrinkStep(context0, item, 
           Map("θ" -> ((J0 x J0) -> R), "k" -> J0)).verbose()
     
     // Current typing is:
@@ -155,10 +156,16 @@ object Shrink {
       new ShrinkStep(context2, program :/ "g|nw" :/ "item", 
           Map("θ" -> (((? x ?) ∩ P1) -> ?), "k" -> (? ∩ K012))).verbose()
           
+    val context4 =
+      new ShrinkStep(context3, program :/ "g|nw'" :/ "item2", 
+          Map("θ" -> (((? x ?) ∩ Q0) -> ?))).verbose()
+          
+    val context = context4
+          
     println("=" * 80)
-    for (piece <- List("f|nw", "g|sw", "g|nw")) {
-      println(s"$piece ? θ  ::  " + context3.vassign(((program :/ piece) ? "θ").root).toPretty)
-      println(s"$piece ? k  ::  " + context3.vassign(((program :/ piece) ? "k").root).toPretty)
+    for (piece <- List("f|nw", "g|sw", "g|nw", "g|nw'")) {
+      println(s"$piece ? θ  ::  " + context.vassign(((program :/ piece) ? "θ").root).toPretty)
+      println(s"$piece ? k  ::  " + context.vassign(((program :/ piece) ? "k").root).toPretty)
     }
   }
   

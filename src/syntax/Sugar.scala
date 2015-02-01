@@ -28,7 +28,7 @@ object AstSugar {
   // DSL Part
   // --------
   
-  val :@ = TI("@")
+  val @: = TI("@")
   
   def ∀(vars: Term*)(body: Term): Term = ∀(vars.toList)(body)
   def ∀(vars: List[Term])(body: Term) = TI("∀")(vars)(body).foldRight
@@ -49,8 +49,10 @@ object AstSugar {
     def unary_~ = TI("~")(term)
     def x(that: Term) = TI("x")(term, that)
     def ∩(that: Term) = TI("∩")(term, that)
-    def +(that: Term) = :@(:@(TI("+"), term), that)
+    def +(that: Term) = @:(@:(TI("+"), term), that)
     def =:=(that: Term) = TI("=")(term, that)
+    
+    def :@(that: Term*) = @:(term)(that:_*).foldLeft
     
     def ~>[A](that: A) = if (term.isLeaf) term.root -> that
       else throw new Exception(s"mapping from non-leaf '$term'")
