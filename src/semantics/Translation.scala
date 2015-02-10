@@ -121,15 +121,17 @@ object TypeTranslation {
   def shrink(decl: Declaration, subdecl: List[TypeTranslation.MicroCode]) = {
     // Create a second version of the support predicate
     val inner = new Namespace
-    val supp = decl.support
-    val shrunk = TypedIdentifier(new Identifier(s"${supp.literal}'", supp.kind, inner), supp.typ)
+    val (head, supp) = (decl.head, decl.support)
+    val shrunk_head = TypedIdentifier(new Identifier(s"${head.literal}'", head.kind, inner), head.typ)
+    val shrunk_supp = TypedIdentifier(new Identifier(s"${supp.literal}'", supp.kind, inner), supp.typ)
     // Construct the intersection of original support and new contract
     val (vars, ret, assertions) = TypeTranslation.contract(decl.head.untype, subdecl)
     if (assertions.isEmpty) decl
     else {
       val args = vars map (T(_)) 
-      Declaration(List(decl.head, shrunk), List(
-        ∀(args)(T(shrunk.untype)(args) <-> (T(supp.untype)(args) & &&(assertions)))))
+      Declaration(List(shrunk_head, shrunk_supp), List(
+        ∀(args)( (T(shrunk_head.untype)(args) =:= T(head.untype)(args)) &
+                 (T(shrunk_supp.untype)(args) <-> (T(supp.untype)(args) & &&(assertions))) )))
     }
   }
   
@@ -185,24 +187,6 @@ object TypeTranslation {
     else throw new Scope.TypingException(s"'$term' is not a type")
   }
 
-  /**
-   * Computes an intersection type in MicroCode form.
-   */
-  def intersection(decls: List[List[MicroCode]]): List[MicroCode] = {
-    def isCheck(mc: MicroCode) = mc match { case Check(_,_) => true case _ => false }
-    def isLeaf(mc: MicroCode) = (mc match { case In(t) => Some(t) case Out(t) => Some(t) case _ => None }) exists (_.isLeaf)
-    def dir(mc: MicroCode) = mc match { case In(_) => InOut.IN case Out(_) => InOut.OUT }
-    if (decls forall (_.isEmpty)) List()
-    else if (decls.exists (l => !l.isEmpty && isCheck(l(0))))
-      (decls flatMap (_ takeWhile isCheck)) ++ intersection(decls map (_ dropWhile isCheck))
-    else {
-      val heads = decls map (_.head)
-      if (heads forall (_==heads.head)) heads.head :: intersection(decls map (_ drop 1))
-      else if (heads forall isLeaf) throw new Scope.TypingException(s"incompatible type instructions: $heads")
-      else ???  /* high-order arguments? */
-    }
-  }
-  
   def canonical(micro: List[MicroCode]): Term = {
     val args = new ArrayBuffer[(Int, Term)]
     var ret: Option[Term] = None
@@ -245,13 +229,7 @@ object TypeTranslation {
     }
     else T(tpe.root)(tpe.subtrees map (simplify(scope, _)))
   }
-  
-  def intersection(scope: Scope, types: List[Term]): Term = {
-    import syntax.Piping._
-    val emits = types map (emit(scope, _))
-    intersection(emits) |> canonical |> (simplify(scope, _))
-  }
-  
+
   // --------
   // DSL part
   // --------
@@ -342,8 +320,7 @@ object TermTranslation {
     
     def retype(scope: Scope, value: Declaration, typ: Term) = {
       val redecl = TypeTranslation.shrink(value, TypeTranslation.emit(scope, typ))
-      if (redecl eq value) (value.head, value)
-      else ($_, redecl)
+      (redecl.head, redecl)
     }
     
   }

@@ -3,6 +3,8 @@ package semantics
 
 import syntax.{Tree, Identifier, AstSugar}
 import syntax.transform.TreeSubstitution
+import semantics.TypeTranslation.TypedIdentifier
+import semantics.TypeTranslation.Declaration
 
 
 
@@ -93,11 +95,43 @@ class Domains {
   
 }
 
+/**
+ * A cheating techniques to reason about second-order functions.
+ * The function type is represented by a first-order sort that reflects it.
+ */
+class FunctionType(val args: List[Identifier], val ret: Identifier) {
+  import AstSugar._
+
+  val faux = new Identifier((args :+ ret) mkString "→", "set", this)
+  val app = new Declaration(
+      List(TypedIdentifier( new Identifier("@", "function", this), 
+                            TI("->")(faux +: args :+ ret map (T(_))).foldRight ),
+           TypedIdentifier( new Identifier("|@|", "predicate", this),
+                            TI("->")(faux +: args :+ S("") map (T(_))).foldRight )), List() )
+                                 
+  def abs(f: Declaration) = {
+    import TypeTranslation.{In,Out}
+    import TypeTranslation.TypingSugar._
+    val f_abs = TypedIdentifier( new Identifier(s"${f.head.untype}#", "function", new Uid), T(faux) )
+    val f_abs_supp = TypedIdentifier( new Identifier(s"|${f.head.untype}#|", "predicate", new Uid), T(S("")) )
+    val micro = (args map ((x) => In(T(x)))) :+ Out(T(ret))
+    val (varids, _, _) = TypeTranslation.contract(f_abs, micro)
+    val vars = varids map (T(_))
+    val assumptions = List(
+        T(f_abs_supp) ,
+        ∀(vars)( (T(app.head)(T(f_abs) :: vars) =:= T(f.head)(vars)) &
+                 (T(app.support)(T(f_abs) :: vars) <-> T(f.support)(vars))  )
+      )
+    new Declaration(List(f_abs, f_abs_supp), assumptions)
+  }                               
+}
+
 class Scope {
   
   import AstSugar._
   
   val sorts = new Domains
+  val functypes = collection.mutable.Map[Term, FunctionType]()
   //var signature = Map[Identifier,Term]()
   
 }

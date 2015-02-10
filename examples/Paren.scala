@@ -47,8 +47,8 @@ object Paren {
   def K02 = TV("K₀₊₂")
   def K012 = TV("K₀₊₁₊₂")
   def K12sq = TV("K₁₊₂²")
-  def P1 = TV("P1")
-  def Q0 = TV("Q0")
+  def P1 = TV("P₁")
+  def Q0 = TV("Q₀")
   
   def x = TV("x")
   def _1 = TI(1)

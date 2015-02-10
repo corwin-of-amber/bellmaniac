@@ -12,6 +12,7 @@ import semantics.TypeInference
 import semantics.TypeTranslation
 import semantics.Id
 import syntax.AstSugar
+import semantics.TypePrimitives
 
 
 
@@ -75,7 +76,7 @@ object Shrink {
       retypes = constraints map { case (name, constraint) =>
           val id = (term ? name).root
           val List(x,y) = reinforce(List(context.vassign(id),constraint) map mark)(dual.meet) map unmark
-          id -> TypeTranslation.intersection(scope, List(x,y))
+          id -> TypePrimitives.intersection(scope, List(x,y))
         }
       shrink(term, retypes) match { case (a,g) =>
         assumptions = a; goals = g; 
