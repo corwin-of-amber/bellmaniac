@@ -1,5 +1,6 @@
 package semantics
 
+import syntax.Identifier
 import syntax.AstSugar
 import TypeTranslation.{MicroCode,In,Out,Check}
 import TypeTranslation.InOut
@@ -10,6 +11,29 @@ import TypeTranslation.{emit,simplify,canonical}
 object TypePrimitives {
   
   import AstSugar._
+  
+  /**
+   * Strips type of checks to get the unrefined type.
+   */
+  def rawtype(micro: List[MicroCode]) = micro filter { case In(_) | Out(_) => true case _ => false }
+  
+  def rawtype(scope: Scope, micro: List[MicroCode]): List[MicroCode] = micro flatMap {
+    case In(t) => Some(if (t.isLeaf) In(t) else In(rawtype(scope, t)))
+    case Out(t) => Some(if (t.isLeaf) Out(t) else Out(rawtype(scope, t)))
+    case _ => None
+  }
+  
+  def rawtype(scope: Scope, typ: Term): Term = 
+    TypeTranslation.canonical(rawtype(scope, TypeTranslation.emit(scope, typ)))
+    
+  /**
+   * Counts the arguments in a function type.
+   */
+  def arity(micro: List[MicroCode]) = micro count { case In(_) => true case _ => false}
+
+  def arity(typ: Term): Int = 
+    if (typ.root == "->") (typ.subtrees.length - 1) + arity(typ.subtrees.last)
+    else 0
   
   /**
    * Computes an intersection type in MicroCode form.
@@ -64,3 +88,21 @@ object TypePrimitives {
   
   class CurryingException(msg: String) extends Scope.TypingException(msg)
 }
+
+
+object LambdaCalculus {
+  
+  import AstSugar._
+
+  def beta(va: Identifier, body: Term, arg: Term): Term = {
+    if (body.isLeaf && body.root == va) arg
+    else T(body.root, body.subtrees map (x => beta(va, x, arg)))
+  }
+  
+  def beta(fun: Term, arg: Term): Term = {
+    assume(fun =~ ("↦", 2) && fun.subtrees(0).isLeaf)
+    beta(fun.subtrees(0).root, fun.subtrees(1), arg)
+  }
+    
+}
+

@@ -86,7 +86,7 @@ object AstSugar {
 
 
 object Formula {
-  val INFIX = Map("->" -> 1, "<->" -> 1, "&" -> 1, "<" -> 1, "=" -> 1, "↦" -> 1, ":" -> 1, "::" -> 1,
+  val INFIX = Map("->" -> 1, "<->" -> 1, "&" -> 1, "|" -> 1, "<" -> 1, "=" -> 1, "↦" -> 1, ":" -> 1, "::" -> 1,
       "/" -> 1, "|_" -> 1, "|!" -> 1, "∩" -> 1, "x" -> 1)
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
   
@@ -104,7 +104,7 @@ object Formula {
     }
   
   def display(term: AstSugar.Term, pri: Int): String = {
-    if (term.subtrees.length != 2) term.toString
+    if (term.subtrees.length != 2) display(term)
     else {
       val subpri = (INFIX get term.root.toString) getOrElse 0
       if (subpri < pri) display(term) else s"(${display(term)})"

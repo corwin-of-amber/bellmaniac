@@ -123,7 +123,11 @@ class FunctionType(val args: List[Identifier], val ret: Identifier) {
                  (T(app.support)(T(f_abs) :: vars) <-> T(f.support)(vars))  )
       )
     new Declaration(List(f_abs, f_abs_supp), assumptions)
-  }                               
+  }
+  
+  def abs(f: Identifier) =
+    TypedIdentifier( new Identifier(s"${f.literal}#", "function", new Uid), T(faux) )
+
 }
 
 class Scope {

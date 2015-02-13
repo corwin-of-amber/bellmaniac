@@ -11,6 +11,8 @@ class Tree[T] (val root: T, val subtrees: List[Tree[T]] = List()) {
     case _ => false
   }
   
+  override def hashCode = root.hashCode
+  
   def nodes: Stream[Tree[T]] = this #:: {subtrees.toStream flatMap (x => x.nodes)}
   
   def bfs: Stream[Tree[T]] = {

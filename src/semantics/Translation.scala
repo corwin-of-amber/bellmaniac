@@ -51,8 +51,27 @@ object TypeTranslation {
     def ++(that: Map[_ <: Identifier, Declaration]) =  E(scope, decl ++ that)
     def +(that: (_ <: Identifier, Declaration)) =      E(scope, decl + that)
     
-    def apply(symbol: Identifier) = decl(symbol)
+    def apply(symbol: Identifier) : Declaration = decl get symbol getOrElse {
+        for ((_,v) <- decl; s <- v.symbols) if (s == symbol) return v
+        throw new NoSuchElementException(s"symbol $symbol")
+      }
     
+    def typedSymbols: Stream[TypedIdentifier] =
+      (for ((k,v) <- decl; s <- v.symbols) yield s) toStream
+    
+    def typeOf(symbol: Identifier) = symbol match {
+        case t: TypedIdentifier => Some(t.typ)
+        case _ => typedSymbols find (_ == symbol) map (_.typ)
+      }
+    
+    def typeOf(term: Term): Option[Term] = term match {
+      case typed: TypedTerm => Some(typed.typ)
+      case _ =>
+        if (term.isLeaf) typeOf(term.root) else None
+    }
+    
+    def typeOf_!(term: Term) = typeOf(term) getOrElse { throw new Scope.TypingException(s"type needed for $term") }
+        
     def where(facts: Term*) = this + ($_ -> Declaration(List(), facts.toList))
   }
   
@@ -292,7 +311,7 @@ object TermTranslation {
   object combine {
     
     def app(func: Declaration, arg: Declaration) = {
-      val freshns = new Namespace
+      val freshns = new Uid
       val result = new Identifier("@", "function", freshns)
       val support = new Identifier("|@|", "predicate", freshns)
       def behead(typ: Term) =
@@ -310,7 +329,7 @@ object TermTranslation {
                        TypedIdentifier(support, support_type)),
           List(
             ∀(vars)(
-                TI("=")(T(result)(vars), T(func.head, T(arg.head) :: vars)) &
+                (T(result)(vars) =:= T(func.head, T(arg.head) :: vars)) &
                 (T(support, vars) <->
                   (T(arg.support) &
                    T(func.support, T(arg.head) :: vars)))
@@ -323,9 +342,49 @@ object TermTranslation {
       (redecl.head, redecl)
     }
     
+    def slash(scope: Scope, fore: Declaration, back: Declaration) = {
+      val ns = new Uid
+      val result = new Identifier("/", "function", ns)
+      val support = new Identifier("|/|", "predicate", ns)
+      val (varids, _, _) = TypeTranslation.contract(result, TypeTranslation.emit(scope, fore.head.typ))
+      val vars = varids map (T(_))
+      Declaration(List(TypedIdentifier(result, fore.head.typ),
+                       TypedIdentifier(support, fore.support.typ)),
+         List(
+            ∀(vars)(
+                (T(fore.support)(vars) -> (T(result)(vars) =:= T(fore.head)(vars))) &
+                (~T(fore.support)(vars) -> (T(result)(vars) =:= T(back.head)(vars))) &
+                (T(support)(vars) <-> (T(fore.support)(vars) | T(back.support)(vars)))
+            )
+         ))
+    }
+    
+    /*
+    def abs(va: Declaration, decl: Declaration): Declaration = {
+      val ns = new Uid
+      val result = new Identifier(s"${va.head.literal}↦${decl.head.literal}", "function", ns)
+      val support = new Identifier(s"|${va.head.literal}↦${decl.head.literal}|", "predicate", ns)
+      def gener(phi: Term): Term =
+        if (phi.root == va.head) T(result)(T(va.head))(phi.subtrees map gener)
+        else if (phi.root == va.support) T(support)(T(va.head))(phi.subtrees map gener)
+        else T(phi.root)(phi.subtrees map gener)
+      Declaration(List(TypedIdentifier(result, va.head.typ -> decl.head.typ),
+                       TypedIdentifier(support, va.head.typ -> decl.support.typ)),
+          for (phi <- decl.precondition) yield ∀(T(va.head))(phi))
+    }
+
+    def abs(va: Declaration, env: Environment): Environment =
+      new Environment(env.scope, env.decl map { case (k,v) => 
+        (k, if (v eq va) v else abs(va, v)) })*/
+    
   }
   
   def term(env: Environment, term: Term, annot: Map[Id[Term], Term] = Map()): (Identifier, Environment) = {
+    val (id, termEnv) = term1(env, term, annot)
+    (id, env ++ termEnv)
+  }
+
+  def term1(env: Environment, term: Term, annot: Map[Id[Term], Term] = Map()): (Identifier, Environment) = {
     (term0(env, term, annot), annot get term) match {
       case ((va, va_env), Some(typ)) => 
         val (aid, a) = combine.retype(env.scope, va_env(va), typ)
@@ -337,10 +396,10 @@ object TermTranslation {
   def term0(env: Environment, term: Term, annot: Map[Id[Term], Term]): (Identifier, Environment) = {
     val r = term.root
     val arity = term.subtrees.length
-    def rechild(x: Term) = TermTranslation.term(env, x, annot)
+    def rechild(x: Term) = term1(env, x, annot)
     def recurse = term.subtrees map rechild
     if (term.isLeaf) env.decl get term.root match {
-      case Some(decl) => (r, env)
+      case Some(decl) => (r, new Environment(env.scope, Map(r -> decl)))//env)
       case _ => throw new Exception(s"undeclared identifier '$term'")
     }
     else if (r == "@" && arity == 2) {
@@ -356,6 +415,16 @@ object TermTranslation {
     else if (r == ":" && arity == 2) {
       rechild(term.subtrees(1))
     }
+    else if (r == "/" && arity == 2) {
+      val List((fore, fore_env), (back, back_env)) = recurse
+      val sl = combine.slash(env.scope, fore_env(fore), back_env(back))
+      (sl.head, fore_env ++ back_env + (sl.head -> sl))
+    }/*
+    else if (r == "↦" && arity == 2) {
+      val List((va, va_env), (body, body_env)) = recurse
+      val abs = combine.abs(va_env(va), body_env)
+      (abs.head, abs)
+    }*/
     else throw new Exception(s"Cannot translate term '${term.toPretty}'")
   }
   

@@ -10,6 +10,7 @@ import com.microsoft.z3.FuncDecl
 import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
 import com.microsoft.z3.ArithExpr
+import com.microsoft.z3.Z3Exception
 
 
 
@@ -21,7 +22,8 @@ object Z3Sugar {
 
   val ctx = new Context  // main context
 
-  def !!(e: Expr) = e.asInstanceOf[BoolExpr]
+  def !!(e: Expr) = try e.asInstanceOf[BoolExpr]
+    catch { case _: ClassCastException => throw new Z3Exception(s"expected BoolExpr, found '$e'") }
 
   implicit class LogicalConnectives(private val e: Expr) extends AnyVal {
     def |(other: Expr) = ctx mkOr (!!(e), !!(other))

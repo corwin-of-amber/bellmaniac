@@ -11,6 +11,7 @@ import semantics.TypeTranslation.TypedIdentifier
 import semantics.TypeTranslation.TypedIdentifier
 import com.microsoft.z3.BoolExpr
 import com.microsoft.z3.Z3Exception
+import scala.util.Either
 
 
 
@@ -19,14 +20,17 @@ class Z3Gate {
   import AstSugar._
   import Z3Sugar._
   
-  val declarations = new HashMap[Identifier, FuncDecl]
+  val declarations = new HashMap[Identifier, Either[FuncDecl,Expr]]
   val sorts = new HashMap[Identifier, Sort]
   
   val mnemonics = new HashMap[String, Identifier]
   
   /* some built-in declarations */
-  sorts += (S("R") -> ctx.getRealSort)
-  sorts += (S("") -> ctx.getBoolSort)
+  sorts += (S("R") -> ctx.getRealSort,
+            S("") -> ctx.getBoolSort)
+  
+  declarations += (I(true) -> Right(ctx mkBool true),
+                   I(false) -> Right(ctx mkBool false))
   
   // -----------------
   // Declarations part
@@ -47,7 +51,7 @@ class Z3Gate {
     }
     else throw new SmtException(s"cannot handle type '${typ.toPretty}'")
   
-  def declare(symbol: TypedIdentifier): FuncDecl = declare(symbol.untype, symbol.typ)
+  def declare(symbol: TypedIdentifier): Either[FuncDecl, Expr] = declare(symbol.untype, symbol.typ)
   
   def declare(symbol: Identifier, typ: Term) = declarations get symbol match {
     case Some(decl) => 
@@ -57,10 +61,17 @@ class Z3Gate {
         throw new SmtException(s"multiply declared symbol '$symbol' " +
           s"(conflicting types: ${existingType.toPretty}  ~  ${typ.toPretty})")
     case _ => 
-      val decl = func (mne(symbol) :-> (getSorts(typ):_*))
+      val decl = Left(func (mne(symbol) :-> (getSorts(typ):_*)))
       declarations += symbol -> decl
       decl
   }
+  
+  def typeOf(d: Either[FuncDecl, Expr]): Term = d match {
+    case Left(f) => typeOf(f)
+    case Right(e) => typeOf(e)
+  }
+  
+  def typeOf(e: Expr): Term = typeOf(e.getSort)
   
   def typeOf(f: FuncDecl): Term =
     TI("->", f.getDomain.toList map typeOf)(typeOf(f.getRange)).foldRight
@@ -97,6 +108,17 @@ class Z3Gate {
   // Assertions part
   // ---------------
 
+  import AstSugar.TreeBuild
+  
+  implicit class App(private val d: Either[FuncDecl, Expr])  {
+    def apply(args: Expr*) = d match {
+      case Left(f) => f(args:_*)
+      case Right(e) =>
+        if (args.length > 0) throw new SmtException(s"non-function $e used with ${args.length} arguments")
+        else e
+    }
+  }
+  
   def expression(expr: Term): Expr = {
     val r = expr.root
     val arity = expr.subtrees.length
