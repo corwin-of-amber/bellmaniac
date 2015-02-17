@@ -70,6 +70,7 @@ object TypeTranslation {
         if (term.isLeaf) typeOf(term.root) else None
     }
     
+    def typeOf_!(symbol: Identifier) = typeOf(symbol) getOrElse { throw new Scope.TypingException(s"type needed for $symbol") }
     def typeOf_!(term: Term) = typeOf(term) getOrElse { throw new Scope.TypingException(s"type needed for $term") }
         
     def where(facts: Term*) = this + ($_ -> Declaration(List(), facts.toList))
@@ -238,6 +239,9 @@ object TypeTranslation {
     TI("->")((args.toList map (_._2)) :+ (ret.get)).foldRight
   }
   
+  def canonical(scope: Scope, micro: List[MicroCode]): Term =
+    simplify(scope, canonical(micro))
+  
   def simplify(scope: Scope, tpe: Term): Term = {
     if (tpe.root == "∩") {
       val tset = (tpe.unfold.subtrees map (simplify(scope, _)) toSet)
@@ -266,6 +270,10 @@ object TypeTranslation {
     }
     def ∀:(domain: Term, body: (Term,Term,Term) => Term) = qvars(List("x", "y", "z"), domain) match {
       case List(x,y,z) => ∀(x,y,z)(body(x,y,z))
+    }
+
+    def ∀:(xdomain: Term, ydomain: Term, body: (Term,Term) => Term) = qvars(List("x"), xdomain) ++ qvars(List("y"), ydomain) match {
+      case List(x,y) => ∀(x,y)(body(x,y))
     }
   }
 

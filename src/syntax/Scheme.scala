@@ -1,5 +1,7 @@
 package syntax
 
+import syntax.transform.TreeSubstitution
+
 
 trait Scheme {
   type Term = Tree[Identifier]
@@ -7,6 +9,7 @@ trait Scheme {
   def apply(args: Term*): Term
   def apply(args: List[Term]): Term = apply(args:_*)
 }
+
 
 
 object Scheme {
@@ -28,6 +31,15 @@ object Scheme {
   implicit class SimplePredicateSymbol(val P: Term) extends Scheme {
     // note: using P(args:_*) would cause infinite recursion
     def apply(args: Term*) = AstSugar.TreeBuild(P)(args:_*)
+  }
+
+  class Template(val vars: List[Identifier], val template: Term) extends Scheme {
+    import AstSugar._
+    
+    def apply(args: Term*): Term = {
+      val subst = new TreeSubstitution(vars map (T(_)) zip args)
+      subst(template)
+    }
   }
 
 }

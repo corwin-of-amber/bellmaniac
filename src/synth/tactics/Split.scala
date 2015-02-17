@@ -23,9 +23,18 @@ object Split {
   import semantics.Domains._
   import semantics.Prelude._
   
+  object Reflection {
+    case class Consolidated(term: Term) extends Term(term.root, term.subtrees)
+    def isConsolidated(term: Term) = term match {
+      case Consolidated(_) | TypedTerm(_, Consolidated(_)) => true
+      case _ => false
+    }
+  }
+  
   class Reflection(val env: Environment) {
 
     import TypeTranslation.Declaration
+    import Reflection._
 
     val funcSymbols = (for ((_, d) <- env.decl; s <- d.symbols if isFunc(s)) yield s).toSet
     val funcSymbolsU = funcSymbols map {x => x.untype -> x} toMap
@@ -49,20 +58,21 @@ object Split {
     
     val quantified = (for ((k,v) <- env.decl; phi <- v.precondition; q <- collectQuantified(phi)) yield q) toSet
     val consts = (for ((k,v) <- env.decl; phi <- v.precondition; c <- collectConsts(phi)) yield c) toSet
-    
+    /*
     val abstracts = collection.mutable.Map[Identifier,TypedIdentifier]()
     val capsules = collection.mutable.Map[Identifier,TypedIdentifier]()
-    
+    */
     //-----------------
     // Abstraction Part
     //-----------------
     
     import TypePrimitives.rawtype
     
-    def abstype(typ: Term): Term =
+    def abstype(typ: Term): Term = {
       if (isFuncType(typ)) T(env.scope.functypes(rawtype(env.scope, typ)).faux)
       else typ
-   
+    }
+   /*
     def turnAbstract0(decl: Declaration) = {
       val ftype = env.scope.functypes(decl.head.typ)
       val absdecl = ftype.abs(decl)
@@ -143,18 +153,21 @@ object Split {
       new Environment(env.scope, env.decl map { case (k,v) => (k, encapsulate(v)) })
     
     def reflEnv = encapsulate(turnAbstract(env))
-    
+    */
     
     //-------------------
     // Consolidation Part
     //-------------------
+    
+    def consolidate(term: Term) = consolidate1(term)
     
     def consolidate1(term: Term): Term = {
       def preserve(newterm: Term) = term match {
         case typed: TypedTerm => TypedTerm(newterm, typed.typ)
         case _ => newterm
       }
-      preserve(consolidate0(term))
+      if (isConsolidated(term)) term
+      else preserve(consolidate0(term))
     }
     
     def consolidate0(term: Term): Term = {
@@ -175,16 +188,25 @@ object Split {
         val typ = env.typeOf_!(lhs)
         if (typ =~ ("->", 2)) {
           val va = T(TypedIdentifier(new Identifier("$" + lhs.subtrees.length, "variable", new Uid), typ.subtrees(0)))
-          currying = currying + (va.root -> overload(va.root))
+          if (isFuncType(env.typeOf_!(va)))
+            currying += (va.root -> (overload(va.root) take 1))  /* quantified var: has only one version */
           ∀(va)(consolidate1(TypedTerm(lhs :@ va, typ.subtrees(1)) =:= TypedTerm(rhs :@ va, typ.subtrees(1))))
         }
         else if (rhs =~ ("/", 2)) {
-          val TRUE = T(new Identifier(true, "predicate"))
-          val FALSE = T(new Identifier(false, "predicate"))
           val List(trueB, falseB) = rhs.subtrees
-          && (List(TRUE -> (lhs =:= trueB), FALSE -> (lhs =:= falseB)) map consolidate1)
+          val cond = TI("↓")(trueB)
+          && (List(cond -> (lhs =:= trueB), (~cond) -> (lhs =:= falseB)) map consolidate1)
         }
-        else T(term.root, sub)
+        else {
+          (TI("↓")(lhs) <-> TI("↓")(rhs)) & (TI("↓")(lhs) -> (lhs =:= rhs))
+        }
+      }
+      else if (term =~ ("∀", 2)) {
+        term.subtrees(0).root match {
+          case tid: TypedIdentifier => if (isFuncType(tid.typ))
+            currying += (tid -> (overload(tid) take 1))  /* quantified var: has only one version */
+        }
+        T(term.root, sub)
       }
       else T(term.root, sub)
     }
@@ -196,9 +218,9 @@ object Split {
     import TypeTranslation.{MicroCode,In,Out,Check}
     import TypePrimitives.arity
     
-    var currying: Map[Identifier, List[TypedIdentifier]] = Map()
+    val currying = collection.mutable.Map[Identifier, List[TypedIdentifier]]()
     
-    def overload(typ: Term): List[Term] = overload(TypeTranslation.emit(env.scope, typ)) map TypeTranslation.canonical _
+    def overload(typ: Term): List[Term] = overload(TypeTranslation.emit(env.scope, typ)) map (TypeTranslation.canonical(env.scope, _))
     
     def overload(symbol: Identifier): List[TypedIdentifier] = {
       val ns = new Uid
@@ -208,26 +230,88 @@ object Split {
       }
     }
       
-    def overload(micro: List[MicroCode]): List[List[MicroCode]] = List(Out(abstype(TypeTranslation.canonical(micro)))) ::
+    def overload(micro: List[MicroCode]): List[List[MicroCode]] = List(Out(abstype(TypeTranslation.canonical(env.scope, micro)))) ::
       (micro match {
-      case In(typ) :: tail => 
-        val arg = abstype(typ)
-        (overload(tail) map (In(arg) :: _))
-      case _ => Nil
-    })
+        case In(typ) :: tail => 
+          val arg = abstype(typ)
+          (overload(tail) map (In(arg) :: _))
+        case _ => Nil
+      })
 
-    def uncurry(term: Term): Term = currying get term.root match {
+   import syntax.Scheme
+      
+   def uncurry(term: Term): Term = {
+     if (term =~ ("↓",1)) {
+       val atom = term.subtrees(0)
+       val checks = atom.root match {
+         case tid: TypedIdentifier =>
+           val (vars, ret, assertions) = TypeTranslation.contract(tid.untype, TypeTranslation.emit(env.scope, tid.typ))
+           if (assertions.isEmpty) List()
+           else List(new Scheme.Template(vars, &&(assertions))(atom.subtrees))
+         case _ => List()
+       }
+       &&(T(term.root)(uncurry(atom)) :: checks)
+     }
+     else if (term.root == "@") {
+       uncurry1(term.subtrees(0), term.subtrees drop 1)
+     }
+     else uncurry0(term)
+    }
+      
+    def uncurry0(term: Term): Term = currying get term.root match {
       case Some(oset) => oset find (x => arity(x.typ) == term.subtrees.length) match {
         case Some(variant) => T(variant, term.subtrees map uncurry _)
-        case _ => throw new Scope.TypingException(s"no overloaded variant, in '${term toPretty}'")
+        case _ => term.subtrees match {
+          case args :+ last => 
+            val fun = uncurry(T(term.root, args))
+            val typ = env.typeOf_!(fun)
+            env.scope.functypes.values find (_.faux == typ.root) match {
+              case Some(functype) => T(functype.app.head, List(fun, uncurry(last)))
+              case _ => throw new Scope.TypingException(s"unrecognized reflection type '$typ'")
+            }
+          case _ =>
+            throw new Scope.TypingException(s"no overloaded variant, in '${term toPretty}'")
+        }
       }
       case _ => T(term.root, term.subtrees map uncurry _)
     }
       
+    def uncurry1(fun: Term, args: List[Term]) = {
+      val ucfun = uncurry(fun)
+      val typ = env.typeOf_!(ucfun)
+      env.scope.functypes.values find (_.faux == typ.root) match {
+        case Some(functype) => T(functype.app.head, ucfun :: (args map uncurry))
+        case _ => throw new Scope.TypingException(s"unrecognized reflection type '$typ'")
+      }
+    }
     
-    //--------------
-    // Simplify Part
-    //--------------
+    //-------------
+    // Support Part
+    //-------------
+    
+    val supports = collection.mutable.Map[Identifier, TypedIdentifier]()
+    
+    def supportType(typ: Term): Term =
+      if (typ.root == "->") T(typ.root, (typ.subtrees dropRight 1) :+ supportType(typ.subtrees.last))
+      else B
+    
+    def support(symbol: Identifier) = supports get symbol match {
+      case Some(supp) => supp
+      case _ =>
+        val supp = TypedIdentifier(new Identifier(s"|${symbol.literal}|", "predicate", new Uid),
+                                   supportType(env.typeOf_!(symbol)))
+        supports += symbol -> supp
+        supp
+    }
+    
+    def support(term: Term): Term =
+      if (term =~ ("↓",1)) {
+        val atom = term.subtrees(0)
+        T(support(atom.root), atom.subtrees map support)
+      }
+      else
+        T(term.root, term.subtrees map support)
+    
   }
   
   def main(args: Array[String]): Unit = {
@@ -244,7 +328,9 @@ object Split {
     val x = TV("x")
     val i = TV("i")
 
-    val env = (TypeTranslation.subsorts(scope) where (compl(J)(J0, J1))) ++
+    val prenv = (TypeTranslation.subsorts(scope) where (compl(J)(J0, J1)))
+    
+    val env = prenv ++
       TypeTranslation.decl(scope, 
           Map(f ~> ((J -> R) -> (J -> R)),
               c ~> ((J0 -> R) -> (J1 -> R)),
@@ -261,27 +347,43 @@ object Split {
     // need to prove
     // c x = c (f x)
     val Ijr = T(TypedIdentifier(I("I"), (J->R) -> (J->R)))
+    val xj0 = T(TypedIdentifier(I("x|J0"), (J -> R)))
     val cx = T(TypedIdentifier(I("cx"), J -> R))
     val fx = T(TypedIdentifier(I("fx"), J -> R))
+    val fxj0 = T(TypedIdentifier(I("fx|J0"), J -> R))
     val cfx = T(TypedIdentifier(I("cfx"), J -> R))
+    
+    import TypeTranslation.TypingSugar._
+    import Split.Reflection.Consolidated
     
     val assumptions = List(
         Ijr =:= { val x = $v ; T(x) ↦ T(x) },
         f =:= TypedTerm(c /: Ijr, (J->R) -> (J->R)),
-        cx =:= TypedTerm(c :@ x, J -> R),
+        xj0 =:= T(TypedIdentifier(x.root, J0 -> R)),
+        cx =:= TypedTerm(c :@ xj0, J -> R),
         fx =:= TypedTerm(f :@ x, J -> R),
-        cfx =:= TypedTerm(c :@ fx, J -> R)
-        )
+        fxj0 =:= T(TypedIdentifier(fx.root, J0 -> R)),
+        cfx =:= TypedTerm(c :@ fxj0, J -> R),
+        
+        // (these should be autogenerated by TypeTranslation / Reflection)
+        ∀:(J, i => J0(i) <-> ~J1(i)),
+        ∀:(J -> R, J, (x, i) => (TI("↓")(c(x, i)) -> J1(i))),     // c :: (J0 -> R) -> J1 -> R
+        // currying
+        ∀:(J, (i) => (TypedTerm(fxj0(i), R) =:= TypedTerm(fxj0 :@ i, Consolidated(R)))),
+        ∀:(J, (i) => (TypedTerm(xj0(i), R) =:= TypedTerm(xj0 :@ i, Consolidated(R)))),
+        ∀:(J, (i) => (TypedTerm(x(i), R) =:= TypedTerm(x :@ i, Consolidated(R)))),
+        ∀:(J->R, (x,y) => ∀:(J, i => TypedTerm(x(i), R) =:= TypedTerm(y(i), R)) -> Consolidated(x =:= y))
+      )
     
     val goal = (cx =:= cfx)
         
-    val symbols = List(Ijr, c, f, x, cx, fx, cfx)
+    val symbols = List(Ijr, c, f, x, xj0, cx, fx, fxj0, cfx)
     
     import TypeTranslation.{UntypedTerm}
     
     val reflect = new Reflection(env)
     
-    reflect.currying = symbols map (symbol => (symbol.root, reflect.overload(symbol.root))) toMap
+    reflect.currying ++= symbols map (symbol => (symbol.root, reflect.overload(symbol.root))) toMap
     
     for (symbol <- symbols) {
       println(s"${symbol.untype} :: ${env.typeOf(symbol.root).get toPretty}")
@@ -292,16 +394,35 @@ object Split {
     println("· " * 25)
     
     
-    val z3g = new Z3Gate
+    val (z3g, _) = TypeTranslation toSmt List(prenv) // new Z3Gate
     
-    for (atn <- assumptions) {
-      println(atn.untype toPretty)
-      val atn_c = reflect.consolidate1(atn)
-      println(s"  ${atn_c toPretty}")
-      val atn_u = reflect.uncurry(atn_c)
-      println(s"  ${atn_u toPretty}")
-      z3g.formula(atn_u)
-    }
+    val fo_assumptions =
+      for (atn <- assumptions) yield {
+        println(atn.untype toPretty)
+        val atn_c = reflect.consolidate(atn)
+        println(s"  ${atn_c toPretty}")
+        val atn_u = reflect.uncurry(atn_c)
+        println(s"  ${atn_u toPretty}")
+        val atn_s = reflect.support(atn_u)
+        println(s"  ${atn_s toPretty}")
+        atn_s
+      } 
+    
+    import syntax.Piping._
+    val fo_goal = goal |> reflect.consolidate |> reflect.uncurry |> reflect.support
+    
+    println("-" * 60)
+    
+    
+    
+    val status =
+      z3g.solveAndPrint(
+        for (atn <- fo_assumptions) yield {
+          println(s" * ${atn.untype toPretty}")
+          z3g.formula(atn)
+        },
+        List(z3g.formula(fo_goal)))
+        
     
     /*
     val expr1 = (x :: (J0 -> R))
