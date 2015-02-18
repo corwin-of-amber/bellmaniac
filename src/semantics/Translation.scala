@@ -266,22 +266,30 @@ object TypeTranslation {
   // DSL part
   // --------
   object TypingSugar {
+    val numeral: PartialFunction[Int, String] = { case x: Int => "$"+x }
+    val greek = "αβγδεζηθικλμνξοπρστυφχψω".toList orElse numeral
+    
     def qvars(names: List[String], typ: Term) = {
       val ns = new Namespace
       for (name <- names) yield T(TypedIdentifier( new Identifier(name, "variable", ns), typ ))
     }
+    def qvars(types: List[Term]) = {
+      val ns = new Namespace
+      for ((typ, i) <- types.zipWithIndex)
+        yield T(TypedIdentifier( new Identifier(greek(i), "variable", ns), typ ))
+    }
     
-    def ∀:(domain: Term, body: Term => Term) = qvars(List("x"), domain) match {
+    def ∀:(domain: Term, body: Term => Term) = qvars(List(domain)) match {
       case List(x) => ∀(x)(body(x))
     }
-    def ∀:(domain: Term, body: (Term,Term) => Term) = qvars(List("x", "y"), domain) match {
+    def ∀:(domain: Term, body: (Term,Term) => Term) = qvars(List(domain, domain)) match {
       case List(x,y) => ∀(x,y)(body(x,y))
     }
-    def ∀:(domain: Term, body: (Term,Term,Term) => Term) = qvars(List("x", "y", "z"), domain) match {
+    def ∀:(domain: Term, body: (Term,Term,Term) => Term) = qvars(List(domain, domain, domain)) match {
       case List(x,y,z) => ∀(x,y,z)(body(x,y,z))
     }
 
-    def ∀:(xdomain: Term, ydomain: Term, body: (Term,Term) => Term) = qvars(List("x"), xdomain) ++ qvars(List("y"), ydomain) match {
+    def ∀:(xdomain: Term, ydomain: Term, body: (Term,Term) => Term) = qvars(List(xdomain, ydomain)) match {
       case List(x,y) => ∀(x,y)(body(x,y))
     }
   }
