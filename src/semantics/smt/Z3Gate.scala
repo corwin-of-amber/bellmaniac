@@ -165,10 +165,12 @@ class Z3Gate {
       case z: Z3Exception => throw new SmtException(z.toString()).at(term)
     }
   
-  def quantifiedVar(va: Term) = {
-      if (va.isLeaf)
-        declare(va.root.asInstanceOf[TypedIdentifier])() 
-      else throw new SmtException(s"not a valid variable: '${va.toPretty}'")
+  def quantifiedVar(va: Term) = (va.isLeaf, va.root) match {
+    case (true, tid@TypedIdentifier(_, typ)) =>
+      if (typ.isLeaf) declare(tid)() 
+      else throw new SmtNotFirstOrder(s"high-order quantification: '${va.toPretty}'")
+    case _ =>
+      throw new SmtException(s"not a valid variable: '${va.toPretty}'")
   }
   
   def fork[R](op: => R) = {

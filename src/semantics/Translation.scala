@@ -1,6 +1,6 @@
 package semantics
 
-import syntax.{Tree,Identifier,AstSugar}
+import syntax.{Tree,Identifier,AstSugar,Scheme}
 import scala.collection.mutable.ArrayBuffer
 import semantics.smt.Z3Gate
 
@@ -119,6 +119,15 @@ object TypeTranslation {
     assert(ret != null)
     (vars.toList, ret, assertions.toList)
   }
+  
+  def checks(symbol: Identifier, micro: List[MicroCode], args: List[Term]) = {
+    val (vars, ret, assertions) = contract(symbol, micro)
+    for (assertion <- assertions)
+      yield new Scheme.Template(vars, assertion)(args)
+  }
+  
+  def checks(scope: Scope, symbol: TypedIdentifier, args: List[Term]): List[Term] = 
+    checks(symbol.untype, emit(scope, symbol.typ), args)
   
   def subsorts(scope: Scope) = E(scope, {
     import TypingSugar._

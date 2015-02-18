@@ -77,6 +77,8 @@ object Z3Sugar {
         case Status.UNKNOWN => UNKNOWN
       }
     }
+    
+    def toPretty(status: Value) = status.toString.toLowerCase
   }
   
   import ProverStatus._
