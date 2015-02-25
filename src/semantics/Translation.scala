@@ -245,6 +245,7 @@ object TypeTranslation {
             args += ((arity, TI("∩")(TI("x")(popped.toList map (_._2)).foldLeft, pred)))
         }
     }
+    if (ret.isEmpty) throw new Scope.TypingException(s"return missing: $micro")
     TI("->")((args.toList map (_._2)) :+ (ret.get)).foldRight
   }
   

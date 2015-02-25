@@ -40,7 +40,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   import TypePrimitives.rawtype
   
   def abstype(typ: Term): Term = {
-    if (isFuncType(typ)) T(env.scope.functypes(rawtype(env.scope, typ)).faux)
+    if (isFuncType(typ)) T(env.scope.declFunctionType(rawtype(env.scope, typ)).faux)
     else typ
   }
 
@@ -54,6 +54,10 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     case _ => newterm
   }
   
+  def isFuncTypeExt(typ: Term) = {
+    isFuncType(typ) || (typ.isLeaf && (env.scope.functypes.values exists (_.faux == typ.root)))
+  }
+    
   def equality(typ: Term) = ∀:(typ, (x,y) => (x =:= y) -> Consolidated(x =:= y))
 
   def equality: List[Term] = env.scope.functypes.keys map equality toList 
@@ -91,7 +95,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
         consolidate1(T(fun.root, fun.subtrees map (_ :@ arg)))
       }
       else if (fun =~ ("↦", 2)) {    /* beta reduction */
-        consolidate1(LambdaCalculus.beta(fun, arg))
+        consolidate1(TypedLambdaCalculus.beta(fun, arg))
       }
       else throw new Exception(s"application term cannot be consolidated: '${fun toPretty} @ ${arg toPretty}'")
     }
@@ -102,25 +106,41 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
         val va = T(TypedIdentifier(new Identifier(greek(lhs.subtrees.length), "variable", new Uid), typ.subtrees(0)))
         if (isFuncType(env.typeOf_!(va)))
           currying += (va.root -> (overload(va.root) take 1))  /* quantified var: has only one version */
+        alwaysDefined += va.root
         ∀(va)(consolidate1(TypedTerm(lhs :@ va, typ.subtrees(1)) =:= TypedTerm(rhs :@ va, typ.subtrees(1))))
       }
       else if (rhs =~ ("/", 2)) {
         val List(trueB, falseB) = rhs.subtrees
-        val cond = TI("↓")(trueB)
+        val cond = ↓?(trueB)
         && (List(cond -> (lhs =:= trueB), (~cond) -> (lhs =:= falseB)) map consolidate1)
       }
       else {
-        (TI("↓")(lhs) <-> TI("↓")(rhs)) & (TI("↓")(lhs) -> (lhs =:= rhs))
+        (↓?(lhs) <-> ↓?(rhs)) & (TI("↓")(lhs) -> (lhs =:= rhs))
       }
+    }
+    else if (term =~ ("↦", 2)) {
+      term
     }
     else if (term =~ ("∀", 2)) {
       term.subtrees(0).root match {
         case tid: TypedIdentifier => if (isFuncType(tid.typ))
           currying += (tid -> (overload(tid) take 1))  /* quantified var: has only one version */
+          alwaysDefined += tid
       }
       T(term.root, sub)
     }
+    else if (term =~ ("↓",1)) {
+      ↓?(sub(0))
+    }
     else T(term.root, sub)
+  }
+  
+  import Prelude.TRUE
+  
+  def ↓? (term: Term): Term = {
+    if (env.typeOf(term) exists isFuncTypeExt) TRUE
+    else
+      &&( TI("↓")(term) :: (term.subtrees map ↓? filter (_ != TRUE)) )
   }
   
   //--------------
@@ -141,7 +161,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
           case tid: TypedIdentifier => TypeTranslation.checks(env.scope, tid, atom.subtrees)
           case _ => List()
         }
-      &&(T(term.root)(uncurry(atom)) :: checks)
+      &&(T(term.root)(uncurry(atom)) :: (checks map uncurry))
     }
     else if (term.root == "@") {
       uncurry1(term.subtrees(0), term.subtrees drop 1)
@@ -170,7 +190,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   
   def overload(symbol: Identifier): List[TypedIdentifier] = {
     val ns = new Uid
-    val typ = env.typeOf(symbol).get
+    val typ = env.typeOf_!(symbol)
     for (otyp <- overload(typ)) yield {
       TypedIdentifier(new Identifier(s"${symbol.literal}[${arity(otyp)}]", "function", ns), otyp)
     }
@@ -209,6 +229,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   //-------------
   
   val supports = collection.mutable.Map[Identifier, TypedIdentifier]()
+  val alwaysDefined = collection.mutable.Set[Identifier]()
   
   def supportType(typ: Term): Term =
     if (typ.root == "->") T(typ.root, (typ.subtrees dropRight 1) :+ supportType(typ.subtrees.last))
@@ -226,7 +247,8 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   def support(term: Term): Term =
     if (term =~ ("↓",1)) {
       val atom = term.subtrees(0)
-      T(support(atom.root), atom.subtrees map support)
+      if (alwaysDefined contains atom.root) TI(true)
+      else T(support(atom.root), atom.subtrees map support)
     }
     else
       T(term.root, term.subtrees map support)
@@ -249,10 +271,10 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
       println(s"  ${phi_u toPretty}")
       val phi_s = support(phi_u)
       println(s"  ${phi_s toPretty}")
-      phi_s
+      FolSimplify.simplify(phi_s)
     }
-    val fo_assumptions = (prelude ++ assumptions) map reflect
-  
+    val fo_assumptions = (assumptions ++ prelude) map reflect filter (_ != TRUE)
+    
     val fo_goals = goals map reflect
   
     println("-" * 60)

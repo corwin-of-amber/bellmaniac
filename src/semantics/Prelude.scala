@@ -10,6 +10,8 @@ object Prelude {
   import TypeTranslation.TypingSugar._
   
   val B = T(S(""))
+  val TRUE = TI(true)
+  val FALSE = TI(false)
 
   val ∩ = TI("∩")
   def min = TI("min")

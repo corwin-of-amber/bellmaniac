@@ -27,7 +27,7 @@ object TypePrimitives {
     TypeTranslation.canonical(rawtype(scope, TypeTranslation.emit(scope, typ)))
     
   /**
-   * Counts the arguments in a function type.
+   * Counts the arguments of a function type.
    */
   def arity(micro: List[MicroCode]) = micro count { case In(_) => true case _ => false}
 
@@ -35,6 +35,22 @@ object TypePrimitives {
     if (typ.root == "->") (typ.subtrees.length - 1) + arity(typ.subtrees.last)
     else 0
   
+  /**
+   * Retrieves the argument types of a (raw) function type.
+   */
+  def args(micro: List[MicroCode]) = micro flatMap { case In(typ) => Some(typ) case _ => None}
+
+  def args(typ: Term): List[Term] =
+    if (typ.root == "->") (typ.subtrees dropRight 1) ++ args(typ.subtrees.last)
+    else List()
+    
+  /**
+   * Retrieves the return type of a function type.
+   */
+  def ret(typ: Term): Term =
+    if (typ.root == "->") ret(typ.subtrees.last)
+    else typ
+    
   /**
    * Computes an intersection type in MicroCode form.
    */
@@ -60,6 +76,11 @@ object TypePrimitives {
     intersection(emits) |> canonical |> (simplify(scope, _))
   }
   
+  def curry(typ: Term)(implicit scope: Scope): (Term, Term) = {
+    val (arg, ret) = curry(emit(scope, typ))
+    (canonical(arg), canonical(ret))
+  }
+  
   def curry(micro: List[MicroCode])(implicit scope: Scope): (List[MicroCode], List[MicroCode]) = {
     import syntax.Piping._
     def shift1[A](ab: (List[A], List[A])) = (ab._1 :+ ab._2.head, ab._2.tail)
@@ -77,7 +98,7 @@ object TypePrimitives {
   private def curriedArg(micro: List[MicroCode])(implicit scope: Scope) = {
     micro match {
       case In(tpe) :: tail =>
-        if (tpe.isLeaf) micro
+        if (tpe.isLeaf) Out(tpe) :: tail
         else if (!tail.isEmpty) throw new CurryingException(s"cannot curry ${micro}: high-order checks")
         else emit(scope, tpe)
       case _ =>
@@ -93,7 +114,7 @@ object TypePrimitives {
 object LambdaCalculus {
   
   import AstSugar._
-
+  
   def beta(va: Identifier, body: Term, arg: Term): Term = {
     if (body.isLeaf && body.root == va) arg
     else T(body.root, body.subtrees map (x => beta(va, x, arg)))
@@ -106,3 +127,77 @@ object LambdaCalculus {
     
 }
 
+object TypedLambdaCalculus {
+
+  import AstSugar._
+  import TypeTranslation.TypedTerm
+  
+  def preserve(term: Term, newterm: Term) = term match {
+    case typed: TypedTerm => TypedTerm(newterm, typed.typ)
+    case _ => newterm
+  }
+
+  def beta(va: Identifier, body: Term, arg: Term): Term = {
+    if (body.isLeaf && body.root == va) arg
+    else preserve(body, T(body.root, body.subtrees map (x => beta(va, x, arg))))
+  }
+  
+  def beta(fun: Term, arg: Term): Term = {
+    assume(fun =~ ("↦", 2) && fun.subtrees(0).isLeaf)
+    beta(fun.subtrees(0).root, fun.subtrees(1), arg)
+  }
+
+}
+
+
+/**
+ * Used to simplify first-order formulas using standard identities.
+ * E.g. x = x     --->  true
+ *      P & true  --->  P
+ */
+object FolSimplify {
+  
+  import AstSugar._
+  import Prelude.{TRUE,FALSE}
+  
+  def simplify(phi: Term): Term = {
+    val sub = phi.subtrees map simplify
+    if (phi.root == "&") {
+      val nontrue = sub filter (_ != TRUE)
+      nontrue match {
+        case Nil => TRUE
+        case List(x) => x
+        case _ => T(phi.root, nontrue)
+      }
+    }
+    else if (phi.root == "|") {
+      val nonfalse = sub filter (_ != FALSE)
+      nonfalse match {
+        case Nil => FALSE
+        case List(x) => x
+        case _ => T(phi.root, nonfalse)
+      }
+    }
+    else if (phi =~ ("<->", 2) || phi =~ ("=", 2)) {
+      if (sub(0) == sub(1)) TRUE
+      else T(phi.root, sub)
+    }
+    else if (phi =~ ("->", 2)) {
+      if (sub(0) == TRUE || sub(1) == TRUE) sub(1)
+      else if (sub(0) == FALSE) TRUE
+      else if (sub(1) == FALSE) ~(sub(0))
+      else T(phi.root, sub)
+    }
+    else if (phi =~ ("~", 1)) {
+      if (sub(0) == TRUE) FALSE
+      else if (sub(0) == FALSE) TRUE
+      else T(phi.root, sub)
+    }
+    else if (phi.root == "∀") {
+      if (sub.last == TRUE) TRUE
+      else T(phi.root, sub)
+    }
+    else T(phi.root, sub)
+  }
+  
+}

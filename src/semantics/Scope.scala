@@ -138,6 +138,16 @@ class Scope {
   val functypes = collection.mutable.Map[Term, FunctionType]()
   //var signature = Map[Identifier,Term]()
   
+  def declFunctionType(rawType: Term): FunctionType = {
+    def arg(e: Term) = if (e.isLeaf) e.root else declFunctionType(e).faux
+    functypes get rawType match {
+      case Some(functype) => functype
+      case _ =>
+        val functype = new FunctionType(TypePrimitives.args(rawType) map arg, arg(TypePrimitives.ret(rawType)))
+        functypes += ((rawType, functype))
+        functype
+    }
+  }
 }
 
 object Scope {

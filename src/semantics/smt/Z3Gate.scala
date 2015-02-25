@@ -23,7 +23,7 @@ class Z3Gate {
   val declarations = new HashMap[Identifier, Either[FuncDecl,Expr]]
   val sorts = new HashMap[Identifier, Sort]
   
-  val mnemonics = new HashMap[String, Identifier]
+  val mnemonics = new HashMap[Identifier, String]//, Identifier]
   
   /* some built-in declarations */
   sorts += (S("R") -> ctx.getRealSort,
@@ -87,12 +87,12 @@ class Z3Gate {
    * identifiers get distinct mnemonics (even if they have the same
    * literal).
    */
-  def mne(id: Identifier) = mnemonics find (_._2 == id) match {
-    case Some(x) => x._1
+  def mne(id: Identifier) = mnemonics get id /* (_._2 == id)*/ match {
+    case Some(x) => x
     case _ =>
       val lit = id.literal.toString
-      val newMne = (lit #:: (nat map (lit + _))) find (! mnemonics.contains(_))
-      mnemonics += newMne.get -> id
+      val newMne = (lit #:: (nat map (lit + _))) find (x => ! mnemonics.exists (_._2 == x))
+      mnemonics += id -> newMne.get
       newMne.get
   }
 
@@ -125,8 +125,8 @@ class Z3Gate {
     def recurse = expr.subtrees map expression
     if (r == "forall" || r == "∀") {
       val (vas :+ body) = expr.unfoldRight.subtrees
-      fork {
-        val vas_decl = vas map quantifiedVar 
+      val vas_decl = vas map quantifiedVar 
+      fork(vas map (_.root)) {
         forall(vas_decl:_*)(expression(body))
       }
     }
@@ -173,10 +173,11 @@ class Z3Gate {
       throw new SmtException(s"not a valid variable: '${va.toPretty}'")
   }
   
-  def fork[R](op: => R) = {
-    val checkpoint = (declarations.clone, mnemonics.clone)
-    def rollback = { declarations.clear ; declarations ++= checkpoint._1
-                     mnemonics.clear ; mnemonics ++= checkpoint._2 }
+  def fork[R](retract: Iterable[Identifier])(op: => R) = {
+    //val checkpoint = (declarations.clone, mnemonics.clone)
+    def rollback = { declarations --= retract ; mnemonics --= retract }
+    //{ declarations.clear ; declarations ++= checkpoint._1
+    //                 mnemonics.clear ; mnemonics ++= checkpoint._2 }
     try op
     finally rollback
   }

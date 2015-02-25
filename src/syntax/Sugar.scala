@@ -81,6 +81,7 @@ object AstSugar {
   class Uid {}
   def $_ = new Identifier("_", "placeholder", new Uid)
   def $v = new Identifier("?", "variable", new Uid)
+  def $v(name: String) = new Identifier(name, "variable", new Uid)
       
 }
 
