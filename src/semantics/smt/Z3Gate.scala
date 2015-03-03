@@ -26,7 +26,8 @@ class Z3Gate {
   val mnemonics = new HashMap[Identifier, String]//, Identifier]
   
   /* some built-in declarations */
-  sorts += (S("R") -> ctx.getRealSort,
+  sorts += (//S("R") -> ctx.getRealSort,
+            //S("N") -> ctx.getIntSort,
             S("") -> ctx.getBoolSort)
   
   declarations += (I(true) -> Right(ctx mkBool true),

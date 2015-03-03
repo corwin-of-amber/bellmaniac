@@ -1,6 +1,7 @@
 package semantics
 
 import syntax.Scheme
+import syntax.Identifier
 
 
 
@@ -9,7 +10,8 @@ object Prelude {
   import syntax.AstSugar._
   import TypeTranslation.TypingSugar._
   
-  val B = T(S(""))
+  val B = TS("")
+  val N = TS("N")
   val TRUE = TI(true)
   val FALSE = TI(false)
 
@@ -20,6 +22,8 @@ object Prelude {
   def nil = TI("nil")
   def cons = TI("cons")
 
+  def ? = T(new Identifier("?", "type variable", new Uid))
+    
   def transitive(elType: Term)(r: Term) = 
     ∀:(elType, (x,y,z) => (r(x,y) ->: r(y,z) ->: r(x,z)))
   

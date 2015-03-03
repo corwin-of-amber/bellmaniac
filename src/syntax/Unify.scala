@@ -3,6 +3,8 @@ package syntax
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.ListMap
 import semantics.Namespace
+import java.util.logging.Logger
+import java.util.logging.Level
 
 
 
@@ -169,18 +171,21 @@ object Unify {
   }
   
   def mgu(x: Map[Identifier, Tree[Identifier]], y: Map[Identifier, Tree[Identifier]])(implicit resolve: Resolve) = {
-    println(s"mgu   $x   ~   $y")
+    log.info(s"mgu   $x   ~   $y")
     val uni = new Unify
     uni.makeMgu(x, y)
     uni.canonicalize
   }
 
   // does not canonicalize
-  def mgu0(x: Map[Identifier, Tree[Identifier]], y: Map[Identifier, Tree[Identifier]])(implicit resolve: Resolve) = {
-    println(s"mgu   $x   ~   $y")
+  def mgu0(x: Map[Identifier, Tree[Identifier]], y: Map[Identifier, Tree[Identifier]], verbose: Boolean=false)(implicit resolve: Resolve) = {
+    log.info(s"mgu   $x   ~   $y")
     val uni = new Unify
     uni.makeMgu(x, y)
     uni.assignment.toMap
   }
+  
+  val log = Logger.getLogger("Unify")
+  log.setLevel(Level.OFF)
 
 }

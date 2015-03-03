@@ -29,6 +29,10 @@ class Binding(val left: Set[Identifier], val right: Set[Identifier]) {
   def bind(id: Identifier) = new Identifier(id.literal, id.kind, ns = new Binder)
   
   def bind(term: Term, bound: Map[Identifier, Identifier] = Map.empty): Term = {
+    TypedLambdaCalculus.preserve(term, bind0(term, bound))
+  }
+  
+  def bind0(term: Term, bound: Map[Identifier, Identifier] = Map.empty): Term = {
     if (term.isLeaf)
       bound get term.root match {
         case Some(b) => new Tree(b)

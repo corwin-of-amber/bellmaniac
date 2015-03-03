@@ -13,6 +13,7 @@ import semantics.TypeTranslation
 import semantics.Id
 import syntax.AstSugar
 import semantics.TypePrimitives
+import semantics.Prelude
 
 
 
@@ -113,7 +114,7 @@ object Shrink {
 
     val program = inline( prebind(Paren.tree) )
     
-    val (vassign, tassign) = TypeInference.infer(Paren.scope, program)
+    val (vassign, tassign) = TypeInference.infer(Paren.scope, program, Map())
     
     println("-" * 80)
 
@@ -132,6 +133,7 @@ object Shrink {
     println("=" * 80)
     
     import Paren._
+    import Prelude.?
           
     // Current typing is:
     //   θ :: ((J x J) ∩ <) -> R

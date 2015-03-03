@@ -5,6 +5,7 @@ import scala.util.hashing.Hashing
 class Tree[T] (val root: T, val subtrees: List[Tree[T]] = List()) {
   
   def isLeaf = subtrees.isEmpty
+  def leaf = { assume(isLeaf); root }
   
   override def equals(other: Any) = other match {
     case other: Tree[T] => other.root == root && other.subtrees == subtrees
@@ -20,6 +21,8 @@ class Tree[T] (val root: T, val subtrees: List[Tree[T]] = List()) {
       if (l.isEmpty) Stream.empty else l ++ tbf(l flatMap (_.subtrees))
     tbf(Stream(this))
   }
+  
+  override def clone = map (x => x)
   
   def map[S](op: T => S) : Tree[S] =
     new Tree(op(root), subtrees map (_ map op))

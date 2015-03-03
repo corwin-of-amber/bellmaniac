@@ -19,6 +19,12 @@ object Domains {
   
   implicit class SubsortAssoc(private val sup: Identifier) extends AnyVal {
     def :<: (sub: Identifier) = new Extends(sub, sup)
+    def :<: (sub: Tree[Identifier]) = new Extends(sub.leaf, sup)
+  }
+
+  implicit class SubsortAssocT(private val sup: Tree[Identifier]) extends AnyVal {
+    def :<: (sub: Identifier) = new Extends(sub, sup.leaf)
+    def :<: (sub: Tree[Identifier]) = new Extends(sub.leaf, sup.leaf)
   }
 }
 
@@ -39,6 +45,7 @@ class Domains {
   def declare(ext: Extends) {
     findSortHie(ext.sup) match {
       case Some(hie) =>
+        /**/ assert(ext.sub.kind == "set") /**/
         val hie0 = if (hie.subtrees exists (_.root == ⊥)) T(hie.root)(T(ext.sub)(hei_⊥))
           else hie(T(ext.sub)(hei_⊥))
         hierarchy = new TreeSubstitution[Identifier](List(hie -> hie0))(hierarchy)
@@ -47,9 +54,9 @@ class Domains {
     }
   }
 
-  def declare(id: Identifier) {
-    declare(id :<: ⊤)
-  }
+  def declare(id: Identifier) { declare(id :<: ⊤) }
+  
+  def declare(id: Term) { declare(id.leaf) }
   
   def contains(sort: Identifier) = findSortHie(sort).isDefined
   
@@ -77,20 +84,26 @@ class Domains {
   }
   
   def subs(sort: Identifier) = findSortHie(sort) match {
-    case Some(hie) => hie.bfs map (_.root)
+    case Some(hie) => hie.bfs map (_.root) toList
     case None => throw new TypingException(s"undefined sort '$sort'")
   }
   
+  def <=(sort1: Identifier, sort2: Identifier) = subs(sort2) contains sort1
+  def >=(sort1: Identifier, sort2: Identifier) = <=(sort2, sort1)
+  
+  def max(sorts: Iterable[Identifier]) = sorts.find (x => sorts.forall (<=(_, x)))
+  def min(sorts: Iterable[Identifier]) = sorts.find (x => sorts.forall (>=(_, x)))
+  
   def join(sort1: Identifier, sort2: Identifier) = {
     val (supers1, supers2) = (supers(sort1), supers(sort2))
-    supers1.reverseIterator find supers2.contains _ getOrElse 
-      { assert(false, s"$sort1 and $sort2 do not have any common supertype!") ; null }
+    min(supers1 intersect supers2) getOrElse
+      { assert(false, s"$sort1 and $sort2 do not have a minimal supertype!") ; null }
   }
 
   def meet(sort1: Identifier, sort2: Identifier) = {
     val (subs1, subs2) = (subs(sort1), subs(sort2))
-    subs1 find subs2.contains _ getOrElse
-      { assert(false, s"$sort1 and $sort2 do not have any common subtype!") ; null }
+    max(subs1 intersect subs2) getOrElse
+      { assert(false, s"$sort1 and $sort2 do not have a maximal subtype!") ; null }
   }
   
 }

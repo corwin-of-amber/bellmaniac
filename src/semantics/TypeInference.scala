@@ -13,6 +13,8 @@ import syntax.Resolve
 import syntax.Unify.CannotUnify
 import semantics.Scope.TypingException
 import report.console.NestedListTextFormat
+import java.util.logging.Logger
+import java.util.logging.Level
 
 
 class Namespace[Name](cmp: (Name,Name) => Boolean = null) {
@@ -159,12 +161,13 @@ object TypeInference {
   }
     
   val POLYMORPHIC = {
-    import Prelude.{min,cons,nil}
+    import Prelude.{min,cons,nil,N,B}
     def ? = T($v)
     def __[A](gen: => A) = (() => gen)
     Map(min ~>  __ { val b = ?; (? -> b) -> b },                    // min :: ('a -> 'b) -> 'b
-        cons ~> __ { val a, b = ?; b -> ((a -> b) -> (a -> b)) },   // cons :: 'b -> ('a -> 'b) -> 'a -> 'b
-        nil ~>  __ { ? -> ? })                                      // nil :: 'a -> 'b
+        cons ~> __ { val b = ?; b -> ((N -> b) -> (N -> b)) },      // cons :: 'b -> (N -> 'b) -> N -> 'b
+        nil ~>  __ { ? -> ? },                                      // nil :: 'a -> 'b
+        V("=") -> __ { val a = ?; a -> (a -> B) })
   }
   
   /**
@@ -173,12 +176,17 @@ object TypeInference {
    */  
   class CoarseGrained(resolve: ResolveLattice) {
     
+    import TypeTranslation.TypedTerm
+    
     val ns = new Namespace[Id[Tree[Identifier]]]
     
-    def infer(expr: Tree[Identifier]) = {
+    def infer(expr: Tree[Identifier], vassign: Map[Identifier, Tree[Identifier]]=Map()) = {
       val (rootvar, assign) = infer0(expr)
+      implicit val join = resolve.join
       // - canonicalize result
       val u = new Unify
+      u digest vassign
+      //u digest (expr.nodes flatMap { case typed: TypedTerm => Some(NV(typed) -> typed.typ) case _ => None } toMap)
       u digest assign
       (rootvar, u.canonicalize filter (_._1.ns match { case _:AbsTypeUid=>false case _=>true }))
     }
@@ -200,7 +208,7 @@ object TypeInference {
         (freshvar, mgu)
       }
       else if (expr.root == "@") {
-        val children = for (s <- expr.subtrees) yield infer0(s)
+        val children = expr.subtrees map infer0
         /**/ assume(children.length == 2) /**/
         val (f, a) = (children get 0, children get 1)
         val t1 = a._1; val t2 = freshvar
@@ -210,7 +218,7 @@ object TypeInference {
         (t2, mgu)
       }
       else if (expr.root == "↦") {
-        val children = for (s <- expr.subtrees) yield infer0(s)
+        val children = expr.subtrees map infer0
         /**/ assume(children.length == 2) /**/
         val List(v, e) = children
         val t1 = v._1; val t2 = e._1
@@ -259,10 +267,19 @@ object TypeInference {
         implicit val join = resolve.join;
         (freshvar, Unify.mgu0(f._2, Map(freshvar -> T(f._1), f._1 -> TI("->")(T(domainvar), T(domainvar)))))
       }
+      else if (expr.root == "=") {
+        val tp = $v
+        val children = expr.subtrees map infer0 map { case (x,y) => y + (tp -> T(x)) }
+        implicit val join = resolve.join;
+        val mgu = (Map(freshvar -> T(S(""))) +: children) reduce ((x, y) => Unify.mgu0(x,y))
+        (freshvar, mgu)
+      }
       else
         throw new Exception(s"don't quite know what to do with '${expr.root}'  (in $expr)")
     }
     
+    def NV(index: Int) = new Identifier(index, "variable", ns)
+    def NV(term: Term): Identifier = NV(ns.declare(term))
   }
   
   /**
@@ -362,7 +379,7 @@ object TypeInference {
       /**/ assume(!terms.isEmpty) /**/
       val force = reinforce(terms.toList)(resolve.meet)
       /**/ assert(force.length == terms.length) /**/
-      _printNicely(node, terms, force)
+      if (log.isLoggable(Level.INFO)) _printNicely(node, terms, force)
       force
     }
     
@@ -376,7 +393,7 @@ object TypeInference {
       else
         println(s"      => ${force map (_.toPretty)}")
     }
-    
+
     // -------------
     // Mutation part
     // -------------
@@ -455,19 +472,44 @@ object TypeInference {
   }
   
   /**
-   * Combines coarse-grained and fine-grained    
+   * Combines coarse-grained and fine-grained type inference.
+   * @deprecated
    */
-  def infer(scope: Scope, term: Term) = {
+  def infer(scope: Scope, term: Term, vassign: Map[Identifier, Tree[Identifier]]) = {
     val conservative = new ConservativeResolve(scope)
     val dual = new DualResolve(scope)
     val coarse =  new CoarseGrained(conservative)
-    val (rootvar, assign) = coarse.infer(term)
+    val (rootvar, assign) = coarse.infer(term, vassign)
     val fine = new FineGrained(coarse.ns, assign)(dual)
     val reassign = fine.improve(term) map (kv => (kv._1, unmark(kv._2)))
     (reassign filter ((kv) => kv._1.ns ne coarse.ns), 
         { for ((k,v) <- coarse.ns; tpe <- reassign get fine.NV(k)) yield (v, tpe) } .toMap
     )
   }
+  
+  /**
+   * Combines coarse-grained and fine-grained type inference.
+   */
+  def infer(term: Term, preassign: Map[Identifier, Tree[Identifier]]=Map())(implicit scope: Scope): (Map[Identifier, Term], Term) = {
+    val (vassign, tassign) = infer(scope, term, preassign)
+    (vassign, annotate(term, tassign))
+  }
+  
+  def annotate(term: Term, tassign: Map[Id[Term], Term]): Term = {
+    import TypeTranslation.TypedTerm
+    val clon = T(term.root, term.subtrees map (annotate(_, tassign)))
+    tassign get term match {
+      case Some(typ) => TypedTerm(clon, typ)
+      case _ => term match {
+        case typed: TypedTerm => TypedTerm(clon, typed.typ)
+        case _ => clon
+      }
+    }
+  }
+  
+  val log = Logger.getLogger("TypeInference")
+  log.setLevel(Level.OFF)
+    
   
   def main(args: Array[String]): Unit = {
 

@@ -115,8 +115,20 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
         && (List(cond -> (lhs =:= trueB), (~cond) -> (lhs =:= falseB)) map consolidate1)
       }
       else {
-        (↓?(lhs) <-> ↓?(rhs)) & (TI("↓")(lhs) -> (lhs =:= rhs))
+        (↓?(lhs) <-> ↓?(rhs)) & (↓?(lhs) -> (lhs =:= rhs))
       }
+    }
+    else if (term =~ ("<->", 2)) {
+      val List(lhs, rhs) = sub
+      val typ = env.typeOf_!(lhs)
+      if (typ =~ ("->", 2)) {
+        val va = T(TypedIdentifier(new Identifier(greek(lhs.subtrees.length), "variable", new Uid), typ.subtrees(0)))
+        if (isFuncType(env.typeOf_!(va)))
+          currying += (va.root -> (overload(va.root) take 1))  /* quantified var: has only one version */
+        alwaysDefined += va.root
+        ∀(va)(consolidate1(TypedTerm(lhs :@ va, typ.subtrees(1)) <-> TypedTerm(rhs :@ va, typ.subtrees(1))))
+      }
+      else (lhs <-> rhs)
     }
     else if (term =~ ("↦", 2)) {
       term

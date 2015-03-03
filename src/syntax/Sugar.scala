@@ -11,6 +11,7 @@ object AstSugar {
   def V(a: Any) = new Identifier(a, "variable")
   def T(a: Identifier, b: List[Tree[Identifier]]=List()) = new Tree(a, b)
   def TI(a: Any, b: List[Tree[Identifier]]=List()) = T(I(a), b)
+  def TS(a: Any, b: List[Tree[Identifier]]=List()) = T(S(a), b)
   def TV(a: Any, b: List[Tree[Identifier]]=List()) = T(V(a), b)
 
   def symbols[T](t: Tree[T]) = (t.nodes map (_.root) toSet)
@@ -77,19 +78,48 @@ object AstSugar {
   
   def &&(conjuncts: Term*): Term = &&(conjuncts.toList)
   def &&(conjuncts: List[Term]) = TI("&")(conjuncts).foldLeft
+
+  def /::(conjuncts: Term*): Term = /::(conjuncts.toList)
+  def /::(conjuncts: List[Term]) = TI("/")(conjuncts).foldLeft
   
   class Uid {}
   def $_ = new Identifier("_", "placeholder", new Uid)
   def $v = new Identifier("?", "variable", new Uid)
   def $v(name: String) = new Identifier(name, "variable", new Uid)
-      
+ 
+  def $TV = T($v)
+  def $TV(name: String) = T($v(name))
 }
 
 
 object Formula {
-  val INFIX = Map("->" -> 1, "<->" -> 1, "&" -> 1, "|" -> 1, "<" -> 1, "=" -> 1, "↦" -> 1, ":" -> 1, "::" -> 1,
-      "/" -> 1, "|_" -> 1, "|!" -> 1, "∩" -> 1, "x" -> 1)
+  
+  object Assoc extends Enumeration {
+    type Assoc = Value
+    val Left, Right, None = Value
+  }
+  import Assoc.Assoc
+  
+  class InfixOperator(val literal: String, val priority: Int, val assoc: Assoc=Assoc.None) {
+    def format(term: AstSugar.Term) = {
+      /**/ assume(term.subtrees.length == 2) /**/
+      val op = if (literal == null) display(term.root) else literal
+      s"${display(term.subtrees(0), priority, Assoc.Left)} $op ${display(term.subtrees(1), priority, Assoc.Right)}"
+    }
+  }
+  
+  def O(literal: String, priority: Int, assoc: Assoc=Assoc.None) = 
+    new InfixOperator(literal, priority, assoc)
+  
+  def M(ops: InfixOperator*) = ops map (x => (x.literal, x)) toMap
+  
+  val INFIX = M(O("->", 1), O("<->", 1), O("&", 1), O("|", 1), O("<", 1), O("=", 1), O("↦", 1),
+      O(":", 1), O("::", 1), O("/", 1), O("|_", 1), O("|!", 1), O("∩", 1), O("x", 1)) ++ 
+      Map("@" -> O("", 1, Assoc.Left))
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
+  
+  def display(symbol: Identifier): String = 
+    symbol.literal.toString
   
   def display(term: AstSugar.Term): String =
     if (QUANTIFIERS contains term.root.toString)
@@ -97,18 +127,22 @@ object Formula {
     else
     (if (term.subtrees.length == 2) Formula.INFIX get term.root.toString else None)
     match {
-      case Some(pri) => 
-        s"${display(term.subtrees(0), pri)} ${term.root} ${display(term.subtrees(1), pri)}"
+      case Some(op) => 
+        op.format(term)
       case None => 
         if (term.isLeaf) term.root.toString
         else s"${term.root}(${term.subtrees map display mkString ", "})"
     }
   
-  def display(term: AstSugar.Term, pri: Int): String = {
+  def display(term: AstSugar.Term, pri: Int, side: Assoc): String = {
     if (term.subtrees.length != 2) display(term)
     else {
-      val subpri = (INFIX get term.root.toString) getOrElse 0
-      if (subpri < pri) display(term) else s"(${display(term)})"
+      val d = display(term)
+      INFIX get term.root.toString match {
+        case Some(op) =>
+          if (op.priority < pri || op.priority == pri && side == op.assoc) d else s"($d)"
+        case _ => d
+      }
     }
   }
 

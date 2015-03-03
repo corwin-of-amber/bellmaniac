@@ -21,7 +21,7 @@ class NestedListTextFormat[A](val ● : String = "•", val indent: String = "  
       println(fallback(t))
     else {
       print(t.root)
-      annot(t) match { case Some(a) => println(s" :: $a") case _ => println }
+      annot(t) match { case Some(a) => println(s"      〔 $a 〕") case _ => println }
       for (s <- t.subtrees)
         layOutAndAnnotate(s, annot, fallback, level + indent)
     }

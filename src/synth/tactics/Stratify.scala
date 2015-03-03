@@ -67,14 +67,14 @@ object Stratify {
     val goals = List(cx =:= cfx)
         
     
-    val symbols = List(<, Ijr, c, f) ++ termb.leaves
+    val symbols = typedecl.keys ++ termb.intermediates // List(<, Ijr, c, f) ++ (termb.intermediates map (T(_)))
     
     val reflect = new Reflection(env, typedecl)
     
-    reflect.currying ++= symbols map (symbol => (symbol.root, reflect.overload(symbol.root))) toMap
+    reflect.currying ++= symbols map (symbol => (symbol, reflect.overload(symbol))) toMap
 
     for (symbol <- symbols) {
-      println(s"${symbol.untype} :: ${env.typeOf(symbol.root).get toPretty}")
+      println(s"${T(symbol).untype} :: ${env.typeOf(symbol).get toPretty}")
       /*
       val variants = reflect.currying(symbol.root)
       for (variant <- variants)

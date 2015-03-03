@@ -53,8 +53,6 @@ object Paren {
   def x = TV("x")
   def _1 = TI(1)
   
-  def ? = T(new Identifier("?", "type variable", new Uid))
-  
   def TT(v: Any) = T(new Identifier(v, "type variable"))
   
   val tree = TI("program")(
