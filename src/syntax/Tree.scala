@@ -40,9 +40,18 @@ class Tree[T] (val root: T, val subtrees: List[Tree[T]] = List()) {
       t => if (t.root == root) t.unfoldRightN(N).subtrees else List(t)
     })
   
+  def split = unfold.subtrees
+  def split(sep: T): List[Tree[T]] = if (root == sep) split else List(this)
+  
   def replaceDescendant(switch: (Tree[T], Tree[T])): Tree[T] =
     if (switch._1 eq this) switch._2
     else new Tree(root, subtrees map (_.replaceDescendant(switch))) 
+  
+  def replaceDescendants(switch: List[(Tree[T], Tree[T])]): Tree[T] =
+    switch find (_._1 eq this) match {
+      case Some(sw) => sw._2
+      case _ => new Tree(root, subtrees map (_.replaceDescendants(switch)))
+    }
   
   override def toString(): String = {
     if (subtrees.isEmpty) root.toString

@@ -9,7 +9,9 @@ import semantics.TypeTranslation.Environment
 import semantics.TypeTranslation.{TypedIdentifier,TypedTerm}
 import semantics.Reflection
 import semantics.TypePrimitives
-
+import semantics.TypeTranslation.TypingSugar
+import semantics.TypedLambdaCalculus
+import semantics.TypeInference
 
 
 object Stratify {
@@ -21,6 +23,25 @@ object Stratify {
   import TypeTranslation.UntypedTerm
 
   import Split.TermBreak
+  
+  class Intros(implicit env: Environment) {
+    val intermediates = new collection.mutable.HashSet[TypedIdentifier]
+    def apply(goal: Term) = {
+      if (goal =~ ("=", 2)) {
+        val List(lhs, rhs) = goal.subtrees
+        env.typeOf(lhs) match {
+          case Some(typ) if Reflection.isFuncType(typ) =>
+            val rawtyp = TypePrimitives.rawtype(env.scope, typ)
+            val qv = TypingSugar.qvars(TypePrimitives.args(rawtyp))
+            val ret = TypePrimitives.ret(rawtyp)
+            intermediates ++= (qv map (_.root.asInstanceOf[TypedIdentifier]))
+            TypedTerm(lhs :@ (qv:_*), ret) =:= TypedTerm(rhs :@ (qv:_*), ret)
+          case _ => goal
+        }
+      }
+      else goal
+    }
+  }
   
   
   def main(args: Array[String]): Unit = {
@@ -40,9 +61,9 @@ object Stratify {
 
     val prenv = (TypeTranslation.subsorts(scope) where (compl(J)(J0, J1)))
     val typedecl = Map(
-        < ~> ((J x J) -> B),
+        //< ~> ((J x J) -> B),
         Ijr ~> (((J x J)->R) -> ((J x J)->R)),
-        f ~> (((J x J) -> R) -> (((J x J) ∩ <) -> R)),
+        f ~> (((J x J) -> R) -> (((J x J) /*∩ <*/) -> R)),
         c ~> (((J0 x J0) -> R) -> ((J1 x J1) -> R)),
         x ~> ((J x J) -> R) )
     
@@ -55,23 +76,42 @@ object Stratify {
     
     val termb = new TermBreak(env)
 
-    val (cx, cx_t) = termb(c :@ (x :: (J0 -> (J0 -> R))))
-    val (cfx, cfx_t) = termb(c :@ ((f :@ x) :: (J0 -> (J0 -> R))))
+    val (_, cxcfx) = 
+      TypeInference.infer( (x ↦ (c :@ (x :: (J0 -> (J0 -> R))))) =:= (x ↦ (c :@ ((f :@ x) :: (J0 -> (J0 -> R))))), typedecl )
+      
+    println(cxcfx)
+      //  TypedTerm(c :@ (x :: (J0 -> (J0 -> R))), J -> (J -> R)) =:=
+      //  TypedTerm(c :@ ((f :@ x) :: (J0 -> (J0 -> R))), J -> (J -> R))
+      //TypedTerm(x ↦ (c :@ (x :: (J0 -> (J0 -> R)))), (J -> (J -> R)) -> (J -> (J -> R))) =:=
+       //         TypedTerm(x ↦ (c :@ ((f :@ x) :: (J0 -> (J0 -> R)))), (J -> (J -> R)) -> (J -> (J -> R)))
+                
+    val intros = new Intros()(env)
+    val eq = TypedLambdaCalculus.simplify(intros(cxcfx))
+    println(eq toPretty)
+    
     //System.exit(0)
     
-    val assumptions = cx_t ++ cfx_t ++ List(
+    val (eq_id, eq_t) = termb(eq) //.subtrees(0))
+    //val (cfx, cfx_t) = termb(eq.subtrees(1))
+    //val (cx, cx_t) = termb(TypedLambdaCalculus.simplify((x ↦ (c :@ (x :: (J0 -> (J0 -> R))))) :@ x))
+    //val (cfx, cfx_t) = termb(TypedLambdaCalculus.simplify((x ↦ (c :@ ((f :@ x) :: (J0 -> (J0 -> R))))) :@ x))
+    //val (cx, cx_t) = termb(c :@ (x :: (J0 -> (J0 -> R))))
+    //val (cfx, cfx_t) = termb(c :@ ((f :@ x) :: (J0 -> (J0 -> R))))
+    
+    val assumptions = eq_t/*cx_t ++ cfx_t*/ ++ List(
         Ijr =:= { val x = T($v("α")) ; x ↦ x },
         f =:= TypedTerm(c /: Ijr, (J->(J->R)) -> (J->(J->R)))
       )
     
-    val goals = List(cx =:= cfx)
+    val goals = List(eq_id) //cx =:= cfx)
         
     
     val symbols = typedecl.keys ++ termb.intermediates // List(<, Ijr, c, f) ++ (termb.intermediates map (T(_)))
     
     val reflect = new Reflection(env, typedecl)
     
-    reflect.currying ++= symbols map (symbol => (symbol, reflect.overload(symbol))) toMap
+    reflect.currying ++= symbols filter (x => Reflection.isFuncType(env.typeOf_!(x))) map 
+                                        (symbol => (symbol, reflect.overload(symbol))) toMap
 
     for (symbol <- symbols) {
       println(s"${T(symbol).untype} :: ${env.typeOf(symbol).get toPretty}")

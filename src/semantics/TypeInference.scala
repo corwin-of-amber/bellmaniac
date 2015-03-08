@@ -186,7 +186,7 @@ object TypeInference {
       // - canonicalize result
       val u = new Unify
       u digest vassign
-      //u digest (expr.nodes flatMap { case typed: TypedTerm => Some(NV(typed) -> typed.typ) case _ => None } toMap)
+      u digest (expr.nodes flatMap { case typed: TypedTerm => Some(NV(typed) -> mark(typed.typ)) case _ => None } toMap)
       u digest assign
       (rootvar, u.canonicalize filter (_._1.ns match { case _:AbsTypeUid=>false case _=>true }))
     }
@@ -203,7 +203,8 @@ object TypeInference {
       else if (expr.root == "program") {
         val children = for (s <- expr.subtrees) yield infer0(s)._2
         implicit val join = resolve.join;
-        for (c <- children) println(" ; " + c)
+        if (log.isLoggable(Level.INFO))
+          for (c <- children) println(" ; " + c)
         val mgu = children reduce ((x, y) => Unify.mgu0(x,y))
         (freshvar, mgu)
       }
@@ -288,6 +289,8 @@ object TypeInference {
    */
   class FineGrained(val ns: Namespace[Id[Term]], var assign: Map[Identifier,Term])(resolve: ResolveLattice) {
 
+    val scope = resolve.asInstanceOf[DualResolve].scope   // @@@ TODO oh terrible!!
+    
     def improve(t: Term) = {
       whileMutate (() => assign) {
         for (n <- t.nodes)
@@ -300,24 +303,49 @@ object TypeInference {
       if (n =~ ("::", 2)) {
         List(n, n.subtrees(0)) map nodeType match {
           case List(Some(tpe), Some(va)) =>
+            val force = step0(n, tpe, va, mark(n.subtrees(1)))
+            val major = TypePrimitives.intersection(scope, List(tpe, va, force.last))
+            for (k <- List(n, n.subtrees(0)))
+              retype(k, major)
+            /*
             //if (tpe != va) {
               val force = step0(n, tpe, va, mark(n.subtrees(1)))
               for ((k,v) <- List(n, n.subtrees(0)) zip force)
                 retype(k, v)
-            //}
+            //}*/
           case _ =>
         }
-      } 
+      }
+      else if (n =~ ("@", 2)) {
+        List(n) ++ n.subtrees map nodeType match {
+          case List(Some(ret), Some(f), Some(arg)) =>
+            val xy = arg -> ret
+            if (f != xy) {
+              val force = step0(n, f, xy)
+              val moreForce = rot((force dropRight 1) ++: force.last.subtrees)
+              for ((k,v) <- List(n) ++ n.subtrees zip moreForce)
+                retype(k, v)
+            }
+          case _ =>
+        }
+      }
       else if (n =~ ("↦", 2)) {
         List(n) ++ n.subtrees map nodeType match {
           case List(Some(f), Some(x), Some(y)) =>
-            val xy = TI("->")(x, y)
+            val (farg, fret) = TypePrimitives.curry(f)(scope)
+            val arg = TypePrimitives.intersection(scope, List(x, farg))
+            val ret = TypePrimitives.intersection(scope, List(y, fret))
+            val xy = TypePrimitives.intersection(scope, List(f, x -> y))
+            retype(n.subtrees(0), arg)
+            retype(n.subtrees(1), ret)
+            retype(n, xy)
+            /*val xy = x -> y
             if (f != xy) {
               val force = step0(n, f, xy)
               val moreForce = (force dropRight 1) ++ force.last.subtrees
               for ((k,v) <- List(n) ++ n.subtrees zip moreForce)
                 retype(k, v)
-            }
+            }*/
           case _ =>
         }
         val arg = n.subtrees(0)
@@ -393,6 +421,8 @@ object TypeInference {
       else
         println(s"      => ${force map (_.toPretty)}")
     }
+
+    def rot[T](l: List[T]) = l.last +: (l dropRight 1)
 
     // -------------
     // Mutation part
@@ -480,7 +510,7 @@ object TypeInference {
     val dual = new DualResolve(scope)
     val coarse =  new CoarseGrained(conservative)
     val (rootvar, assign) = coarse.infer(term, vassign)
-    val fine = new FineGrained(coarse.ns, assign)(dual)
+    val fine = new FineGrained(coarse.ns, assign ++ vassign)(dual)
     val reassign = fine.improve(term) map (kv => (kv._1, unmark(kv._2)))
     (reassign filter ((kv) => kv._1.ns ne coarse.ns), 
         { for ((k,v) <- coarse.ns; tpe <- reassign get fine.NV(k)) yield (v, tpe) } .toMap

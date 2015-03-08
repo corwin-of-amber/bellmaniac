@@ -22,6 +22,7 @@ object Split {
   class TermBreak(val env: Environment) {
     
     import TypeTranslation.UntypedTerm
+    def rawtype(typ: Term) = TypePrimitives.rawtype(env.scope, typ)
     
     val intermediates = collection.mutable.Set[Identifier]()
     
@@ -41,7 +42,7 @@ object Split {
       }
       else if (term =~ ("@", 2)) {
         val List((func_id, func_terms), (arg_id, arg_terms)) = term.subtrees map reapply
-        val (func_par, func_ret) = TypePrimitives.curry(env.typeOf_!(func_id))(env.scope)
+        val (func_par, func_ret) = TypePrimitives.curry(rawtype(env.typeOf_!(func_id)))(env.scope)
         val app = T(TypedIdentifier($v(s"${func_id.untype}${arg_id.untype}"), func_ret))
         (app, func_terms ++ arg_terms :+ (app =:= TypedTerm(func_id :@ arg_id, func_ret)))
       }
@@ -50,12 +51,19 @@ object Split {
         val ore = T(TypedIdentifier($v(s"${fore_id.untype}/${back_id.untype}"), env.typeOf_!(fore_id)))
         (ore, fore_t ++ back_t :+ (ore =:= TypedTerm(fore_id /: back_id, env.typeOf_!(ore))))
       }
+      else if (term =~ ("=", 2)) {
+        val List((lhs_id, lhs_t), (rhs_id, rhs_t)) = term.subtrees map reapply
+        val eq = T(TypedIdentifier($v(s"${lhs_id.untype}=${rhs_id.untype}"), B))
+        (eq, lhs_t ++ rhs_t :+ (eq <-> TypedTerm(lhs_id =:= rhs_id, B)))
+      }
       else if (term =~ ("::", 2)) {
         val List(expr, typ) = term.subtrees
         val (expr_id, expr_terms) = this(expr)
-        val cast = T(TypedIdentifier($v(s"${expr_id.untype}'"), env.typeOf_!(expr_id)))
+        val cast = T(TypedIdentifier($v(s"${expr_id.untype}'"), rawtype(env.typeOf_!(expr_id))))
         assert(expr_id.isLeaf)
-        (cast, expr_terms :+ (cast =:= T(TypedIdentifier(expr_id.root, typ))))
+        //(cast, expr_terms :+ (cast =:= T(TypedIdentifier(expr_id.root, typ))))
+        //(cast, expr_terms :+ (cast =:= TypedTerm(expr_id, typ)))
+        (cast, expr_terms :+ (cast =:= TypedTerm(T(TypedIdentifier(expr_id.root, typ)), typ)))
       }
       else if (term =~ ("↦", 2)) {
         val (body_id, body_t) = apply(term.subtrees(1))
@@ -65,21 +73,28 @@ object Split {
         val (genbody_syms, genbody_t) = generalize(body_t :+ (fun =:= body_id), arg)
         (T(genbody_syms(fun.root)), genbody_t) // TODO
       }
+      else if (term =~ (":", 2)) {
+        term0(term.subtrees(1))
+      }
       else throw new Scope.TypingException(s"don't quite know what to do with ${term toPretty}")
     }
+    
+    import semantics.TypedLambdaCalculus
     
     def generalize(eqs: List[Term], arg: Term): (Map[Identifier,Identifier], List[Term]) = {
       /**/ assume(eqs forall (_ =~ ("=", 2))) /**/
       /**/ assume(eqs forall (_.subtrees(0).isLeaf)) /**/
       val sym = eqs map (_.subtrees(0).root)
       val gensym = sym map (x => (x, TypedIdentifier(x, env.typeOf_!(arg) -> env.typeOf_!(x)))) toMap
-      val subst = new TreeSubstitution(sym map (x => (T(x), T(gensym(x)) :@ arg)))
+      val subst = new TreeSubstitution(sym map (x => (T(x), T(gensym(x)) :@ arg))) {
+        override def preserve(old: Term, new_ : Term) = TypedLambdaCalculus.preserve(old, new_)
+      }
       val geneqs =
       for (eq <- eqs) yield {
         println(eq toPretty)
         val lhs = T(gensym(eq.subtrees(0).root))
         val rhs = arg ↦ subst(eq.subtrees(1))
-        println(s"   ${lhs toPretty} = ${rhs toPretty}")
+        println(s"   ${lhs } = ${rhs }")
         lhs =:= rhs
       }
       intermediates --= gensym.keys

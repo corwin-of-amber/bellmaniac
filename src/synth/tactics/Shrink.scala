@@ -133,7 +133,7 @@ object Shrink {
     println("=" * 80)
     
     import Paren._
-    import Prelude.?
+    import Prelude.{R,?}
           
     // Current typing is:
     //   θ :: ((J x J) ∩ <) -> R

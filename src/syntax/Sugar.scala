@@ -74,14 +74,20 @@ object AstSugar {
       
      def \(whatWith: (Term, Term)): Term =
        new syntax.transform.TreeSubstitution(List(whatWith))(term)
+       
+     def << : Term =
+       if (term.subtrees.length == 1 && term.subtrees(0) == `...`) term
+       else term.foldLeft
   }
   
   def &&(conjuncts: Term*): Term = &&(conjuncts.toList)
-  def &&(conjuncts: List[Term]) = TI("&")(conjuncts).foldLeft
+  def &&(conjuncts: List[Term]) = TI("&")(conjuncts)<<
 
   def /::(conjuncts: Term*): Term = /::(conjuncts.toList)
-  def /::(conjuncts: List[Term]) = TI("/")(conjuncts).foldLeft
+  def /::(conjuncts: List[Term]) = TI("/")(conjuncts)<<
   
+  val `...` = TI("...")
+
   class Uid {}
   def $_ = new Identifier("_", "placeholder", new Uid)
   def $v = new Identifier("?", "variable", new Uid)
@@ -93,6 +99,8 @@ object AstSugar {
 
 
 object Formula {
+  
+  import AstSugar.{Term,DSL}
   
   object Assoc extends Enumeration {
     type Assoc = Value
@@ -108,14 +116,37 @@ object Formula {
     }
   }
   
+  class AppOperator(literal: String, priority: Int, assoc: Assoc=Assoc.None) extends InfixOperator(literal, priority, assoc) {
+    override def format(term: AstSugar.Term) = {
+      /**/ assume(term.subtrees.length == 2) /**/
+      val List(fun, arg) = term.subtrees
+      if (fun =~ ("+", 0))
+        s"${display(arg, if (isOp(arg, "+")) priority else 0, Assoc.Left)} +"
+      else {
+        val lst = splitOp(term, "cons")
+        if (lst.length > 1 && lst.last =~ ("nil", 0))
+          s"⟨${lst dropRight 1 map display mkString ", "}⟩"
+        else
+          s"${display(fun, priority, Assoc.Left)} ${display(arg, priority, Assoc.Right)}"
+      }
+    }
+    
+    def isOp(term: Term, op: String) = (term =~ ("@", 2)) && (term.subtrees(0) =~ ("@", 2)) && (term.subtrees(0).subtrees(0) =~ (op, 0))
+    
+    def splitOp(term: Term, op: String): List[Term] =
+      if (isOp(term, op)) 
+        splitOp(term.subtrees(0).subtrees(1), op) ++ splitOp(term.subtrees(1), op)
+      else List(term)
+  }
+  
   def O(literal: String, priority: Int, assoc: Assoc=Assoc.None) = 
     new InfixOperator(literal, priority, assoc)
   
   def M(ops: InfixOperator*) = ops map (x => (x.literal, x)) toMap
   
-  val INFIX = M(O("->", 1), O("<->", 1), O("&", 1), O("|", 1), O("<", 1), O("=", 1), O("↦", 1),
+  val INFIX = M(O("->", 1, Assoc.Right), O("<->", 1), O("&", 1), O("|", 1), O("<", 1), O("=", 1), O("↦", 1, Assoc.Right),
       O(":", 1), O("::", 1), O("/", 1), O("|_", 1), O("|!", 1), O("∩", 1), O("x", 1)) ++ 
-      Map("@" -> O("", 1, Assoc.Left))
+      Map("@" -> new AppOperator("", 1, Assoc.Left))
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
   
   def display(symbol: Identifier): String = 
@@ -162,4 +193,11 @@ object Piping {
     def |>:(x: X) = f(x)
   }
  
+}
+
+
+object Strip {
+  val numeral: PartialFunction[Int, String] = { case x: Int => "$"+x }
+  val greek = "αβγδεζηθικλμνξοπρστυφχψω".toList orElse numeral
+  val boxedAbc = List("🄰","🄱","🄲","🄳","🄴","🄵","🄶","🄷","🄸","🄹","🄺","🄻","🄼","🄽","🄾","🄿","🅀","🅁","🅂","🅃","🅄","🅅","🅆","🅇","🅈","🅉") orElse numeral
 }

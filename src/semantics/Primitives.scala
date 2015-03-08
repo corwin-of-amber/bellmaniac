@@ -5,6 +5,7 @@ import syntax.AstSugar
 import TypeTranslation.{MicroCode,In,Out,Check}
 import TypeTranslation.InOut
 import TypeTranslation.{emit,simplify,canonical}
+import semantics.TypeTranslation.TypedIdentifier
 
 
 
@@ -54,26 +55,31 @@ object TypePrimitives {
   /**
    * Computes an intersection type in MicroCode form.
    */
-  def intersection(decls: List[List[MicroCode]]): List[MicroCode] = {
+  def intersection(decls: List[List[MicroCode]])(implicit scope: Scope): List[MicroCode] = {
     def isCheck(mc: MicroCode) = mc match { case Check(_,_) => true case _ => false }
     def isLeaf(mc: MicroCode) = (mc match { case In(t) => Some(t) case Out(t) => Some(t) case _ => None }) exists (_.isLeaf)
     def dir(mc: MicroCode) = mc match { case In(_) => InOut.IN case Out(_) => InOut.OUT }
     if (decls forall (_.isEmpty)) List()
+    else if (decls.tail forall (_ == decls.head)) decls.head
     else if (decls.exists (l => !l.isEmpty && isCheck(l.head)))
       (decls flatMap (_ takeWhile isCheck)) ++ intersection(decls map (_ dropWhile isCheck))
     else {
       val heads = decls map (_.head)
       if (heads forall (_==heads.head)) heads.head :: intersection(decls map (_ drop 1))
       else if (heads forall isLeaf) throw new Scope.TypingException(s"incompatible type instructions: $heads")
-      else ???  /* high-order arguments? */
+      else if (heads forall (dir(_) == InOut.IN)) In(intersection(scope, heads map { case In(t) => t })) :: intersection(decls map (_ drop 1))
+      else  ???  /* high-order arguments? */
     }
   }
   
   
   def intersection(scope: Scope, types: List[Term]): Term = {
     import syntax.Piping._
-    val emits = types map (emit(scope, _))
-    intersection(emits) |> canonical |> (simplify(scope, _))
+    if (types.tail forall (_ == types.head)) types.head
+    else {
+      val emits = types map (emit(scope, _))
+      intersection(emits)(scope) |> canonical |> (simplify(scope, _))
+    }
   }
   
   def curry(typ: Term)(implicit scope: Scope): (Term, Term) = {
@@ -132,13 +138,13 @@ object TypedLambdaCalculus {
   import AstSugar._
   import TypeTranslation.TypedTerm
   
-  def preserve(term: Term, newterm: Term) = term match {
-    case typed: TypedTerm => TypedTerm(newterm, typed.typ)
+  def preserve(term: Term, newterm: Term) = (term, term.root) match {
+    case (typed: TypedTerm, _) => TypedTerm(newterm, typed.typ)
     case _ => newterm
   }
 
   def beta(va: Identifier, body: Term, arg: Term): Term = {
-    if (body.isLeaf && body.root == va) arg
+    if (body.isLeaf && body.root == va) preserve(body, arg)
     else preserve(body, T(body.root, body.subtrees map (x => beta(va, x, arg))))
   }
   
@@ -147,6 +153,31 @@ object TypedLambdaCalculus {
     beta(fun.subtrees(0).root, fun.subtrees(1), arg)
   }
 
+  def simplify(term: Term): Term = {
+    if (term =~ ("@", 2) && term.subtrees(0) =~ ("↦", 2)) beta(term.subtrees(0), term.subtrees(1))
+    else preserve(term, T(term.root, term.subtrees map simplify))
+  }
+  
+  def replaceDescendant(term: Term, switch: (Term, Term)): Term =
+    if (switch._1 eq term) switch._2
+    else preserve(term, new Term(term.root, term.subtrees map (replaceDescendant(_, switch))))
+  
+
+  def pullOut(term: Term, subterm: Term): Option[Term] = {
+    if (term eq subterm) Some(term)
+    else if (term =~ ("↦", 2)) 
+      pullOut(term.subtrees(1), subterm) map (x => typecheck0(T(term.root, List(term.subtrees(0), x))))
+    else term.subtrees map (pullOut(_, subterm)) find (_.isDefined) map (_.get)
+  }
+  
+  def typecheck0(term: Term) = {
+    if (term =~ ("↦", 2)) term.subtrees match {
+      case List(arg: TypedTerm, body: TypedTerm) => TypedTerm(term, arg.typ -> body.typ)
+      case _ => term
+    }
+    else term
+  }
+  
 }
 
 

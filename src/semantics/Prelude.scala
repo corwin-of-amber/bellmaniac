@@ -12,6 +12,7 @@ object Prelude {
   
   val B = TS("")
   val N = TS("N")
+  val R = TS("R")
   val TRUE = TI(true)
   val FALSE = TI(false)
 
@@ -21,6 +22,8 @@ object Prelude {
   val ω = TI("ω")
   def nil = TI("nil")
   def cons = TI("cons")
+
+  val ↓ = TV("↓")
 
   def ? = T(new Identifier("?", "type variable", new Uid))
     

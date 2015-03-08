@@ -78,7 +78,7 @@ class Unify(implicit resolve: Resolve = Resolve.NULL) {
     
 
   def makeMgu0(x: Tree[Identifier], y: Tree[Identifier], keys: List[Identifier]) {
-    //println(s"makeMgu    $x     $y     (${keys mkString ","})")
+    //println(s"makeMgu    $x (${x.root.kind})    $y (${y.root.kind})     (${keys mkString ","})")
     if (isVar(y) && !isVar(x))
       makeMgu(y, x, keys)
     else if (isFreeVar(y) && !isFreeVar(x))

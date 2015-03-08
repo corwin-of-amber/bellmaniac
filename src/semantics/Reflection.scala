@@ -32,6 +32,8 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   import TypeTranslation.TypingSugar._
   import Reflection._
   import Prelude.B
+  import syntax.Strip.greek
+  import TypedLambdaCalculus.preserve
   
   //-----------------
   // Abstraction Part
@@ -44,15 +46,15 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     else typ
   }
 
-  def preserve(term: Term, newterm: Term) = term match {
-    case typed: TypedTerm => TypedTerm(newterm, typed.typ)
-    case _ => newterm
-  }
-  
   def preserveAbs(term: Term, newterm: Term) = term match {
     case typed: TypedTerm => TypedTerm(newterm, abstype(typed.typ))
     case _ => newterm
   }
+  
+  def pushTypeDown(term: Term) = if (term.isLeaf) {
+    val typ = env.typeOf_!(term)
+    TypedTerm(T(TypedIdentifier(term.root, typ)), typ)
+  } else term
   
   def isFuncTypeExt(typ: Term) = {
     isFuncType(typ) || (typ.isLeaf && (env.scope.functypes.values exists (_.faux == typ.root)))
@@ -95,7 +97,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
         consolidate1(T(fun.root, fun.subtrees map (_ :@ arg)))
       }
       else if (fun =~ ("↦", 2)) {    /* beta reduction */
-        consolidate1(TypedLambdaCalculus.beta(fun, arg))
+        pushTypeDown(consolidate1(TypedLambdaCalculus.beta(fun, arg)))
       }
       else throw new Exception(s"application term cannot be consolidated: '${fun toPretty} @ ${arg toPretty}'")
     }
@@ -170,6 +172,10 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
       val atom = term.subtrees(0)
       val checks = if (isConsolidated(atom)) List()
         else atom.root match {
+          case a if a == "@" => atom.subtrees(0).root match {
+            case tid: TypedIdentifier => TypeTranslation.checks(env.scope, tid, atom.subtrees drop 1)
+            case _ => List()
+          }
           case tid: TypedIdentifier => TypeTranslation.checks(env.scope, tid, atom.subtrees)
           case _ => List()
         }
@@ -226,17 +232,27 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
             (TypedTerm(T(functype.app.head)(T(variant))(qv), Consolidated(ret)) =:= TypedTerm(T(master)(qv), Consolidated(ret))))
         case _ => None
       }
+    } else if (variant.typ =~ ("->", 2) && (variant.typ.subtrees forall (_.isLeaf))) {
+      val List(farg, fret) = variant.typ.subtrees
+      env.scope.functypes.values find (x => x.faux == fret.root) match {
+        case Some(functype) =>
+          val qv = qvars(farg :: (functype.args map (T(_))))
+          val ret = T(functype.ret)
+          Some(∀(qv)
+            (TypedTerm(T(functype.app.head)(TypedTerm(T(variant)(qv.head), fret))(qv.tail), Consolidated(ret)) =:= TypedTerm(T(master)(qv), Consolidated(ret))))
+        case _ => None
+      }
     } else { /* TODO */ None }
     }
       
-    def curryAxioms(variants: List[TypedIdentifier]): List[Term] = {
+    def curryAxioms(variants: List[TypedIdentifier], used: Set[Identifier]): List[Term] = {
       val master = variants.last
-      variants dropRight 1 flatMap (curryAxioms(_, master))
+      variants dropRight 1 filter (used.contains) flatMap (curryAxioms(_, master))
     }
     
-    def curryAxioms: List[Term] = currying.values flatMap curryAxioms toList
+    def curryAxioms(used: Set[Identifier]): List[Term] = currying.values flatMap (curryAxioms(_,used)) toList
  
-    //-------------
+  //-------------
   // Support Part
   //-------------
   
@@ -273,8 +289,6 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     import semantics.smt.Z3Sugar
     import syntax.Piping._
     
-    def prelude = typeinfo ++ curryAxioms ++ equality
-    
     def reflect(phi: Term) = {
       println(phi.untype toPretty)
       val phi_c = consolidate(phi)
@@ -285,7 +299,11 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
       println(s"  ${phi_s toPretty}")
       FolSimplify.simplify(phi_s)
     }
-    val fo_assumptions = (assumptions ++ prelude) map reflect filter (_ != TRUE)
+    val fo_assumptions = assumptions map reflect
+    val fo_symbols = fo_assumptions flatMap (_.nodes map (_.root)) toSet
+    
+    val prelude = typeinfo ++ curryAxioms(fo_symbols) ++ equality
+    val fo_prelude = prelude map reflect
     
     val fo_goals = goals map reflect
   
@@ -295,7 +313,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   
     val status =
       z3g.solve(fo_base ++ (
-        for (atn <- fo_assumptions) yield {
+        for (atn <- fo_assumptions ++ fo_prelude if atn != TRUE) yield {
           println(s" * ${atn.untype toPretty}")
           z3g.formula(atn)
         }),

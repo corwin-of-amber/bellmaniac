@@ -76,6 +76,10 @@ object TypeTranslation {
     def where(facts: Term*) = this + ($_ -> Declaration(List(), facts.toList))
   }
   
+  object Environment {
+    val Empty = new Environment(new Scope, Map())
+  }
+  
   private def E(scope: Scope, decl: Map[Identifier, Declaration]=Map()) =
     new Environment(scope, decl)
   
@@ -207,10 +211,13 @@ object TypeTranslation {
                  catch { case _: Scope.TypingException => None }) } partition (_._2.isDefined)
       if (subemit.isEmpty) 
         throw new Scope.TypingException(s"non of '${term.subtrees mkString "' '"}' is a type")
-      val (_, Some(x)) = subemit.head
+      //val (_, Some(x)) = subemit.head
+      val x = TypePrimitives.intersection(subemit map (_._2.get))(scope)
       val arity = dir match { case InOut.IN => x count { case In(_) => true case _ => false } case InOut.OUT => 1 }
-      for (y <- subemit.tail) 
-        ???   /* merge two type domains (interleave checks) */
+      //for (y <- subemit.tail) {
+      //  println(subemit)
+      //  ???   /* merge two type domains (interleave checks) */
+      //}
       x ::: (subassert map (x => Check(x._1, arity)))
     }
     else throw new Scope.TypingException(s"'$term' is not a type")
@@ -267,8 +274,7 @@ object TypeTranslation {
   // DSL part
   // --------
   object TypingSugar {
-    val numeral: PartialFunction[Int, String] = { case x: Int => "$"+x }
-    val greek = "αβγδεζηθικλμνξοπρστυφχψω".toList orElse numeral
+    import syntax.Strip.greek
     
     def qvars(names: List[String], typ: Term) = {
       val ns = new Namespace

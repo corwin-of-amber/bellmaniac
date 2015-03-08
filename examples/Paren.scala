@@ -13,7 +13,6 @@ object Paren {
   import semantics.Domains._
   import semantics.Prelude._
   
-  val R = T(S("R"))
   val J = T(S("J"))
   val J0 = T(S("J₀"))
   val J1 = T(S("J₁"))
