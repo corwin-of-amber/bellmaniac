@@ -32,6 +32,9 @@ object TypeTranslation {
   
   case class Declaration(val symbols: List[TypedIdentifier], 
                          val precondition: List[Term]) {
+    def this(symbols: Term*) =
+      this(symbols map (_.leaf.asInstanceOf[TypedIdentifier]) toList, List())
+      
     def head = symbols.head
     def support = symbols.tail find (_.kind == "predicate") getOrElse 
       { throw new Scope.TypingException(s"no support found for '$head'") }
@@ -276,6 +279,8 @@ object TypeTranslation {
   object TypingSugar {
     import syntax.Strip.greek
     
+    def $TyTV(literal: String, typ: Term) = T(TypedIdentifier($v(literal), typ))
+    
     def qvars(names: List[String], typ: Term) = {
       val ns = new Namespace
       for (name <- names) yield T(TypedIdentifier( new Identifier(name, "variable", ns), typ ))
@@ -284,6 +289,12 @@ object TypeTranslation {
       val ns = new Namespace
       for ((typ, i) <- types.zipWithIndex)
         yield T(TypedIdentifier( new Identifier(greek(i), "variable", ns), typ ))
+    }
+    
+    def qvars(types: List[Term], strip: PartialFunction[Int, Any]) = {
+      val ns = new Namespace
+      for ((typ, i) <- types.zipWithIndex)
+        yield T(TypedIdentifier( new Identifier(strip(i), "variable", ns), typ ))
     }
     
     def ∀:(domain: Term, body: Term => Term) = qvars(List(domain)) match {

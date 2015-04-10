@@ -12,6 +12,8 @@ import semantics.TypePrimitives
 import semantics.TypeTranslation.TypingSugar
 import semantics.TypedLambdaCalculus
 import semantics.TypeInference
+import syntax.Strip
+import semantics.TypeTranslation.Declaration
 
 
 object Stratify {
@@ -32,7 +34,7 @@ object Stratify {
         env.typeOf(lhs) match {
           case Some(typ) if Reflection.isFuncType(typ) =>
             val rawtyp = TypePrimitives.rawtype(env.scope, typ)
-            val qv = TypingSugar.qvars(TypePrimitives.args(rawtyp))
+            val qv = TypingSugar.qvars(TypePrimitives.args(rawtyp), Strip.numeral)
             val ret = TypePrimitives.ret(rawtyp)
             intermediates ++= (qv map (_.root.asInstanceOf[TypedIdentifier]))
             TypedTerm(lhs :@ (qv:_*), ret) =:= TypedTerm(rhs :@ (qv:_*), ret)
@@ -41,6 +43,8 @@ object Stratify {
       }
       else goal
     }
+    def intermediate: Environment = new Environment(env.scope, 
+        intermediates map (x => (x, new Declaration(List(x), List()))) toMap)
   }
   
   
@@ -77,38 +81,29 @@ object Stratify {
     val termb = new TermBreak(env)
 
     val (_, cxcfx) = 
-      TypeInference.infer( (x ↦ (c :@ (x :: (J0 -> (J0 -> R))))) =:= (x ↦ (c :@ ((f :@ x) :: (J0 -> (J0 -> R))))), typedecl )
+      TypeInference.infer( c =:= (x ↦ (c :@ (f :@ x))), typedecl )
       
     println(cxcfx)
-      //  TypedTerm(c :@ (x :: (J0 -> (J0 -> R))), J -> (J -> R)) =:=
-      //  TypedTerm(c :@ ((f :@ x) :: (J0 -> (J0 -> R))), J -> (J -> R))
-      //TypedTerm(x ↦ (c :@ (x :: (J0 -> (J0 -> R)))), (J -> (J -> R)) -> (J -> (J -> R))) =:=
-       //         TypedTerm(x ↦ (c :@ ((f :@ x) :: (J0 -> (J0 -> R)))), (J -> (J -> R)) -> (J -> (J -> R)))
                 
     val intros = new Intros()(env)
-    val eq = TypedLambdaCalculus.simplify(intros(cxcfx))
-    println(eq toPretty)
+    val (_, eq) = TypeInference.infer( TypedLambdaCalculus.simplify(intros(cxcfx)) )
+    println(eq)
     
     //System.exit(0)
     
-    val (eq_id, eq_t) = termb(eq) //.subtrees(0))
-    //val (cfx, cfx_t) = termb(eq.subtrees(1))
-    //val (cx, cx_t) = termb(TypedLambdaCalculus.simplify((x ↦ (c :@ (x :: (J0 -> (J0 -> R))))) :@ x))
-    //val (cfx, cfx_t) = termb(TypedLambdaCalculus.simplify((x ↦ (c :@ ((f :@ x) :: (J0 -> (J0 -> R))))) :@ x))
-    //val (cx, cx_t) = termb(c :@ (x :: (J0 -> (J0 -> R))))
-    //val (cfx, cfx_t) = termb(c :@ ((f :@ x) :: (J0 -> (J0 -> R))))
+    val (eq_id, eq_t) = termb(eq) 
     
-    val assumptions = eq_t/*cx_t ++ cfx_t*/ ++ List(
+    val assumptions = eq_t ++ List(
         Ijr =:= { val x = T($v("α")) ; x ↦ x },
         f =:= TypedTerm(c /: Ijr, (J->(J->R)) -> (J->(J->R)))
       )
     
-    val goals = List(eq_id) //cx =:= cfx)
+    val goals = List(eq_id)
         
     
-    val symbols = typedecl.keys ++ termb.intermediates // List(<, Ijr, c, f) ++ (termb.intermediates map (T(_)))
+    val symbols = typedecl.keys ++ termb.intermediates
     
-    val reflect = new Reflection(env, typedecl)
+    val reflect = new Reflection(env ++ intros.intermediate, typedecl)
     
     reflect.currying ++= symbols filter (x => Reflection.isFuncType(env.typeOf_!(x))) map 
                                         (symbol => (symbol, reflect.overload(symbol))) toMap

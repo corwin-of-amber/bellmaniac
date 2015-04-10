@@ -139,6 +139,10 @@ object TypeInference {
       (a, Unify.mgu(tpe, a)(Resolve.NULL))
   }
     
+  def abstypes(types: Map[Identifier, Term]) = {
+    val abstypes = types map { case (k,v) => (k, abstype(v)) }
+    (abstypes map { case (k,v) => (k, v._1) }) ++ (abstypes.values flatMap (_._2)) toMap
+  }
 
   /**
    * Unifies the proposed type terms with "meet" in order to
@@ -179,15 +183,18 @@ object TypeInference {
     import TypeTranslation.TypedTerm
     
     val ns = new Namespace[Id[Tree[Identifier]]]
+    val scope = resolve.asInstanceOf[DualResolve].scope   // @@@ TODO oh terrible!!
+    //def raw(x: Term) = TypePrimitives.rawtype(scope, x)
     
     def infer(expr: Tree[Identifier], vassign: Map[Identifier, Tree[Identifier]]=Map()) = {
       val (rootvar, assign) = infer0(expr)
       implicit val join = resolve.join
-      // - canonicalize result
+      // - unify all the information you have (@@@ this is so messy)
       val u = new Unify
-      u digest vassign
+      u digest (abstypes(vassign map { case (k,v) => (k, mark(/*raw*/(v))) }))
       u digest (expr.nodes flatMap { case typed: TypedTerm => Some(NV(typed) -> mark(typed.typ)) case _ => None } toMap)
       u digest assign
+      // - canonicalize result
       (rootvar, u.canonicalize filter (_._1.ns match { case _:AbsTypeUid=>false case _=>true }))
     }
     
@@ -336,6 +343,12 @@ object TypeInference {
             val arg = TypePrimitives.intersection(scope, List(x, farg))
             val ret = TypePrimitives.intersection(scope, List(y, fret))
             val xy = TypePrimitives.intersection(scope, List(f, x -> y))
+            if (log.isLoggable(Level.INFO)) {
+              println(s"|- $n")
+              println(s"   :: ${f toPretty}  ∩  ${(x -> y) toPretty}  =>  ${xy toPretty}")
+              println(s"   ${n.subtrees(0)} :: ${x toPretty}  ∩  ${farg toPretty}  =>  ${arg toPretty}")
+              println(s"   ${n.subtrees(1)} :: ${y toPretty}  ∩  ${fret toPretty}  =>  ${ret toPretty}")
+            }
             retype(n.subtrees(0), arg)
             retype(n.subtrees(1), ret)
             retype(n, xy)
@@ -370,6 +383,7 @@ object TypeInference {
               val force = step0(n, tpe, join(0), join(1))
               retype(n, force(0))
             }
+          case _ =>
         }
       }
       else if (n.isLeaf) {
@@ -511,6 +525,8 @@ object TypeInference {
     val coarse =  new CoarseGrained(conservative)
     val (rootvar, assign) = coarse.infer(term, vassign)
     val fine = new FineGrained(coarse.ns, assign ++ vassign)(dual)
+    val tassign = { for ((k,v) <- coarse.ns; tpe <- assign get fine.NV(k)) yield (v, tpe) } .toMap
+    synth.tactics.Rewrite.display(annotate(term, tassign))(new TypeTranslation.Environment(scope, Map()))
     val reassign = fine.improve(term) map (kv => (kv._1, unmark(kv._2)))
     (reassign filter ((kv) => kv._1.ns ne coarse.ns), 
         { for ((k,v) <- coarse.ns; tpe <- reassign get fine.NV(k)) yield (v, tpe) } .toMap

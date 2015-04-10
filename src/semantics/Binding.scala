@@ -2,6 +2,7 @@ package semantics
 
 import syntax.{Tree,Identifier,AstSugar}
 import Scope.TypingException
+import semantics.TypeTranslation.TypedIdentifier
 
 
 
@@ -26,7 +27,10 @@ class Binding(val left: Set[Identifier], val right: Set[Identifier]) {
 
   def ++(that: Binding) = new Binding(left ++ that.left, right ++ that.right)
   
-  def bind(id: Identifier) = new Identifier(id.literal, id.kind, ns = new Binder)
+  def bind(id: Identifier) = {
+    val va = new Identifier(id.literal, id.kind, ns = new Binder)
+    id match { case tid: TypedIdentifier => TypedIdentifier(va, tid.typ) case _ => va }
+  }
   
   def bind(term: Term, bound: Map[Identifier, Identifier] = Map.empty): Term = {
     TypedLambdaCalculus.preserve(term, bind0(term, bound))

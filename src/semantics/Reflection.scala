@@ -92,12 +92,12 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     def sub = term.subtrees map consolidate1
     if (term =~ ("@", 2)) {
       val List(fun, arg) = sub
-      if (currying contains fun.root) fun(arg)
+      if (currying contains fun.root) pushTypeDown(fun)(arg)
       else if (fun.root == "/") {    /* distribute '@' over '/' */
         consolidate1(T(fun.root, fun.subtrees map (_ :@ arg)))
       }
       else if (fun =~ ("↦", 2)) {    /* beta reduction */
-        pushTypeDown(consolidate1(TypedLambdaCalculus.beta(fun, arg)))
+        consolidate1(TypedLambdaCalculus.beta(fun, arg))
       }
       else throw new Exception(s"application term cannot be consolidated: '${fun toPretty} @ ${arg toPretty}'")
     }
@@ -200,7 +200,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     val typ = env.typeOf_!(ucfun)
     env.scope.functypes.values find (_.faux == typ.root) match {
       case Some(functype) => TypedTerm(T(functype.app.head, ucfun :: (args map uncurry)), T(functype.ret))
-      case _ => throw new Scope.TypingException(s"unrecognized reflection type '$typ'for '${ucfun toPretty}'")
+      case _ => throw new Scope.TypingException(s"unrecognized reflection type '$typ' for '${ucfun toPretty}'")
     }
   }
   
@@ -223,34 +223,26 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     })
 
   def curryAxioms(variant: TypedIdentifier, master: TypedIdentifier) = {
-    if (variant.typ.isLeaf) {
-      env.scope.functypes.values find (x => x.faux == variant.typ.root) match {
-        case Some(functype) =>
-          val qv = qvars(functype.args map (T(_)))
-          val ret = T(functype.ret)
-          Some(∀(qv)
-            (TypedTerm(T(functype.app.head)(T(variant))(qv), Consolidated(ret)) =:= TypedTerm(T(master)(qv), Consolidated(ret))))
-        case _ => None
-      }
-    } else if (variant.typ =~ ("->", 2) && (variant.typ.subtrees forall (_.isLeaf))) {
-      val List(farg, fret) = variant.typ.subtrees
-      env.scope.functypes.values find (x => x.faux == fret.root) match {
-        case Some(functype) =>
-          val qv = qvars(farg :: (functype.args map (T(_))))
-          val ret = T(functype.ret)
-          Some(∀(qv)
-            (TypedTerm(T(functype.app.head)(TypedTerm(T(variant)(qv.head), fret))(qv.tail), Consolidated(ret)) =:= TypedTerm(T(master)(qv), Consolidated(ret))))
-        case _ => None
-      }
-    } else { /* TODO */ None }
+    val args = TypePrimitives.args(variant.typ)
+    val ret = TypePrimitives.ret(variant.typ)
+    val arity = args.length
+    /**/ assume(ret.isLeaf) /**/
+    env.scope.functypes.values find (x => x.faux == ret.root) match {
+      case Some(functype) =>
+        val qv = qvars(args ::: (functype.args map (T(_))))
+        val fret = T(functype.ret)
+        Some(∀(qv)
+          (TypedTerm(T(functype.app.head)(TypedTerm(T(variant)(qv take arity), ret))(qv drop arity), Consolidated(fret)) =:= TypedTerm(T(master)(qv), Consolidated(fret))))
+      case _ => None
     }
-      
-    def curryAxioms(variants: List[TypedIdentifier], used: Set[Identifier]): List[Term] = {
-      val master = variants.last
-      variants dropRight 1 filter (used.contains) flatMap (curryAxioms(_, master))
-    }
+  }
     
-    def curryAxioms(used: Set[Identifier]): List[Term] = currying.values flatMap (curryAxioms(_,used)) toList
+  def curryAxioms(variants: List[TypedIdentifier], used: Set[Identifier]): List[Term] = {
+    val master = variants.last
+    variants dropRight 1 filter (used.contains) flatMap (curryAxioms(_, master))
+  }
+  
+  def curryAxioms(used: Set[Identifier]): List[Term] = currying.values flatMap (curryAxioms(_,used)) toList
  
   //-------------
   // Support Part

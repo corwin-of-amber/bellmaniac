@@ -27,6 +27,11 @@ object TypePrimitives {
   def rawtype(scope: Scope, typ: Term): Term = 
     TypeTranslation.canonical(rawtype(scope, TypeTranslation.emit(scope, typ)))
     
+  def isRaw_shallow(micro: List[MicroCode]) = ! (micro exists { case Check(_,_) => true case _ => false })
+
+  def isRaw_shallow(scope: Scope, typ: Term): Boolean =
+    isRaw_shallow(TypeTranslation.emit(scope, typ))
+    
   /**
    * Counts the arguments of a function type.
    */
@@ -170,12 +175,20 @@ object TypedLambdaCalculus {
     else term.subtrees map (pullOut(_, subterm)) find (_.isDefined) map (_.get)
   }
   
-  def typecheck0(term: Term) = {
-    if (term =~ ("↦", 2)) term.subtrees match {
-      case List(arg: TypedTerm, body: TypedTerm) => TypedTerm(term, arg.typ -> body.typ)
+  def typecheck0(term: Term): Term = {
+    if (term =~ ("↦", 2)) term.subtrees map typeOf match {
+      case List(Some(arg_typ), Some(body_typ)) => TypedTerm(term, arg_typ -> body_typ)
       case _ => term
     }
     else term
+  }
+  
+  def typeOf(term: Term) = term match {
+    case typed: TypedTerm => Some(typed.typ)
+    case _ => (term.isLeaf, term.root) match {
+      case (true, tid: TypedIdentifier) => Some(tid.typ)
+      case _ => None
+    }
   }
   
 }
