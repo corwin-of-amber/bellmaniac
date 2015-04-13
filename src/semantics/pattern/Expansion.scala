@@ -47,7 +47,7 @@ trait FunctorMap[A,B] extends Map[A, B ⇒ Option[B]] {
 object FunctorMap {
   implicit def make[A, B](map0: Map[A, B ⇒ Option[B]]): FunctorMap[A, B] = new FunctorMap[A, B] { def impl = map0 }
   
-  def apply[A,B](seq: (A, B ⇒ Option[B])*) = seq toMap
+  def apply[A,B](seq: (A, B ⇒ Option[B])*): FunctorMap[A,B] = make(seq toMap)
   def empty[A,B]: FunctorMap[A,B] = make(Map())
 }
 

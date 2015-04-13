@@ -4,6 +4,8 @@ import syntax.{Identifier, Tree}
 import syntax.AstSugar._
 import semantics.TypeTranslation.Environment
 import semantics.TypedTerm
+import semantics.Scope
+import semantics.TypePrimitives
 
 
 
@@ -67,15 +69,15 @@ object SimplePattern {
 }
 
 
-class SimpleTypedPattern(pattern: Term) extends SimplePattern(pattern) {
+class SimpleTypedPattern(pattern: Term)(implicit scope: Scope) extends SimplePattern(pattern) {
   override def filter(pattern: Term, term: Term) = (pattern, term) match {
-    case (typat: TypedTerm, tyterm: TypedTerm) => typat.typ == tyterm.typ
+    case (typat: TypedTerm, tyterm: TypedTerm) => typat.typ == TypePrimitives.rawtype(scope, tyterm.typ)  // TODO rawtype??
     case (_: TypedTerm, _) => false
     case _ => true
   }
 }
 
-object SimpleTypedPattern { def apply(pattern: Term) = new SimpleTypedPattern(pattern); }
+object SimpleTypedPattern { def apply(pattern: Term)(implicit scope: Scope) = new SimpleTypedPattern(pattern); }
 
 /**
  * Represents a successful match.

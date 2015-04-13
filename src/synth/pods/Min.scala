@@ -8,6 +8,9 @@ import semantics.Scope
 import semantics.TypedTerm
 import semantics.pattern.SimpleTypedPattern
 import semantics.pattern.MacroMap
+import javax.lang.model.`type`.DeclaredType
+import semantics.TypeTranslation.Declaration
+import semantics.TypeTranslation.Environment
 
 
 
@@ -21,17 +24,16 @@ object SlicePod {
   
 }
 
-class MinPod(domain: Term, range: Term, < : Term) {
+class MinPod(domain: Term, range: Term, < : Term)(implicit env: Environment) {
   import Prelude.{B,↓}
   
   val D = domain
   val R = range
   val min = $TyTV(s"min.$D", (D -> R) -> R)
   val argmin = $TyTV(s"argmin.$D", (D -> R) -> D)
-  //val < = $TyTV("<", R ->: R ->: B)
 
   private val X = V("x")
-  val MINPAT = SimpleTypedPattern(TypedTerm(Prelude.min, (D -> R) -> R))
+  val MINPAT = SimpleTypedPattern(TypedTerm(Prelude.min, (D -> R) -> R))(env.scope)
   
   val macros = MacroMap(Prelude.min ~> {
     x =>
@@ -39,16 +41,15 @@ class MinPod(domain: Term, range: Term, < : Term) {
       MINPAT(x) map (m => min)
     })
   
-  val axioms =
-    List(//min :: ((domain -> range) -> range),
-        min =:= { val g = T($v("g")) ; TypedTerm(g ↦ (g :@ TypedTerm(argmin :@ g, D)), (D->R) -> R) },
-        ∀:(D->R, D, (g, i) => (↓(g :@ i) -> (↓(min :@ g) & ~(< :@ (g :@ i) :@ (min :@ g)))) )
+  val decl = new Declaration(min, argmin) where List(
+      min =:= { val g = T($v("g")) ; TypedTerm(g ↦ (g :@ TypedTerm(argmin :@ g, D)), (D->R) -> R) },
+      ∀:(D->R, D, (g, i) => (↓(g :@ i) -> (↓(min :@ g) & ~(< :@ (g :@ i) :@ (min :@ g)))) )
     )
   
 }
 
 object MinPod {
-  def apply(domain: Term, range: Term, < : Term) = new MinPod(domain, range, <)
+  def apply(domain: Term, range: Term, < : Term)(implicit env: Environment) = new MinPod(domain, range, <)
 }
 
 object MinDistribPod {

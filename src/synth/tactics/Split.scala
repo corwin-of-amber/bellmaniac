@@ -17,6 +17,7 @@ import synth.pods.ConsPod
 import semantics.TypedLambdaCalculus
 import synth.pods.MinPod
 import semantics.pattern.MacroMap
+import synth.pods.TotalOrderPod
 
 
 
@@ -141,20 +142,6 @@ object Split {
     scope.sorts.declare(R.root)
     scope.sorts.declare(J0.root :<: J.root)
     scope.sorts.declare(J1.root :<: J.root)
-    
-    //val _0 = TV("0")
-    //val _1 = TV("1")
-    //val z = TV("z")
-    //val nz = TV("~z")
-    //val s = TV("s")
-    //val p = TV("p")
-    //val nilN = TV("nil.N")
-    val minN = TV("min.N")
-    val argminN = TV("argmin.N")
-    //val nilJ = TV("nil.J")
-    val minJ = TV("min.J")
-    val argminJ = TV("argmin.J")
-    //val ↓ = TV("↓")
 
     val y = TV("y")
     val g = TV("g")
@@ -164,19 +151,6 @@ object Split {
     
     val prenv = (TypeTranslation.subsorts(scope) where (compl(J)(J0, J1)))
     val typedecl = Map(
-        < ~> ((R x R) -> B),
-        _0 ~> N,
-        _1 ~> N,
-        z ~> (N -> B), nz ~> (N -> B),
-        s ~> (N -> N),
-        p ~> ((N ∩ nz) -> N),
-        cons ~> (R -> ((N -> R) -> (N -> R))),
-        //nilN ~> (N -> R),
-        minN ~> ((N -> R) -> R),
-        argminN ~> ((N -> R) -> N),
-        //nilJ ~> (J -> R),
-        minJ ~> ((J -> R) -> R),
-        argminJ ~> ((J -> R) -> J),
         i ~> J,
         g ~> (J0 -> R),
         h ~> (J1 -> R),
@@ -191,8 +165,9 @@ object Split {
     
     val nilNR = NilPod(N, R)
     val consR = ConsPod(R)
-    val minNR = MinPod(N, R, <)
-    val minJR = MinPod(J, R, <)
+    val toR = TotalOrderPod(R)
+    val minNR = MinPod(N, R, toR.<)
+    val minJR = MinPod(J, R, toR.<)
     
     def liftedOrElse[A,B,C](m1: Map[A, B => Option[C]], m2: Map[A, B => Option[C]]) = {
       m1 ++ (m2 map { case(k,v2) =>
@@ -203,7 +178,7 @@ object Split {
         })
     }
     
-    val mac = MacroMap.empty ++ nilNR.macros ++ consR.macros ++ minNR.macros ++ minJR.macros
+    val mac = nilNR.macros ++ consR.macros ++ minNR.macros ++ minJR.macros
     import semantics.TypedLambdaCalculus
     def expand(term: Term): Term = {
       val eterm = TypedLambdaCalculus.preserve(term, T(term.root, term.subtrees map expand))
@@ -229,30 +204,16 @@ object Split {
     
     import TypeTranslation.TypingSugar._
     
-    val (mingh, mingh_t) = be(minJR.min :@ (g /: h))
-    val (xy, xy_t) = be(minJR.min :@ g)
-    val (xx, xx_t) = be(minJR.min :@ h)
+    val (mingh, mingh_t) = be(min :@ (g /: h))
+    val (xy, xy_t) = be(min :@ g)
+    val (xx, xx_t) = be(min :@ h)
     val (minxy, minxy_t) = 
-      be( min :@ (cons :@ (TypedTerm(minJR.min :@ g, R), cons :@ (TypedTerm(minJR.min :@ h, R), TypedTerm(nil, N->R)))) )
+      be( min :@ (cons :@ (TypedTerm(min :@ g, R), cons :@ (TypedTerm(min :@ h, R), TypedTerm(nil, N->R)))) )
     
     
+    val decls = List(NatPod.decl, nilNR.decl, toR.decl, minNR.decl, minJR.decl)
     
-    val assumptions = /*gh_t ++ ming_t ++ minh_t ++ mingh_t ++*/ xx_t ++ xy_t /*++ cons_t*/ ++ mingh_t ++ minxy_t ++ List(
-        //↓(_0) & ↓(_1) & (TypedTerm(s :@ _0, N) =:= _1),
-        //∀:(N, i => (↓(s :@ i) -> ~(TypedTerm(s :@ i, N) =:= i) )),
-        //∀:(N, i => (↓(s :@ i) -> (TypedTerm(p :@ (s :@ i), N) =:= i) )),
-        //∀:(N, i => ~(↓(nilN :@ i))),
-        //cons_id,
-        //∀:(J, i => ~(↓(nilJ :@ i))),
-        ∀:(R, (i, j) => (< :@ i :@ j) -> ~(< :@ j :@ i)),
-        ∀:(R, (i, j) => ~(< :@ i :@ j) ->: ~(< :@ j :@ i) ->: (i =:= j)),
-        z <-> (i ↦ (i =:= _0)),
-        nz <-> (i ↦ ~(z :@ i))
-        //minN =:= { val g = T($v("g")) ; TypedTerm(g ↦ (g :@ TypedTerm(argminN :@ g, N)), (N->R) -> R) },
-        //minJ =:= { val g = T($v("g")) ; TypedTerm(g ↦ (g :@ TypedTerm(argminJ :@ g, J)), (J->R) -> R) },
-        //∀:(N->R, N, (g, i) => (↓(g :@ i) -> (↓(minN :@ g) & ~(< :@ (g :@ i) :@ (minN :@ g)))) ),
-        //∀:(J->R, J, (g, i) => (↓(g :@ i) -> (↓(minJ :@ g) & ~(< :@ (g :@ i) :@ (minJ :@ g)))) )
-      ) ++ nilNR.decl.precondition ++ NatPod.axioms ++ minNR.axioms ++ minJR.axioms
+    val assumptions = xx_t ++ xy_t ++ mingh_t ++ minxy_t ++ (decls flatMap (_.precondition))
     
     val goals = List(
         //((minxy =:= ming) | (minxy =:= minh)) , //↓(TypedTerm(argmin :@ g, N)),
@@ -261,7 +222,7 @@ object Split {
         )
         
     
-    val symbols = typedecl.keys ++ List(nilNR.nil.root, minNR.min.root, minNR.argmin.root, minJR.min.root, minJR.argmin.root) ++ termb.intermediates
+    val symbols = typedecl.keys ++ (decls flatMap (_.symbols)) ++ termb.intermediates
     
     val reflect = new Reflection(env, typedecl)
     
