@@ -4,13 +4,19 @@ import syntax.Identifier
 import syntax.AstSugar._
 import semantics.Scope
 import semantics.FunctionType
+import semantics.TypedTerm
 import semantics.TypeTranslation
 import semantics.TypeTranslation.Environment
-import semantics.TypeTranslation.{TypedIdentifier,TypedTerm}
+import semantics.TypeTranslation.TypedIdentifier
 import semantics.Reflection
 import semantics.TypePrimitives
 import syntax.transform.TreeSubstitution
 import synth.pods.NilPod
+import synth.pods.NatPod
+import synth.pods.ConsPod
+import semantics.TypedLambdaCalculus
+import synth.pods.MinPod
+import semantics.pattern.MacroMap
 
 
 
@@ -22,7 +28,7 @@ object Split {
 
   class TermBreak(val env: Environment) {
     
-    import TypeTranslation.UntypedTerm
+    import semantics.UntypedTerm
     def rawtype(typ: Term) = TypePrimitives.rawtype(env.scope, typ)
     def isRaw(typ: Term) = TypePrimitives.isRaw_shallow(env.scope, typ)
     
@@ -78,7 +84,7 @@ object Split {
         val (body_id, body_t) = apply(term.subtrees(1))
         val fun = T(TypedIdentifier($v("↦"), rawtype(env.typeOf_!(body_id))))
         val arg = term.subtrees(0)
-        println(s"**** ${term toPretty}")
+        //println(s"**** ${term toPretty}")
         val (genbody_syms, genbody_t) = generalize(body_t :+ (fun =:= body_id), arg)
         (T(genbody_syms(fun.root)), genbody_t) // TODO
       }
@@ -100,10 +106,10 @@ object Split {
       }
       val geneqs =
       for (eq <- eqs) yield {
-        println(eq toPretty)
+        //println(eq toPretty)
         val lhs = T(gensym(eq.subtrees(0).root))
         val rhs = eta(typecheck0(arg ↦ subst(eq.subtrees(1))))
-        println(s"   ${lhs } = ${rhs }")
+        //println(s"   ${lhs } = ${rhs }")
         lhs =:= rhs
       }
       intermediates --= gensym.keys
@@ -121,7 +127,7 @@ object Split {
   }
   
 
-  import TypeTranslation.UntypedTerm
+  import semantics.UntypedTerm
     
   
   def main(args: Array[String]): Unit = {
@@ -136,23 +142,25 @@ object Split {
     scope.sorts.declare(J0.root :<: J.root)
     scope.sorts.declare(J1.root :<: J.root)
     
-    def _0 = TV("0")
-    def _1 = TV("1")
-    val z = TV("z")
-    val nz = TV("~z")
-    val s = TV("s")
-    val p = TV("p")
+    //val _0 = TV("0")
+    //val _1 = TV("1")
+    //val z = TV("z")
+    //val nz = TV("~z")
+    //val s = TV("s")
+    //val p = TV("p")
     //val nilN = TV("nil.N")
     val minN = TV("min.N")
     val argminN = TV("argmin.N")
     //val nilJ = TV("nil.J")
     val minJ = TV("min.J")
     val argminJ = TV("argmin.J")
-    val ↓ = TV("↓")
+    //val ↓ = TV("↓")
 
     val y = TV("y")
     val g = TV("g")
     val h = TV("h")
+    
+    import NatPod.{_0,_1,z,nz,s,p}
     
     val prenv = (TypeTranslation.subsorts(scope) where (compl(J)(J0, J1)))
     val typedecl = Map(
@@ -174,57 +182,33 @@ object Split {
         h ~> (J1 -> R),
         x ~> R, y ~> R)
         
-    val env = prenv ++ TypeTranslation.decl(scope, typedecl)
+    implicit val env = prenv ++ TypeTranslation.decl(scope, typedecl)
     
     val termb = new TermBreak(env)
-    
-    def singleton(x: Term) = {
-      val r = env.typeOf_!(x)
-      val i = T(TypedIdentifier($v("i"), N))
-      //TypedTerm(i ↦ x, N -> r) :: ((N ∩ z) -> r)
-      TypedTerm(i ↦ x, (N ∩ z) -> r)
-    }
-    def compose(f: Term, g: Term) = {
-      val (tf, tg) = (env.typeOf_!(f), env.typeOf_!(g))
-      val ((af, rf), (ag, rg)) = (TypePrimitives.curry(tf), TypePrimitives.curry(tg))
-      val i = T(TypedIdentifier($v("j"), N))
-      TypedTerm(i ↦ (g :@ (f :@ i)), af -> rg)
-    }
-    def consM(x: Term, l: Term) = TypedTerm(singleton(x) /: compose(p, l), env.typeOf_!(l))
-    
-    def pair(x: Term, y: Term) = {
-      val r = env.typeOf_!(x)
-      (TypedTerm(i ↦ x, N -> r) :: ((N ∩ z) -> r)) /: TypedTerm(i ↦ y, N -> r)
-    }
-    
-    /*
-    //val (h, h_t) = termb(cons(y, nil))
-    val (gh, gh_t) = termb(g /: h)
-    val (minh, minh_t) = termb(minJ :@ h)
-    //val (g, g_t) = termb(TypedTerm(singleton(x) /: h, N -> R)) //cons(x, h))//cons(y, nil)))
-    val (ming, ming_t) = termb(minJ :@ g)
-    //val (mingh, mingh_t) = termb(minJ :@ gh)
-    val (xy, xy_t) = termb(cons(ming, cons(minh, nilN)))
-    //val (minxy, minxy_t) = termb(minN :@ xy)
-    //val (minxy, minxy_t) = termb(minN :@ pair(ming, minh))
-   */
-    
-    val (cons_id, cons_t) = {
-      val (x, xs) = (T(TypedIdentifier($v("x"), R)), T(TypedIdentifier($v("xs"), N -> R)))
-      //termb(cons =:= (x ↦ singleton(x)))
-      termb(cons =:= (x ↦ (xs ↦ (singleton(x) /: compose(p, xs)))))
-    }
     
     //val assumptions = cons_t
     //val goals = List()
     
-    val nilN = NilPod(N, R)
+    val nilNR = NilPod(N, R)
+    val consR = ConsPod(R)
+    val minNR = MinPod(N, R, <)
+    val minJR = MinPod(J, R, <)
     
-    val mac = nilN.macros
+    def liftedOrElse[A,B,C](m1: Map[A, B => Option[C]], m2: Map[A, B => Option[C]]) = {
+      m1 ++ (m2 map { case(k,v2) =>
+          m1 get k match {
+            case Some(v1) => (k, { (b: B) => v1(b) orElse { v2(b) } })
+            case _ => (k, v2)
+          }
+        })
+    }
+    
+    val mac = MacroMap.empty ++ nilNR.macros ++ consR.macros ++ minNR.macros ++ minJR.macros
     import semantics.TypedLambdaCalculus
     def expand(term: Term): Term = {
       val eterm = TypedLambdaCalculus.preserve(term, T(term.root, term.subtrees map expand))
-      mac get eterm.root flatMap (_(eterm)) match {
+      def head(term: Term): Identifier = if (term =~ ("@", 2)) head(term.subtrees(0)) else term.root
+      mac get head(eterm) flatMap (_(eterm)) match {
        case Some(newTerm) => newTerm
        case _ => eterm
       }
@@ -235,46 +219,40 @@ object Split {
     import syntax.Unify
     
     import java.util.logging.Level
-    TypeInference.log.setLevel(Level.INFO)
+    //TypeInference.log.setLevel(Level.INFO)
     
     def e(term: Term) = expand(TypeInference.infer(Binding.prebind(term), typedecl)._2)
-    def be(term: Term) = termb(e(term))
+    def be(term: Term) = termb({ val x = e(term); println(x toPretty); x})
 
     //println(minN :@ (consM(TypedTerm(minJ :@ g, R), consM(TypedTerm(minJ :@ h, R), TypedTerm(nil, N->R)))))
     //println(e( minN :@ (consM(TypedTerm(minJ :@ g, R), consM(TypedTerm(minJ :@ h, R), TypedTerm(nil, N->R)))) ))
     
-    
-    val (mingh, mingh_t) = be(minJ :@ (g /: h))
-    val (xy, xy_t) = be(minJ :@ g)
-    val (xx, xx_t) = be(minJ :@ h)
-    val (minxy, minxy_t) = //be(minN :@ consM(TypedTerm(minJ :@ g, R), TypedTerm(nil, N -> R)))
-      //be(minN :@ (consM(TypedTerm(minJ :@ g, R), TypedTerm(nil, N -> R))))
-      //be(minN :@ (consM(xy/*TypedTerm(minJ :@ g, R)*/, consM(xx, TypedTerm(nil, N -> R)))))
-      be( minN :@ (consM(TypedTerm(minJ :@ g, R), consM(TypedTerm(minJ :@ h, R), TypedTerm(nil, N->R)))) )
-      //termb(minN :@ (consM(TypedTerm(minJ :@ g, R), consM(TypedTerm(minJ :@ h, R), nilN.nil))))
-    
-    //System.exit(0)
-    
     import TypeTranslation.TypingSugar._
+    
+    val (mingh, mingh_t) = be(minJR.min :@ (g /: h))
+    val (xy, xy_t) = be(minJR.min :@ g)
+    val (xx, xx_t) = be(minJR.min :@ h)
+    val (minxy, minxy_t) = 
+      be( min :@ (cons :@ (TypedTerm(minJR.min :@ g, R), cons :@ (TypedTerm(minJR.min :@ h, R), TypedTerm(nil, N->R)))) )
     
     
     
     val assumptions = /*gh_t ++ ming_t ++ minh_t ++ mingh_t ++*/ xx_t ++ xy_t /*++ cons_t*/ ++ mingh_t ++ minxy_t ++ List(
-        ↓(_0) & ↓(_1) & (TypedTerm(s :@ _0, N) =:= _1),
-        ∀:(N, i => (↓(s :@ i) -> ~(TypedTerm(s :@ i, N) =:= i) )),
-        ∀:(N, i => (↓(s :@ i) -> (TypedTerm(p :@ (s :@ i), N) =:= i) )),
+        //↓(_0) & ↓(_1) & (TypedTerm(s :@ _0, N) =:= _1),
+        //∀:(N, i => (↓(s :@ i) -> ~(TypedTerm(s :@ i, N) =:= i) )),
+        //∀:(N, i => (↓(s :@ i) -> (TypedTerm(p :@ (s :@ i), N) =:= i) )),
         //∀:(N, i => ~(↓(nilN :@ i))),
         //cons_id,
         //∀:(J, i => ~(↓(nilJ :@ i))),
         ∀:(R, (i, j) => (< :@ i :@ j) -> ~(< :@ j :@ i)),
         ∀:(R, (i, j) => ~(< :@ i :@ j) ->: ~(< :@ j :@ i) ->: (i =:= j)),
         z <-> (i ↦ (i =:= _0)),
-        nz <-> (i ↦ ~(z :@ i)),
-        minN =:= { val g = T($v("g")) ; TypedTerm(g ↦ (g :@ TypedTerm(argminN :@ g, N)), (N->R) -> R) },
-        minJ =:= { val g = T($v("g")) ; TypedTerm(g ↦ (g :@ TypedTerm(argminJ :@ g, J)), (J->R) -> R) },
-        ∀:(N->R, N, (g, i) => (↓(g :@ i) -> (↓(minN :@ g) & ~(< :@ (g :@ i) :@ (minN :@ g)))) ),
-        ∀:(J->R, J, (g, i) => (↓(g :@ i) -> (↓(minJ :@ g) & ~(< :@ (g :@ i) :@ (minJ :@ g)))) )
-      ) ++ nilN.decl.precondition
+        nz <-> (i ↦ ~(z :@ i))
+        //minN =:= { val g = T($v("g")) ; TypedTerm(g ↦ (g :@ TypedTerm(argminN :@ g, N)), (N->R) -> R) },
+        //minJ =:= { val g = T($v("g")) ; TypedTerm(g ↦ (g :@ TypedTerm(argminJ :@ g, J)), (J->R) -> R) },
+        //∀:(N->R, N, (g, i) => (↓(g :@ i) -> (↓(minN :@ g) & ~(< :@ (g :@ i) :@ (minN :@ g)))) ),
+        //∀:(J->R, J, (g, i) => (↓(g :@ i) -> (↓(minJ :@ g) & ~(< :@ (g :@ i) :@ (minJ :@ g)))) )
+      ) ++ nilNR.decl.precondition ++ NatPod.axioms ++ minNR.axioms ++ minJR.axioms
     
     val goals = List(
         //((minxy =:= ming) | (minxy =:= minh)) , //↓(TypedTerm(argmin :@ g, N)),
@@ -283,7 +261,7 @@ object Split {
         )
         
     
-    val symbols = typedecl.keys ++ List(nilN.nil.root) ++ termb.intermediates
+    val symbols = typedecl.keys ++ List(nilNR.nil.root, minNR.min.root, minNR.argmin.root, minJR.min.root, minJR.argmin.root) ++ termb.intermediates
     
     val reflect = new Reflection(env, typedecl)
     

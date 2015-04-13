@@ -3,7 +3,8 @@ package semantics.pattern
 import syntax.{Identifier, Tree}
 import syntax.AstSugar._
 import semantics.TypeTranslation.Environment
-import semantics.TypeTranslation.TypedTerm
+import semantics.TypedTerm
+
 
 
 class ExactMatch(val pattern: Term) {
@@ -27,13 +28,10 @@ class ExactMatch(val pattern: Term) {
 
 class SimplePattern(val pattern: Term) {
     
-  def find(term: Term) = {
-    term.nodes collect { n => apply(n) match {
-      case Some(x) => new Matched(n, x)
-    }}
-  }
+  def find(term: Term) =
+    term.nodes flatMap (n => this(n))
     
-  def apply(term: Term): Option[Map[Identifier, Term]] = apply(pattern, term, true)
+  def apply(term: Term): Option[Matched] = apply(pattern, term, true) map (new Matched(term, _))
   
   def apply(pattern: Term, term: Term, top: Boolean=false): Option[Map[Identifier, Term]] = {
     if      (pattern =~ (":", 2)) apply(pattern.subtrees(1), term, top) map (_ + (key(pattern) -> term))

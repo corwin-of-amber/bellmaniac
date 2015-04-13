@@ -141,7 +141,6 @@ object LambdaCalculus {
 object TypedLambdaCalculus {
 
   import AstSugar._
-  import TypeTranslation.TypedTerm
   
   def preserve(term: Term, newterm: Term) = (term, term.root) match {
     case (typed: TypedTerm, _) => TypedTerm(newterm, typed.typ)
@@ -176,12 +175,55 @@ object TypedLambdaCalculus {
   }
   
   def typecheck0(term: Term): Term = {
-    if (term =~ ("↦", 2)) term.subtrees map typeOf match {
+    if (term =~ ("↦", 2)) term.subtrees map TypedTerm.typeOf match {
       case List(Some(arg_typ), Some(body_typ)) => TypedTerm(term, arg_typ -> body_typ)
       case _ => term
     }
     else term
   }
+}
+
+
+import AstSugar.Term
+
+
+object `package` {
+  
+  /**
+   * Adds the "untype" method to Term.
+   */
+  implicit class UntypedTerm(private val term: Term) extends AnyVal {
+    def untype = term.map({
+      case x: TypedIdentifier => x.untype
+      case e => e
+    })
+  }
+
+  /*
+   * Helper class that makes objects equatable by reference
+   * rather than .equals() for use in HashMap 
+   */
+  implicit class Id[A <: AnyRef](private val a: A) {
+    override def equals(other: Any) = other match {
+      case b: Id[_] => a eq b.a
+      case b: AnyRef => a eq b
+      case _ => false
+    }
+    override def hashCode = a.hashCode
+    def get = a
+  }
+}
+
+case class TypedTerm(term: Term, val typ: Term)
+  extends AstSugar.Term(term.root, term.subtrees) {
+  override def toString = s"${super.toString} :: $typ"
+  def untype = term.untype
+}
+  
+  
+object TypedTerm {
+
+  import AstSugar._
   
   def typeOf(term: Term) = term match {
     case typed: TypedTerm => Some(typed.typ)
@@ -189,6 +231,11 @@ object TypedLambdaCalculus {
       case (true, tid: TypedIdentifier) => Some(tid.typ)
       case _ => None
     }
+  }
+  
+  def typeOf_!(term: Term) = typeOf(term) match {
+    case Some(typ) => typ
+    case _ => throw new Scope.TypingException(s"type needed for '${term toPretty}'")
   }
   
 }

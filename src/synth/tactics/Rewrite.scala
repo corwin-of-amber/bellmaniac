@@ -2,7 +2,7 @@ package synth.tactics
 
 import syntax.Tree
 import syntax.AstSugar._
-import semantics.TypeTranslation.TypedTerm
+import semantics.TypedTerm
 import semantics.Scope
 import semantics.TypeTranslation
 import semantics.TypeInference

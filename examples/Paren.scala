@@ -50,7 +50,7 @@ object Paren {
   def Q0 = TV("Q₀")
   
   def x = TV("x")
-  def _1 = TI(1)
+  private def _1 = TI(1)
   
   def TT(v: Any) = T(new Identifier(v, "type variable"))
   

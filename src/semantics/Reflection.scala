@@ -5,7 +5,6 @@ import syntax.Identifier
 import TypeTranslation.TypedIdentifier
 import TypeTranslation.Environment
 import TypeTranslation.Declaration
-import TypeTranslation.TypedTerm
 import Scope.TypingException
 
 import AstSugar._
@@ -277,7 +276,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   // Solver Part
   //------------
   def solve(assumptions: List[Term], goals: List[Term]) = {
-    import TypeTranslation.UntypedTerm
+    import semantics.UntypedTerm
     import semantics.smt.Z3Sugar
     import syntax.Piping._
     
@@ -324,7 +323,7 @@ object `@Reflection` {
   
   import semantics.Domains._
   import semantics.Prelude._
-  import TypeTranslation.UntypedTerm
+  import semantics.UntypedTerm
     
 
   /**

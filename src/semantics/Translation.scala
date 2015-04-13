@@ -17,19 +17,6 @@ object TypeTranslation {
     def untype = new Identifier(symbol.literal, symbol.kind, symbol.ns)
   }
   
-  implicit class UntypedTerm(private val term: Term) extends AnyVal {
-    def untype = term.map({
-      case x: TypedIdentifier => x.untype
-      case e => e
-    })
-  }
-  
-  case class TypedTerm(term: Term, val typ: Term)
-    extends Term(term.root, term.subtrees) {
-    override def toString = s"${super.toString} :: $typ"
-    def untype = term.untype
-  }
-  
   case class Declaration(val symbols: List[TypedIdentifier], 
                          val precondition: List[Term]) {
     def this(symbols: Term*) =
@@ -279,6 +266,7 @@ object TypeTranslation {
   object TypingSugar {
     import syntax.Strip.greek
     
+    def TyTV(literal: String, typ: Term) = T(TypedIdentifier(V(literal), typ))
     def $TyTV(literal: String, typ: Term) = T(TypedIdentifier($v(literal), typ))
     
     def qvars(names: List[String], typ: Term) = {

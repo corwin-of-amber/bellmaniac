@@ -180,7 +180,7 @@ object TypeInference {
    */  
   class CoarseGrained(resolve: ResolveLattice) {
     
-    import TypeTranslation.TypedTerm
+    import TypedTerm.typeOf
     
     val ns = new Namespace[Id[Tree[Identifier]]]
     val scope = resolve.asInstanceOf[DualResolve].scope   // @@@ TODO oh terrible!!
@@ -192,7 +192,7 @@ object TypeInference {
       // - unify all the information you have (@@@ this is so messy)
       val u = new Unify
       u digest (abstypes(vassign map { case (k,v) => (k, mark(/*raw*/(v))) }))
-      u digest (expr.nodes flatMap { case typed: TypedTerm => Some(NV(typed) -> mark(typed.typ)) case _ => None } toMap)
+      u digest (expr.nodes collect { n => typeOf(n) match { case Some(typ) => (NV(n) -> mark(typ)) }} toMap)
       u digest assign
       // - canonicalize result
       (rootvar, u.canonicalize filter (_._1.ns match { case _:AbsTypeUid=>false case _=>true }))
@@ -294,10 +294,8 @@ object TypeInference {
    * Improves a coarse assignment of types to tree nodes by detecting slack
    * and removing it.
    */
-  class FineGrained(val ns: Namespace[Id[Term]], var assign: Map[Identifier,Term])(resolve: ResolveLattice) {
+  class FineGrained(val ns: Namespace[Id[Term]], var assign: Map[Identifier,Term])(scope: Scope, resolve: ResolveLattice) {
 
-    val scope = resolve.asInstanceOf[DualResolve].scope   // @@@ TODO oh terrible!!
-    
     def improve(t: Term) = {
       whileMutate (() => assign) {
         for (n <- t.nodes)
@@ -524,7 +522,7 @@ object TypeInference {
     val dual = new DualResolve(scope)
     val coarse =  new CoarseGrained(conservative)
     val (rootvar, assign) = coarse.infer(term, vassign)
-    val fine = new FineGrained(coarse.ns, assign ++ vassign)(dual)
+    val fine = new FineGrained(coarse.ns, assign ++ vassign)(scope, dual)
     val tassign = { for ((k,v) <- coarse.ns; tpe <- assign get fine.NV(k)) yield (v, tpe) } .toMap
     synth.tactics.Rewrite.display(annotate(term, tassign))(new TypeTranslation.Environment(scope, Map()))
     val reassign = fine.improve(term) map (kv => (kv._1, unmark(kv._2)))
@@ -542,7 +540,6 @@ object TypeInference {
   }
   
   def annotate(term: Term, tassign: Map[Id[Term], Term]): Term = {
-    import TypeTranslation.TypedTerm
     val clon = T(term.root, term.subtrees map (annotate(_, tassign)))
     tassign get term match {
       case Some(typ) => TypedTerm(clon, typ)
@@ -589,7 +586,7 @@ object TypeInference {
       case _ =>
     }
     
-    val fine = new FineGrained(coarse.ns, assign)(dual)
+    val fine = new FineGrained(coarse.ns, assign)(scope, dual)
     val reassign = fine.improve(program)
 
     println("-" * 80)

@@ -4,9 +4,10 @@ import syntax.Identifier
 import syntax.AstSugar._
 import semantics.Scope
 import semantics.FunctionType
+import semantics.TypedTerm
 import semantics.TypeTranslation
 import semantics.TypeTranslation.Environment
-import semantics.TypeTranslation.{TypedIdentifier,TypedTerm}
+import semantics.TypeTranslation.TypedIdentifier
 import semantics.Reflection
 import semantics.TypePrimitives
 import semantics.TypeTranslation.TypingSugar
@@ -22,7 +23,7 @@ object Stratify {
   import semantics.Prelude._
   
 
-  import TypeTranslation.UntypedTerm
+  import semantics.UntypedTerm
 
   import Split.TermBreak
   
