@@ -21,11 +21,9 @@ object Stratify {
 
   import semantics.Domains._
   import semantics.Prelude._
-  
-
+  import semantics.TermTranslation.TermBreak
   import semantics.UntypedTerm
 
-  import Split.TermBreak
   
   class Intros(implicit env: Environment) {
     val intermediates = new collection.mutable.HashSet[TypedIdentifier]

@@ -32,7 +32,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   import Reflection._
   import Prelude.B
   import syntax.Strip.greek
-  import TypedLambdaCalculus.preserve
+  import TypedTerm.preserve
   
   //-----------------
   // Abstraction Part

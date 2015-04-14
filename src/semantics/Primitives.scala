@@ -141,11 +141,7 @@ object LambdaCalculus {
 object TypedLambdaCalculus {
 
   import AstSugar._
-  
-  def preserve(term: Term, newterm: Term) = (term, term.root) match {
-    case (typed: TypedTerm, _) => TypedTerm(newterm, typed.typ)
-    case _ => newterm
-  }
+  import TypedTerm.preserve
 
   def beta(va: Identifier, body: Term, arg: Term): Term = {
     if (body.isLeaf && body.root == va) preserve(body, arg)
@@ -236,6 +232,11 @@ object TypedTerm {
   def typeOf_!(term: Term) = typeOf(term) match {
     case Some(typ) => typ
     case _ => throw new Scope.TypingException(s"type needed for '${term toPretty}'")
+  }
+  
+  def preserve(term: Term, newterm: Term) = (term, term.root) match {
+    case (typed: TypedTerm, _) => TypedTerm(newterm, typed.typ)
+    case _ => newterm
   }
   
 }

@@ -1,6 +1,7 @@
 package semantics
 
 import syntax.{Tree,Identifier,AstSugar,Scheme}
+import syntax.transform.TreeSubstitution
 import scala.collection.mutable.ArrayBuffer
 import semantics.smt.Z3Gate
 
@@ -458,6 +459,110 @@ object TermTranslation {
     }*/
     else throw new Exception(s"Cannot translate term '${term.toPretty}'")
   }
+  
+  /**
+   * Eventually all of the term translation mechanism will go through this.
+   */
+  class TermBreak(val env: Environment) {
+    
+    import Prelude.B
+    
+    def rawtype(typ: Term) = TypePrimitives.rawtype(env.scope, typ)
+    def isRaw(typ: Term) = TypePrimitives.isRaw_shallow(env.scope, typ)
+    
+    val intermediates = collection.mutable.Set[Identifier]()
+    val perceivedType = collection.mutable.Map[Identifier, Term]()
+    
+    def apply(term: Term): (Term, List[Term]) = {
+      val (id, eqs) = term0(term)
+      if (id.isLeaf) intermediates += id.root
+      env.typeOf(term) match {
+        case Some(typ) if id.isLeaf && !isRaw(typ) && perceivedType.get(id.root) != Some(typ) =>
+          val cast = T(TypedIdentifier($v(s"${id.untype}'"), rawtype(typ)))
+          intermediates += cast.root
+          perceivedType += (cast ~> typ)
+          (cast, eqs :+ (cast =:= TypedTerm(T(TypedIdentifier(id.root, typ)), typ)))
+        case _ =>
+          (id, eqs)
+      }
+    }
+    
+    def term0(term: Term): (Term, List[Term]) = {
+      def reapply(term: Term) = apply(term)
+      if (term.isLeaf) {
+        env typeOf term match {
+          case Some(typ) => (term, List())
+          case _ => throw new Scope.TypingException(s"undeclared: '$term'")
+        }
+      }
+      else if (term =~ ("@", 2)) {
+        val List((func_id, func_terms), (arg_id, arg_terms)) = term.subtrees map reapply
+        val (func_par, func_ret) = TypePrimitives.curry(rawtype(env.typeOf_!(func_id)))(env.scope)
+        val app = T(TypedIdentifier($v(s"${func_id.untype}${arg_id.untype}"), func_ret))
+        (app, func_terms ++ arg_terms :+ (app =:= TypedTerm(func_id :@ arg_id, func_ret)))
+      }
+      else if (term =~ ("/", 2)) {
+        val List((fore_id, fore_t), (back_id, back_t)) = term.subtrees map reapply
+        val ore = T(TypedIdentifier($v(s"${fore_id.untype}/${back_id.untype}"), rawtype(env.typeOf_!(fore_id))))
+        (ore, fore_t ++ back_t :+ (ore =:= TypedTerm(fore_id /: back_id, env.typeOf_!(ore))))
+      }
+      else if (term =~ ("=", 2)) {
+        val List((lhs_id, lhs_t), (rhs_id, rhs_t)) = term.subtrees map reapply
+        val eq = T(TypedIdentifier($v(s"${lhs_id.untype}=${rhs_id.untype}"), B))
+        (eq, lhs_t ++ rhs_t :+ (eq <-> TypedTerm(lhs_id =:= rhs_id, B)))
+      }
+      else if (term =~ ("::", 2)) {
+        val List(expr, typ) = term.subtrees
+        val (expr_id, expr_terms) = this(expr)
+        val cast = T(TypedIdentifier($v(s"${expr_id.untype}'"), rawtype(env.typeOf_!(expr_id))))
+        assert(expr_id.isLeaf)
+        (cast, expr_terms :+ (cast =:= TypedTerm(T(TypedIdentifier(expr_id.root, typ)), typ)))
+      }
+      else if (term =~ ("↦", 2)) {
+        val (body_id, body_t) = apply(term.subtrees(1))
+        val fun = T(TypedIdentifier($v("↦"), rawtype(env.typeOf_!(body_id))))
+        val arg = term.subtrees(0)
+        //println(s"**** ${term toPretty}")
+        val (genbody_syms, genbody_t) = generalize(body_t :+ (fun =:= body_id), arg)
+        (T(genbody_syms(fun.root)), genbody_t) // TODO
+      }
+      else if (term =~ (":", 2)) {
+        term0(term.subtrees(1))
+      }
+      else throw new Scope.TypingException(s"don't quite know what to do with ${term toPretty}")
+    }
+    
+    import semantics.TypedLambdaCalculus.typecheck0
+    
+    def generalize(eqs: List[Term], arg: Term): (Map[Identifier,Identifier], List[Term]) = {
+      /**/ assume(eqs forall (_ =~ ("=", 2))) /**/
+      /**/ assume(eqs forall (_.subtrees(0).isLeaf)) /**/
+      val sym = eqs map (_.subtrees(0).root)
+      val gensym = sym map (x => (x, TypedIdentifier(x, rawtype(env.typeOf_!(arg) -> env.typeOf_!(x))))) toMap
+      val subst = new TreeSubstitution(sym map (x => (T(x), T(gensym(x)) :@ arg))) {
+        override def preserve(old: Term, new_ : Term) = TypedTerm.preserve(old, new_)
+      }
+      val geneqs =
+      for (eq <- eqs) yield {
+        //println(eq toPretty)
+        val lhs = T(gensym(eq.subtrees(0).root))
+        val rhs = eta(typecheck0(arg ↦ subst(eq.subtrees(1))))
+        //println(s"   ${lhs } = ${rhs }")
+        lhs =:= rhs
+      }
+      intermediates --= gensym.keys
+      intermediates ++= gensym.values
+      //if (!eqs.isEmpty) System.exit(0)
+      (gensym, geneqs)
+    }
+    
+    def eta(term: Term) =
+      if (term =~ ("↦", 2) && term.subtrees(1) =~ ("@", 2) && term.subtrees(1).subtrees(1) == term.subtrees(0))
+        TypedTerm.preserve(term, term.subtrees(1).subtrees(0))
+      else
+        term
+    
+  }  
   
   def proveAndPrint(env: List[Environment], goals: List[Term]) {
     val (smt, assumptions) = TypeTranslation.toSmt(env)

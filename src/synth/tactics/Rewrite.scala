@@ -10,11 +10,10 @@ import semantics.Id
 import report.console.NestedListTextFormat
 import syntax.Identifier
 import semantics.TypeTranslation.Environment
+import semantics.TermTranslation.TermBreak
 import semantics.Binding
 import semantics.Prelude
-import semantics.TypeTranslation.Environment
 import semantics.TypedLambdaCalculus
-import synth.tactics.Split.TermBreak
 import semantics.Reflection
 import semantics.pattern.ExactMatch
 

@@ -33,7 +33,7 @@ class Binding(val left: Set[Identifier], val right: Set[Identifier]) {
   }
   
   def bind(term: Term, bound: Map[Identifier, Identifier] = Map.empty): Term = {
-    TypedLambdaCalculus.preserve(term, bind0(term, bound))
+    TypedTerm.preserve(term, bind0(term, bound))
   }
   
   def bind0(term: Term, bound: Map[Identifier, Identifier] = Map.empty): Term = {
