@@ -15,23 +15,23 @@ import semantics.pattern.MacroMap
 
 
 
-class NilPod(val domain: Term, val range: Term)(implicit env: Environment) {
+class NilPod(val domain: Term, val range: Term)(implicit env: Environment) extends Pod {
   
   import Prelude.↓
   
   val nil = $TyTV(s"nil.${domain}${range}", domain -> range)
-  val decl = 
+  override val decl = 
       new Declaration(nil) where ∀:(domain, i => ~(↓(nil :@ i)))
       
   val NILPAT = SimpleTypedPattern(TypedTerm(Prelude.nil, typeOf_!(nil)))(env.scope)
-  val macros = MacroMap(Prelude.nil ~> { x => NILPAT(x) map (m => nil) })
+  override val macros = MacroMap(Prelude.nil ~> { x => NILPAT(x) map (m => nil) })
 }
 
 object NilPod {
   def apply(domain: Term, range: Term)(implicit env: Environment) = new NilPod(domain, range)
 }
 
-class ConsPod(val range: Term)(implicit env: Environment) {
+class ConsPod(val range: Term)(implicit env: Environment) extends Pod {
   
   import Prelude.N
   
@@ -42,7 +42,7 @@ class ConsPod(val range: Term)(implicit env: Environment) {
   private val L = V("l")
   
   val CONSPAT = SimpleTypedPattern(TypedTerm(Prelude.cons, consType) :@ (T(X) :- $TV("?"), T(L) :- $TV("?")))(env.scope)
-  val macros = MacroMap(Prelude.cons ~> { 
+  override val macros = MacroMap(Prelude.cons ~> { 
     x => CONSPAT(x) map (m => ConsPod.consM(m(X), m(L))(env.scope)) 
     })
 }

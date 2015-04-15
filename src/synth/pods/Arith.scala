@@ -5,10 +5,16 @@ import semantics.Prelude
 import semantics.TypedTerm
 import semantics.TypeTranslation.TypingSugar._
 import semantics.TypeTranslation.Declaration
+import semantics.pattern.MacroMap
 
 
+trait Pod {
+  val decl = new Declaration()
+  val macros = MacroMap.empty
+}
 
-object NatPod {
+
+object NatPod extends Pod {
   import Prelude.{N,B,↓}
   
   val _0 = TyTV("0", N)
@@ -20,7 +26,7 @@ object NatPod {
   
   private val i = $TV("i")
   
-  val decl = new Declaration(_0, _1, z, nz, s, p) where List(
+  override val decl = new Declaration(_0, _1, z, nz, s, p) where List(
       ↓(_0) & ↓(_1) & (TypedTerm(s :@ _0, N) =:= _1),
       z <-> (i ↦ (i =:= _0)),
       nz <-> (i ↦ ~(z :@ i)),
@@ -31,7 +37,7 @@ object NatPod {
 
 
 
-class TotalOrderPod(domain: Term) {
+class TotalOrderPod(domain: Term) extends Pod {
   
   import Prelude.B
   
@@ -41,7 +47,7 @@ class TotalOrderPod(domain: Term) {
   
   val sym = List(<.root)
   
-  val decl = new Declaration(<) where List(
+  override val decl = new Declaration(<) where List(
       ∀:(D, (i, j) => (< :@ i :@ j) -> ~(< :@ j :@ i)),                   // anti-symmetry
       ∀:(D, (i, j) => ~(< :@ i :@ j) ->: ~(< :@ j :@ i) ->: (i =:= j))    // totality
     )      

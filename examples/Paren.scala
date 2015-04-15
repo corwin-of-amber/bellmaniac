@@ -99,7 +99,7 @@ object Paren {
               cons:@(
                 min:@((k :: K1) ↦
                     (((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item2"))),
-                (nil :: (J -> ?)) ))
+                nil))
           )// -: TV("compute")
         ).foldRight :: (? ->: (K0 x K2) ->: ?) )
   

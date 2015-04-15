@@ -16,27 +16,36 @@ import semantics.Prelude
 import semantics.TypedLambdaCalculus
 import semantics.Reflection
 import semantics.pattern.ExactMatch
+import semantics.TypeTranslation.Declaration
 
 
 
 object Rewrite {
   
-  object CPod {
+  class CPod(J0: Term, J1: Term, J2: Term) {
     import examples.Paren.{J,w}
     import semantics.Prelude._
     
-    def apply(J0: Term, J1: Term, J2: Term) = {
-      val C = $TV("C")
-      val P = $TV("P")
-      val (θ, i, j, k) = ($TV("θ"), $TV("i"), $TV("j"), $TV("k"))
-      val (item, compute) = ($TV("item"), $TV("compute"))
+    val C = $TV("C")
+    val P = $TV("P")
+    val (θ, i, j, k) = ($TV("θ"), $TV("i"), $TV("j"), $TV("k"))
+    val (item, compute) = ($TV("item"), $TV("compute"))
+    
+    val program =
       TV("program")(
           P :: ((J x J) -> B),
           w :: ((J x J x J) -> R),
-          C :- ((θ ↦ (i ↦ (j ↦ (min :@ (k ↦ ( item :- ((θ :@ i :@ k) + (θ :@ k :@ j) + (w :@ i :@ k :@ j))))))))
+          C :- ((θ ↦ (i ↦ (j ↦ (min :@ (k ↦ ( item :- ((θ :@ (i, k)) + (θ :@ (k, j)) + (w :@ (i, k, j)))))))))
            :: ((((J x J) ∩ P) -> R) ->: J0 ->: J2 ->: R))
       )
-    }
+      
+    val decl = new Declaration() where List(
+        (P <-> (i ↦ (j ↦ ((J0(i) & J1(j)) | (J1(i) & J2(j))))))
+      )
+  }
+  
+  object CPod {
+    def apply(J0: Term, J1: Term, J2: Term) = new CPod(J0, J1, J2)
   }
   
   def display(term: Term)(implicit env: Environment) {
@@ -121,7 +130,7 @@ object Rewrite {
       TypeInference.infer(Binding.prebind(term), vassign)
     }
     
-    val (vassign, tC) = instantiate(CPod.apply(K0, K1, K2))
+    val (vassign, tC) = instantiate(CPod(K0, K1, K2).program)
     val C = tC
     
     display(C)

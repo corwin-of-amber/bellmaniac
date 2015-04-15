@@ -1,7 +1,8 @@
 package semantics.pattern
 
 import syntax.Identifier
-import syntax.AstSugar.Term
+import syntax.AstSugar._
+import semantics.TypedTerm
 
 
 object `package` {
@@ -10,6 +11,22 @@ object `package` {
     def apply(seq: (Identifier, Term ⇒ Option[Term])*) = FunctorMap(seq:_*)
     def empty: MacroMap = FunctorMap.empty
   }
+}
+
+
+class Expansion(val macros: MacroMap) {
+  
+  def apply(term: Term) = expand(term)
+
+  def expand(term: Term): Term = {
+    val eterm = TypedTerm.preserve(term, T(term.root, term.subtrees map expand))
+    def head(term: Term): Identifier = if (term =~ ("@", 2)) head(term.subtrees(0)) else term.root
+    macros get head(eterm) flatMap (_(eterm)) match {
+     case Some(newTerm) => newTerm
+     case _ => eterm
+    }
+  }
+  
 }
 
 

@@ -19,7 +19,8 @@ object TypeTranslation {
   }
   
   case class Declaration(val symbols: List[TypedIdentifier], 
-                         val precondition: List[Term]) {
+                         val precondition: List[Term],
+                         val origin: Map[Identifier, Term]=Map.empty) {
     def this(symbols: Term*) =
       this(symbols map (_.leaf.asInstanceOf[TypedIdentifier]) toList, List())
       
@@ -29,6 +30,8 @@ object TypeTranslation {
     
     def where(fact: Term): Declaration = where(List(fact))
     def where(facts: List[Term]) = Declaration(symbols, precondition ++ facts)
+    
+    def of(origin: Map[Identifier, Term]) = Declaration(symbols, precondition, origin)
     
     def toPretty = s"Declaration(${symbols map (_.toPretty) mkString ", "}; " +
                    s"${precondition map (_.untype.toPretty) mkString ", "})"
@@ -46,6 +49,8 @@ object TypeTranslation {
         for ((_,v) <- decl; s <- v.symbols) if (s == symbol) return v
         throw new NoSuchElementException(s"symbol $symbol")
       }
+    
+    def typedecl = decl.values flatMap (_.origin) toMap
     
     def typedSymbols: Stream[TypedIdentifier] =
       (for ((k,v) <- decl; s <- v.symbols) yield s) toStream
@@ -78,7 +83,7 @@ object TypeTranslation {
     E(scope, types map { case (k,v) => k -> decl(scope, k, v) })
   
   def decl(scope: Scope, symbol: Identifier, typ: Term): Declaration =
-    decl(symbol, emit(scope, typ))
+    decl(symbol, emit(scope, typ)) of Map(symbol -> typ)
   
   def decl(symbol: Identifier, micro: List[MicroCode]) = {
     val inner = new Namespace

@@ -24,7 +24,7 @@ object SlicePod {
   
 }
 
-class MinPod(domain: Term, range: Term, < : Term)(implicit env: Environment) {
+class MinPod(domain: Term, range: Term, < : Term)(implicit env: Environment) extends Pod {
   import Prelude.{B,↓}
   
   val D = domain
@@ -35,13 +35,11 @@ class MinPod(domain: Term, range: Term, < : Term)(implicit env: Environment) {
   private val X = V("x")
   val MINPAT = SimpleTypedPattern(TypedTerm(Prelude.min, (D -> R) -> R))(env.scope)
   
-  val macros = MacroMap(Prelude.min ~> {
-    x =>
-      println(s"MINPAT($x) = ${MINPAT(x)}")
-      MINPAT(x) map (m => min)
+  override val macros = MacroMap(Prelude.min ~> {
+    x => MINPAT(x) map (_ => min)
     })
   
-  val decl = new Declaration(min, argmin) where List(
+  override val decl = new Declaration(min, argmin) where List(
       min =:= { val g = T($v("g")) ; TypedTerm(g ↦ (g :@ TypedTerm(argmin :@ g, D)), (D->R) -> R) },
       ∀:(D->R, D, (g, i) => (↓(g :@ i) -> (↓(min :@ g) & ~(< :@ (g :@ i) :@ (min :@ g)))) )
     )
