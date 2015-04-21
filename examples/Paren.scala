@@ -71,7 +71,7 @@ object Paren {
   
           (@:(x, i) |! ((i+_1) =:= j)) /:
           (min:@(k ↦
-              (((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item")))
+              (((θ:@(i, k)) + (θ:@(k, j)) /*+ (w:@(i, k, j))*/) -: TV("item")))
           ) -: TV("compute")
         ).foldRight -: f ) ,
       
@@ -86,7 +86,7 @@ object Paren {
       g :- TV("f|ne") ,
       
       TV("g|nw") :- ( g :: (? ->: (K0 x K2) ->: ?) ) ,
-      TV("g|sw") :- ( g :: (? ->: (K1 x K2) ->: ?) ) ,
+      TV("g|sw") :- ( g :: (? ->: (K1 x K2) ->: ?) ) /*,
 
       TV("g|nw'") :- (
         TI("↦")(
@@ -101,7 +101,7 @@ object Paren {
                     (((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item2"))),
                 nil))
           )// -: TV("compute")
-        ).foldRight :: (? ->: (K0 x K2) ->: ?) )
+        ).foldRight :: (? ->: (K0 x K2) ->: ?) ) */
   
   )
     

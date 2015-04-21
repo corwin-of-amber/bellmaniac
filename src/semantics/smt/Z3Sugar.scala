@@ -79,6 +79,10 @@ object Z3Sugar {
     }
     
     def toPretty(status: Value) = status.toString.toLowerCase
+    
+    implicit class Pretty(v: Value) {
+      def toPretty = v.toString.toLowerCase
+    }
   }
   
   import ProverStatus._

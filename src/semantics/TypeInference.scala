@@ -184,20 +184,22 @@ object TypeInference {
     
     val ns = new Namespace[Id[Tree[Identifier]]]
     val scope = resolve.asInstanceOf[DualResolve].scope   // @@@ TODO oh terrible!!
-    //def raw(x: Term) = TypePrimitives.rawtype(scope, x)
+    def raw(x: Term) = TypePrimitives.rawtype(scope, x)
     
     def infer(expr: Tree[Identifier], vassign: Map[Identifier, Tree[Identifier]]=Map()) = {
       val (rootvar, assign) = infer0(expr)
       implicit val join = resolve.join
       // - unify all the information you have (@@@ this is so messy)
       val u = new Unify
-      u digest (abstypes(vassign map { case (k,v) => (k, mark(/*raw*/(v))) }))
-      u digest (expr.nodes collect { n => typeOf(n) match { case Some(typ) => (NV(n) -> mark(typ)) }} toMap)
+      u digest (abstypes(vassign map { case (k,v) => (k, mark(raw(v))) }))
+      u digest (expr.nodes collect { n => typeOf(n) match { case Some(typ) => (NV(n) -> mark(raw(typ))) }} toMap)
       u digest assign
       // - canonicalize result
       (rootvar, u.canonicalize filter (_._1.ns match { case _:AbsTypeUid=>false case _=>true }))
     }
     
+    import Prelude.B
+
     def infer0(expr: Tree[Identifier]): (Identifier, Map[Identifier, Tree[Identifier]]) = {
       val freshvar = new Identifier(ns.declare(expr), "variable", ns)
       if (expr.isLeaf) {
@@ -279,9 +281,24 @@ object TypeInference {
         val tp = $v
         val children = expr.subtrees map infer0 map { case (x,y) => y + (tp -> T(x)) }
         implicit val join = resolve.join;
-        val mgu = (Map(freshvar -> T(S(""))) +: children) reduce ((x, y) => Unify.mgu0(x,y))
+        val mgu = (Map(freshvar -> B) +: children) reduce ((x, y) => Unify.mgu0(x,y))
         (freshvar, mgu)
       }
+      else if (expr.root == "∀") {
+        /**/ assume(expr.subtrees.length >= 1) /**/
+        (freshvar, Map(freshvar -> B) ++ infer0(expr.subtrees.last)._2) 
+      }
+      else if (expr.root == "<->" || expr.root == "~" || expr.root == "|" || expr.root == "&" || expr.root == "->") {
+        val children = expr.subtrees map infer0 map { case (x,y) => y + (x -> B) }
+        implicit val join = resolve.join
+        val mgu = (Map(freshvar -> B) +: children) reduce ((x, y) => Unify.mgu0(x,y))
+        (freshvar, mgu)
+      }
+      else if (expr.root.kind == "set") {
+        /**/ assume(expr.subtrees.length == 1) /**/
+        (freshvar, Map(freshvar -> B) ++ infer0(expr.subtrees(0))._2)
+      }
+      else if (expr.root == "<" && !expr.isLeaf)  { /* mighty hack */ (freshvar, Map(freshvar ->B)) }
       else
         throw new Exception(s"don't quite know what to do with '${expr.root}'  (in $expr)")
     }
@@ -524,7 +541,6 @@ object TypeInference {
     val (rootvar, assign) = coarse.infer(term, vassign)
     val fine = new FineGrained(coarse.ns, assign ++ vassign)(scope, dual)
     val tassign = { for ((k,v) <- coarse.ns; tpe <- assign get fine.NV(k)) yield (v, tpe) } .toMap
-    synth.tactics.Rewrite.display(annotate(term, tassign))(new TypeTranslation.Environment(scope, Map()))
     val reassign = fine.improve(term) map (kv => (kv._1, unmark(kv._2)))
     (reassign filter ((kv) => kv._1.ns ne coarse.ns), 
         { for ((k,v) <- coarse.ns; tpe <- reassign get fine.NV(k)) yield (v, tpe) } .toMap
@@ -536,7 +552,10 @@ object TypeInference {
    */
   def infer(term: Term, preassign: Map[Identifier, Tree[Identifier]]=Map())(implicit scope: Scope): (Map[Identifier, Term], Term) = {
     val (vassign, tassign) = infer(scope, term, preassign)
-    (vassign, annotate(term, tassign))
+    val typed = annotate(term, tassign)
+    if (log.isLoggable(Level.INFO))
+      synth.tactics.Rewrite.display(typed)(new TypeTranslation.Environment(scope, Map()))
+    (vassign, typed)
   }
   
   def annotate(term: Term, tassign: Map[Id[Term], Term]): Term = {
@@ -598,7 +617,7 @@ object TypeInference {
       case _ =>
     }
     
-    val format = new NestedListTextFormat[Identifier]
+    val format = new NestedListTextFormat[Identifier]()()
     format.layOutAndAnnotate(program, 
         ((x) => fine.nodeType(x) map (_.toPretty)), (_.toPretty))
   }

@@ -16,6 +16,8 @@ class Tree[T] (val root: T, val subtrees: List[Tree[T]] = List()) {
   
   def nodes: Stream[Tree[T]] = this #:: {subtrees.toStream flatMap (x => x.nodes)}
   
+  def leaves = nodes filter (_.isLeaf)
+  
   def bfs: Stream[Tree[T]] = {
     def tbf(l: Stream[Tree[T]]): Stream[Tree[T]] = 
       if (l.isEmpty) Stream.empty else l ++ tbf(l flatMap (_.subtrees))

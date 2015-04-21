@@ -1,6 +1,7 @@
 package synth.tactics
 
 import syntax.Identifier
+import syntax.Tree
 import semantics.TypeInference.ConservativeResolve
 import semantics.TypeTranslation.Declaration
 import semantics.TypeTranslation.TypedIdentifier
@@ -14,6 +15,13 @@ import semantics.Id
 import syntax.AstSugar
 import semantics.TypePrimitives
 import semantics.Prelude
+import synth.proof.Prover
+import semantics.TypedTerm
+import semantics.TypedLambdaCalculus
+import java.util.logging.Level
+import semantics.Reflection.Consolidated
+import scala.collection.mutable.ListBuffer
+import semantics.Trench
 
 
 
@@ -110,19 +118,29 @@ object Shrink {
     import examples.Paren
     import semantics.Binding.{inline,prebind}
             
+    val prenv = Paren.env
+    implicit val scope = prenv.scope
+    
     val resolve = new ConservativeResolve(Paren.scope)
 
     val program = inline( prebind(Paren.tree) )
     
-    val (vassign, tassign) = TypeInference.infer(Paren.scope, program, Map())
+    //val (vassign, tassign) = TypeInference.infer(Paren.scope, program, Map())
+    //val context0 = Context(Paren.env, vassign, tassign)
+    val (vassign, prog) = TypeInference.infer(program)
+    val env = prenv ++ TypeTranslation.decl(scope, vassign)
     
     println("-" * 80)
 
-    val context0 = Context(Paren.env, vassign, tassign)
-    
-    val defn = program :/ "f|nw"
-    val item = defn :/ "item"
+    val defn = prog/*ram*/ :/ "f|nw"
+    val item = (defn :/ "item")
 
+    /*
+    val litem_+ = item.subtrees(1).subtrees(0)
+    val litem = item.subtrees(1).subtrees(0).subtrees(1)
+    val ritem = item.subtrees(1).subtrees(1)
+    */
+    
     for (stmt <- List(defn, item)) println(stmt.toPretty)
 
     println("~" * 40)
@@ -133,12 +151,75 @@ object Shrink {
     println("=" * 80)
     
     import Paren._
-    import Prelude.{R,?}
+    import Prelude._
+    import TypeTranslation.TypingSugar._
           
+    val p = new Prover(List())(env)
+    val assumptions = List()
+    
+    val conclusions = new ListBuffer[Trench[Term]]
+    
     // Current typing is:
     //   θ :: ((J x J) ∩ <) -> R
     // desired typing is:
     //   θ :: ((J₀ x J₀) ∩ <) -> R
+    
+    {
+      val t = new p.Transaction
+      val θ = item ? "θ"
+      val θ_copy = t.let(T(θ.root)) 
+      val θ_nw = t.let(TypedTerm(θ, (J0 x J0) -> R))
+      /*
+      val litem_nw = TypedLambdaCalculus.beta(θ.root, litem_+, θ_nw)
+      val lcur = t.let(litem_+)
+      val ldes = t.let(litem_nw)
+      val ritem_nw = TypedLambdaCalculus.beta(θ.root, ritem, θ_nw)
+      val rcur = t.let(ritem)
+      val rdes = t.let(ritem_nw)
+      val cur0 = t.let(lcur :@ rcur)
+      val des0 = t.let(ldes :@ rdes)*/
+      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw)
+      val cur = t.let(item)
+      //TypeInference.log.setLevel(Level.INFO)
+      val des = t.let(item_nw)
+      
+      conclusions += (item =:= item_nw) /: t.commit(assumptions, List(cur =:= des))
+    }
+    
+    {
+      val item = prog :/ "f|se" :/ "item"
+      val t = new p.Transaction
+      val θ = item ? "θ"
+      val θ_nw = t.let(TypedTerm(θ, ((J1 x J1)) -> R))
+      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw)
+      val cur = t.let(item)
+      val des = t.let(item_nw)
+      
+      conclusions += (item =:= item_nw) /: t.commit(assumptions, List(cur =:= des))
+    }
+
+    //if (false)
+    {
+      val item = prog :/ "g|sw" :/ "item"
+      val t = new p.Transaction
+      val θ = item ? "θ"
+      val θ_nw = t.let(TypedTerm(θ, ((J x J) ∩ K12sq) -> R))
+      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw)
+      val cur = t.let(item)
+      val des = t.let(item_nw)
+      
+      conclusions += (item =:= item_nw) /: t.commit(assumptions, List(cur =:= des))
+    }
+    
+    println("=" * 60)
+    
+    Trench.display(new Trench[Term](conclusions flatMap (_.el) toList), "◦")
+    
+    //Rewrite.display(item)(Paren.env)
+    //Rewrite.display(item_nw)(Paren.env)
+  }
+    
+    /*
     val context1 =
       new ShrinkStep(context0, item, 
           Map("θ" -> ((J0 x J0) -> R), "k" -> J0)).verbose()
@@ -170,7 +251,7 @@ object Shrink {
       println(s"$piece ? θ  ::  " + context.vassign(((program :/ piece) ? "θ").root).toPretty)
       println(s"$piece ? k  ::  " + context.vassign(((program :/ piece) ? "k").root).toPretty)
     }
-  }
+  }*/
   
   
 /*  

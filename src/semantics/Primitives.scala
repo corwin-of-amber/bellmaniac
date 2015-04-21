@@ -1,11 +1,16 @@
 package semantics
 
 import syntax.Identifier
+import syntax.Tree
 import syntax.AstSugar
 import TypeTranslation.{MicroCode,In,Out,Check}
 import TypeTranslation.InOut
 import TypeTranslation.{emit,simplify,canonical}
 import semantics.TypeTranslation.TypedIdentifier
+
+
+import AstSugar.Term
+import report.console.NestedListTextFormat
 
 
 
@@ -31,6 +36,14 @@ object TypePrimitives {
 
   def isRaw_shallow(scope: Scope, typ: Term): Boolean =
     isRaw_shallow(TypeTranslation.emit(scope, typ))
+    
+  def shape(typ: Term)(implicit scope: Scope): Term = {
+    if (typ =~ ("∩", 2)) shape(typ.subtrees(0))
+    else if (typ.isLeaf && scope.sorts.contains(typ.root)) 
+      T(scope.sorts.getMasterOf(typ.root))
+    else
+      T(typ.root, typ.subtrees map shape)
+  }
     
   /**
    * Counts the arguments of a function type.
@@ -180,9 +193,6 @@ object TypedLambdaCalculus {
 }
 
 
-import AstSugar.Term
-
-
 object `package` {
   
   /**
@@ -293,3 +303,44 @@ object FolSimplify {
   }
   
 }
+
+
+/**
+ * Represent a proof sub-forest.
+ * Can go in either direction: either the roots are assumptions, and children
+ * are implied conjectures; or the roots are goals, and the children are
+ * sufficient proof obligations.
+ */
+class Trench[T](val el: List[Tree[T]]) {
+  def this(e: List[T])(implicit d: DummyImplicit) = this(e map (x => new Tree[T](x)))
+  
+  def applyToLeaves(l: List[Tree[T]], f: T => List[T])(implicit rewrap: (T, List[Tree[T]]) => List[Tree[T]]): List[Tree[T]] = 
+    l flatMap {t =>
+      if (t.isLeaf) rewrap(t.root, f(t.root) map (x => new Tree(x)))
+      else List(new Tree(t.root, applyToLeaves(t.subtrees, f)))
+    }
+  
+  def keep(root: T, sub: List[Tree[T]]) = List(new Tree(root, sub))
+  def drop(root: T, sub: List[Tree[T]]) = sub
+  
+  def map(f: T => T) = new Trench[T]( applyToLeaves(el, x => List(f(x)))(drop) )
+  def flatMap(f: T => Seq[T]) = new Trench[T]( applyToLeaves(el, x => f(x).toList)(drop) )
+
+  def map_/(f: T => T) = new Trench[T]( applyToLeaves(el, x => List(f(x)))(keep) )
+  def flatMap_/(f: T => Seq[T]) = new Trench[T]( applyToLeaves(el, x => f(x).toList)(keep) )
+  
+  def /:(newRoot: T) = new Trench[T](List(new Tree(newRoot, el)))
+  
+  def toList = el flatMap (_.leaves map (_.root))
+}
+
+object Trench {
+  
+  import AstSugar._
+
+  def display(tr: Trench[Term], ● : String = "•", indent: String = "  ", level: String = " ") = {
+    val fmta = new NestedListTextFormat[Term](●, indent)((_.untype.toPretty))
+    for (a <- tr.el) fmta.layOut(a, level)
+  }
+}
+    

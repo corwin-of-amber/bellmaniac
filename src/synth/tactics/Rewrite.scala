@@ -49,12 +49,12 @@ object Rewrite {
   }
   
   def display(term: Term)(implicit env: Environment) {
-    val format = new NestedListTextFormat[Identifier]
+    val format = new NestedListTextFormat[Identifier]()()
     format.layOutAndAnnotate(term, (env.typeOf(_) map (_.toPretty)), (_.toPretty))
   }
   
   def display(xterm: Tree[Term]) {
-    val format = new NestedListTextFormat[String]
+    val format = new NestedListTextFormat[String]()()
     format.layOut(xterm map (_.toPretty))
   }
 

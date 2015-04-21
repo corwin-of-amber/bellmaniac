@@ -6,8 +6,10 @@ import TypeTranslation.TypedIdentifier
 import TypeTranslation.Environment
 import TypeTranslation.Declaration
 import Scope.TypingException
-
 import AstSugar._
+import java.util.logging.Logger
+import java.util.logging.Level
+import report.console.NestedListTextFormat
 
 
 
@@ -21,6 +23,10 @@ object Reflection {
 
   def isFuncType(typ: Term) = typ.root == "->"
   def isFunc(v: TypedIdentifier) = isFuncType(v.typ)    
+  
+  
+  val log = Logger.getLogger("semantics.Reflection")
+  log.setLevel(Level.OFF)
 }
 
 
@@ -209,6 +215,8 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     val ns = new Uid
     val typ = env.typeOf_!(symbol)
     for (otyp <- overload(typ)) yield {
+      if (otyp == typ) TypedIdentifier(symbol, otyp)
+      else
       TypedIdentifier(new Identifier(s"${symbol.literal}[${arity(otyp)}]", "function", ns), otyp)
     }
   }
@@ -276,44 +284,47 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   // Solver Part
   //------------
   def solve(assumptions: List[Term], goals: List[Term]) = {
-    import semantics.UntypedTerm
     import semantics.smt.Z3Sugar
     import syntax.Piping._
     
     def reflect(phi: Term) = {
-      println(phi.untype toPretty)
+      log.fine(phi.untype toPretty)
       val phi_c = consolidate(phi)
-      println(s"  ${phi_c toPretty}")
+      log.fine(s"  ${phi_c toPretty}")
       val phi_u = uncurry(phi_c)
-      println(s"  ${phi_u toPretty}")
+      log.fine(s"  ${phi_u toPretty}")
       val phi_s = support(phi_u)
-      println(s"  ${phi_s toPretty}")
+      log.fine(s"  ${phi_s toPretty}")
       FolSimplify.simplify(phi_s)
     }
-    val fo_assumptions = assumptions map reflect
-    val fo_symbols = fo_assumptions flatMap (_.nodes map (_.root)) toSet
+    def e(l: List[Term]) = new Trench[Term](l)
+    val fo_assumptions = e(assumptions) map_/ reflect
+    val fo_symbols = fo_assumptions.toList flatMap (_.nodes map (_.root)) toSet
     
     val prelude = typeinfo ++ curryAxioms(fo_symbols) ++ equality
     val fo_prelude = prelude map reflect
     
-    val fo_goals = goals map reflect
+    val fo_goals = e(goals) map_/ reflect flatMap (_.split(new Identifier("&", "connective")))
   
-    println("-" * 60)
+    log.fine("-" * 60)
   
     val (z3g, fo_base) = TypeTranslation toSmt List(env)
-  
+
+    Trench.display(fo_assumptions)
+    
     val status =
       z3g.solve(fo_base ++ (
-        for (atn <- fo_assumptions ++ fo_prelude if atn != TRUE) yield {
-          println(s" * ${atn.untype toPretty}")
+        for (atn <- fo_assumptions.toList ++ fo_prelude if atn != TRUE) yield {
           z3g.formula(atn)
         }),
-        fo_goals map z3g.formula)
+        fo_goals.toList map z3g.formula)
         
-    for ((g,s) <- fo_goals zip status) {
-      println(s" ? ${g.untype toPretty}")
-      println(s |> Z3Sugar.ProverStatus.toPretty)
-    }
+    val statusMap = (fo_goals.toList map (new Id(_))) zip status toMap
+    val results = fo_goals map_/ (s => TI(statusMap(s).toPretty))
+    
+    Trench.display(results, "◦")
+    
+    results
   }
   
 }
@@ -323,7 +334,6 @@ object `@Reflection` {
   
   import semantics.Domains._
   import semantics.Prelude._
-  import semantics.UntypedTerm
     
 
   /**
