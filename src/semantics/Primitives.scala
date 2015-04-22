@@ -156,9 +156,9 @@ object TypedLambdaCalculus {
   import AstSugar._
   import TypedTerm.preserve
 
-  def beta(va: Identifier, body: Term, arg: Term): Term = {
-    if (body.isLeaf && body.root == va) preserve(body, arg)
-    else preserve(body, T(body.root, body.subtrees map (x => beta(va, x, arg))))
+  def beta(va: Identifier, body: Term, arg: Term, retype: Boolean=false): Term = {
+    if (body.isLeaf && body.root == va) (if (retype) arg else preserve(body, arg))
+    else preserve(body, T(body.root, body.subtrees map (x => beta(va, x, arg, retype))))
   }
   
   def beta(fun: Term, arg: Term): Term = {

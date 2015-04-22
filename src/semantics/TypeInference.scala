@@ -60,6 +60,7 @@ trait ResolveLattice {
 object TypeInference {
 
   import syntax.AstSugar._
+  import TypedTerm.typeOf
 
 
   val TREE_PRED = new Identifier("T")
@@ -180,8 +181,6 @@ object TypeInference {
    */  
   class CoarseGrained(resolve: ResolveLattice) {
     
-    import TypedTerm.typeOf
-    
     val ns = new Namespace[Id[Tree[Identifier]]]
     val scope = resolve.asInstanceOf[DualResolve].scope   // @@@ TODO oh terrible!!
     def raw(x: Term) = TypePrimitives.rawtype(scope, x)
@@ -239,7 +238,8 @@ object TypeInference {
       }
       else if (expr.root == "::") {
         /**/ assume(expr.subtrees.length == 2) /**/
-        val (va, tpe) = (infer0(expr.subtrees(0)), mark(expr.subtrees(1)))
+        val (va, tpe) = (infer0(expr.subtrees(0)), mark(TypePrimitives.shape(expr.subtrees(1))(scope)))
+        // TODO perhaps abstype() is no longer needed here?
         val (atpe, acomponents) = abstype(tpe)
         val (btpe, bcomponents) = abstype(tpe) // allow a gap for fine-grained later to fill
         implicit val meet = resolve.meet;
@@ -250,8 +250,7 @@ object TypeInference {
         val (lbl, va) = (expr.subtrees(0), infer0(expr.subtrees(1)))
         if (!lbl.isLeaf) throw new Exception(s"invalid label '$lbl'")
         implicit val meet = resolve.meet;
-        val labelvar = lbl.root //new Identifier(lbl.root.literal, "label", new Uid)
-        (va._1, Unify.mgu0(va._2, Map(freshvar -> T(va._1), labelvar -> T(va._1))))
+        (va._1, Unify.mgu0(va._2, Map(freshvar -> T(va._1), lbl.root -> T(va._1))))
       }
       else if (expr.root == "/") {
         /**/ assume(expr.subtrees.length == 2) /**/
@@ -321,14 +320,26 @@ object TypeInference {
       assign
     }
     
+    def canonicalize(typ: Term) = {
+      val u = new Unify()(Resolve.NULL)
+      u.digest(assign)
+      u canonicalize mark(typ)
+    }
+    
     private def improve0(n: Term) {
-      if (n =~ ("::", 2)) {
+      if (n.root == "program") {
+        for (stmt <- n.subtrees)
+          if (stmt =~ ("::", 2)) improveDecl(stmt)
+      }
+      else if (n =~ ("::", 2)) {
         List(n, n.subtrees(0)) map nodeType match {
           case List(Some(tpe), Some(va)) =>
-            val force = step0(n, tpe, va, mark(n.subtrees(1)))
-            val major = TypePrimitives.intersection(scope, List(tpe, va, force.last))
-            for (k <- List(n, n.subtrees(0)))
-              retype(k, major)
+            val spec = mark(canonicalize(n.subtrees(1)))
+            if (tpe != va || tpe != spec) {
+              val force = step1(n, tpe, va, spec)
+              for (k <- List(n, n.subtrees(0)))
+                retype(k, force)
+            }
             /*
             //if (tpe != va) {
               val force = step0(n, tpe, va, mark(n.subtrees(1)))
@@ -377,18 +388,7 @@ object TypeInference {
           case _ =>
         }
         val arg = n.subtrees(0)
-        (nodeType(arg), getDeclaredVariable(arg)) match {
-          case (Some(declType), Some(id)) => assign get id match {
-            case Some(varType) =>
-              if (declType != varType) {
-                val force = step0(arg, declType, varType)
-                retype(arg, force(0))
-                retype(id, force(1))
-              }
-            case _ => 
-          }
-          case _ =>
-        }
+        improveDecl(arg)
       }
       else if (n =~ ("/", 2)) {
         n +: n.subtrees map nodeType match {
@@ -410,6 +410,24 @@ object TypeInference {
             }
           case _ =>
         }
+      }
+    }
+    
+    def improveDecl(decl: Term) {
+      (nodeType(decl), getDeclaredVariable(decl)) match {
+        case (Some(declType), Some(id)) => assign get id match {
+          case Some(varType) =>
+            if (declType != varType) {
+              val typ = step1(decl, declType, varType)
+              retype(decl, typ)
+              retype(id, typ)
+              //val force = step0(decl, declType, varType)
+              //retype(decl, force(0))
+              //retype(id, force(1))
+            }
+          case _ => 
+        }
+        case _ =>
       }
     }
 
@@ -438,6 +456,13 @@ object TypeInference {
       /**/ assert(force.length == terms.length) /**/
       if (log.isLoggable(Level.INFO)) _printNicely(node, terms, force)
       force
+    }
+    
+    private def step1(node: Term, types: Term*) = {
+      /**/ assume(!types.isEmpty) /**/
+      val least = TypePrimitives.intersection(scope, types toList)
+      if (log.isLoggable(Level.INFO)) _printNicely(node, types, List(least))
+      least
     }
     
     def _printNicely(node: Term, terms: Seq[Term], force: Seq[Term]) {
@@ -539,8 +564,10 @@ object TypeInference {
     val dual = new DualResolve(scope)
     val coarse =  new CoarseGrained(conservative)
     val (rootvar, assign) = coarse.infer(term, vassign)
-    val fine = new FineGrained(coarse.ns, assign ++ vassign)(scope, dual)
-    val tassign = { for ((k,v) <- coarse.ns; tpe <- assign get fine.NV(k)) yield (v, tpe) } .toMap
+    //  val tassign = { for ((k,v) <- coarse.ns; tpe <- assign get coarse.NV(k)) yield (v, tpe) } .toMap
+    //  synth.tactics.Rewrite.display(annotate(term, tassign))(new TypeTranslation.Environment(scope, Map()))
+    val tassign0 = (term.nodes collect { n => typeOf(n) match { case Some(typ) => (coarse.NV(n) -> mark(typ)) }} toMap)
+    val fine = new FineGrained(coarse.ns, assign ++ tassign0 ++ vassign)(scope, dual)
     val reassign = fine.improve(term) map (kv => (kv._1, unmark(kv._2)))
     (reassign filter ((kv) => kv._1.ns ne coarse.ns), 
         { for ((k,v) <- coarse.ns; tpe <- reassign get fine.NV(k)) yield (v, tpe) } .toMap

@@ -22,6 +22,7 @@ object Paren {
   val K3 = T(S("K₃"))
   
   val scope = new Scope
+  scope.sorts.declare(N.root)
   scope.sorts.declare(R.root)
   scope.sorts.declare(J.root)
   scope.sorts.declare(J0.root :<: J.root)
@@ -39,6 +40,7 @@ object Paren {
   def i = TV("i")
   def j = TV("j")
   def k = TV("k")
+  def e = TV("e")
   def w = TV("w")
   def < = TV("<")
   
@@ -86,22 +88,27 @@ object Paren {
       g :- TV("f|ne") ,
       
       TV("g|nw") :- ( g :: (? ->: (K0 x K2) ->: ?) ) ,
-      TV("g|sw") :- ( g :: (? ->: (K1 x K2) ->: ?) ) /*,
+      TV("g|sw") :- ( g :: (? ->: (K1 x K2) ->: ?) ) ,
 
       TV("g|nw'") :- (
         TI("↦")(
-          θ :: (((J x J) ∩ <) ∩ P1) ->: R , i , j ,
+          θ :: ((J x J) ∩ <) ->: R , i , j ,
   
+              (min:@((e :: K0) ↦
+                  (((θ:@(i, e)) + (θ:@(e, j)) + (w:@(i, e, j))) -: TV("item1")))) +
+              (min:@((k :: K1) ↦
+                  (((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item2"))))
+                    /*
           min:@(
             cons:@(
-              min:@(k ↦
-                    (((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item1"))),
+              min:@((e :: K0) ↦
+                    (((θ:@(i, e)) + (θ:@(e, j)) /*+ (w:@(i, e, j))*/) -: TV("item1"))),
               cons:@(
                 min:@((k :: K1) ↦
                     (((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item2"))),
                 nil))
-          )// -: TV("compute")
-        ).foldRight :: (? ->: (K0 x K2) ->: ?) ) */
+          )*/ // -: TV("compute")
+        ).foldRight :: (? ->: (K0 x K2) ->: ?) ) 
   
   )
     

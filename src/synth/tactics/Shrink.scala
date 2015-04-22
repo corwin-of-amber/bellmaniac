@@ -121,25 +121,20 @@ object Shrink {
     val prenv = Paren.env
     implicit val scope = prenv.scope
     
-    val resolve = new ConservativeResolve(Paren.scope)
-
-    val program = inline( prebind(Paren.tree) )
+    //val resolve = new ConservativeResolve(Paren.scope)
     
-    //val (vassign, tassign) = TypeInference.infer(Paren.scope, program, Map())
-    //val context0 = Context(Paren.env, vassign, tassign)
-    val (vassign, prog) = TypeInference.infer(program)
+    TypeInference.log.setLevel(Level.INFO)
+
+    val (vassign, program) = TypeInference.infer( inline( prebind(Paren.tree) ) )
+    
     val env = prenv ++ TypeTranslation.decl(scope, vassign)
     
     println("-" * 80)
-
-    val defn = prog/*ram*/ :/ "f|nw"
-    val item = (defn :/ "item")
-
+    
     /*
     val litem_+ = item.subtrees(1).subtrees(0)
     val litem = item.subtrees(1).subtrees(0).subtrees(1)
     val ritem = item.subtrees(1).subtrees(1)
-    */
     
     for (stmt <- List(defn, item)) println(stmt.toPretty)
 
@@ -147,6 +142,7 @@ object Shrink {
     
     for (symbol <- symbols(defn); tpe <- vassign get symbol)
       println(s"$symbol :: ${tpe.toPretty}")
+    */
 
     println("=" * 80)
     
@@ -159,52 +155,93 @@ object Shrink {
     
     val conclusions = new ListBuffer[Trench[Term]]
     
+    // f|nw
+    //
     // Current typing is:
     //   θ :: ((J x J) ∩ <) -> R
     // desired typing is:
     //   θ :: ((J₀ x J₀) ∩ <) -> R
-    
     {
+      val item = program :/ "f|nw" :/ "item"
+
       val t = new p.Transaction
       val θ = item ? "θ"
-      val θ_copy = t.let(T(θ.root)) 
-      val θ_nw = t.let(TypedTerm(θ, (J0 x J0) -> R))
-      /*
-      val litem_nw = TypedLambdaCalculus.beta(θ.root, litem_+, θ_nw)
-      val lcur = t.let(litem_+)
-      val ldes = t.let(litem_nw)
-      val ritem_nw = TypedLambdaCalculus.beta(θ.root, ritem, θ_nw)
-      val rcur = t.let(ritem)
-      val rdes = t.let(ritem_nw)
-      val cur0 = t.let(lcur :@ rcur)
-      val des0 = t.let(ldes :@ rdes)*/
-      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw)
-      val cur = t.let(item)
+      val θ_nw = TypedTerm(θ, (J0 x J0) -> R)
+      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw, true)
       //TypeInference.log.setLevel(Level.INFO)
+      val cur = t.let(item)
       val des = t.let(item_nw)
       
       conclusions += (item =:= item_nw) /: t.commit(assumptions, List(cur =:= des))
     }
     
+    // f|se
+    //
+    // Current typing is:
+    //   θ :: ((J x J) ∩ <) -> R
+    // desired typing is:
+    //   θ :: ((J₁ x J₁) ∩ <) -> R
     {
-      val item = prog :/ "f|se" :/ "item"
+      val item = program :/ "f|se" :/ "item"
       val t = new p.Transaction
       val θ = item ? "θ"
-      val θ_nw = t.let(TypedTerm(θ, ((J1 x J1)) -> R))
-      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw)
+      val θ_nw = (TypedTerm(θ, ((J1 x J1)) -> R))
+      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw, true)
       val cur = t.let(item)
       val des = t.let(item_nw)
       
       conclusions += (item =:= item_nw) /: t.commit(assumptions, List(cur =:= des))
     }
 
-    //if (false)
+    // g|sw
+    //
+    // Current typing is:
+    //   θ :: ((J x J) ∩ <) -> R
+    // desired typing is:
+    //   θ :: ((K₁⋃K₂ x K₁⋃K₂) ∩ <) -> R
     {
-      val item = prog :/ "g|sw" :/ "item"
+      val item = program :/ "g|sw" :/ "item"
       val t = new p.Transaction
       val θ = item ? "θ"
-      val θ_nw = t.let(TypedTerm(θ, ((J x J) ∩ K12sq) -> R))
-      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw)
+      val θ_nw = TypedTerm(θ, ((J x J) ∩ K12sq) -> R)
+      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw, true)
+      val cur = t.let(item)
+      val des = t.let(item_nw)
+      
+      conclusions += (item =:= item_nw) /: t.commit(assumptions, List(cur =:= des))
+    }
+    
+    // g|nw
+    //
+    // Current typing is:
+    //   θ :: ((J x J) ∩ <) -> R
+    // desired typing is:
+    //   θ :: ((K₀xK₀ ⋃ K₀xK₁ ⋃ K₀xK₂ ⋃ K₁xK₂ ⋃ K₂xK₂) ∩ <) -> R
+    {
+      val item = program :/ "g|nw" :/ "item"
+      val t = new p.Transaction
+      val θ = item ? "θ"
+      val θ_nw = TypedTerm(θ, ((J x J) ∩ P1) -> R)
+      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw, true)
+      val cur = t.let(item)
+      val des = t.let(item_nw)
+      
+      conclusions += (item =:= item_nw) /: t.commit(assumptions, List(cur =:= des))
+    }
+    
+    // g|nw'
+    //
+    // Current typing is:
+    //   θ :: ((J x J) ∩ <) -> R
+    // desired typing is:
+    //   θ :: ((K₀xK₁ ⋃ K₁xK₂) ∩ <) -> R
+    {
+      val item = program :/ "g|nw'" :/ "item2"
+      Rewrite.display(item)(env)
+      val t = new p.Transaction
+      val θ = item ? "θ"
+      val θ_nw = TypedTerm(θ, ((J x J) ∩ Q0) -> R)
+      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw, true)
       val cur = t.let(item)
       val des = t.let(item_nw)
       
