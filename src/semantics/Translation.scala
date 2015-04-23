@@ -279,13 +279,7 @@ object TypeTranslation {
       val ns = new Namespace
       for (name <- names) yield T(TypedIdentifier( new Identifier(name, "variable", ns), typ ))
     }
-    def qvars(types: List[Term]) = {
-      val ns = new Namespace
-      for ((typ, i) <- types.zipWithIndex)
-        yield T(TypedIdentifier( new Identifier(greek(i), "variable", ns), typ ))
-    }
-    
-    def qvars(types: List[Term], strip: PartialFunction[Int, Any]) = {
+    def qvars(types: List[Term], strip: PartialFunction[Int, Any]=greek) = {
       val ns = new Namespace
       for ((typ, i) <- types.zipWithIndex)
         yield T(TypedIdentifier( new Identifier(strip(i), "variable", ns), typ ))

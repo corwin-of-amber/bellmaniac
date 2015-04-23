@@ -154,7 +154,7 @@ class Z3Gate {
         case Some(decl) => decl(recurse:_*)
         case _ => r match {
           case rt: TypedIdentifier => declare(rt)(recurse:_*)
-          case _=> throw new SmtException(s"undeclared '$r' ($arity-ary)")
+          case _=> throw new SmtException(s"undeclared '$r' ($arity-ary ${r.kind})")
         }
       }
     }

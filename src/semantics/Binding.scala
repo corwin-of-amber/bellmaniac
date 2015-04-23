@@ -46,7 +46,7 @@ class Binding(val left: Set[Identifier], val right: Set[Identifier]) {
       val rebind =
         if (left contains term.root)
           (term.subtrees dropRight 1) map { x =>
-            TypeInference.getDeclaredVariable(x) match {
+            TypedLambdaCalculus.getDeclaredVariable(x) match {
               case Some(va) => (va -> bind(va))
               case _ => throw new TypingException(s"not a valid binding: '$x'")
             }

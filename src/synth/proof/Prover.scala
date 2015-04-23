@@ -9,8 +9,8 @@ import semantics.TypeInference
 import semantics.TypeTranslation.Environment
 import semantics.pattern.MacroMap
 import semantics.Reflection
-
 import synth.pods.Pod
+import semantics.TypeTranslation
 
 
 
@@ -25,23 +25,28 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
   val typedecl = env.typedecl
   val expand = new Expansion(pods map (_.macros) reduceOption (_ ++ _) getOrElse MacroMap.empty)
     
-  def e(term: Term) = expand(TypeInference.infer(Binding.prebind(term), typedecl)._2)
+  def e(term: Term) = {
+    val (vassign, typed) = TypeInference.infer(/*Binding.prebind*/(term), typedecl)
+    (TypeTranslation.decl(env.scope, vassign), expand(typed))
+  }
   
   class Transaction {
     val termb = new TermBreak(env)
-    val termlings = collection.mutable.ListBuffer[List[Term]]()
+    val termlings = collection.mutable.ListBuffer[(Environment, List[Term])]()
     
     def let(term: Term) = {
-      val (v, v_t) = be(term)
-      termlings += v_t
+      val (v_env, (v, v_t)) = be(term)
+      termlings += ((v_env, v_t))
       v
     }
     
     def commit(assumptions: List[Term], goals: List[Term]) = {
       val symbols = typedecl.keys ++ (pods flatMap (_.decl.symbols)) ++ termb.intermediates
+      val env1 = (env /: termlings) { case (env, (env1, _)) => env ++ env1 }
+      val terms1 = termlings map (_._2)
       
-      val reflect = new Reflection(env, typedecl)
-      reflect.currying ++= symbols filter (x => Reflection.isFuncType(env.typeOf_!(x))) map 
+      val reflect = new Reflection(env1, typedecl)
+      reflect.currying ++= symbols filter (x => Reflection.isFuncType(env1.typeOf_!(x))) map 
                                           (symbol => (symbol, reflect.overload(symbol))) toMap
   
       for (variants <- reflect.currying.values)
@@ -49,10 +54,13 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
                                       
       println("· " * 25)
   
-      reflect.solve((termlings.toList flatten) ++ assumptions ++ (pods flatMap (_.decl.precondition)), goals)    
+      reflect.solve((terms1.toList flatten) ++ assumptions ++ (pods flatMap (_.decl.precondition)), goals)    
     }
     
-    def be(term: Term) = termb(e(term))
+    def be(term: Term) = {
+      val (env1, typed) = e(term)
+      (env1, termb(typed))
+    }
     
   }
 }

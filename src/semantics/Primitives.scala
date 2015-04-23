@@ -162,13 +162,23 @@ object TypedLambdaCalculus {
   }
   
   def beta(fun: Term, arg: Term): Term = {
-    assume(fun =~ ("↦", 2) && fun.subtrees(0).isLeaf)
-    beta(fun.subtrees(0).root, fun.subtrees(1), arg)
+    assume(fun =~ ("↦", 2))
+    getDeclaredVariable(fun.subtrees(0)) match {
+      case Some(va) => beta(va, fun.subtrees(1), arg)
+      case _ => throw new Scope.TypingException(s"not an argument declaration: '${fun.subtrees(0) toPretty}'")
+    }
   }
 
+  def getDeclaredVariable(t: Term): Option[Identifier] = {
+    if (t.isLeaf) Some(t.root)
+    else if (t =~ ("::", 2)) getDeclaredVariable(t.subtrees(0))
+    else None
+  }
+    
   def simplify(term: Term): Term = {
-    if (term =~ ("@", 2) && term.subtrees(0) =~ ("↦", 2)) beta(term.subtrees(0), term.subtrees(1))
-    else preserve(term, T(term.root, term.subtrees map simplify))
+    val sub = term.subtrees map simplify
+    if (term =~ ("@", 2) && sub(0) =~ ("↦", 2)) beta(sub(0), sub(1))
+    else preserve(term, T(term.root, sub))
   }
   
   def replaceDescendant(term: Term, switch: (Term, Term)): Term =

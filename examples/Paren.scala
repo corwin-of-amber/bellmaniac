@@ -52,7 +52,7 @@ object Paren {
   def Q0 = TV("Q₀")
   
   def x = TV("x")
-  private def _1 = TI(1)
+  def _1 = TI(1)
   
   def TT(v: Any) = T(new Identifier(v, "type variable"))
   
@@ -73,7 +73,7 @@ object Paren {
   
           (@:(x, i) |! ((i+_1) =:= j)) /:
           (min:@(k ↦
-              (((θ:@(i, k)) + (θ:@(k, j)) /*+ (w:@(i, k, j))*/) -: TV("item")))
+              (((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item")))
           ) -: TV("compute")
         ).foldRight -: f ) ,
       

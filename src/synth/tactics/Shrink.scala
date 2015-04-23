@@ -29,88 +29,62 @@ object Shrink {
   
   import AstSugar._
 
-  
-  def equivCheck(v0: TypedIdentifier, v1: TypedIdentifier): List[Term] = {
-    if (v0.typ == v1.typ) {
-      val typ = v0.typ
-      val vas = 
-        if (typ.root == "->") 
-          typ.unfoldRight.subtrees dropRight 1 map (TypedIdentifier($_, _)) map (T(_))
-        else List()
-      val (s0, s1) = (T(v0.untype), T(v1.untype))
-      List(∀(vas)(s0(vas) =:= s1(vas)))
-    }
-    else throw new TypingException(s"incompatible types: '$v0'  ~  '$v1'")
-  }
-  
-  def equivCheck(v0: Declaration, v1: Declaration): List[Term] =
-    equivCheck(v0.head, v1.head) ++
-    equivCheck(v0.support, v1.support)
-  
-  
-  case class Context(env: Environment, vassign: Map[Identifier, Term], tassign: Map[Id[Term], Term])
+  class ShrinkStep(val term: Term, constraints: Map[String, Term], assumptions: List[Term]=List())(implicit env: Environment) {
+    val prover = new Prover(List())(env)
     
-  class ShrinkCheck(env: Environment, vassign: Map[Identifier, Term], tassign: Map[Id[Term], Term]) {
-    
-    def apply(expr: Term, retypes: Map[Identifier, Term]): (List[Environment], List[Term]) =
-      apply(env ++ TypeTranslation.decl(env.scope, vassign), expr, retypes)
-    
-    private def apply(env: Environment, expr: Term, retypes: Map[Identifier, Term]) = {
-      val (eval, eval_env) = TermTranslation.term(env, expr, tassign)
-      
-      val alt_env = TypeTranslation.shrink(env, retypes)
-      val (alt_eval, alt_eval_env) = TermTranslation.term(env ++ alt_env, expr, tassign)
-      
-      (List(eval_env, alt_eval_env), equivCheck(eval_env(eval), alt_eval_env(alt_eval)))
-    }
-  }
-  
-  class ShrinkStep(context: Context, term: Term, constraints: Map[String, Term]) {
-    
-    private val shrink =
-        new ShrinkCheck(context.env, context.vassign, context.tassign)
-
-    private var _verbose = false
-    
-    def verbose = { _verbose = true; this }
-    
-    private var retypes: Map[Identifier, Term] = null
-    private var assumptions: List[Environment] = null
-    private var goals: List[Term] = null
-    
-    def prepare = {
-      import TypeInference.{mark,unmark, reinforce}
-      val scope = context.env.scope
-      val dual = new TypeInference.DualResolve(scope)
-      retypes = constraints map { case (name, constraint) =>
-          val id = (term ? name).root
-          val List(x,y) = reinforce(List(context.vassign(id),constraint) map mark)(dual.meet) map unmark
-          id -> TypePrimitives.intersection(scope, List(x,y))
-        }
-      shrink(term, retypes) match { case (a,g) =>
-        assumptions = a; goals = g; 
+    def apply() = {
+      val t = new prover.Transaction
+      val term_nw = (constraints :\ term) { case ((k, typ), term) =>
+        val θ = term ? k
+        val θ_nw = TypedTerm(θ, typ)
+        TypedLambdaCalculus.beta(θ.root, term, θ_nw, true)
       }
+      val cur = t.let(term)
+      val des = t.let(term_nw)
+      (term =:= term_nw) /: t.commit(assumptions, List(cur =:= des))
     }
-    
-    def solve = {
-      /**/ assume(retypes != null && assumptions != null && goals != null) /**/
-      import semantics.smt.Z3Sugar.ProverStatus._
-      if (TypeTranslation.solve(assumptions, goals, _verbose) forall (_ == VALID)) {
-        if (_verbose) {
-          println
-          for ((k,v) <- retypes) println(s"$k :: ${v.toPretty}")
-        }
-        Context(context.env, context.vassign ++ retypes, context.tassign)
-      }
-      else context
-    }
-    
-    def apply() = { prepare ; solve }
   }
   
-  def shrinkStep(context: Context, term: Term, constraints: Map[String, Term]) = {
-    val step = new ShrinkStep(context, term, constraints)
+  def shrinkStep(term: Term, constraints: Map[String, Term])(implicit env: Environment) = {
+    val step = new ShrinkStep(term, constraints)
     step()
+  }
+  
+  
+  object InputPod {
+    import Prelude.{R,B}
+    import examples.Paren.{J,<,K012,K12,K12sq,P1,Q0}
+    val program = TI("program")(
+      
+      TV("+") :: (R x R) ->: R ,
+      < :: (J x J) ->: B , 
+      
+      K012   :: J ->: B ,
+      K12    :: J ->: B ,
+      K12sq  :: (J x J) ->: B ,
+      P1     :: (J x J) ->: B ,
+      Q0     :: (J x J) ->: B
+    )
+  }
+  
+  class APod(val J: Term, val J0: Term) {
+    import Prelude.{fix,∩,R,min,?}
+    import examples.Paren.{θ,<,i,j,k,x,w,_1,f}
+    
+    val A = $TV("A")
+    
+    val program = TI("program")(
+      A :- fix( 
+        TI("↦")(
+          θ :: ((J x J) ∩ <) ->: R , i , j ,
+  
+          (@:(x, i) |! ((i+_1) =:= j)) /:
+          (min:@(k ↦
+              (((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item")))
+          ) -: TV("compute")
+        ).foldRight -: f ),
+      TV("f|nw") :- ( f :: (? ->: (J0 x J0) ->: ?) )
+    )
   }
     
   def main(args: Array[String]): Unit = {
@@ -121,59 +95,65 @@ object Shrink {
     val prenv = Paren.env
     implicit val scope = prenv.scope
     
-    //val resolve = new ConservativeResolve(Paren.scope)
+    val A = new APod(Paren.J, Paren.J0)
     
-    TypeInference.log.setLevel(Level.INFO)
-
-    val (vassign, program) = TypeInference.infer( inline( prebind(Paren.tree) ) )
+    val (vassign, program) = TypeInference.infer( inline( prebind(InputPod.program(A.program).unfoldRight) ) )
     
-    val env = prenv ++ TypeTranslation.decl(scope, vassign)
+    implicit val env = prenv ++ TypeTranslation.decl(scope, vassign)
     
     println("-" * 80)
-    
-    /*
-    val litem_+ = item.subtrees(1).subtrees(0)
-    val litem = item.subtrees(1).subtrees(0).subtrees(1)
-    val ritem = item.subtrees(1).subtrees(1)
-    
-    for (stmt <- List(defn, item)) println(stmt.toPretty)
-
-    println("~" * 40)
-    
-    for (symbol <- symbols(defn); tpe <- vassign get symbol)
-      println(s"$symbol :: ${tpe.toPretty}")
-    */
-
-    println("=" * 80)
     
     import Paren._
     import Prelude._
     import TypeTranslation.TypingSugar._
           
-    val p = new Prover(List())(env)
     val assumptions = List()
     
     val conclusions = new ListBuffer[Trench[Term]]
     
+     // f|nw
+    //
+    // Current typing is:
+    //   θ :: ((J x J) ∩ <) -> R
+    // desired typing is:
+    //   θ :: ((J₀ x J₀) ∩ <) -> R
+    //conclusions += shrinkStep(program :/ "f|nw" :/ "item", Map("θ" -> ((J0 x J0) -> R)))
+   
+    val A0 = new APod(Paren.J0, Paren.K0)
+    val (vassign1, program1) = TypeInference.infer( inline ( prebind(A0.program) ), vassign )
+    
+    val env1 = TypeTranslation.decl(scope, vassign1)
+    
+    val item0 = TypedLambdaCalculus.pullOut(program, program :/ "f|nw" :/ "item") get
+    val item1 = TypedLambdaCalculus.pullOut(program1, program1 :/ "f" :/ "item") get
+    
+    Rewrite.display(item0)
+    Rewrite.display(item1)
+    
+    val p = new Prover(List())(env ++ env1)
+    val t = new p.Transaction
+    
+    def intros(goal: Term) = {
+      if (goal =~ ("=", 2)) {
+        val List(lhs, rhs) = goal.subtrees
+        val ftype = TypePrimitives.shape(TypedTerm.typeOf_!(lhs))
+        /**/ assert(ftype == TypePrimitives.shape(TypedTerm.typeOf_!(rhs))) /**/
+        val vars = qvars(TypePrimitives.args(ftype))
+        TypedLambdaCalculus.simplify((lhs:@(vars:_*)) =:= (rhs:@(vars:_*)))
+      }
+      else goal
+    }
+    
+    conclusions += t.commit(assumptions, List(t.let(intros(item0 =:= item1))))
+    
+    /*
     // f|nw
     //
     // Current typing is:
     //   θ :: ((J x J) ∩ <) -> R
     // desired typing is:
     //   θ :: ((J₀ x J₀) ∩ <) -> R
-    {
-      val item = program :/ "f|nw" :/ "item"
-
-      val t = new p.Transaction
-      val θ = item ? "θ"
-      val θ_nw = TypedTerm(θ, (J0 x J0) -> R)
-      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw, true)
-      //TypeInference.log.setLevel(Level.INFO)
-      val cur = t.let(item)
-      val des = t.let(item_nw)
-      
-      conclusions += (item =:= item_nw) /: t.commit(assumptions, List(cur =:= des))
-    }
+    conclusions += shrinkStep(program :/ "f|nw" :/ "item", Map("θ" -> ((J0 x J0) -> R)))
     
     // f|se
     //
@@ -181,35 +161,16 @@ object Shrink {
     //   θ :: ((J x J) ∩ <) -> R
     // desired typing is:
     //   θ :: ((J₁ x J₁) ∩ <) -> R
-    {
-      val item = program :/ "f|se" :/ "item"
-      val t = new p.Transaction
-      val θ = item ? "θ"
-      val θ_nw = (TypedTerm(θ, ((J1 x J1)) -> R))
-      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw, true)
-      val cur = t.let(item)
-      val des = t.let(item_nw)
-      
-      conclusions += (item =:= item_nw) /: t.commit(assumptions, List(cur =:= des))
-    }
-
+    conclusions += shrinkStep(program :/ "f|se" :/ "item", Map("θ" -> ((J1 x J1) -> R)))
+    
     // g|sw
     //
     // Current typing is:
     //   θ :: ((J x J) ∩ <) -> R
     // desired typing is:
     //   θ :: ((K₁⋃K₂ x K₁⋃K₂) ∩ <) -> R
-    {
-      val item = program :/ "g|sw" :/ "item"
-      val t = new p.Transaction
-      val θ = item ? "θ"
-      val θ_nw = TypedTerm(θ, ((J x J) ∩ K12sq) -> R)
-      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw, true)
-      val cur = t.let(item)
-      val des = t.let(item_nw)
-      
-      conclusions += (item =:= item_nw) /: t.commit(assumptions, List(cur =:= des))
-    }
+    conclusions += shrinkStep(program :/ "g|sw" :/ "item", Map("θ" -> (((J x J) ∩ K12sq) -> R)))
+
     
     // g|nw
     //
@@ -217,17 +178,7 @@ object Shrink {
     //   θ :: ((J x J) ∩ <) -> R
     // desired typing is:
     //   θ :: ((K₀xK₀ ⋃ K₀xK₁ ⋃ K₀xK₂ ⋃ K₁xK₂ ⋃ K₂xK₂) ∩ <) -> R
-    {
-      val item = program :/ "g|nw" :/ "item"
-      val t = new p.Transaction
-      val θ = item ? "θ"
-      val θ_nw = TypedTerm(θ, ((J x J) ∩ P1) -> R)
-      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw, true)
-      val cur = t.let(item)
-      val des = t.let(item_nw)
-      
-      conclusions += (item =:= item_nw) /: t.commit(assumptions, List(cur =:= des))
-    }
+    conclusions += shrinkStep(program :/ "g|nw" :/ "item", Map("θ" -> (((J x J) ∩ P1) -> R)))
     
     // g|nw'
     //
@@ -235,18 +186,8 @@ object Shrink {
     //   θ :: ((J x J) ∩ <) -> R
     // desired typing is:
     //   θ :: ((K₀xK₁ ⋃ K₁xK₂) ∩ <) -> R
-    {
-      val item = program :/ "g|nw'" :/ "item2"
-      Rewrite.display(item)(env)
-      val t = new p.Transaction
-      val θ = item ? "θ"
-      val θ_nw = TypedTerm(θ, ((J x J) ∩ Q0) -> R)
-      val item_nw = TypedLambdaCalculus.beta(θ.root, item, θ_nw, true)
-      val cur = t.let(item)
-      val des = t.let(item_nw)
-      
-      conclusions += (item =:= item_nw) /: t.commit(assumptions, List(cur =:= des))
-    }
+    conclusions += shrinkStep(program :/ "g|nw'" :/ "item2", Map("θ" -> (((J x J) ∩ Q0) -> R)))
+    */
     
     println("=" * 60)
     
