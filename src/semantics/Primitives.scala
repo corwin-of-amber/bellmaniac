@@ -38,11 +38,14 @@ object TypePrimitives {
     isRaw_shallow(TypeTranslation.emit(scope, typ))
     
   def shape(typ: Term)(implicit scope: Scope): Term = {
-    if (typ =~ ("∩", 2)) shape(typ.subtrees(0))
+    val subs = typ.subtrees.toStream map shape
+    if (typ =~ ("∩", 2)) subs(0)
+    else if (typ =~ ("->", 2) && subs(0).root == "x")
+      shape((subs(0).subtrees :\ typ.subtrees(1))(_ -> _))
     else if (typ.isLeaf && scope.sorts.contains(typ.root)) 
       T(scope.sorts.getMasterOf(typ.root))
     else
-      T(typ.root, typ.subtrees map shape)
+      T(typ.root, subs toList)
   }
     
   /**
@@ -178,6 +181,7 @@ object TypedLambdaCalculus {
   def simplify(term: Term): Term = {
     val sub = term.subtrees map simplify
     if (term =~ ("@", 2) && sub(0) =~ ("↦", 2)) beta(sub(0), sub(1))
+    else if (term =~ (":", 2)) sub(1) // TODO only throw away labels when necessary?
     else preserve(term, T(term.root, sub))
   }
   
@@ -330,6 +334,13 @@ class Trench[T](val el: List[Tree[T]]) {
       else List(new Tree(t.root, applyToLeaves(t.subtrees, f)))
     }
   
+  def filterLeaves(t: Tree[T], p: T => Boolean): Option[Tree[T]] = 
+    if (t.isLeaf) (if (p(t.root)) Some(t) else None)
+    else t.subtrees flatMap (filterLeaves(_, p)) match {
+      case Nil => None
+      case subs => Some(new Tree(t.root, subs))
+    }
+  
   def keep(root: T, sub: List[Tree[T]]) = List(new Tree(root, sub))
   def drop(root: T, sub: List[Tree[T]]) = sub
   
@@ -338,6 +349,8 @@ class Trench[T](val el: List[Tree[T]]) {
 
   def map_/(f: T => T) = new Trench[T]( applyToLeaves(el, x => List(f(x)))(keep) )
   def flatMap_/(f: T => Seq[T]) = new Trench[T]( applyToLeaves(el, x => f(x).toList)(keep) )
+  
+  def filter(p: T => Boolean) = new Trench[T]( el flatMap (filterLeaves(_, p)))
   
   def /:(newRoot: T) = new Trench[T](List(new Tree(newRoot, el)))
   

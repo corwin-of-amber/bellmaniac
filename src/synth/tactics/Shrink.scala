@@ -22,6 +22,13 @@ import java.util.logging.Level
 import semantics.Reflection.Consolidated
 import scala.collection.mutable.ListBuffer
 import semantics.Trench
+import semantics.Reflection
+import java.util.logging.Logger
+import synth.pods.TotalOrderPod
+import synth.pods.MinPod
+import synth.pods.NilPod
+import synth.pods.ConsPod
+import semantics.Scope
 
 
 
@@ -29,8 +36,8 @@ object Shrink {
   
   import AstSugar._
 
-  class ShrinkStep(val term: Term, constraints: Map[String, Term], assumptions: List[Term]=List())(implicit env: Environment) {
-    val prover = new Prover(List())(env)
+  class ShrinkStep(val term: Term, constraints: Map[String, Term], assumptions: List[Term]=List())(implicit prover: Prover) {
+    //val prover = new Prover(List())(env)
     
     def apply() = {
       val t = new prover.Transaction
@@ -45,7 +52,7 @@ object Shrink {
     }
   }
   
-  def shrinkStep(term: Term, constraints: Map[String, Term])(implicit env: Environment) = {
+  def shrinkStep(term: Term, constraints: Map[String, Term])(implicit prover: Prover) = {
     val step = new ShrinkStep(term, constraints)
     step()
   }
@@ -68,22 +75,33 @@ object Shrink {
   }
   
   class APod(val J: Term, val J0: Term) {
-    import Prelude.{fix,∩,R,min,?}
-    import examples.Paren.{θ,<,i,j,k,x,w,_1,f}
+    import Prelude.{ω,∩,R,min,?,cons,nil}
+    import examples.Paren.{<,θ,i,j,k,x,w,_1,f}
     
     val A = $TV("A")
     
     val program = TI("program")(
-      A :- fix( 
+      A :- ω( 
         TI("↦")(
           θ :: ((J x J) ∩ <) ->: R , i , j ,
   
-          (@:(x, i) |! ((i+_1) =:= j)) /:
-          (min:@(k ↦
-              (((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item")))
-          ) -: TV("compute")
-        ).foldRight -: f ),
-      TV("f|nw") :- ( f :: (? ->: (J0 x J0) ->: ?) )
+          //(@:(x, i) |! ((i+_1) =:= j)) /:
+          min:@
+          (
+            cons:@(
+              (min:@ 
+                (k ↦
+                  ( ((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item") )
+                )
+              ),
+              cons:@(
+                (θ:@(i, j)),
+                nil
+              )
+            )
+          )  -: TV("compute")
+          
+        ).foldRight -: f )
     )
   }
     
@@ -118,33 +136,31 @@ object Shrink {
     // desired typing is:
     //   θ :: ((J₀ x J₀) ∩ <) -> R
     //conclusions += shrinkStep(program :/ "f|nw" :/ "item", Map("θ" -> ((J0 x J0) -> R)))
-   
+
     val A0 = new APod(Paren.J0, Paren.K0)
     val (vassign1, program1) = TypeInference.infer( inline ( prebind(A0.program) ), vassign )
     
     val env1 = TypeTranslation.decl(scope, vassign1)
     
-    val item0 = TypedLambdaCalculus.pullOut(program, program :/ "f|nw" :/ "item") get
-    val item1 = TypedLambdaCalculus.pullOut(program1, program1 :/ "f" :/ "item") get
+    val item0 = TypeInference.infer((program :/ "f") :: (? ->: (J0 x J0) ->: ?))._2
+    val item1 = (program1 :/ "f")
+    //val item0 = TypedLambdaCalculus.pullOut(program, (program :/ "f|nw" :/ "item")) get
+    //val item1 = TypedLambdaCalculus.pullOut(program1, (program1 :/ "f" :/ "item")) get
     
     Rewrite.display(item0)
     Rewrite.display(item1)
+
+    val toR = TotalOrderPod(R)
+    val nilNR = NilPod(N, R)
+    val consR = ConsPod(R)
+    val minJR = MinPod(J, R, toR.<)
+    val minNR = MinPod(N, R, toR.<)
     
-    val p = new Prover(List())(env ++ env1)
+    val p = new Prover(List(toR, nilNR, consR, minJR, minNR))(env ++ env1)
+
     val t = new p.Transaction
     
-    def intros(goal: Term) = {
-      if (goal =~ ("=", 2)) {
-        val List(lhs, rhs) = goal.subtrees
-        val ftype = TypePrimitives.shape(TypedTerm.typeOf_!(lhs))
-        /**/ assert(ftype == TypePrimitives.shape(TypedTerm.typeOf_!(rhs))) /**/
-        val vars = qvars(TypePrimitives.args(ftype))
-        TypedLambdaCalculus.simplify((lhs:@(vars:_*)) =:= (rhs:@(vars:_*)))
-      }
-      else goal
-    }
-    
-    conclusions += t.commit(assumptions, List(t.let(intros(item0 =:= item1))))
+    conclusions += t.commit(assumptions, List(t.let(p.intros(item0 =:= item1))))
     
     /*
     // f|nw

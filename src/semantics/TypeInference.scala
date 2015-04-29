@@ -337,6 +337,16 @@ object TypeInference {
           case _ =>
         }
       }
+      else if (n =~ (":", 2)) {
+        List(n, n.subtrees(1)) map nodeType match {
+          case List(Some(parent), Some(child)) =>
+            if (parent != child) {
+              val force = step1(n, parent, child)
+              for (k <- List(n, n.subtrees(1)))
+                retype(k, force)
+            }
+        }
+      }
       else if (n =~ ("@", 2)) {
         List(n) ++ n.subtrees map nodeType match {
           case List(Some(y), Some(f), Some(x)) =>

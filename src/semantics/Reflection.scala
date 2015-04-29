@@ -10,6 +10,7 @@ import AstSugar._
 import java.util.logging.Logger
 import java.util.logging.Level
 import report.console.NestedListTextFormat
+import synth.tactics.Rewrite
 
 
 
@@ -27,6 +28,12 @@ object Reflection {
   
   val log = Logger.getLogger("semantics.Reflection")
   log.setLevel(Level.OFF)
+  
+  {  /* I'm not sure this is advised */
+    val handler = new java.util.logging.ConsoleHandler
+    handler.setLevel(Level.FINER);
+    Reflection.log.addHandler(handler);
+  }
 }
 
 
@@ -111,10 +118,11 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
       val typ = env.typeOf_!(lhs)
       if (typ =~ ("->", 2)) {
         val va = T(TypedIdentifier(new Identifier(greek(lhs.subtrees.length), "variable", new Uid), typ.subtrees(0)))
+        val ret = TypePrimitives.curry(env.typeOf_!(rhs))(env.scope)._2
         if (isFuncType(env.typeOf_!(va)))
           currying += (va.root -> (overload(va.root) take 1))  /* quantified var: has only one version */
         alwaysDefined += va.root
-        ∀(va)(consolidate1(TypedTerm(lhs :@ va, typ.subtrees(1)) =:= TypedTerm(rhs :@ va, typ.subtrees(1))))
+        ∀(va)(consolidate1(TypedTerm(lhs :@ va, typ.subtrees(1)) =:= TypedTerm(rhs :@ va, ret)))
       }
       else if (rhs =~ ("/", 2)) {
         val List(trueB, falseB) = rhs.subtrees
@@ -130,10 +138,11 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
       val typ = env.typeOf_!(lhs)
       if (typ =~ ("->", 2)) {
         val va = T(TypedIdentifier(new Identifier(greek(lhs.subtrees.length), "variable", new Uid), typ.subtrees(0)))
+        val ret = TypePrimitives.curry(env.typeOf_!(rhs))(env.scope)._2
         if (isFuncType(env.typeOf_!(va)))
           currying += (va.root -> (overload(va.root) take 1))  /* quantified var: has only one version */
         alwaysDefined += va.root
-        ∀(va)(consolidate1(TypedTerm(lhs :@ va, typ.subtrees(1)) <-> TypedTerm(rhs :@ va, typ.subtrees(1))))
+        ∀(va)(consolidate1(TypedTerm(lhs :@ va, typ.subtrees(1)) <-> TypedTerm(rhs :@ va, ret)))
       }
       else (lhs <-> rhs)
     }
@@ -302,7 +311,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     val fo_symbols = fo_assumptions.toList flatMap (_.nodes map (_.root)) toSet
     
     val prelude = typeinfo ++ curryAxioms(fo_symbols) ++ equality
-    val fo_prelude = prelude map reflect
+    val fo_prelude = e(prelude) map_/ reflect filter (_ != TRUE)
     
     val fo_goals = e(goals) map_/ reflect flatMap (_.split(new Identifier("&", "connective")))
   
@@ -311,10 +320,11 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     val (z3g, fo_base) = TypeTranslation toSmt List(env)
 
     Trench.display(fo_assumptions)
+    Trench.display(fo_prelude)
     
     val status =
       z3g.solve(fo_base ++ (
-        for (atn <- fo_assumptions.toList ++ fo_prelude if atn != TRUE) yield {
+        for (atn <- fo_assumptions.toList ++ fo_prelude.toList if atn != TRUE) yield {
           z3g.formula(atn)
         }),
         fo_goals.toList map z3g.formula)

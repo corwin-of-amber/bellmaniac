@@ -522,7 +522,7 @@ object TermTranslation {
         val fun = T(TypedIdentifier($v("↦"), rawtype(env.typeOf_!(body_id))))
         val arg = term.subtrees(0)
         //println(s"**** ${term toPretty}")
-        val (genbody_syms, genbody_t) = generalize(body_t :+ (fun =:= body_id), arg)
+        val (genbody_syms, genbody_t) = generalize(body_t :+ (fun =:= body_id), arg, fun)
         (T(genbody_syms(fun.root)), genbody_t) // TODO
       }
       else if (term =~ (":", 2)) {
@@ -533,27 +533,36 @@ object TermTranslation {
     
     import semantics.TypedLambdaCalculus.typecheck0
     
-    def generalize(eqs: List[Term], arg: Term): (Map[Identifier,Identifier], List[Term]) = {
+    def generalize(eqs: List[Term], arg: Term, target: Term): (Map[Identifier,Identifier], List[Term]) = {
       /**/ assume(eqs forall (_ =~ ("=", 2))) /**/
       /**/ assume(eqs forall (_.subtrees(0).isLeaf)) /**/
-      val sym = eqs map (_.subtrees(0).root)
+      //val sym = eqs map (_.subtrees(0).root)
+      val sym = (reach1(Set(arg.root), dependencies(eqs)) + target.root) toList
       val gensym = sym map (x => (x, TypedIdentifier(x, rawtype(env.typeOf_!(arg) -> env.typeOf_!(x))))) toMap
       val subst = new TreeSubstitution(sym map (x => (T(x), T(gensym(x)) :@ arg))) {
         override def preserve(old: Term, new_ : Term) = TypedTerm.preserve(old, new_)
       }
       val geneqs =
-      for (eq <- eqs) yield {
+      for (eq <- eqs) yield gensym get eq.subtrees(0).root match { case None => eq case Some(l) =>
         //println(eq toPretty)
-        val lhs = T(gensym(eq.subtrees(0).root))
+        val lhs = T(l)
         val rhs = eta(typecheck0(arg ↦ subst(eq.subtrees(1))))
         //println(s"   ${lhs } = ${rhs }")
         lhs =:= rhs
       }
       intermediates --= gensym.keys
       intermediates ++= gensym.values
-      //if (!eqs.isEmpty) System.exit(0)
       (gensym, geneqs)
     }
+    
+    def dependencies(eqs: List[Term]) = {
+      def syms(rhs: Term) = rhs.leaves map (_.root) /*filter syma.contains*/ toList
+      val cab = eqs map (eq => (eq.subtrees(0).root, syms(eq.subtrees(1))))
+      ( for ((l,rs) <- cab; r <- rs) yield (r,l) ) groupBy (_._1) mapValues (_.map (_._2)) toMap
+    }
+    
+    def reach1[X](origins: Set[X], adj: Map[X, List[X]]) =
+      (Stream.iterate(origins)((_ flatMap (adj.getOrElse(_, List())))) drop 1 takeWhile (x => !(x.isEmpty))).flatten toSet
     
     def eta(term: Term) =
       if (term =~ ("↦", 2) && term.subtrees(1) =~ ("@", 2) && term.subtrees(1).subtrees(1) == term.subtrees(0))

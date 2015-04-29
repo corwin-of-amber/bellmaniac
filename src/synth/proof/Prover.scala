@@ -11,6 +11,10 @@ import semantics.pattern.MacroMap
 import semantics.Reflection
 import synth.pods.Pod
 import semantics.TypeTranslation
+import semantics.TypePrimitives
+import semantics.TypedTerm
+import semantics.Scope
+import semantics.TypedLambdaCalculus
 
 
 
@@ -20,11 +24,27 @@ import semantics.TypeTranslation
  */
 class Prover(val pods: List[Pod])(implicit env: Environment) {
 
-
+  import TypeTranslation.TypingSugar._
+  import TypedTerm.typeOf_!
+  import TypePrimitives.{shape, args}
+  
   implicit val scope = env.scope
   val typedecl = env.typedecl
   val expand = new Expansion(pods map (_.macros) reduceOption (_ ++ _) getOrElse MacroMap.empty)
     
+  def intros(goal: Term) = {
+    if (goal =~ ("=", 2)) {
+      val List(lhs, rhs) = goal.subtrees
+      val ftype = shape(typeOf_!(lhs))
+      if (ftype != shape(typeOf_!(rhs)))
+        throw new Scope.TypingException(s"incompatible types in equality, '${typeOf_!(lhs) toPretty}'  =  '${typeOf_!(rhs) toPretty}")
+      val vars = qvars(args(ftype))
+      TypedLambdaCalculus.simplify((lhs:@(vars:_*)) =:= (rhs:@(vars:_*)))
+    }
+    else goal
+  }
+    
+  
   def e(term: Term) = {
     val (vassign, typed) = TypeInference.infer(/*Binding.prebind*/(term), typedecl)
     (TypeTranslation.decl(env.scope, vassign), expand(typed))

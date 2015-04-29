@@ -43,7 +43,7 @@ class TotalOrderPod(domain: Term) extends Pod {
   
   private val D = domain
   
-  val < = TyTV("<", D ->: D ->: B)
+  val < = $TyTV("<", D ->: D ->: B)
   
   val sym = List(<.root)
   
