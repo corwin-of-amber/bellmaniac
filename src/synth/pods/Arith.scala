@@ -28,8 +28,8 @@ object NatPod extends Pod {
   
   override val decl = new Declaration(_0, _1, z, nz, s, p) where List(
       ↓(_0) & ↓(_1) & (TypedTerm(s :@ _0, N) =:= _1),
-      z <-> (i ↦ (i =:= _0)),
-      nz <-> (i ↦ ~(z :@ i)),
+      z <-> TypedTerm(i ↦ (i =:= _0), N -> B),
+      nz <-> TypedTerm(i ↦ ~(z :@ i), N -> B),
       ∀:(N, i => (↓(s :@ i) -> ~(TypedTerm(s :@ i, N) =:= i) )),
       ∀:(N, i => (↓(s :@ i) -> (TypedTerm(p :@ (s :@ i), N) =:= i) ))
     )

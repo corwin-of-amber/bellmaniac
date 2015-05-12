@@ -160,7 +160,7 @@ object Shrink {
 
     val t = new p.Transaction
     
-    conclusions += t.commit(assumptions, List(t.let(p.intros(item0 =:= item1))))
+    conclusions += t.commit(assumptions, List(t.let(t.intros(item0 =:= item1))))
     
     /*
     // f|nw

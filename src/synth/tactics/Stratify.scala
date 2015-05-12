@@ -10,43 +10,90 @@ import semantics.TypeTranslation.Environment
 import semantics.TypeTranslation.TypedIdentifier
 import semantics.Reflection
 import semantics.TypePrimitives
-import semantics.TypeTranslation.TypingSugar
+import semantics.TypeTranslation.TypingSugar._
 import semantics.TypedLambdaCalculus
 import semantics.TypeInference
 import syntax.Strip
 import semantics.TypeTranslation.Declaration
+import synth.proof.Prover
+import synth.pods.TotalOrderPod
+import synth.pods.Pod
+import semantics.TypedSubstitution
+import semantics.Prelude
 
 
 object Stratify {
 
   import semantics.Domains._
   import semantics.Prelude._
-  import semantics.TermTranslation.TermBreak
-  import semantics.UntypedTerm
 
-  
-  class Intros(implicit env: Environment) {
-    val intermediates = new collection.mutable.HashSet[TypedIdentifier]
-    def apply(goal: Term) = {
-      if (goal =~ ("=", 2)) {
-        val List(lhs, rhs) = goal.subtrees
-        env.typeOf(lhs) match {
-          case Some(typ) if Reflection.isFuncType(typ) =>
-            val rawtyp = TypePrimitives.rawtype(env.scope, typ)
-            val qv = TypingSugar.qvars(TypePrimitives.args(rawtyp), Strip.numeral)
-            val ret = TypePrimitives.ret(rawtyp)
-            intermediates ++= (qv map (_.root.asInstanceOf[TypedIdentifier]))
-            TypedTerm(lhs :@ (qv:_*), ret) =:= TypedTerm(rhs :@ (qv:_*), ret)
-          case _ => goal
-        }
-      }
-      else goal
+  class PodBuilder(program: Term, symbols: List[Term])(implicit env: Environment) {
+    val (vassign, body) = TypeInference.infer(program)(env.scope)
+    
+    def decl = mkDecl(symbols, body.split(Prelude.program.root))
+    
+    def mkTid(t: Term) = TypedIdentifier(t.leaf, vassign(t.leaf))
+    def mkDecl(symbols: List[Term], axioms: List[Term]) = {
+      val subst = new TypedSubstitution(symbols map (x => (x, T(mkTid(x)))))
+      new Declaration(symbols map mkTid, axioms map (subst(_)))
     }
-    def intermediate: Environment = new Environment(env.scope, 
-        intermediates map (x => (x, new Declaration(List(x), List()))) toMap)
+  }
+  
+  class MonoPod(val J: Term, val R: Term, val < : Term)(implicit env: Environment) extends Pod {
+    val ⊑ = $TyTV("⊑", (J ->: J ->: R) ->: (J ->: J ->: R) ->: B)
+    val (θ, ζ, i, j) = ($TV("θ"), $TV("ζ"), $TV("i"), $TV("j"))
+
+    override val decl = new PodBuilder(program(
+        ∀(θ,ζ)(
+            ⊑ :@ (θ,ζ) <-> 
+              ∀(i,j)(↓(θ:@(i,j)) -> ( ↓(ζ:@(i,j)) & ~(< :@(ζ:@(i,j), θ:@(i,j)))) )
+        )
+      ), List(⊑, θ, ζ, i, j)).decl
+        
   }
   
   
+  class AntiSymmetryPod(val D: Term, val ⊑ : Term) extends Pod {
+    val x = $TyTV("x", D)
+    val y = $TyTV("y", D)
+    
+    override val decl = new Declaration(x, y)
+    val obligation = ∀(x,y)( (⊑ :@(x,y)) ->: (⊑ :@(y,x)) ->: (x =:= y) )
+  }
+  
+  
+  def main(args: Array[String]): Unit = {
+
+    import examples.Paren
+    import examples.Paren._
+    import Shrink.{InputPod,APod}
+    import semantics.Binding.{inline,prebind}
+            
+    val prenv = Paren.env
+    implicit val scope = prenv.scope
+    
+    val A = new APod(Paren.J, Paren.J0)
+    
+    val (vassign, program) = TypeInference.infer( inline( prebind(InputPod.program(A.program).unfoldRight) ) )
+    
+    implicit val env = prenv ++ TypeTranslation.decl(scope, vassign)
+    
+    println("-" * 80)
+    
+    val toR = TotalOrderPod(R)
+    val < = toR.<
+    
+    val monoJJR = new MonoPod(J, R, <)
+    import monoJJR.{⊑}
+    
+    val asymm = new AntiSymmetryPod(J ->: J ->: R, ⊑)
+    
+    val p = new Prover(List(monoJJR, toR))
+    val t = new p.Transaction
+    t.commit(List(), List( t.intros(asymm.obligation) ))
+  }
+  
+/*  
   def main(args: Array[String]): Unit = {
     import examples.Paren._
     implicit val scope = new Scope
@@ -70,7 +117,7 @@ object Stratify {
         c ~> (((J0 x J0) -> R) -> ((J1 x J1) -> R)),
         x ~> ((J x J) -> R) )
     
-    val env = prenv ++ TypeTranslation.decl(scope, typedecl)
+    implicit val env = prenv ++ TypeTranslation.decl(scope, typedecl)
 
     // f := c / I    ( := \x i. c x i / x i )
     
@@ -82,45 +129,18 @@ object Stratify {
     val (_, cxcfx) = 
       TypeInference.infer( c =:= (x ↦ (c :@ (f :@ x))), typedecl )
       
-    println(cxcfx)
-                
-    val intros = new Intros()(env)
-    val (_, eq) = TypeInference.infer( TypedLambdaCalculus.simplify(intros(cxcfx)) )
-    println(eq)
+    Rewrite.display(cxcfx)
     
-    //System.exit(0)
-    
-    val (eq_id, eq_t) = termb(eq) 
-    
-    val assumptions = eq_t ++ List(
-        Ijr =:= { val x = T($v("α")) ; x ↦ x },
+    val assumptions = List(
+        Ijr =:= { val x = T($v("α")) ; TypedTerm(x ↦ x, (J->(J->R))->(J->(J->R))) },
         f =:= TypedTerm(c /: Ijr, (J->(J->R)) -> (J->(J->R)))
       )
     
-    val goals = List(eq_id)
-        
+    val p = new Prover(List())
     
-    val symbols = typedecl.keys ++ termb.intermediates
+    val t = new p.Transaction
     
-    val reflect = new Reflection(env ++ intros.intermediate, typedecl)
-    
-    reflect.currying ++= symbols filter (x => Reflection.isFuncType(env.typeOf_!(x))) map 
-                                        (symbol => (symbol, reflect.overload(symbol))) toMap
-
-    for (symbol <- symbols) {
-      println(s"${T(symbol).untype} :: ${env.typeOf(symbol).get toPretty}")
-      /*
-      val variants = reflect.currying(symbol.root)
-      for (variant <- variants)
-        println(s"   ${variant toPretty}")
-      for (axiom <- reflect.curryAxioms(variants))
-        println(s"   ***  ${axiom toPretty}")
-      */
-    }
-    
-    println("· " * 25)
-
-    reflect.solve(assumptions, goals)
+    t.commit(assumptions, List(t.let( p.intros(cxcfx) )))
     
     /*
     val expr1 = (x :: (J0 -> R))
@@ -196,5 +216,5 @@ object Stratify {
       solveAndPrint(assumptions, goals)
     } */
   }
-  
+ */
 }

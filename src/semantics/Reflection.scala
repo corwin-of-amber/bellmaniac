@@ -11,6 +11,9 @@ import java.util.logging.Logger
 import java.util.logging.Level
 import report.console.NestedListTextFormat
 import synth.tactics.Rewrite
+import com.sun.org.apache.xalan.internal.xsltc.runtime.output.StringOutputBuffer
+import java.io.StringWriter
+import java.io.ByteArrayOutputStream
 
 
 
@@ -154,6 +157,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
         case tid: TypedIdentifier => if (isFuncType(tid.typ))
           currying += (tid -> (overload(tid) take 1))  /* quantified var: has only one version */
           alwaysDefined += tid
+        case _ =>
       }
       T(term.root, sub)
     }
@@ -308,20 +312,22 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     }
     def e(l: List[Term]) = new Trench[Term](l)
     val fo_assumptions = e(assumptions) map_/ reflect
-    val fo_symbols = fo_assumptions.toList flatMap (_.nodes map (_.root)) toSet
+    
+    val fo_goals = e(goals) map_/ reflect flatMap (_.split(new Identifier("&", "connective")))
+
+    val fo_symbols = (fo_assumptions.toList ++ fo_goals.toList) flatMap (_.nodes map (_.root)) toSet
     
     val prelude = typeinfo ++ curryAxioms(fo_symbols) ++ equality
     val fo_prelude = e(prelude) map_/ reflect filter (_ != TRUE)
     
-    val fo_goals = e(goals) map_/ reflect flatMap (_.split(new Identifier("&", "connective")))
-  
     log.fine("-" * 60)
   
-    val (z3g, fo_base) = TypeTranslation toSmt List(env)
-
     Trench.display(fo_assumptions)
+    report.NotebookLog.out += Trench.displayRich(fo_assumptions)
     Trench.display(fo_prelude)
     
+    val (z3g, fo_base) = TypeTranslation toSmt List(env)
+
     val status =
       z3g.solve(fo_base ++ (
         for (atn <- fo_assumptions.toList ++ fo_prelude.toList if atn != TRUE) yield {
@@ -333,7 +339,8 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     val results = fo_goals map_/ (s => TI(statusMap(s).toPretty))
     
     Trench.display(results, "◦")
-    
+    report.NotebookLog.out += Trench.displayRich(results, "◦")
+
     results
   }
   

@@ -4,9 +4,7 @@
 	<classpathentry kind="src" path="examples"/>
 	<classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="lib/iris-0.60.jar"/>
-	<classpathentry kind="lib" path="lib/iris-app-0.60.jar"/>
-	<classpathentry kind="lib" path="lib/iris-parser-0.60.jar"/>
 	<classpathentry kind="var" path="Z3_ROOT/build/com.microsoft.z3.jar"/>
+	<classpathentry kind="lib" path="lib/mongo-java-driver-2.13.1.jar" sourcepath="lib/mongo-java-driver-2.13.1-sources.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

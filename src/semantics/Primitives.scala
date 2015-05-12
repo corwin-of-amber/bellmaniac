@@ -7,10 +7,12 @@ import TypeTranslation.{MicroCode,In,Out,Check}
 import TypeTranslation.InOut
 import TypeTranslation.{emit,simplify,canonical}
 import semantics.TypeTranslation.TypedIdentifier
-
-
 import AstSugar.Term
 import report.console.NestedListTextFormat
+import report.ObjectTree
+import report.ObjectVBox
+import report.BulletDecorator
+import syntax.transform.TreeSubstitution
 
 
 
@@ -265,6 +267,9 @@ object TypedTerm {
   
 }
 
+class TypedSubstitution(substitutions: List[(Term, Term)]) extends TreeSubstitution[Identifier](substitutions) {
+  override def preserve(old: Term, new_ : Term) = TypedTerm.preserve(old, new_)
+}
 
 /**
  * Used to simplify first-order formulas using standard identities.
@@ -364,6 +369,12 @@ object Trench {
   def display(tr: Trench[Term], ● : String = "•", indent: String = "  ", level: String = " ") = {
     val fmta = new NestedListTextFormat[Term](●, indent)((_.untype.toPretty))
     for (a <- tr.el) fmta.layOut(a, level)
+  }
+  
+  def displayRich(tr: Trench[Term], bullet: String = "•") = {
+    new ObjectVBox(tr.el map (t => 
+      new ObjectTree(t map (_.toPrettyTape))
+        with BulletDecorator { override val ● = bullet }))
   }
 }
     

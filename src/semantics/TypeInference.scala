@@ -1,12 +1,8 @@
 package semantics
 
-import org.deri.iris.compiler.Parser
-import org.deri.iris.KnowledgeBaseFactory
 import scala.collection.JavaConversions._
 import syntax.Tree
 import syntax.Identifier
-import org.deri.iris.factory.Factory
-import org.deri.iris.storage.IRelation
 import scala.collection.immutable.HashMap
 import syntax.Unify
 import syntax.Resolve
@@ -62,47 +58,6 @@ object TypeInference {
   import syntax.AstSugar._
   import TypedTerm.typeOf
 
-
-  val TREE_PRED = new Identifier("T")
-  
-  def tree2Tuples(t : Tree[Identifier], ns : Namespace[Identifier]) : (Identifier, List[List[Identifier]]) = {
-    if (t.subtrees.isEmpty) (t.root, List())
-      //(new Identifier(ns declare t.root, "index"), List())
-    else {
-      val rootId = new Identifier(ns fresh, "index")
-      val children = t.subtrees map (x => tree2Tuples(x, ns))
-      val subTuples = (children map (_._2)).flatten
-      val subIds = children map (_._1)
-      val rootTuple = rootId :: t.root :: subIds
-      (rootId, rootTuple +: subTuples)
-    }
-  }
-  
-  def tree2Facts(t : Tree[Identifier], ns : Namespace[Identifier]) = {
-    val (_, tuples) = tree2Tuples (t, ns)
-    tuples map (tup => new Tree(TREE_PRED, tup map (x => new Tree(x))))
-  }
-  
-  def tuples2Tree(tuples: IRelation, rootIndex: Int) = {
-    val sz = tuples.size
-    for (i <- 0 until sz) {
-      
-    }
-  }
-  
-  def asDatalog(i : Identifier) = i.literal match {
-    case index: Int => i.toString
-    case _ => s"'$i'"
-  }
-    
-  
-  def asDatalog(t : Tree[Identifier]): String = {
-    if (t.subtrees isEmpty) asDatalog(t.root)
-    else {
-      val children = t.subtrees map asDatalog mkString ", " 
-      s"${t.root}($children)"
-    }
-  }
   
   /**
    * Demotes type variables to regular variables and variables to predicates
@@ -278,11 +233,20 @@ object TypeInference {
         (freshvar, mgu)
       }
       else if (expr.root == "∀") {
+        val children = expr.subtrees map infer0
         /**/ assume(expr.subtrees.length >= 1) /**/
-        (freshvar, Map(freshvar -> B) ++ infer0(expr.subtrees.last)._2) 
+        implicit val join = resolve.join
+        val mgu = (Map(freshvar -> B, children.last._1 -> B) +: (children map (_._2))) reduce ((x, y) => Unify.mgu0(x,y))
+        (freshvar, mgu)
       }
       else if (expr.root == "<->" || expr.root == "~" || expr.root == "|" || expr.root == "&" || expr.root == "->") {
         val children = expr.subtrees map infer0 map { case (x,y) => y + (x -> B) }
+        implicit val join = resolve.join
+        val mgu = (Map(freshvar -> B) +: children) reduce ((x, y) => Unify.mgu0(x,y))
+        (freshvar, mgu)
+      }
+      else if (expr.root == "↓") {
+        val children = expr.subtrees map infer0 map (_._2)
         implicit val join = resolve.join
         val mgu = (Map(freshvar -> B) +: children) reduce ((x, y) => Unify.mgu0(x,y))
         (freshvar, mgu)

@@ -15,6 +15,8 @@ import semantics.TypePrimitives
 import semantics.TypedTerm
 import semantics.Scope
 import semantics.TypedLambdaCalculus
+import semantics.TypeTranslation.Declaration
+import syntax.Identifier
 
 
 
@@ -32,16 +34,21 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
   val typedecl = env.typedecl
   val expand = new Expansion(pods map (_.macros) reduceOption (_ ++ _) getOrElse MacroMap.empty)
     
-  def intros(goal: Term) = {
+  def intros(goal: Term): (List[Term], Term) = {
     if (goal =~ ("=", 2)) {
       val List(lhs, rhs) = goal.subtrees
-      val ftype = shape(typeOf_!(lhs))
-      if (ftype != shape(typeOf_!(rhs)))
+      val ftype = shape(env.typeOf_!(lhs))
+      if (ftype != shape(env.typeOf_!(rhs)))
         throw new Scope.TypingException(s"incompatible types in equality, '${typeOf_!(lhs) toPretty}'  =  '${typeOf_!(rhs) toPretty}")
       val vars = qvars(args(ftype))
-      TypedLambdaCalculus.simplify((lhs:@(vars:_*)) =:= (rhs:@(vars:_*)))
+      (vars, TypedLambdaCalculus.simplify((lhs:@(vars:_*)) =:= (rhs:@(vars:_*))))
     }
-    else goal
+    else if (goal.root == "∀") {
+      val vars = goal.subtrees.dropRight(1)
+      val (more_vars, g) = intros(goal.subtrees.last)
+      (vars ++ more_vars, g)
+    }
+    else (List(), goal)
   }
     
   
@@ -53,6 +60,7 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
   class Transaction {
     val termb = new TermBreak(env)
     val termlings = collection.mutable.ListBuffer[(Environment, List[Term])]()
+    val locals = collection.mutable.Set[Identifier]()
     
     def let(term: Term) = {
       val (v_env, (v, v_t)) = be(term)
@@ -60,8 +68,14 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
       v
     }
     
+    def intros(goal: Term) = {
+      val (vars, g) = Prover.this.intros(goal)
+      locals ++= vars map (_.leaf)
+      g
+    }
+    
     def commit(assumptions: List[Term], goals: List[Term]) = {
-      val symbols = typedecl.keys ++ (pods flatMap (_.decl.symbols)) ++ termb.intermediates
+      val symbols = typedecl.keys ++ (pods flatMap (_.decl.symbols)) ++ termb.intermediates ++ locals
       val env1 = (env /: termlings) { case (env, (env1, _)) => env ++ env1 }
       val terms1 = termlings map (_._2)
       

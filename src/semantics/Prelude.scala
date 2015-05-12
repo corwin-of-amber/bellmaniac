@@ -27,6 +27,8 @@ object Prelude {
 
   def ? = T(new Identifier("?", "type variable", new Uid))
     
+  val program = TV("program")
+  
   def transitive(elType: Term)(r: Term) = 
     ∀:(elType, (x,y,z) => (r(x,y) ->: r(y,z) ->: r(x,z)))
   

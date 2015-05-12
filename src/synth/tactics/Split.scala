@@ -45,8 +45,6 @@ object Split {
     import java.util.logging.Level
     //TypeInference.log.setLevel(Level.INFO)
     
-    val termb = new TermBreak(env)
-    
     val nilNR = NilPod(N, R)
     val consR = ConsPod(R)
     val toR = TotalOrderPod(R)

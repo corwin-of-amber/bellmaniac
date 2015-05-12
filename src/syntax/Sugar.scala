@@ -1,6 +1,8 @@
 
 package syntax
 
+import report.data.TapeString
+
 
 object AstSugar {
 
@@ -22,7 +24,8 @@ object AstSugar {
   }
   
   implicit class FormulaDisplay(private val term: Term) extends AnyVal {
-    def toPretty: String = Formula.display(term)
+    def toPretty: String = Formula.display(term) toString
+    def toPrettyTape: TapeString = Formula.display(term)
   }
   
   // --------
@@ -101,7 +104,8 @@ object AstSugar {
 object Formula {
   
   import AstSugar.{Term,DSL}
-  
+  import TapeString.{fromAny,TapeFormat}
+    
   object Assoc extends Enumeration {
     type Assoc = Value
     val Left, Right, None = Value
@@ -112,7 +116,7 @@ object Formula {
     def format(term: AstSugar.Term) = {
       /**/ assume(term.subtrees.length == 2) /**/
       val op = if (literal == null) display(term.root) else literal
-      s"${display(term.subtrees(0), priority, Assoc.Left)} $op ${display(term.subtrees(1), priority, Assoc.Right)}"
+      tape"${display(term.subtrees(0), priority, Assoc.Left)} $op ${display(term.subtrees(1), priority, Assoc.Right)}"
     }
   }
   
@@ -121,13 +125,13 @@ object Formula {
       /**/ assume(term.subtrees.length == 2) /**/
       val List(fun, arg) = term.subtrees
       if (fun =~ ("+", 0))
-        s"${display(arg, if (isOp(arg, "+")) priority else 0, Assoc.Left)} +"
+        tape"${display(arg, if (isOp(arg, "+")) priority else 0, Assoc.Left)} +"
       else {
         val lst = splitOp(term, "cons")
         if (lst.length > 1 && lst.last =~ ("nil", 0))
-          s"⟨${lst dropRight 1 map display mkString ", "}⟩"
+          tape"⟨${lst dropRight 1 map display mkString ", "}⟩"
         else
-          s"${display(fun, priority, Assoc.Left)} ${display(arg, priority, Assoc.Right)}"
+          tape"${display(fun, priority, Assoc.Left)} ${display(arg, priority, Assoc.Right)}"
       }
     }
     
@@ -149,10 +153,10 @@ object Formula {
       Map("@" -> new AppOperator("", 1, Assoc.Left))
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
   
-  def display(symbol: Identifier): String = 
-    symbol.literal.toString
+  def display(symbol: Identifier): TapeString = 
+    symbol.literal.toString || symbol
   
-  def display(term: AstSugar.Term): String =
+  def display(term: AstSugar.Term): TapeString =
     if (QUANTIFIERS contains term.root.toString)
       displayQuantifier(term.unfold)
     else
@@ -161,24 +165,24 @@ object Formula {
       case Some(op) => 
         op.format(term)
       case None => 
-        if (term.isLeaf) term.root.toString
-        else s"${term.root}(${term.subtrees map display mkString ", "})"
+        if (term.isLeaf) display(term.root)
+        else tape"${display(term.root)}(${term.subtrees map display mkTapeString ", "})"
     }
   
-  def display(term: AstSugar.Term, pri: Int, side: Assoc): String = {
+  def display(term: AstSugar.Term, pri: Int, side: Assoc): TapeString = {
     if (term.subtrees.length != 2) display(term)
     else {
       val d = display(term)
       INFIX get term.root.toString match {
         case Some(op) =>
-          if (op.priority < pri || op.priority == pri && side == op.assoc) d else s"($d)"
+          if (op.priority < pri || op.priority == pri && side == op.assoc) d else tape"($d)"
         case _ => d
       }
     }
   }
 
   def displayQuantifier(term: AstSugar.Term) =
-    s"${term.root}${term.subtrees dropRight 1 map display mkString " "} (${display(term.subtrees.last)})"
+    tape"${display(term.root)}${term.subtrees dropRight 1 map display mkTapeString " "} (${display(term.subtrees.last)})"
   
 }
 
