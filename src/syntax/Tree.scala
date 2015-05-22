@@ -38,12 +38,21 @@ class Tree[T] (val root: T, val subtrees: List[Tree[T]] = List()) {
   
   def unfoldRight = unfoldRightN(1)
   def unfoldRightN(N: Int): Tree[T] = new Tree(root, (subtrees dropRight N) ++ 
-      (subtrees takeRight N) flatMap { 
+    (subtrees takeRight N) flatMap { 
       t => if (t.root == root) t.unfoldRightN(N).subtrees else List(t)
     })
   
+  def unfoldLeft = unfoldLeftN(1)
+  def unfoldLeftN(N: Int): Tree[T] = new Tree(root, 
+    ((subtrees take N) flatMap {
+      t => if (t.root == root) t.unfoldLeftN(N).subtrees else List(t)
+    }) ++ (subtrees drop N))
+  
   def split = unfold.subtrees
   def split(sep: T): List[Tree[T]] = if (root == sep) split else List(this)
+  
+  def splitLeft = unfoldLeft.subtrees
+  def splitLeft(sep: T): List[Tree[T]] = if (root == sep) splitLeft else List(this)
   
   def replaceDescendant(switch: (Tree[T], Tree[T])): Tree[T] =
     if (switch._1 eq this) switch._2

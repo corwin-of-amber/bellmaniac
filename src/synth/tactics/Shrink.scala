@@ -91,14 +91,14 @@ object Shrink {
             cons:@(
               (min:@ 
                 (k ↦
-                  ( ((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item") )
+                  ( ((θ:@(i, k)) + (θ:@(k, j)))/*((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j)))*/ -: TV("item") )
                 )
               ),
-              cons:@(
-                (θ:@(i, j)),
+              //cons:@(
+              //  (θ:@(i, j)),
                 nil
               )
-            )
+            //)
           )  -: TV("compute")
           
         ).foldRight -: f )

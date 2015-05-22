@@ -24,7 +24,7 @@ object NatPod extends Pod {
   val s =  TyTV("s", N -> N)
   val p =  TyTV("p", N -> N) //(N ∩ nz) -> N)
   
-  private val i = $TV("i")
+  private val i = $TyTV("i", N)
   
   override val decl = new Declaration(_0, _1, z, nz, s, p) where List(
       ↓(_0) & ↓(_1) & (TypedTerm(s :@ _0, N) =:= _1),
@@ -49,7 +49,8 @@ class TotalOrderPod(domain: Term) extends Pod {
   
   override val decl = new Declaration(<) where List(
       ∀:(D, (i, j) => (< :@ i :@ j) -> ~(< :@ j :@ i)),                   // anti-symmetry
-      ∀:(D, (i, j) => ~(< :@ i :@ j) ->: ~(< :@ j :@ i) ->: (i =:= j))    // totality
+      ∀:(D, (i, j) => ~(< :@ i :@ j) ->: ~(< :@ j :@ i) ->: (i =:= j)),    // totality
+      ∀:(D, (i, j, k) => ~(< :@ i :@ j) ->: ~(< :@ j :@ k) ->: ~(< :@ i :@ k))    // transitivity
     )      
 }
 

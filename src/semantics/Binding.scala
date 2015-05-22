@@ -10,7 +10,7 @@ object Binding {
   
   import AstSugar._
 
-  val PREBIND_SET = new Binding(Set(I("↦")), Set())
+  val PREBIND_SET = new Binding(Set(I("↦"), I("∀"), I("∃")), Set())
   val BINDER_SET = PREBIND_SET ++ new Binding(Set(I(":")), Set())
   
   def prebind(program: Term) = PREBIND_SET.bind(program)
@@ -45,16 +45,30 @@ class Binding(val left: Set[Identifier], val right: Set[Identifier]) {
     else {
       val rebind =
         if (left contains term.root)
-          (term.subtrees dropRight 1) map { x =>
+          (term.subtrees dropRight 1) map getVarId map { x => (x -> bind(x)) } /*
+            val va = getVarId(x)
             TypedLambdaCalculus.getDeclaredVariable(x) match {
               case Some(va) => (va -> bind(va))
               case _ => throw new TypingException(s"not a valid binding: '$x'")
             }
-          }
+          }*/
         else if (right contains term.root) ???
         else List()
       new Tree(term.root, term.subtrees map (bind(_, bound ++ rebind)))
     }
+  }
+  
+  private def getVarId(arg: Term) = 
+    TypedLambdaCalculus.getDeclaredVariable(arg) getOrElse
+    { throw new TypingException(s"not a valid binding: '$arg'") }
+  
+  def boundvars(term: Term): Set[Identifier] = {
+    val (rebind, sub) =
+      if (left contains term.root) (term.subtrees dropRight 1, List(term.subtrees.last))
+      else if (right contains term.root) (term.subtrees drop 1, List(term.subtrees.head))
+      else (List(), term.subtrees)
+    ((rebind map getVarId) ++
+        (sub map boundvars flatten)) toSet
   }
   
   def inline(definitions: List[(Term, Term)], program: Term): Term = {

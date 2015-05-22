@@ -295,6 +295,10 @@ object TypeTranslation {
       case List(x,y,z) => ∀(x,y,z)(body(x,y,z))
     }
 
+    def ∀:(domain: Term, body: (Term,Term,Term,Term) => Term) = qvars(List(domain, domain, domain, domain)) match {
+      case List(x,y,z,w) => ∀(x,y,z,w)(body(x,y,z,w))
+    }
+
     def ∀:(xdomain: Term, ydomain: Term, body: (Term,Term) => Term) = qvars(List(xdomain, ydomain)) match {
       case List(x,y) => ∀(x,y)(body(x,y))
     }
@@ -339,6 +343,7 @@ object TermTranslation {
   import TypeTranslation.Environment
   import TypeTranslation.TypingSugar._
   
+  /*
   object combine {
     
     def app(func: Declaration, arg: Declaration) = {
@@ -458,7 +463,7 @@ object TermTranslation {
     }*/
     else throw new Exception(s"Cannot translate term '${term.toPretty}'")
   }
-  
+  */
   /**
    * Eventually all of the term translation mechanism will go through this.
    */
@@ -495,10 +500,15 @@ object TermTranslation {
         }
       }
       else if (term =~ ("@", 2)) {
-        val List((func_id, func_terms), (arg_id, arg_terms)) = term.subtrees map reapply
-        val (func_par, func_ret) = TypePrimitives.curry(rawtype(env.typeOf_!(func_id)))(env.scope)
-        val app = T(TypedIdentifier($v(s"${func_id.untype}${arg_id.untype}"), func_ret))
-        (app, func_terms ++ arg_terms :+ (app =:= TypedTerm(func_id :@ arg_id, func_ret)))
+        val func :: args = term.unfoldLeft.subtrees
+        val (func_id, func_terms) = reapply(func)
+        val (arg_ids, arg_terms) = args map reapply unzip
+        //val List((func_id, func_terms), (arg_id, arg_terms)) = term.subtrees map reapply
+        import TypePrimitives.curry
+        val func_ret = (rawtype(env.typeOf_!(func_id)) /: arg_ids)((t, _) => curry(t)(env.scope)._2)
+        //val (func_par, func_ret) = TypePrimitives.curry(rawtype(env.typeOf_!(func_id)))(env.scope)
+        val app = TypedTerm(T(TypedIdentifier($v(s"${func_id.untype}${arg_ids map (_.untype) mkString}"), func_ret)), func_ret)
+        (app, func_terms ++ arg_terms.flatten :+ (app =:= TypedTerm(func_id :@ arg_ids, func_ret)))
       }
       else if (term =~ ("/", 2)) {
         val List((fore_id, fore_t), (back_id, back_t)) = term.subtrees map reapply
@@ -572,6 +582,7 @@ object TermTranslation {
     
   }  
   
+  /*
   def proveAndPrint(env: List[Environment], goals: List[Term]) {
     val (smt, assumptions) = TypeTranslation.toSmt(env)
     
@@ -620,6 +631,41 @@ object TermTranslation {
     // Put it to the test... with SMT!
     proveAndPrint(List(fij_env, alt_fij_env),
         List(T(fij_env(fij).support) <-> T(alt_fij_env(alt_fij).support)))
-  }
+  }*/
   
+}
+
+
+class FormulaTranslation(val termb: TermTranslation.TermBreak) {
+  
+  import AstSugar._
+  import Prelude.B
+  import TypeTranslation.TypingSugar._
+
+  private def accum[A,B](l: List[(A, List[B])]) =
+    l.unzip match { case (x, y) => (x, y.flatten) }
+  
+  def apply(phi: Term): (Term, List[Term]) = phi match {
+    case typed: TypedTerm if typed.typ == B =>
+      if (phi.root == "@") {
+        val (components, sub) = accum(phi.unfoldLeft.subtrees map apply)
+        (TypedTerm(components.head :@ (components.tail:_*), B), sub)
+      }
+      else if (phi =~ ("∀", 2)) {
+        val forall = $TyTV("A", B)
+        val arg = phi.subtrees(0)
+        val (body, body_t) = apply(phi.subtrees(1))
+        val (genbody_syms, genbody_t) = termb.generalize(body_t :+ (forall =:= body), arg, forall)
+        // genbody_t.last is   A = arg ↦ body
+        //  and we want        ∀arg (body)
+        /**/ assert (genbody_t.last =~ ("=", 2) && genbody_t.last.subtrees(0) =~ (genbody_syms(forall.root), 0) && genbody_t.last.subtrees(1) =~ ("↦", 2)) /**/
+        (TypedTerm(T(phi.root)(genbody_t.last.subtrees(1).subtrees), B), genbody_t dropRight 1)
+      }
+      else {
+        val (components, sub) = accum(phi.subtrees map apply)
+        (TypedTerm(T(phi.root)(components), B), sub)
+      }
+    case _ => termb(phi)
+  }
+    
 }

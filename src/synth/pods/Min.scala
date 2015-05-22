@@ -31,17 +31,21 @@ class MinPod(domain: Term, range: Term, < : Term)(implicit env: Environment) ext
   val R = range
   val min = $TyTV(s"min.$D", (D -> R) -> R)
   val argmin = $TyTV(s"argmin.$D", (D -> R) -> D)
+  val min2 = $TyTV(s"min[2].$R", R -> (R -> R))
 
   private val X = V("x")
   val MINPAT = SimpleTypedPattern(TypedTerm(Prelude.min, (D -> R) -> R))(env.scope)
+  val MIN2PAT = SimpleTypedPattern(TypedTerm(Prelude.min, R -> (R -> R)))(env.scope)
   
   override val macros = MacroMap(Prelude.min ~> {
     x => MINPAT(x) map (_ => min)
-    })
+    }) ++
+    MacroMap(Prelude.min ~> { x => MIN2PAT(x) map (_ => min2) })
   
   override val decl = new Declaration(min, argmin) where List(
-      min =:= { val g = T($v("g")) ; TypedTerm(g ↦ (g :@ TypedTerm(argmin :@ g, D)), (D->R) -> R) },
-      ∀:(D->R, D, (g, i) => (↓(g :@ i) -> (↓(min :@ g) & ~(< :@ (g :@ i) :@ (min :@ g)))) )
+      min =:= { val g = $TyTV("g", D -> R) ; TypedTerm(g ↦ (g :@ TypedTerm(argmin :@ g, D)), (D->R) -> R) },
+      ∀:(D->R, D, (g, i) => (↓(g :@ i) -> (↓(min :@ g) & ~(< :@ (g :@ i) :@ (min :@ g)))) ) /*,
+      ∀:(R, R, (a,b) => ((min2:@(a,b)) =:= a) | ((min2:@(a,b)) =:= b))*/
     )
   
 }

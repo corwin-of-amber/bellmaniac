@@ -57,9 +57,9 @@ object AstSugar {
     def =:=(that: Term) = TI("=")(term, that)
     
     def :@(that: Term*) = @:(term)(that:_*).foldLeft
+    def :@(these: List[Term]) = @:(term)(these:_*).foldLeft
     
-    def ~>[A](that: A) = if (term.isLeaf) term.root -> that
-      else throw new Exception(s"mapping from non-leaf '$term'")
+    def ~>[A](that: A) = term.leaf -> that
     
     def =~(root: Any, arity: Int) =
       term.root == root && term.subtrees.length == arity

@@ -87,7 +87,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     T(symbol.untype) =:= T(symbol)
   
   def typeinfo(typedecl: Map[Identifier, Term]) = typedecl map { 
-      case (k,v) => T(k) =:= T(TypedIdentifier(k, v))
+      case (k,v) => TypedTerm(T(k), rawtype(env.scope, v)) =:= T(TypedIdentifier(k, v))
     }
   
   def typeinfo: List[Term] = typeinfo(typedecl) toList
@@ -122,9 +122,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
       if (typ =~ ("->", 2)) {
         val va = T(TypedIdentifier(new Identifier(greek(lhs.subtrees.length), "variable", new Uid), typ.subtrees(0)))
         val ret = TypePrimitives.curry(env.typeOf_!(rhs))(env.scope)._2
-        if (isFuncType(env.typeOf_!(va)))
-          currying += (va.root -> (overload(va.root) take 1))  /* quantified var: has only one version */
-        alwaysDefined += va.root
+        bind(va)
         ∀(va)(consolidate1(TypedTerm(lhs :@ va, typ.subtrees(1)) =:= TypedTerm(rhs :@ va, ret)))
       }
       else if (rhs =~ ("/", 2)) {
@@ -142,29 +140,30 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
       if (typ =~ ("->", 2)) {
         val va = T(TypedIdentifier(new Identifier(greek(lhs.subtrees.length), "variable", new Uid), typ.subtrees(0)))
         val ret = TypePrimitives.curry(env.typeOf_!(rhs))(env.scope)._2
-        if (isFuncType(env.typeOf_!(va)))
-          currying += (va.root -> (overload(va.root) take 1))  /* quantified var: has only one version */
-        alwaysDefined += va.root
+        bind(va)
         ∀(va)(consolidate1(TypedTerm(lhs :@ va, typ.subtrees(1)) <-> TypedTerm(rhs :@ va, ret)))
       }
       else (lhs <-> rhs)
     }
     else if (term =~ ("↦", 2)) {
-      term
+      bind(term.subtrees(0))
+      term  /* postpone until beta reduction occurs */
     }
-    else if (term =~ ("∀", 2)) {
-      term.subtrees(0).root match {
-        case tid: TypedIdentifier => if (isFuncType(tid.typ))
-          currying += (tid -> (overload(tid) take 1))  /* quantified var: has only one version */
-          alwaysDefined += tid
-        case _ =>
-      }
+    else if (term =~ ("∀", 2) || term =~ ("↦", 2)) {
+      bind(term.subtrees(0))
       T(term.root, sub)
     }
     else if (term =~ ("↓",1)) {
       ↓?(sub(0))
     }
     else T(term.root, sub)
+  }
+  
+  def bind(va: Term) {
+    /**/ assert(va.isLeaf) /**/
+    if (isFuncType(env.typeOf_!(va)))
+      currying += (va.root -> (overload(va.root) take 1))  /* bound var: has only one version */
+    alwaysDefined += va.root
   }
   
   import Prelude.TRUE
@@ -287,7 +286,10 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   def support(term: Term): Term =
     if (term =~ ("↓",1)) {
       val atom = term.subtrees(0)
-      if (alwaysDefined contains atom.root) TI(true)
+      if (alwaysDefined contains atom.root) TRUE /*atom.root match {
+        case tid: TypedIdentifier => &&(TRUE :: TypeTranslation.checks(env.scope, tid, term.subtrees.tail))
+        case _ => TRUE
+      }*/
       else T(support(atom.root), atom.subtrees map support)
     }
     else
@@ -325,6 +327,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     Trench.display(fo_assumptions)
     report.NotebookLog.out += Trench.displayRich(fo_assumptions)
     Trench.display(fo_prelude)
+    Trench.display(fo_goals, "◦")
     
     val (z3g, fo_base) = TypeTranslation toSmt List(env)
 

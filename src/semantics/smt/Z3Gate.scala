@@ -23,7 +23,7 @@ class Z3Gate {
   val declarations = new HashMap[Identifier, Either[FuncDecl,Expr]]
   val sorts = new HashMap[Identifier, Sort]
   
-  val mnemonics = new HashMap[Identifier, String]//, Identifier]
+  val mnemonics = new HashMap[Identifier, String]
   
   /* some built-in declarations */
   sorts += (//S("R") -> ctx.getRealSort,
@@ -88,7 +88,7 @@ class Z3Gate {
    * identifiers get distinct mnemonics (even if they have the same
    * literal).
    */
-  def mne(id: Identifier) = mnemonics get id /* (_._2 == id)*/ match {
+  def mne(id: Identifier) = mnemonics get id match {
     case Some(x) => x
     case _ =>
       val lit = id.literal.toString
@@ -175,10 +175,7 @@ class Z3Gate {
   }
   
   def fork[R](retract: Iterable[Identifier])(op: => R) = {
-    //val checkpoint = (declarations.clone, mnemonics.clone)
     def rollback = { declarations --= retract ; mnemonics --= retract }
-    //{ declarations.clear ; declarations ++= checkpoint._1
-    //                 mnemonics.clear ; mnemonics ++= checkpoint._2 }
     try op
     finally rollback
   }

@@ -1,6 +1,7 @@
 package synth.proof
 
 import syntax.AstSugar._
+import syntax.Identifier
 import semantics.UntypedTerm
 import semantics.pattern.Expansion
 import semantics.TermTranslation.TermBreak
@@ -9,15 +10,16 @@ import semantics.TypeInference
 import semantics.TypeTranslation.Environment
 import semantics.pattern.MacroMap
 import semantics.Reflection
-import synth.pods.Pod
 import semantics.TypeTranslation
 import semantics.TypePrimitives
 import semantics.TypedTerm
 import semantics.Scope
 import semantics.TypedLambdaCalculus
 import semantics.TypeTranslation.Declaration
-import syntax.Identifier
-
+import semantics.FormulaTranslation
+import semantics.Prelude
+import synth.pods.Pod
+import semantics.TypeTranslation.TypedIdentifier
 
 
 /**
@@ -29,6 +31,7 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
   import TypeTranslation.TypingSugar._
   import TypedTerm.typeOf_!
   import TypePrimitives.{shape, args}
+  import Prelude.B
   
   implicit val scope = env.scope
   val typedecl = env.typedecl
@@ -48,23 +51,39 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
       val (more_vars, g) = intros(goal.subtrees.last)
       (vars ++ more_vars, g)
     }
+    else if (goal =~ ("->", 2)) {
+      val (vars, g) = intros(goal.subtrees(1))
+      (vars, TypedTerm(goal.subtrees(0) -> g, B))
+    }
     else (List(), goal)
   }
     
   
   def e(term: Term) = {
-    val (vassign, typed) = TypeInference.infer(/*Binding.prebind*/(term), typedecl)
+    val (vassign, typed) = TypeInference.infer(Binding.prebind(term), typedecl)
     (TypeTranslation.decl(env.scope, vassign), expand(typed))
   }
   
   class Transaction {
     val termb = new TermBreak(env)
+    val formulat = new FormulaTranslation(termb)
     val termlings = collection.mutable.ListBuffer[(Environment, List[Term])]()
     val locals = collection.mutable.Set[Identifier]()
+    
+    def typedecls(symbols: Iterable[Identifier]) = symbols collect {
+      case tid: TypedIdentifier => tid.untype -> tid.typ
+    } toMap
     
     def let(term: Term) = {
       val (v_env, (v, v_t)) = be(term)
       termlings += ((v_env, v_t))
+      v
+    }
+    
+    def prop(formula: Term) = {
+      val (env1, typed) = e(formula)
+      val (v, v_t) = formulat(typed)
+      termlings += ((env1, v_t))
       v
     }
     
@@ -79,7 +98,7 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
       val env1 = (env /: termlings) { case (env, (env1, _)) => env ++ env1 }
       val terms1 = termlings map (_._2)
       
-      val reflect = new Reflection(env1, typedecl)
+      val reflect = new Reflection(env1, typedecl ++ typedecls(locals))
       reflect.currying ++= symbols filter (x => Reflection.isFuncType(env1.typeOf_!(x))) map 
                                           (symbol => (symbol, reflect.overload(symbol))) toMap
   

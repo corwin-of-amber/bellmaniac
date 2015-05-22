@@ -192,6 +192,13 @@ object TypedLambdaCalculus {
     else preserve(term, new Term(term.root, term.subtrees map (replaceDescendant(_, switch))))
   
 
+  def enclosure(term: Term, subterm: Term): Option[List[Term]] = {
+    if (term eq subterm) Some(List())
+    else if (term =~ ("↦", 2))
+      enclosure(term.subtrees(1), subterm) map (term.subtrees(0) :: _)
+    else term.subtrees map (enclosure(_, subterm)) find (_.isDefined) map (_.get)
+  }
+    
   def pullOut(term: Term, subterm: Term): Option[Term] = {
     if (term eq subterm) Some(term)
     else if (term =~ ("↦", 2)) 
@@ -260,7 +267,19 @@ object TypedTerm {
     case _ => throw new Scope.TypingException(s"type needed for '${term toPretty}'")
   }
   
-  def preserve(term: Term, newterm: Term) = (term, term.root) match {
+  def preserve(term: Term, newterm: Term) = typeOf(term) match {
+    case Some(typ) => TypedTerm(newterm, typ)
+    case _ => newterm
+  }
+  /*
+  def preserve(term: Term, newterm: Term) = term match {
+    case typed: TypedTerm => TypedTerm(newterm, typed.typ)
+    case _ => newterm
+  }*/
+  
+  def preserveBoth(term: Term, newterm: Term)(implicit scope: Scope) = (term, newterm) match {
+    case (typed: TypedTerm, newtyped: TypedTerm) => 
+      TypedTerm(newterm, TypePrimitives.intersection(scope, List(typed.typ, newtyped.typ)))
     case (typed: TypedTerm, _) => TypedTerm(newterm, typed.typ)
     case _ => newterm
   }
@@ -269,6 +288,11 @@ object TypedTerm {
 
 class TypedSubstitution(substitutions: List[(Term, Term)]) extends TreeSubstitution[Identifier](substitutions) {
   override def preserve(old: Term, new_ : Term) = TypedTerm.preserve(old, new_)
+}
+
+class ProgressiveTypedSubstitution(substitutions: List[(Term, Term)])(implicit scope: Scope)
+    extends TreeSubstitution[Identifier](substitutions) {
+  override def preserve(old: Term, new_ : Term) = TypedTerm.preserveBoth(old, new_)
 }
 
 /**
