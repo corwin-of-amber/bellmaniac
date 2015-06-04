@@ -2,6 +2,7 @@
 package syntax
 
 import report.data.TapeString
+import scala.collection.generic.CanBuildFrom
 
 
 object AstSugar {
@@ -81,13 +82,17 @@ object AstSugar {
      def << : Term =
        if (term.subtrees.length == 1 && term.subtrees(0) == `...`) term
        else term.foldLeft
+
+     def >> : Term =
+       if (term.subtrees.length == 1 && term.subtrees(0) == `...`) term
+       else term.foldRight
   }
   
   def &&(conjuncts: Term*): Term = &&(conjuncts.toList)
   def &&(conjuncts: List[Term]) = TI("&")(conjuncts)<<
 
-  def /::(conjuncts: Term*): Term = /::(conjuncts.toList)
-  def /::(conjuncts: List[Term]) = TI("/")(conjuncts)<<
+  def /::(parts: Term*): Term = /::(parts.toList)
+  def /::(parts: List[Term]) = TI("/")(parts)>>
   
   val `...` = TI("...")
 
@@ -159,15 +164,17 @@ object Formula {
   def display(term: AstSugar.Term): TapeString =
     if (QUANTIFIERS contains term.root.toString)
       displayQuantifier(term.unfold)
+    else if (term =~ (":", 2) && term.subtrees(0) =~ ("let", 0))// && term.subtrees(1) =~ ("@", 2) && term.subtrees(1).subtrees(0) =~ ("↦", 2))
+       tape"let ${display(term.subtrees(1).subtrees(0).subtrees(0))} := ${display(term.subtrees(1).subtrees(1))} in ${display(term.subtrees(1).subtrees(0).subtrees(1))}"
     else
-    (if (term.subtrees.length == 2) Formula.INFIX get term.root.toString else None)
-    match {
-      case Some(op) => 
-        op.format(term)
-      case None => 
-        if (term.isLeaf) display(term.root)
-        else tape"${display(term.root)}(${term.subtrees map display mkTapeString ", "})"
-    }
+      (if (term.subtrees.length == 2) INFIX get term.root.toString else None)
+      match {
+        case Some(op) => 
+          op.format(term)
+        case None => 
+          if (term.isLeaf) display(term.root)
+          else tape"${display(term.root)}(${term.subtrees map display mkTapeString ", "})"
+      }
   
   def display(term: AstSugar.Term, pri: Int, side: Assoc): TapeString = {
     if (term.subtrees.length != 2) display(term)
@@ -191,12 +198,17 @@ object Piping {
   
   implicit class Piper[X](private val x: X) extends AnyVal {
     def |>[Y](f: X => Y) = f(x)
+    def |--[Y](tee: X => Y) = { tee(x) ; x }
   }
   
   implicit class PiedPiper[X,Y](private val f: X => Y) extends AnyVal {
     def |>:(x: X) = f(x)
   }
- 
+
+  implicit class IterablePiper[X](private val x: Iterable[X]) extends AnyVal {
+    def |>>[Y](f: X => Y) = x map f
+  }
+  
 }
 
 

@@ -327,14 +327,6 @@ object TypeInference {
             retype(n, ret)
             retype(n.subtrees(0), xy)
             retype(n.subtrees(1), arg)
-            /*
-            val xy = arg -> ret
-            if (f != xy) {
-              val force = step0(n, f, xy)
-              val moreForce = rot((force dropRight 1) ++: force.last.subtrees)
-              for ((k,v) <- List(n) ++ n.subtrees zip moreForce)
-                retype(k, v)
-            }*/
           case _ =>
         }
       }
@@ -354,13 +346,6 @@ object TypeInference {
             retype(n.subtrees(0), arg)
             retype(n.subtrees(1), ret)
             retype(n, xy)
-            /*val xy = x -> y
-            if (f != xy) {
-              val force = step0(n, f, xy)
-              val moreForce = (force dropRight 1) ++ force.last.subtrees
-              for ((k,v) <- List(n) ++ n.subtrees zip moreForce)
-                retype(k, v)
-            }*/
           case _ =>
         }
         val arg = n.subtrees(0)
@@ -373,6 +358,18 @@ object TypeInference {
             if (join exists (_ != tpe)) {
               val force = step1(n, tpe, join(0), join(1))
               retype(n, force)
+            }
+          case _ =>
+        }
+      }
+      else if (n =~ ("ω", 1)) {
+        n +: n.subtrees map nodeType match {
+          case List(Some(ωtyp), Some(ftyp)) =>
+            //val (ωarg, ωret) = TypePrimitives.curry(ωtyp)(scope)
+            //val (farg, fret) = TypePrimitives.curry(ftyp)(scope)
+            if (ωtyp != ftyp) {
+              val force = step1(n, ωtyp, ftyp)
+              retype(n, force); // but not n.subtrees(0)
             }
           case _ =>
         }
@@ -397,9 +394,6 @@ object TypeInference {
               val typ = step1(decl, declType, varType)
               retype(decl, typ)
               retype(id, typ)
-              //val force = step0(decl, declType, varType)
-              //retype(decl, force(0))
-              //retype(id, force(1))
             }
           case _ => 
         }
@@ -451,8 +445,6 @@ object TypeInference {
       else
         println(s"      => ${force map (_.toPretty)}")
     }
-
-    def rot[T](l: List[T]) = l.last +: (l dropRight 1)
 
     // -------------
     // Mutation part

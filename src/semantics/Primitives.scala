@@ -187,10 +187,6 @@ object TypedLambdaCalculus {
     else preserve(term, T(term.root, sub))
   }
   
-  def replaceDescendant(term: Term, switch: (Term, Term)): Term =
-    if (switch._1 eq term) switch._2
-    else preserve(term, new Term(term.root, term.subtrees map (replaceDescendant(_, switch))))
-  
 
   def enclosure(term: Term, subterm: Term): Option[List[Term]] = {
     if (term eq subterm) Some(List())
@@ -267,15 +263,18 @@ object TypedTerm {
     case _ => throw new Scope.TypingException(s"type needed for '${term toPretty}'")
   }
   
+  def replaceDescendant(term: Term, switch: (Term, Term)): Term = replaceDescendants(term, Some(switch))
+
+  def replaceDescendants(term: Term, switch: Iterable[(Term, Term)]): Term =
+    switch find (_._1 eq term) match {
+      case Some(sw) => sw._2
+      case _ => preserve(term, new Tree(term.root, term.subtrees map (replaceDescendants(_, switch))))
+    }
+  
   def preserve(term: Term, newterm: Term) = typeOf(term) match {
     case Some(typ) => TypedTerm(newterm, typ)
     case _ => newterm
   }
-  /*
-  def preserve(term: Term, newterm: Term) = term match {
-    case typed: TypedTerm => TypedTerm(newterm, typed.typ)
-    case _ => newterm
-  }*/
   
   def preserveBoth(term: Term, newterm: Term)(implicit scope: Scope) = (term, newterm) match {
     case (typed: TypedTerm, newtyped: TypedTerm) => 

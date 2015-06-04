@@ -13,19 +13,19 @@ class ExactMatch(val pattern: Term) {
   def matchInclTypes(symbol1: Identifier, symbol2: Identifier, rebinds: Map[Identifier, Identifier]): Boolean = 
     rebinds.getOrElse(symbol1, symbol1) == symbol2
   
-  def matchInclTypes(term1: Term, term2: Term, rebinds: Map[Identifier, Identifier]=Map())(implicit env: Environment): Boolean = {
-    if      (term1 =~ (":", 2)) matchInclTypes(term1.subtrees(1), term2, rebinds)
-    else if (term2 =~ (":", 2)) matchInclTypes(term1, term2.subtrees(1), rebinds)
+  def matchInclTypes(term1: Term, term2: Term, top: Boolean=false, rebinds: Map[Identifier, Identifier]=Map())(implicit env: Environment): Boolean = {
+    if      (term1 =~ (":", 2)) matchInclTypes(term1.subtrees(1), term2, top=top, rebinds=rebinds)
+    else if (term2 =~ (":", 2) && !top) matchInclTypes(term1, term2.subtrees(1), rebinds=rebinds)
     else if (matchInclTypes(term1.root, term2.root, rebinds) && env.typeOf(term1) == env.typeOf(term2) &&
       (term1.subtrees.length == term2.subtrees.length)) {
       val rebinds0 = rebinds ++ (if (term1 =~ ("↦", 2)) Map(term1.subtrees(0).leaf -> term2.subtrees(0).leaf) else Map())
-      (term1.subtrees zip term2.subtrees forall { case (x,y) => matchInclTypes(x, y, rebinds0) })
+      (term1.subtrees zip term2.subtrees forall { case (x,y) => matchInclTypes(x, y, rebinds=rebinds0) })
     }
     else false
   }
   
-  def find(term: Term)(implicit env: Environment=Environment.Empty) =
-    term.nodes filter (matchInclTypes(pattern, _))
+  def find(term: Term)(implicit env: Environment=Environment.empty) =
+    term.nodes filter (matchInclTypes(pattern, _, top=true))
 }
 
 class SimplePattern(val pattern: Term) {

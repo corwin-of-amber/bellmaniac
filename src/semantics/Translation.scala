@@ -73,7 +73,7 @@ object TypeTranslation {
   }
   
   object Environment {
-    val Empty = new Environment(new Scope, Map())
+    val empty = new Environment(new Scope, Map())
   }
   
   private def E(scope: Scope, decl: Map[Identifier, Declaration]=Map()) =
@@ -222,13 +222,17 @@ object TypeTranslation {
   def canonical(micro: List[MicroCode]): Term = {
     val args = new ArrayBuffer[(Int, Term)]
     var ret: Option[Term] = None
+    /* Sort consequent checks by arity (quadratic :/) */
+    def insort_ins(x: MicroCode, xs: List[MicroCode]): List[MicroCode] = (x, xs) match {
+      case (Check(a,i), (y@Check(b,j)) :: ys) =>
+        if (i <= j) x :: xs else y :: insort_ins(x, ys)
+      case _ => x :: xs
+    }
     def insort(it: List[MicroCode]): List[MicroCode] = it match {
-      case (x@Check(a,i)) :: (y@Check(b,j)) :: xs =>
-        if (i > j) y :: insort(x :: xs)
-        else x :: insort(y :: xs)
-      case x :: xs => x :: insort(xs)
+      case x :: xs => insort_ins(x, insort(xs))
       case Nil => Nil
     }
+    /* Scan left-to-right and intersect checks */
     for (ins <- insort(micro)) ins match {
       case In(tpe) => args += ((1, tpe))
       case Out(tpe) => ret = Some(tpe)

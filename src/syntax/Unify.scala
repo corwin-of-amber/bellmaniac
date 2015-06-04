@@ -131,6 +131,9 @@ class Unify(implicit resolve: Resolve = Resolve.NULL) {
   def matchUp0(freeVar: Identifier, term: Tree[Identifier]) {
     val key = rootVar(freeVar)
     if (term.isLeaf && rootVar(term.root) == key) return // do nothing (prevent cycles)
+    //println(s"$key  $term   ${canonicalize(term).leaves map (x => rootVar(x.root)) toList}")
+    if (canonicalize(term).leaves exists (x => rootVar(x.root) == key))
+      throw new Unify.CannotUnify(s"unification cycle:  $key  ~  ${canonicalize(term)}")
     assignment += (rootVar(freeVar) -> term)
   }
 

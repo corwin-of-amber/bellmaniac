@@ -13,6 +13,10 @@ trait Pod {
   val macros = MacroMap.empty
 }
 
+object Pod {
+  class TacticalError(msg: String) extends Exception(msg) {}
+}
+
 
 object NatPod extends Pod {
   import Prelude.{N,B,↓}

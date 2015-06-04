@@ -54,6 +54,8 @@ class Tree[T] (val root: T, val subtrees: List[Tree[T]] = List()) {
   def splitLeft = unfoldLeft.subtrees
   def splitLeft(sep: T): List[Tree[T]] = if (root == sep) splitLeft else List(this)
   
+  def hasDescendant(descendant: Tree[T]) = nodes exists (_ eq descendant)
+  
   def replaceDescendant(switch: (Tree[T], Tree[T])): Tree[T] =
     if (switch._1 eq this) switch._2
     else new Tree(root, subtrees map (_.replaceDescendant(switch))) 

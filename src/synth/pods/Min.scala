@@ -14,16 +14,6 @@ import semantics.TypeTranslation.Environment
 
 
 
-object SlicePod {
-  import Prelude.?
-  
-  def apply(f: Term, subdomains: List[Term])(implicit scope: Scope) = {
-    val slices = subdomains map (_ -> ?)
-    f =:= /::(slices map (f :: _) toList)
-  }
-  
-}
-
 class MinPod(domain: Term, range: Term, < : Term)(implicit env: Environment) extends Pod {
   import Prelude.{B,↓}
   
@@ -57,7 +47,42 @@ object MinPod {
 object MinDistribPod {
   import Prelude.{min,cons,nil}
   
-  def apply(fs: List[Term])(implicit scope: Scope) = {
-    (min :@ (/::(fs))) =:= (min :@ (((fs map (min :@ _)) :\ nil)(cons :@ _ :@ _)))
+  def `⟨ ⟩`(elements: List[Term]) =
+    (elements :\ nil)(cons :@ _ :@ _)
+    
+  def apply(fs: List[Term]) = {
+    (min :@ (/::(fs))) =:= (min :@ `⟨ ⟩`(fs map (min :@ _)))
+  }
+}
+
+object MinAssocPod {
+  import Prelude.{min,cons,nil}
+  import MinDistribPod.`⟨ ⟩`
+  
+  def isApp(t: Term): Option[(Term, List[Term])] = 
+    if (t =~ ("@", 2)) isApp(t.subtrees(0)) match {
+      case Some((f, args)) => Some((f, args :+ t.subtrees(1)))
+      case _ => Some((t.subtrees(0), t.subtrees drop 1))
+    }
+    else None
+    
+  def isAppOf(t: Term, f: Term): Option[List[Term]] =
+    isApp(t) collect { case (f0, args) if f0 == f => args }
+  
+  def `⟨ ⟩?`(t: Term): Option[List[Term]] =
+    isAppOf(t, cons) match {
+      case Some(List(head, tail)) => `⟨ ⟩?`(tail) map (head +: _)
+      case _ => if (t == nil) Some(List()) else None
+    }
+  
+  def apply(fs: List[Term]) = {
+    def flatten(t: Term): List[Term] = isAppOf(t, min) match {
+      case Some(List(arg)) => `⟨ ⟩?`(arg) match {
+        case Some(elements) => elements flatMap flatten
+        case _ => List(t)
+      }
+      case _ => List(t)
+    }
+    (min :@ `⟨ ⟩`(fs)) =:= (min :@ `⟨ ⟩`(fs flatMap flatten))
   }
 }

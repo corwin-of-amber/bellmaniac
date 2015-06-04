@@ -22,6 +22,7 @@ object Prelude {
   val ω = TI("ω")
   def nil = TI("nil")
   def cons = TI("cons")
+  def ℐ = TI("I")
 
   val ↓ = TV("↓")
 
