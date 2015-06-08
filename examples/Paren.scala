@@ -293,7 +293,7 @@ object Paren {
     
     
     import syntax.transform.Extrude
-    import semantics.pattern.SimplePattern
+    import semantics.pattern.SimplePattern 
     import synth.tactics.Rewrite.{Rewrite,instantiate,display}
     import synth.pods.{SlicePod,StratifyPod,StratifyReducePod,MinDistribPod,MinAssocPod}
     import semantics.TypedLambdaCalculus.{simplify,pullOut}

@@ -7,6 +7,7 @@ import semantics.TypedTerm
 import semantics.TypedLambdaCalculus
 import syntax.Identifier
 import synth.pods.Pod.TacticalError
+import synth.pods.Pod.TacticalError
 
 
 
@@ -20,6 +21,17 @@ object SlicePod {
   
 }
 
+
+object SlashDistribPod {
+  import TypedTerm.replaceDescendant
+  
+  def apply(f: Term, box: Term) = {
+    if (f.nodes exists (_ eq box)) {
+      f =:= /::(box.split(I("/")) map (x => replaceDescendant(f, (box, x))))
+    }
+    else throw new TacticalError(s"'${box toPretty}' should be a sub-term of '${f toPretty}'")
+  }
+}
 
 object StratifyPod {
   import Prelude.{ω,ℐ,?}
@@ -92,7 +104,10 @@ object StratifyReducePod {
   import  MinAssocPod.`⟨ ⟩?`
   
   def findContainingReduction(box: Term, components: List[Term]) =
-    box.nodes find (n => n =~ ("@", 2) && n.subtrees(0).root != "cons" && `⟨ ⟩?`(n.subtrees(1)).isDefined)
+    box.nodes find (n => n =~ ("@", 2) && n.subtrees(0).root != "cons" && (`⟨ ⟩?`(n.subtrees(1)) match {
+      case Some(l) => components forall (x => l exists (_ eq x))
+      case None => false
+    }))
   
   /*
    * obligation; 

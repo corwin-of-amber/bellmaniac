@@ -69,12 +69,15 @@ object Rewrite {
   
   class Rewrite(val fromTo: List[(Term, Term)]) {
     private val ematch = fromTo map { case (from, to) => (new ExactMatch(from), to) }
-    def apply(term: Term)(implicit env: Environment=Environment.empty) = {
-      val matches = ematch flatMap { case (from, to) => from find term map ((_, Binding.prebind(to))) }
+    
+    def apply(term: Term)(implicit env: Environment): Option[Term] = apply(term, Some(term))
+    
+    def apply(term: Term, within: Iterable[Term])(implicit env: Environment) = {
+      val matches = 
+        for ((from, to) <- ematch; subterm <- within; m <- from find subterm)
+          yield ((m, Binding.prebind(to)))
       Some(TypeInference.infer(TypedTerm.replaceDescendants(term, matches))(env.scope)._2)
-      //for (s <- ematch find term) yield TypeInference.infer(TypedTerm.replaceDescendant(term, (s, subst)))(env.scope)._2
     }
-    //def subst = Binding.prebind(to)
   }
   
   object Rewrite {

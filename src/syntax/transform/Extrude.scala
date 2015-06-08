@@ -9,18 +9,20 @@ import semantics.Scope
 
 class Extrude(val ops: Set[Identifier]) {
   
+  val labelStrip = syntax.Strip.boxedAbcThenUnderbar
+  
   def apply(term: Term): ExtrudedTerms = {
-    import syntax.Strip.boxedAbc
-    extrude0(term).renumber(boxedAbc)
+    extrude0(term).renumber(labelStrip)
   }
   
   def extrude0(term: Term): ExtrudedTerms = {
     def xoperands(term: Term): Option[List[Term]] =
       if (ops contains term.root) Some(term.subtrees)
       else if (term =~ ("@", 2)) {
-        if (term.subtrees(0).isLeaf && (ops contains term.subtrees(0).root))
-          Some(term.subtrees drop 1)
-        else xoperands(term.subtrees(0)) map (_ ++ (term.subtrees drop 1))
+        val f :: args = term.subtrees
+        if (f.isLeaf && (ops contains f.root)) Some(args)
+        else if (f =~ ("@", 2)) xoperands(term.subtrees(0)) map (_ ++ (term.subtrees drop 1))
+        else None
       }
       else None
     val subterms = xoperands(term) match {
@@ -51,6 +53,8 @@ class ExtrudedTerms(val terms: Tree[Term], val labels: Map[Identifier, Term]) {
   def :/(label: Any) = labels get I(label) getOrElse {
     throw new Scope.TypingException(s"no sub-term '${label}' in current set")
   }
+  
+  def terminals = terms.terminals map { x => assume (x =~ (":", 2)); x.subtrees(1) }
   
   def renumber(strip: PartialFunction[Int, String]) = {
     val ph = terms.nodes flatMap (_.root.nodes collect { case x if (x.root == "🅇") => x.root }) distinct

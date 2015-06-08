@@ -121,7 +121,11 @@ object TypeInference {
     Map(min ~>  __ { val b = ?; (? -> b) -> b },                    // min :: ('a -> 'b) -> 'b
         cons ~> __ { val b = ?; b -> ((N -> b) -> (N -> b)) },      // cons :: 'b -> (N -> 'b) -> N -> 'b
         nil ~>  __ { ? -> ? },                                      // nil :: 'a -> 'b
-        V("=") -> __ { val a = ?; a -> (a -> B) })
+        V("=") -> __ { val a = ?; a -> (a -> B) },                  // = :: 'a -> 'a ->
+        V("+") -> __ { val a = ?; a ->: a ->: a },                  // + :: 'a -> 'a -> 'a
+        V("-") -> __ { val a = ?; a ->: a ->: a },                  // - :: 'a -> 'a -> 'a
+        I(1) -> __ { ? }
+     )
   }
   
   /**
@@ -532,8 +536,8 @@ object TypeInference {
     val dual = new DualResolve(scope)
     val coarse =  new CoarseGrained(conservative)
     val (rootvar, assign) = coarse.infer(term, vassign)
-    //  val tassign = { for ((k,v) <- coarse.ns; tpe <- assign get coarse.NV(k)) yield (v, tpe) } .toMap
-    //  synth.tactics.Rewrite.display(annotate(term, tassign))(new TypeTranslation.Environment(scope, Map()))
+    // val tassign = { for ((k,v) <- coarse.ns; tpe <- assign get coarse.NV(k)) yield (v, tpe) } .toMap
+    // synth.tactics.Rewrite.display(annotate(term, tassign))(new TypeTranslation.Environment(scope, Map()))
     val tassign0 = (term.nodes collect { n => typeOf(n) match { case Some(typ) => (coarse.NV(n) -> typ) }} toMap)
     val fine = new FineGrained(coarse.ns, assign ++ tassign0 ++ vassign)(scope, dual)
     val reassign = fine.improve(term)

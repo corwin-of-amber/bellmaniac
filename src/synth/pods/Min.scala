@@ -47,7 +47,9 @@ object MinPod {
 object MinDistribPod {
   import Prelude.{min,cons,nil}
   
-  def `⟨ ⟩`(elements: List[Term]) =
+  def `⟨ ⟩`(elements: List[Term]): Term = `⟨ ⟩`(elements:_*)
+    
+  def `⟨ ⟩`(elements: Term*) = 
     (elements :\ nil)(cons :@ _ :@ _)
     
   def apply(fs: List[Term]) = {
@@ -84,5 +86,17 @@ object MinAssocPod {
       case _ => List(t)
     }
     (min :@ `⟨ ⟩`(fs)) =:= (min :@ `⟨ ⟩`(fs flatMap flatten))
+  }
+}
+
+
+object SlashToReducePod {
+  
+  import MinDistribPod.`⟨ ⟩`
+  
+  // Expect fs to be of scalar type (otherwise reduce(`⟨ ⟩`(fs)) does not type-check)
+  
+  def apply(fs: List[Term], reduce: Term) = {
+    /::(fs) =:= (reduce:@(`⟨ ⟩`(fs)))
   }
 }

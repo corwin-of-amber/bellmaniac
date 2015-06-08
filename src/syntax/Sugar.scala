@@ -48,13 +48,15 @@ object AstSugar {
     def ->(that: Term) = TI("->")(term, that)
     def ->:(that: Term) = TI("->")(that, term)
     def ↦(that: Term) = TI("↦")(term, that)
+    def ↦:(args: Term*) = TI("↦")((args :+ term):_*)>>
     def &(that: Term) = TI("&")(term, that)
     def |(that: Term) = TI("|")(term, that)
     def <->(that: Term) = TI("<->")(term, that)
     def unary_~ = TI("~")(term)
     def x(that: Term) = TI("x")(term, that)
     def ∩(that: Term) = TI("∩")(term, that)
-    def +(that: Term) = @:(@:(TI("+"), term), that)
+    def +(that: Term) = TI("+"):@(term, that)
+    def -(that: Term) = TI("-"):@(term, that)
     def =:=(that: Term) = TI("=")(term, that)
     
     def :@(that: Term*) = @:(term)(that:_*).foldLeft
@@ -76,16 +78,16 @@ object AstSugar {
     def :/(label: Any, subst: Term): Term =
       term.replaceDescendant((term :/ label).subtrees(1) → subst)
       
-     def \(whatWith: (Term, Term)): Term =
-       new syntax.transform.TreeSubstitution(List(whatWith))(term)
+    def \(whatWith: (Term, Term)): Term =
+      new syntax.transform.TreeSubstitution(List(whatWith))(term)
        
-     def << : Term =
-       if (term.subtrees.length == 1 && term.subtrees(0) == `...`) term
-       else term.foldLeft
+    def << : Term =
+      if (term.subtrees.length == 1 && term.subtrees(0) == `...`) term
+      else term.foldLeft
 
-     def >> : Term =
-       if (term.subtrees.length == 1 && term.subtrees(0) == `...`) term
-       else term.foldRight
+    def >> : Term =
+      if (term.subtrees.length == 1 && term.subtrees(0) == `...`) term
+      else term.foldRight
   }
   
   def &&(conjuncts: Term*): Term = &&(conjuncts.toList)
@@ -131,6 +133,8 @@ object Formula {
       val List(fun, arg) = term.subtrees
       if (fun =~ ("+", 0))
         tape"${display(arg, if (isOp(arg, "+")) priority else 0, Assoc.Left)} +"
+      else if (fun =~ ("-", 0))
+        tape"${display(arg, if (isOp(arg, "-")) priority else 0, Assoc.Left)} -"
       else {
         val lst = splitOp(term, "cons")
         if (lst.length > 1 && lst.last =~ ("nil", 0))
@@ -203,6 +207,7 @@ object Piping {
   
   implicit class PiedPiper[X,Y](private val f: X => Y) extends AnyVal {
     def |>:(x: X) = f(x)
+    def |>>:(xs: Iterable[X]) = xs map f
   }
 
   implicit class IterablePiper[X](private val x: Iterable[X]) extends AnyVal {
@@ -215,5 +220,9 @@ object Piping {
 object Strip {
   val numeral: PartialFunction[Int, String] = { case x: Int => "$"+x }
   val greek = "αβγδεζηθικλμνξοπρστυφχψω".toList orElse numeral
-  val boxedAbc = List("🄰","🄱","🄲","🄳","🄴","🄵","🄶","🄷","🄸","🄹","🄺","🄻","🄼","🄽","🄾","🄿","🅀","🅁","🅂","🅃","🅄","🅅","🅆","🅇","🅈","🅉") orElse numeral
+  val boxedAbcList = List("🄰","🄱","🄲","🄳","🄴","🄵","🄶","🄷","🄸","🄹","🄺","🄻","🄼","🄽","🄾","🄿","🅀","🅁","🅂","🅃","🅄","🅅","🅆","🅇","🅈","🅉")
+  val boxedAbc = boxedAbcList orElse numeral
+  val boxedAbcOverline = (boxedAbcList map (_ + "̅")) orElse numeral
+  val boxedAbcUnderbar = (boxedAbcList map (_ + "̱")) orElse numeral
+  val boxedAbcThenUnderbar = (boxedAbcList ++ (boxedAbcList map (_ + "̱"))) orElse numeral
 }
