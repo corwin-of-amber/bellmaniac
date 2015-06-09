@@ -61,6 +61,9 @@ The $\to$ constructor is defined to be {\bf covariant} in {\bf both} arguments. 
 --- we write $K\to P <: K\to J$, and also $P\to K <: J\to K$. This is different from type semantics used in OO
 languages.
 
+Given a type $\T$, the raw type obtained from $\T$ by removing all predicate annotations
+is called the \newterm{shape} of $\T$.
+
 
 \subsection{Expressions}
 
@@ -75,17 +78,92 @@ We will be using function types to represent $k$-dimensional arrays, in particul
 To support addressing of regions, we define two operators:
 
 \begin{itemize}
-  \item The \newterm{restriction} operator, $\big|_-$, coerces a function value to a subtype. 
+  \item The \newterm{restrict} operator, $\big|_-$, coerces a function value to a subtype. 
     If $f::J\to K$, then $f\big|_P :: P\to K$
-    with the semantics 
+    with the semantics
     \[\semp{f\big|_P\ x} = \begin{cases}f\ x & \textrm{if}~P(x)\\ \bot & \textrm{o.w.}\end{cases}\]
     This is easily lifted to $k$-ary functions via $\times$ and $\cap$.
     As a special case, $\big|_-$ can be applied to scalar values (``nullary'' functions)
     by supplying a Boolean expression.
     \[\semp{y\big|_{i<j}} = \begin{cases}y & \textrm{if}~i<j \\ \bot & \textrm{o.w.}\end{cases}\]
+  \item The \newterm{combine} operator, $/$. It operates on two functions with the same shape.
+    \[\semp{f / g} = \overline{x}\mapsto\begin{cases}f\,\overline{x} & \textrm{if}~f\,\overline{x}\neq\bot \\ 
+                                                     g\,\overline{x} & \textrm{o.w.}\end{cases}\]
+    where $\overline{x}$ are $k$ fresh variables, $k$ being the arity of $f$ and $g$.
+\end{itemize}
+
+To express recursive computations, we employ fixed-point semantics.
+
+\newcommand\fix{\mathrm{fix}\,}
+
+\begin{itemize}
+  \item For $f :: \T\to\T$, define $f^\omega :: \T\to\T$ such that for every $\theta :: \T$ there exists some $n\in\N$,
+    \[f^\omega\,\theta = f^n\,\theta = f^{n+1}\,\theta\]
+  \item For $f :: \T\to\T$, define $\fix f :: \T = f^\omega\,\bot$.\\
+    If $\T$ is a function type, then $\bot$ is lifted to that type (e.g. $\bot :: X\to Y = x :: X \mapsto \bot :: Y$).
 \end{itemize}
 
 
+\section{Library of Primitives}
+
+To express regular arithmetic and iteration, the ``prelude'' contains the following primitive
+values:
+
+\begin{itemize}
+  \item ${+}, {-} :: \forall A.~A\times A\to A$ --- polymorphic binary operators.
+  \item ${<} :: \forall A. ~A\times A\to\B$ --- a polymorphic order relation.
+  \item $\min, \max, \Sigma :: \forall A,B.~ (A\to B)\to B$ --- reduction operators
+    on ordered/unordered sequences. The sequence is represented by a function $f :: A\to B$,
+    so that e.g. \[\semp{\min f} = \min_v \{f\,v \;|\; f\,v\neq\bot\}\]
+    The sequences are expected to be finite.
+  \item $\mathrm{nil} :: \N\to A, \mathrm{cons} :: A \to (\N\to A)\to(\N\to A)$ --- list constructors.
+    Lists are represented as functions over $\N$. They are defined as
+    \[\begin{array}{l}\mathrm{nil}=i\mapsto\bot \\
+        \mathrm{cons}\,x\,xs = i\mapsto \big(x\big|_{i=0} ~\big/~ xs\,(i-1)\big)\end{array}\]
+    Notice that, unlike with most functions, $\mathrm{cons}\,x\,xs\,i$ may be defined even if $x$ is not.
+\end{itemize}
+
+
+\section{Refinement Strategy}
+
+\subsection{Tactics}
+
+Each tactic defines a scheme of equalities that can be used for rewriting.
+A valid application of a tactic is an instance of the scheme that is well-typed and logically valid
+(as a simply-typed lambda calculus ``formula'').
+
+\subsubsection{Slice}
+\[f = f\big|_{X_1} \Big/ f\big|_{X_2} \Big/ ~\cdots~ \Big/ f\big|_{X_r}\]
+
+This tactic breaks a function (array) into sub-regions. Clearly, the recombination expression is
+valid when $\mathrm{supp}\,f \subseteq \bigcup X_i$, where $\mathrm{supp}\,f$ is the set of
+argument values for which $f$ is defined.
+
+\subsubsection{Stratify[/]}
+
+\[
+\begin{array}{l}
+  \big(f_1 / \cdots / f_r\big)^\omega = \\
+  \qquad
+  \big(I_1 / \cdots I_{i-1} / f_i^\omega / I_{i+1} / \cdots / I_{r}\big)
+  \cdot \big(f_1 / \cdots / f_{i-1} / I_i / f_{i+1} / \cdots / f_r\big)^\omega
+\end{array}
+\]
+
+This tactic separates one element of a fixed-point computation out of a bunch
+of $/$-separated slices. The $f_i$s should have a common shape 
+$(\overline{X}\to A)\to \overline{X} \to A$,
+where $\overline{X}$ may include multiple argument types, and their domains
+should be disjoint by means of predicate annotations on their refined types.
+
+In addition, $f_i$ must pertain that
+\[\forall\theta.~ f_i\,\theta = f_i\,(g\,\theta)\]
+%
+where $g = f_1 / \cdots / f_{i-1} / I_i / f_{i+1} / \cdots / f_r$.
+This is supposed to match our intuition that $f_i$ does not use (does not ``read'')
+any of the values computed by any $f_j, j\neq i$, therefore it can be computed independently.
+
 \bibliography{writeup}
+\bibliographystyle{abbrv}
 
 \end{document}
