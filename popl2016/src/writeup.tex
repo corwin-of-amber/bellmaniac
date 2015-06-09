@@ -1,0 +1,91 @@
+\documentclass{article}
+
+\usepackage{amssymb,amsmath}
+
+\newcommand\newterm[1]{{\it #1}}
+\newcommand\R{\mathbb{R}}
+\newcommand\N{\mathbb{N}}
+\newcommand\B{\mathbb{B}}
+\newcommand\T{\mathcal{T}}
+
+\newcommand\semp[1]{[\![{#1}]\!]}
+\newcommand\parto{\rightharpoonup}
+
+
+\begin{document}
+
+\begin{abstract}
+We present a language for specifying DP algorithms, and a calculus that facilitates
+gradual transformation of these specifications into efficient cache-oblivious
+parallel implementations using the Divide and Conquer technique.
+\end{abstract}
+
+\section{The Language}
+
+\subsection{Types}
+
+Our language involves a type system and some specialized operators to manipulate
+values. We define \newterm{raw types} to include:
+\begin{itemize}
+  \item The primitive types---$\N$ (natural numbers), $\R$ (real numbers), and $\B$ (Boolean truth values).
+  \item User-defined uninterpreted scalar types. By convention, we use capital letters for those, e.g. $J$, $K$, $L$.
+  \item Function types constructed using the type constructor $\to$. For $\T_1, \T_2$ types,
+    $\T_1\to\T_2$ is a function type.
+\end{itemize}
+
+
+Function types have the semantics of partial functions. So the interpretation of $f :: J\to\R$, for example, would be
+$\semp{f} : J\parto\R$. Since there are no tuple types, $(\T_1\times\T_2)\to\T_3$ is accepted as an alternative to
+$\T_1\to\T_2\to\T_3$.
+
+\medskip
+\newterm{Predicates} are defined using $\B$ as a function range. So $P :: J\to\B$ defines a unary predicate
+on $J$, and ${<} :: (J\times J)\to\B$ defines a binary relation.
+Predicates can be used to annotate types, forming \newterm{refined types} similar to the ones
+used in Liquid Types~\cite{PLDI08/Rondon}, but limited to the following subset:
+\begin{itemize}
+  \item $J\cap P$ is interpreted as $\{v:J\;|\;P(v)\}$. Since $J$ is the domain of $P$, it can be inferred;
+    so in this case it is enough to just write $P$, when understood from the context that it denotes a
+    type rather than an expression. E.g. $P\to\R$ is the same as $(J\cap P)\to\R$, both meaning
+    $\{v:J\;|\;P(v)\}\to\R$.
+  \item $((J\times J)\cap {<})\to\R$ is interpreted as $i:J\to\{v:J\;|\;i<v\}\to\R$. Due to the use of $\times$,
+    binary and higher-arity predicates can only be used in argument types, i.e., on the left side of a $\to$
+    constructor.
+  \item It is possible to combine several predicates in type annotations, with the semantics of a conjunction.
+    $J\cap P\cap Q$ (or just $P\cap Q$) means $\{v:J\;|\;P(v)\land Q(v)\}$.
+    $((P\times J)\cap{<})\to\R$ means $i:\{v:J\;|\;P(v)\}\to\{v:J\;|\;i<v\}\to\R$.
+    $((J\times P)\cap{<})\to\R$ means $i:J\to\{v:J\;|\;P(v)\land i<v\}\to\R$.
+\end{itemize}
+
+The $\to$ constructor is defined to be {\bf covariant} in {\bf both} arguments. So $K\to P$ is a subtype of $K\to J$
+--- we write $K\to P <: K\to J$, and also $P\to K <: J\to K$. This is different from type semantics used in OO
+languages.
+
+
+\subsection{Expressions}
+
+The language is basically simply-typed lambda calculus, where abstraction terms are written as
+$v::\T\mapsto e$, and application terms as $e_1\ e_2$. Infix notation is used as syntactic sugar
+for symbols such as $+$, $<$, so that we can write $e_1 + e_2$ instead of ${+}\ e_1\ e_2$.
+Thanks to type inference, type annotations may occasionally be omitted.
+
+\subsection{Operators}
+
+We will be using function types to represent $k$-dimensional arrays, in particular DP tables.
+To support addressing of regions, we define two operators:
+
+\begin{itemize}
+  \item The \newterm{restriction} operator, $\big|_-$, coerces a function value to a subtype. 
+    If $f::J\to K$, then $f\big|_P :: P\to K$
+    with the semantics 
+    \[\semp{f\big|_P\ x} = \begin{cases}f\ x & \textrm{if}~P(x)\\ \bot & \textrm{o.w.}\end{cases}\]
+    This is easily lifted to $k$-ary functions via $\times$ and $\cap$.
+    As a special case, $\big|_-$ can be applied to scalar values (``nullary'' functions)
+    by supplying a Boolean expression.
+    \[\semp{y\big|_{i<j}} = \begin{cases}y & \textrm{if}~i<j \\ \bot & \textrm{o.w.}\end{cases}\]
+\end{itemize}
+
+
+\bibliography{writeup}
+
+\end{document}
