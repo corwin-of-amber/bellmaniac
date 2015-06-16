@@ -254,6 +254,28 @@ This tactic can be thought of as the inverse of a $\beta$-reduction. Indeed, if 
 $\beta$-reduction to the application on the right-hand side, the result would be the expression
 on the left.
 
+\medskip
+Combined with associativity, if $s = \mathrm{reduce}\langle\overline{a},\overline{b}\rangle$,
+we get the corollary
+%
+\[e[s] ~=~ (\overline{x}\mapsto \mathrm{reduce}\langle\overline a\rangle) ~\applt~ 
+  z\mapsto e[\mathrm{reduce}\langle z\,\overline{x}, \overline{b}\rangle]\]
+
+
+\subsubsection{Elimination}
+
+\[e[t] ~=~ e[\bot]\]
+
+If a sub-term is never defined, within a given context, then it can be replaced with $\bot$,
+provided that the above equality can be proven.
+\medskip
+Combined with associativity, if $s = \mathrm{reduce}\langle\overline{a},t,\overline{b}\rangle$,
+we get the corollary
+%
+\[e[s] ~=~ e[\mathrm{reduce}\langle\overline{a},t,\overline{b}\rangle]\]
+
+Because $\bot = \mathrm{reduce}\,\mathrm{nil}$.
+
 \subsection{Example}
 
 We demonstrate our approach using this recursion (the gap problem):
@@ -367,7 +389,7 @@ To make expressions a little more managable, let
     f ~=~ \theta\,i\,j \mapsto \min\langle & \psi_{ij}, \\
                 & \theta_{(i-1)(j-1)} + c_{ij}, \\
                 & \min q\mapsto \theta_{iq} + w_{qj} \\
-                & \min q\mapsto \theta_{pj} + w'_{pi}~\rangle
+                & \min p\mapsto \theta_{pj} + w'_{pi}~\rangle
   \end{array}$
   \item $A ~=~ \psi\mapsto \mathrm{fix}\,f$
 \end{itemize}
@@ -401,10 +423,10 @@ A ~=~ \psi\mapsto\mathrm{fix}\,\left(\quadrants{f}{f}{f}{f}\right)
 Separate the top-left quadrant using let:
 
 \[
-A ~=~ \psi\mapsto\mathrm{fix}\, f\big|_{\_\times J_0\times K_0} \applt \psi\mapsto\left(\quadrants{f}{f}{f}{f}\right)
+A ~=~ \psi\mapsto\mathrm{fix}\, f\big|_{\_\times J_0\times K_0} ~\applt~ z\mapsto\left(\quadrants{z}{f}{f}{f}\right)
  \]
 
-And Stratify (with padding).
+Stratify, reusing $\psi$ and padding $f\big|_{\_\times J_0\times K_0}$ with the other three quadrants.
 
 \[
 A ~=~  \psi\mapsto\mathrm{fix}\,\left( \quadrants{f}{\psi}{\psi}{\psi} \right)
@@ -427,6 +449,123 @@ A ~=~ \psi\mapsto{} & \mathrm{fix}\,\left( \quadrants{f}{\psi}{\psi}{\psi} \righ
 \end{array}
 \]
 
+We now focus on the second term, labeling it $A_2$.
+%
+\[A_2 ~=~ \psi\mapsto \mathrm{fix}\,\left(\quadrants{\psi}{f}{\psi}{\psi}\right)\]
+\[\begin{array}{l@{}l}
+  f\big|_{\_\times J_0\times K_1} ~=~ \theta\,(i::J_0)\,(j::K_1)\mapsto\min\langle~
+    & \psi_{ij}, \\
+    & \theta_{(i-1)(j-1)} + c_{ij}, \\
+    & \min q\mapsto \theta_{iq} + w_{qj} \\
+    & \min p\mapsto \theta_{pj} + w'_{pi}~\rangle
+\end{array}\]
+
+Slice $\theta = \theta|_{J\times K_0} ~/~ \theta|_{J\times K_1}$.
+
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{\,}c@{\,}c@{}l@{}l}
+  ~=~ \theta & i & j & \mapsto\min\langle~
+        & \psi_{ij}, \\
+    & ^{(J_0)} & ^{(K_1)} & & [\theta|_{J\times K_0} / \theta|_{J\times K_1}]_{(i-1)(j-1)} + c_{ij}, \\
+    &          &          & & \min q\mapsto [\theta|_{J\times K_0} / \theta|_{J\times K_1}]_{iq} + w_{qj} \\
+    &          &          & & \min p\mapsto [\theta|_{J\times K_0} / \theta|_{J\times K_1}]_{pj} + w'_{pi}~\rangle
+\end{array}\]
+
+Now we apply distributivity and associativity rules, so that each of the elements containing 
+$\theta/\theta$ is expanded into two elements.
+
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{\,}c@{\,}c@{}l@{}l}
+  ~=~ \theta & i & j & \mapsto\min\langle~
+        & \psi_{ij}, \\
+    & ^{(J_0)} & ^{(K_1)} & & (\theta|_{J\times K_0})_{(i-1)(j-1)} + c_{ij}, \\
+    &          &          & & (\theta|_{J\times K_1})_{(i-1)(j-1)} + c_{ij}, \\
+    &          &          & & \min q\mapsto (\theta|_{J\times K_0})_{iq} + w_{qj} \\
+    &          &          & & \min q\mapsto (\theta|_{J\times K_1})_{iq} + w_{qj} \\
+    &          &          & & \min p\mapsto (\theta|_{J\times K_0})_{pj} + w'_{pi} \\
+    &          &          & & \min p\mapsto (\theta|_{J\times K_1})_{pj} + w'_{pi}~\rangle
+\end{array}\]
+
+The sixth element is now defunct due to the type of $j$, since $\theta|_{J\times K_0}::J\times K_0\to\R$
+and $j::K_1$, where $K_0\cap K_1=\varnothing$, and can be eliminated.
+
+
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{\,}c@{\,}c@{}l@{}l}
+  ~=~ \theta & i & j & \mapsto\min\langle~
+        & \psi_{ij}, \\
+    & ^{(J_0)} & ^{(K_1)} & & (\theta|_{J\times K_0})_{(i-1)(j-1)} + c_{ij}, \\
+    &          &          & & (\theta|_{J\times K_1})_{(i-1)(j-1)} + c_{ij}, \\
+    &          &          & & \min q\mapsto (\theta|_{J\times K_0})_{iq} + w_{qj} \\
+    &          &          & & \min q\mapsto (\theta|_{J\times K_1})_{iq} + w_{qj} \\
+    &          &          & & \min p\mapsto (\theta|_{J\times K_1})_{pj} + w'_{pi}~\rangle
+\end{array}\]
+
+We now separate the parts involving $\theta|_{J\times K_0}$ via let insertion.
+
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{}l@{\,}c@{\,}c@{}l@{}l}
+  ~=~ &\big(\theta & i & j & \mapsto\min\langle~
+        & \psi_{ij}, \\
+    & & ^{(J_0)} & ^{(K_1)} & & (\theta|_{J\times K_0})_{(i-1)(j-1)} + c_{ij}, \\
+    & &          &          & & \min q\mapsto (\theta|_{J\times K_0})_{iq} + w_{qj}~\rangle\big) ~\applt \\
+    & z\;\theta& i & j & \mapsto\min\langle~
+        & z_{\theta ij}, \\
+    & & ^{(J_0)} & ^{(K_1)} & & (\theta|_{J\times K_1})_{(i-1)(j-1)} + c_{ij}, \\
+    & &          &          & & \min q\mapsto (\theta|_{J\times K_1})_{iq} + w_{qj} \\
+    & &          &          & & \min p\mapsto (\theta|_{J\times K_1})_{pj} + w'_{pi}~\rangle
+\end{array}\]
+
+Stratify $A_2$, reusing $\psi$ again and padding.
+%
+\[A_2 = \psi\mapsto\mathrm{fix}\,\left(\quadrants{\psi}{f_1}{\psi}{\psi}\right) ~\applt~
+        \psi\mapsto\mathrm{fix}\,\left(\quadrants{\psi}{f_2}{\psi}{\psi}\right)
+ \]
+ %
+ where
+ \[\renewcommand\arraystretch{1.3}
+   \begin{array}{r@{}l@{}l}
+   f_1 ~=~ & \theta\,i\,j \mapsto \min\langle~
+        & \psi_{ij}, \\
+    & & (\theta|_{J\times K_0})_{(i-1)(j-1)} + c_{ij}, \\
+    & & \min q\mapsto (\theta|_{J\times K_0})_{iq} + w_{qj}~\rangle \\
+    f_2 ~=~ & \theta\,i\,j \mapsto\min\langle~
+        & \psi_{ij}, \\
+    & & (\theta|_{J\times K_1})_{(i-1)(j-1)} + c_{ij}, \\
+    & & \min q\mapsto (\theta|_{J\times K_1})_{iq} + w_{qj} \\
+    & & \min p\mapsto (\theta|_{J\times K_1})_{pj} + w'_{pi}~\rangle
+ \end{array}
+ \]
+%
+and \[f_1,f_2 :: (J\times K\to\R) \to (J_0\times K_1\to R)\]
+
+\bigskip
+At this point we should note the following facts:
+\begin{itemize}
+  \item $\theta$ in $f_1$ is cast to $J\times K_0\to\R$ in all occurrences. 
+   It is therefore safe to type it as $f_1 :: (J\times K_0\to\R) \to (J_0\times K_1\to R)$.
+  \item Similarly, $f_2 :: (J\times K_1\to\R) \to (J_0\times K_1\to R)$.
+  \item $\theta$ is only ever applied to values smaller that $i$, in both terms. Remembering that $i :: J_0$,
+    proving this will allow us to obtain an even tighter type assignment:
+    \[\renewcommand\arraystretch{1.5}
+      \begin{array}{l}
+       f_1 :: (J_0\times K_0\to\R) \to (J_0\times K_1\to R) \\
+       f_2 :: (J_0\times K_1\to\R) \to (J_0\times K_1\to R)
+      \end{array}\]
+\end{itemize}
+
+\bigskip
+Next steps:
+\begin{itemize}
+  \item Show that $\mathrm{fix}\,\left(\quadrants{f}{\psi}{\psi}{\psi}\right)$
+    is equivalent to $\quadrants{\mathrm{fix}\,f|_{\_\times J_0\times K_0}}{\psi}{\psi}{\psi}$.
+  \item Show that $\mathrm{fix}\,f|_{\_\times J_0\times K_0} = A\,(\psi|_{J_0\times K_0})$.
+  \item Show that $\mathrm{fix}\,\left(\quadrants{\psi}{f_2}{\psi}{\psi}\right) = 
+                   \quadrants{\psi}{A\,(\psi|_{J_0\times K_1})}{\psi}{\psi}$.
+  \item Slice the $\min\langle\cdot\rangle$ terms in the other two quadrants
+    according to $J_0,J_1,K_0,K_1$, using the same approach.
+  \item Extract sub-computations $B$ and $C$, and express $A$ as a composition of $A$, $B$, and $C$.
+\end{itemize}
 
 \bibliography{writeup}
 \bibliographystyle{abbrv}
