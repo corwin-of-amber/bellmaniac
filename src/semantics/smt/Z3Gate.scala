@@ -91,11 +91,18 @@ class Z3Gate {
   def mne(id: Identifier) = mnemonics get id match {
     case Some(x) => x
     case _ =>
-      val lit = id.literal.toString
+      val lit = normalizeLiteral(id)
       val newMne = (lit #:: (nat map (lit + _))) find (x => ! mnemonics.exists (_._2 == x))
       mnemonics += id -> newMne.get
       newMne.get
   }
+  
+  def normalizeLiteral(id: Identifier) = normalize(id.literal.toString)
+  
+  def normalize(s: String) =
+    if (s == "<") "lt"
+    else if (s == "+") "plus"
+    else s.replace("'", "_").replace("|", "!").replace("@", "apply")
 
   /**
    * just the stream of naturals (taken from Scala docs)

@@ -14,7 +14,7 @@ import semantics.TypeTranslation.Environment
 
 
 
-class MinPod(domain: Term, range: Term, < : Term)(implicit env: Environment) extends Pod {
+class MinPod(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implicit env: Environment) extends Pod {
   import Prelude.{B,↓}
   
   val D = domain
@@ -32,16 +32,16 @@ class MinPod(domain: Term, range: Term, < : Term)(implicit env: Environment) ext
     }) ++
     MacroMap(Prelude.min ~> { x => MIN2PAT(x) map (_ => min2) })
   
-  override val decl = new Declaration(min, argmin) where List(
+  override val decl = new Declaration(min, argmin) where (if (opaque) List() else List(
       min =:= { val g = $TyTV("g", D -> R) ; TypedTerm(g ↦ (g :@ TypedTerm(argmin :@ g, D)), (D->R) -> R) },
-      ∀:(D->R, D, (g, i) => (↓(g :@ i) -> (↓(min :@ g) & ~(< :@ (g :@ i) :@ (min :@ g)))) ) /*,
-      ∀:(R, R, (a,b) => ((min2:@(a,b)) =:= a) | ((min2:@(a,b)) =:= b))*/
-    )
+      ∀:(D->R, D, (g, i) => (↓(g :@ i) -> (↓(min :@ g) & ~(< :@ (g :@ i) :@ (min :@ g)))) )/*,
+      ∀:(R, R, (a,b) => ((min2:@(a,b)) =:= a) | ((min2:@(a,b)) =:= b)) */
+    ))
   
 }
 
 object MinPod {
-  def apply(domain: Term, range: Term, < : Term)(implicit env: Environment) = new MinPod(domain, range, <)
+  def apply(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implicit env: Environment) = new MinPod(domain, range, <, opaque)
 }
 
 object MinDistribPod {

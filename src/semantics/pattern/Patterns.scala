@@ -24,6 +24,8 @@ class ExactMatch(val pattern: Term) {
     else false
   }
   
+  def matchInclTypes(term: Term)(implicit env: Environment): Boolean = matchInclTypes(pattern, term, top=true)
+  
   def find(term: Term)(implicit env: Environment=Environment.empty) =
     term.nodes filter (matchInclTypes(pattern, _, top=true))
 }

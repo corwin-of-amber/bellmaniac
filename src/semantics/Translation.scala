@@ -103,6 +103,37 @@ object TypeTranslation {
         precondition.toList)
   }
   
+  /**
+   * Generates input precondition
+   * @param nargs: generates contract for the first nargs arguments
+   */
+  def contract(micro: List[MicroCode], nargs: Int) = {
+    val inner = new Namespace
+    val vars = new ArrayBuffer[TypedIdentifier]
+    var ret: Boolean = false
+    def freshvar = new Identifier(s"$$${vars.length}", "variable", inner)
+    val assertions = new ArrayBuffer[Term]
+    micro foreach {
+      case In(t) => vars += (TypedIdentifier(freshvar,t))
+      case Out(t) => ret = true
+      case Check(pred, arity) =>
+        if (!ret) {
+          if (vars.length <= nargs) {
+            val args = (vars takeRight arity map (T(_)) toList)
+            assertions += pred(args:_*)
+          }
+          else {
+            if (arity > vars.length - nargs)
+              throw new NotImplementedError(s"dependent types: $micro, (as $nargs-ary)")
+          }
+        }
+    }
+    (vars.toList, assertions.toList)
+  }
+
+  /**
+   * Generates input and output conditions
+   */
   def contract(symbol: Identifier, micro: List[MicroCode]) = {
     val inner = new Namespace
     val vars = new ArrayBuffer[TypedIdentifier]
@@ -120,6 +151,12 @@ object TypeTranslation {
     (vars.toList, ret, assertions.toList)
   }
   
+  def checks(micro: List[MicroCode], args: List[Term]) = {
+    val (vars, assertions) = contract(micro, args.length)
+    for (assertion <- assertions)
+      yield new Scheme.Template(vars, assertion)(args)
+  }
+  
   def checks(symbol: Identifier, micro: List[MicroCode], args: List[Term]) = {
     val (vars, ret, assertions) = contract(symbol, micro)
     for (assertion <- assertions)
@@ -128,6 +165,9 @@ object TypeTranslation {
   
   def checks(scope: Scope, symbol: TypedIdentifier, args: List[Term]): List[Term] = 
     checks(symbol.untype, emit(scope, symbol.typ), args)
+  
+  def checks(scope: Scope, typ: Term, args: List[Term]): List[Term] = 
+    checks(emit(scope, typ), args)
   
   def subsorts(scope: Scope) = E(scope, {
     import TypingSugar._
@@ -538,6 +578,13 @@ object TermTranslation {
         //println(s"**** ${term toPretty}")
         val (genbody_syms, genbody_t) = generalize(body_t :+ (fun =:= body_id), arg, fun)
         (T(genbody_syms(fun.root)), genbody_t) // TODO
+      }
+      else if (term =~ ("|!", 2)) {
+        val List(expr, cond) = term.subtrees
+        val (expr_id, expr_terms) = this(expr)
+        val guard = T(TypedIdentifier($v(s"${expr_id.untype}`"), rawtype(env.typeOf_!(expr_id))))
+        assert(expr_id.isLeaf)
+        (guard, expr_terms :+ (guard =:= TypedTerm(expr_id |! cond, env.typeOf_!(expr_id))))
       }
       else if (term =~ (":", 2)) {
         term0(term.subtrees(1))

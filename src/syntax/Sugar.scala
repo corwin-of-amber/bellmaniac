@@ -78,6 +78,9 @@ object AstSugar {
     def :/(label: Any, subst: Term): Term =
       term.replaceDescendant((term :/ label).subtrees(1) → subst)
       
+    def :-/(label: Any): Term =
+      semantics.TypedLambdaCalculus.pullOut(term, term :/ label) get  // @@ syntax->semantics dependency?
+      
     def \(whatWith: (Term, Term)): Term =
       new syntax.transform.TreeSubstitution(List(whatWith))(term)
        
@@ -163,7 +166,7 @@ object Formula {
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
   
   def display(symbol: Identifier): TapeString = 
-    symbol.literal.toString || symbol
+    symbol.literal.toString |-| symbol
   
   def display(term: AstSugar.Term): TapeString =
     if (QUANTIFIERS contains term.root.toString)
@@ -176,7 +179,7 @@ object Formula {
         case Some(op) => 
           op.format(term)
         case None => 
-          if (term.isLeaf) display(term.root)
+          if (term.isLeaf) display(term.root) |-| term
           else tape"${display(term.root)}(${term.subtrees map display mkTapeString ", "})"
       }
   

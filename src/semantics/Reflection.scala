@@ -79,6 +79,11 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
 
   def equality: List[Term] = env.scope.functypes.keys map equality toList 
 
+  def equality(used: Set[Identifier]): List[Term] = {
+    val usedTypes = used flatMap (env.typeOf(_) map TypePrimitives.ret map (_.leaf))//collect { case x if x.isLeaf => x.root })
+    (env.scope.functypes filter { case (k,v) => usedTypes contains v.faux }).keys map equality toList
+  }
+  
   //---------------
   // Type Info Part
   //---------------
@@ -96,14 +101,18 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   // Consolidation Part
   //-------------------
   
-  def consolidate(term: Term) = consolidate1(term)
+  object Role extends Enumeration {
+    val Definition, Proposition = Value
+  }
   
-  def consolidate1(term: Term): Term = {
+  def consolidate(term: Term)(implicit role: Role.Value) = consolidate1(term)
+  
+  def consolidate1(term: Term)(implicit role: Role.Value): Term = {
     if (isConsolidated(term)) term
     else preserve(term, consolidate0(term))
   }
   
-  def consolidate0(term: Term): Term = {
+  def consolidate0(term: Term)(implicit role: Role.Value): Term = {
     def sub = term.subtrees map consolidate1
     if (term =~ ("@", 2)) {
       val List(fun, arg) = sub
@@ -130,8 +139,16 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
         val cond = ↓?(trueB)
         && (List(cond -> (lhs =:= trueB), (~cond) -> (lhs =:= falseB)) map consolidate1)
       }
+      else if (rhs =~ ("|!", 2)) {
+        val cond = rhs.subtrees(1)
+        import Prelude.↓
+        && (List(cond -> consolidate1(lhs =:= rhs.subtrees(0)), (~cond) -> (~(↓(lhs)))))
+      }
       else {
-        (↓?(lhs) <-> ↓?(rhs)) & (↓?(lhs) -> (lhs =:= rhs))
+        role match {
+          case Role.Definition => (↓?(lhs) <-> ↓?(rhs)) & (lhs =:= rhs)
+          case _               => (↓?(lhs) <-> ↓?(rhs)) & (↓?(lhs) -> (lhs =:= rhs))
+        }
       }
     }
     else if (term =~ ("<->", 2)) {
@@ -286,10 +303,8 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   def support(term: Term): Term =
     if (term =~ ("↓",1)) {
       val atom = term.subtrees(0)
-      if (alwaysDefined contains atom.root) TRUE /*atom.root match {
-        case tid: TypedIdentifier => &&(TRUE :: TypeTranslation.checks(env.scope, tid, term.subtrees.tail))
-        case _ => TRUE
-      }*/
+      if (alwaysDefined contains atom.root) TRUE 
+      else if (atom.root == "+") TRUE  /* @@ TODO add alwaysTotal? */
       else T(support(atom.root), atom.subtrees map support)
     }
     else
@@ -298,11 +313,14 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   //------------
   // Solver Part
   //------------
-  def solve(assumptions: List[Term], goals: List[Term]) = {
+  def solve(assumptions: List[Term], goals: List[Term]): Trench[Term] = solve(List(), assumptions, goals)
+    
+    
+  def solve(definitions: List[Term], assumptions: List[Term], goals: List[Term]) = {
     import semantics.smt.Z3Sugar
     import syntax.Piping._
     
-    def reflect(phi: Term) = {
+    def reflect(phi: Term)(implicit role: Role.Value=Role.Proposition) = {
       log.fine(phi.untype toPretty)
       val phi_c = consolidate(phi)
       log.fine(s"  ${phi_c toPretty}")
@@ -313,13 +331,14 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
       FolSimplify.simplify(phi_s)
     }
     def e(l: List[Term]) = new Trench[Term](l)
-    val fo_assumptions = e(assumptions) map_/ reflect
+    val fo_assumptions = (e(definitions) map_/ (reflect(_)(Role.Definition))) ++ 
+                         (e(assumptions) map_/ reflect)
     
     val fo_goals = e(goals) map_/ reflect flatMap (_.split(new Identifier("&", "connective")))
 
     val fo_symbols = (fo_assumptions.toList ++ fo_goals.toList) flatMap (_.nodes map (_.root)) toSet
     
-    val prelude = typeinfo ++ curryAxioms(fo_symbols) ++ equality
+    val prelude = typeinfo ++ curryAxioms(fo_symbols) ++ equality(fo_symbols)
     val fo_prelude = e(prelude) map_/ reflect filter (_ != TRUE)
     
     log.fine("-" * 60)

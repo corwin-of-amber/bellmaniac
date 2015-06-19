@@ -11,6 +11,8 @@ import com.microsoft.z3.Solver
 import com.microsoft.z3.Status
 import com.microsoft.z3.ArithExpr
 import com.microsoft.z3.Z3Exception
+import com.microsoft.z3.Params
+import java.util.regex.Pattern
 
 
 
@@ -89,6 +91,10 @@ object Z3Sugar {
 
   def solve(assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
     val s = ctx mkSolver()
+    /*val p = ctx mkParams()
+    p.add("soft_timeout", 1000)
+    s.setParameters(p)*/
+    save(assumptions, goals)
     assumptions foreach (s.add(_))
     goals map (check(s, _))
   }
@@ -136,5 +142,22 @@ object Z3Sugar {
         println(s"unknown (${s.getReasonUnknown})")
         ProverStatus.UNKNOWN
     }
-  }  
+  }
+  
+  import syntax.Piping._
+
+  def save(assumptions: List[BoolExpr], goals: List[BoolExpr]) {
+    import java.io._
+    goals.zipWithIndex foreach { case(goal, i) =>
+      val f = new PrintWriter(new File(s"/tmp/benchmark${i}.txt"))
+      f write ctx.benchmarkToSMTString("bell", "", "unknown", "", assumptions toArray, ~goal) |> standardize
+      f close
+    }
+  }
+  
+  def standardize(smt: String) = {
+    def declare_sort(smt: String) = Pattern.compile(raw"\((declare-sort .*?)\)") matcher smt replaceAll "($1 0)"
+    def implies(smt: String) = smt.replace("implies", "=>")  // TODO word boundaries
+    smt |> declare_sort |> implies
+  }
 }

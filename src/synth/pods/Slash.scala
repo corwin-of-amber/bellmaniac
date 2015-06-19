@@ -74,7 +74,7 @@ object StratifyLetPod {
    * forall θ (capsule θ = capsule (f θ))
    */
   
-  def apply(f: Term, component: Term) = {
+  def apply(f: Term, component: Term)(implicit scope: Scope) = {
     val _θ = $TV("θ̲")
     val (capsule, ctx) = (pullOut(f, component) get, enclosure(f, component) get)
     val let = { val ψ = $TV("ψ") ; ψ ↦ ω(replaceDescendant(f, (component, ψ :@ ctx.tail))) }

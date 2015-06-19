@@ -9,9 +9,6 @@ import TypeTranslation.{emit,simplify,canonical}
 import semantics.TypeTranslation.TypedIdentifier
 import AstSugar.Term
 import report.console.NestedListTextFormat
-import report.ObjectTree
-import report.ObjectVBox
-import report.BulletDecorator
 import syntax.transform.TreeSubstitution
 
 
@@ -154,12 +151,20 @@ object LambdaCalculus {
     beta(fun.subtrees(0).root, fun.subtrees(1), arg)
   }
     
+  // returns args and body
+  def uncurry(fun: Term): (List[Term], Term) = {
+    if (fun =~ ("↦", 2)) {
+      uncurry(fun.subtrees(1)) match { case (args, body) => (fun.subtrees(0) :: args, body) }
+    }
+    else (List(), fun)
+  }
+  
 }
 
 object TypedLambdaCalculus {
 
   import AstSugar._
-  import TypedTerm.preserve
+  import TypedTerm.{preserve,preserveBoth}
 
   def beta(va: Identifier, body: Term, arg: Term, retype: Boolean=false): Term = {
     if (body.isLeaf && body.root == va) (if (retype) arg else preserve(body, arg))
@@ -180,11 +185,11 @@ object TypedLambdaCalculus {
     else None
   }
     
-  def simplify(term: Term): Term = {
+  def simplify(term: Term)(implicit scope: Scope): Term = {
     val sub = term.subtrees map simplify
     if (term =~ ("@", 2) && sub(0) =~ ("↦", 2)) beta(sub(0), sub(1))
     else if (term =~ (":", 2)) sub(1) // TODO only throw away labels when necessary?
-    else preserve(term, T(term.root, sub))
+    else preserveBoth(term, T(term.root, sub))
   }
   
 
@@ -356,6 +361,8 @@ object FolSimplify {
 class Trench[T](val el: List[Tree[T]]) {
   def this(e: List[T])(implicit d: DummyImplicit) = this(e map (x => new Tree[T](x)))
   
+  def ++(that: Trench[T]) = new Trench[T](el ++ that.el)
+  
   def applyToLeaves(l: List[Tree[T]], f: T => List[T])(implicit rewrap: (T, List[Tree[T]]) => List[Tree[T]]): List[Tree[T]] = 
     l flatMap {t =>
       if (t.isLeaf) rewrap(t.root, f(t.root) map (x => new Tree(x)))
@@ -395,6 +402,7 @@ object Trench {
   }
   
   def displayRich(tr: Trench[Term], bullet: String = "•") = {
+    import report.{ObjectTree,ObjectVBox,BulletDecorator}
     new ObjectVBox(tr.el map (t => 
       new ObjectTree(t map (_.toPrettyTape))
         with BulletDecorator { override val ● = bullet }))

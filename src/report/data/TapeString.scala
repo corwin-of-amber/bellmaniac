@@ -13,7 +13,7 @@ class TapeString(val text: String, val markup: Map[(Int, Int), Any]=Map.empty) e
   def +(that: TapeString) = TapeString(text + that.text, markup ++ shift(that.markup, text.length))
   def +:(that: TapeString) = that + this
   
-  def ||(mark: Any) = TapeString(text, markup + ((0 -> text.length) -> mark))
+  def |-|(mark: Any) = TapeString(text, markup + ((0 -> text.length) -> mark))
   
   override def toString = text
   

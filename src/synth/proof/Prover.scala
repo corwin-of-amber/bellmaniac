@@ -107,7 +107,7 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
                                       
       println("· " * 25)
   
-      reflect.solve((terms1.toList flatten) ++ assumptions ++ (pods flatMap (_.decl.precondition)), goals)    
+      reflect.solve(terms1.toList flatten, assumptions ++ (pods flatMap (_.decl.precondition)), goals)    
     }
     
     def be(term: Term) = {

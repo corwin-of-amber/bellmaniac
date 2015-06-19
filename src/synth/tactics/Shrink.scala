@@ -94,11 +94,11 @@ object Shrink {
                   ( ((θ:@(i, k)) + (θ:@(k, j)))/*((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j)))*/ -: TV("item") )
                 )
               ),
-              //cons:@(
-              //  (θ:@(i, j)),
+              cons:@(
+                (θ:@(i, j)),
                 nil
               )
-            //)
+            )
           )  -: TV("compute")
           
         ).foldRight -: f )
@@ -109,6 +109,7 @@ object Shrink {
 
     import examples.Paren
     import semantics.Binding.{inline,prebind}
+    import Prelude.R
             
     val prenv = Paren.env
     implicit val scope = prenv.scope
@@ -117,7 +118,7 @@ object Shrink {
     
     val (vassign, program) = TypeInference.infer( inline( prebind(InputPod.program(A.program).unfoldRight) ) )
     
-    implicit val env = prenv ++ TypeTranslation.decl(scope, vassign)
+    implicit val env = prenv ++ TypeTranslation.decl(scope, vassign + (V("+") -> (R ->: R ->: R)))
     
     println("-" * 80)
     
