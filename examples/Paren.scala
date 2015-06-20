@@ -6,6 +6,8 @@ import syntax.Identifier
 import semantics.Scope
 import semantics.TypeTranslation.Declaration
 import semantics.TypeTranslation.Environment
+import semantics.TypeTranslation.Declaration
+import semantics.TypeTranslation.TypedIdentifier
 
 
 
@@ -120,16 +122,21 @@ object Paren {
     import semantics.TypeTranslation
     import semantics.TypeTranslation.TypingSugar._
 
-    TypeTranslation.subsorts(scope) where 
+    val ley = scope.sorts.findSortHie(J.root).get.nodes filter (_.subtrees == List(T(⊥))) toList
+    val newbot = new Identifier("⊥.J", "set")
+    val h = scope.sorts.hierarchy.replaceDescendants(ley map (t => (t, T(t.root, List(T(newbot, t.subtrees))))))
+    scope.sorts.hierarchy = h
+
+    (TypeTranslation.subsorts(scope) + (<.root, new Declaration(T(TypedIdentifier(<.root, J ->: J ->: B))))) where 
          ( transitive(J)(<), antisymm(J)(<),
-           compl(J)(J0, J1), allToAll(J)(J0, <, J1),
-           partition(J)(J0, K0, K1), partition(J)(J1, K2, K3),
+           compl(J)(J0, J1), allToAll(J)(J0, <, J1), ∀:( J, x => ~T(newbot)(x) )
+           /*partition(J)(J0, K0, K1), partition(J)(J1, K2, K3),
            allToAll(J)(K0, <, K1), allToAll(J)(K2, <, K3),
            ∀:( J, x => K12(x) <-> (K1(x) | K2(x)) ),
            ∀:( J, x => K012(x) <-> (K0(x) | K1(x) | K2(x)) ),
            ∀:( J, (x,y) => K12sq(x,y) <-> (K12(x) & K12(y)) ),
            ∀:( J, (x,y) => P1(x,y) <-> ((K0(x) & K0(y)) | (K0(x) & K1(y)) | (K0(x) & K2(y)) | (K1(x) & K2(y)) | (K2(x) & K2(y))) ),
-           ∀:( J, (x,y) => Q0(x,y) <-> ((K0(x) & K1(y)) | (K1(x) & K2(y))) )
+           ∀:( J, (x,y) => Q0(x,y) <-> ((K0(x) & K1(y)) | (K1(x) & K2(y))) )*/
          )
   } 
   

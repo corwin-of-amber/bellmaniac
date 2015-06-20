@@ -358,10 +358,10 @@ object TypeInference {
       else if (n =~ ("/", 2)) {
         n +: n.subtrees map nodeType match {
           case List(Some(tpe), Some(ltpe), Some(rtpe)) =>
-            val join = reinforce(List(ltpe, rtpe))(resolve.join)
-            if (join exists (_ != tpe)) {
-              val force = step1(n, tpe, join(0), join(1))
-              retype(n, force)
+            val join = TypePrimitives.union(scope, List(ltpe, rtpe)) //reinforce(List(ltpe, rtpe))(resolve.join)
+            if (join != tpe) {
+              val force = step1(n, tpe)
+              //retype(n, force)
             }
           case _ =>
         }

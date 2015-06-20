@@ -90,8 +90,7 @@ object TypePrimitives {
       else if (heads forall (dir(_) == InOut.IN)) In(intersection(scope, heads map { case In(t) => t })) :: intersection(decls map (_ drop 1))
       else  ???  /* high-order arguments? */
     }
-  }
-  
+  }  
   
   def intersection(scope: Scope, types: List[Term]): Term = {
     import syntax.Piping._
@@ -101,6 +100,35 @@ object TypePrimitives {
       intersection(emits)(scope) |> canonical |> (simplify(scope, _))
     }
   }
+  
+  
+  def union(decls: List[List[MicroCode]])(implicit scope: Scope): List[MicroCode] = {
+    def isCheck(mc: MicroCode) = mc match { case Check(_,_) => true case _ => false }
+    def isLeaf(mc: MicroCode) = (mc match { case In(t) => Some(t) case Out(t) => Some(t) case _ => None }) exists (_.isLeaf)
+    def dir(mc: MicroCode) = mc match { case In(_) => InOut.IN case Out(_) => InOut.OUT }
+    def common(l: List[List[MicroCode]]) = l.head filter (x => l.tail forall (_ contains x))
+    if (decls forall (_.isEmpty)) List()
+    else if (decls.tail forall (_ == decls.head)) decls.head
+    else if (decls.exists (l => !l.isEmpty && isCheck(l.head)))
+      common(decls map (_ takeWhile isCheck)) ++ union(decls map (_ dropWhile isCheck))
+    else {
+      val heads = decls map (_.head)
+      if (heads forall (_==heads.head)) heads.head :: union(decls map (_ drop 1))
+      else if (heads forall isLeaf) throw new Scope.TypingException(s"incompatible type instructions: $heads")
+      else if (heads forall (dir(_) == InOut.IN)) In(intersection(scope, heads map { case In(t) => t })) :: union(decls map (_ drop 1))
+      else  ???  /* high-order arguments? */
+    }
+  }  
+  
+  def union(scope: Scope, types: List[Term]): Term = {
+    import syntax.Piping._
+    if (types.tail forall (_ == types.head)) types.head
+    else {
+      val emits = types map (emit(scope, _))
+      union(emits)(scope) |> canonical |> (simplify(scope, _))
+    }
+  }
+  
   
   def curry(typ: Term)(implicit scope: Scope): (Term, Term) = {
     val (arg, ret) = curry(emit(scope, typ))
