@@ -108,7 +108,8 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
       new TypedSubstitution(
         c.cabinet filter (_.length > 1) flatMap { l =>
           val se = l.head.compact
-          println(s"${l.length}  x  ${se.term toPretty}");
+          def prefix(s: String) = if (s == "") "" else s"[$s ↦] "
+          println(s"${l.length}  x  ${prefix(se.enclosure map (_ toPretty) mkString " ")}${se.term toPretty}");
           val uf = let(se.capsule):@(se.enclosure)
           l map (_.term) map ((_, uf))
         } toList)

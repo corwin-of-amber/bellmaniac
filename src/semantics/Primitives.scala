@@ -298,7 +298,7 @@ object TypedTerm {
   
   def replaceDescendant(term: Term, switch: (Term, Term)): Term = replaceDescendants(term, Some(switch))
 
-  def replaceDescendants(term: Term, switch: Iterable[(Term, Term)]): Term =
+  def replaceDescendants(term: Term, switch: Iterable[(Term, Term)]): Term = if (switch.isEmpty) term else
     switch find (_._1 eq term) match {
       case Some(sw) => sw._2
       case _ => preserve(term, new Tree(term.root, term.subtrees map (replaceDescendants(_, switch))))

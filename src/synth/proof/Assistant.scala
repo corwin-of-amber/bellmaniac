@@ -24,6 +24,10 @@ class Assistant(implicit env: Environment) {
   implicit val scope = env.scope
   val typedecl = env.typedecl
   
+  def precompile(term: Term) = {
+    Binding.prebind(term)
+  }
+  
   def compile(term: Term) = {
     TypeInference.infer(Binding.prebind(term), typedecl)._2
   }
@@ -85,7 +89,7 @@ class Assistant(implicit env: Environment) {
     else if (term =~ ("@", 2) && sub(0).root == "/") TypedTerm.preserve(term, TI("/")(sub(0).subtrees map (x => 
       simplify(TypedTerm.preserve( term, TypedTerm.preserveBoth(sub(0), x) :@ sub(1) )))))
     else if (term =~ ("|!", 2)) {
-      val cond = term.subtrees(1) // do not simplify guard conds
+      val cond = unguard(term.subtrees(1))
       if (sub(0) =~ ("|!", 2)) {
         val mcond = mergeConds(sub(0).subtrees(1), cond)
         if (mcond == sub(0).subtrees(1)) sub(0)
@@ -95,6 +99,14 @@ class Assistant(implicit env: Environment) {
     }
     else if (term =~ (":", 2)) sub(1) // TODO only throw away labels when necessary?
     else TypedTerm.preserveBoth(term, T(term.root, sub))
+  }
+  
+  def unguard(cond: Term): Term = {
+    val inner = cond.nodes filter (_ =~ ("|!", 2)) toList
+    def hoist = &&(inner map (_.subtrees(1)))
+    if (inner.isEmpty) cond
+    else 
+      TypedTerm.replaceDescendants(cond, inner map (n => (n, n.subtrees(0)))) & hoist
   }
   
   def typeGuard(fun: Term)(implicit scope: Scope) = {
