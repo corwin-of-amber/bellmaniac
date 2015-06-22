@@ -290,7 +290,7 @@ G_{ij} ~=~  &
   \begin{array}{@{}l@{~}l}
     \min\langle & G_{(i-1)(j-1)} + c_{ij}, \\
                 & \min q\mapsto G_{iq} + w_{qj} \\
-                & \min q\mapsto G_{pj} + w'_{pi}~\rangle
+                & \min p\mapsto G_{pj} + w'_{pi}~\rangle
   \end{array}
 \end{array}
 \]
@@ -537,20 +537,20 @@ Stratify $A_2$, reusing $\psi$ again and padding.
  \end{array}
  \]
 %
-and \[f_1,f_2 :: (J\times K\to\R) \to (J_0\times K_1\to R)\]
+and \[f_1,f_2 :: (J\times K\to\R) \to (J_0\times K_1\to\R)\]
 
 \bigskip
 At this point we should note the following facts:
 \begin{itemize}
   \item $\theta$ in $f_1$ is cast to $J\times K_0\to\R$ in all occurrences. 
-   It is therefore safe to type it as $f_1 :: (J\times K_0\to\R) \to (J_0\times K_1\to R)$.
-  \item Similarly, $f_2 :: (J\times K_1\to\R) \to (J_0\times K_1\to R)$.
+   It is therefore safe to type it as $f_1 :: (J\times K_0\to\R) \to (J_0\times K_1\to\R)$.
+  \item Similarly, $f_2 :: (J\times K_1\to\R) \to (J_0\times K_1\to\R)$.
   \item $\theta$ is only ever applied to values smaller that $i$, in both terms. Remembering that $i :: J_0$,
     proving this will allow us to obtain an even tighter type assignment:
     \[\renewcommand\arraystretch{1.5}
       \begin{array}{l}
-       f_1 :: (J_0\times K_0\to\R) \to (J_0\times K_1\to R) \\
-       f_2 :: (J_0\times K_1\to\R) \to (J_0\times K_1\to R)
+       f_1 :: (J_0\times K_0\to\R) \to (J_0\times K_1\to\R) \\
+       f_2 :: (J_0\times K_1\to\R) \to (J_0\times K_1\to\R)
       \end{array}\]
 \end{itemize}
 

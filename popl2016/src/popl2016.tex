@@ -1,0 +1,60 @@
+\documentclass[preprint]{sigplanconf}
+
+\begin{document}
+
+
+\special{papersize=8.5in,11in}
+\setlength{\pdfpageheight}{\paperheight}
+\setlength{\pdfpagewidth}{\paperwidth}
+
+%\conferenceinfo{CONF 'yy}{Month d--d, 20yy, City, ST, Country} 
+%\copyrightyear{20yy} 
+%\copyrightdata{978-1-nnnn-nnnn-n/yy/mm} 
+%\doi{nnnnnnn.nnnnnnn}
+
+%\titlebanner{banner above paper title}        % These are ignored unless
+%\preprintfooter{short description of paper}   % 'preprint' option specified.
+
+\title{Bellmania: Deriving Implementations from Specifications by Transformation}
+
+%\authorinfo{Shachar Itzhaky}
+%           {MIT CSAIL}
+%           {shachari@mit.edu}
+\authorinfo{Double-blind submission}
+           {}
+           {}
+
+\maketitle
+
+\begin{abstract}
+Programmers almost never write optimal code on the first phase.
+Instead, they usually begin with a simplified, possibly inefficient, or even
+na\"ive implementation. When the result is satisfactory, they would move
+on to revise the code in order to improve performance. These normally
+change the code considerably compared to the original version. It is especially
+true for code that targets multi-core processors, since many considerations
+must be taken into account for parallel code in order to utilize all available
+cores.
+
+Clearly, each iteration becomes more tedious as the code increases in complexity,
+and naturally holds more chance of introducing defects. The programmer must
+exercise care to make sure that each version is functionally equivalent to the
+previous one. This is when mechanical reasoning can prove useful, by 
+(a) packaging familiar techniques as routines, thus avoiding repetitive work, and
+(b) checking each modification step, warning the developer when functionality
+may be accidentally changed.
+
+We present Bellmania, a framework comprising of a language for specifying
+dynamic programming algorithms as recurrences,
+and a calculus that facilitates gradual transformation of these 
+specifications into efficient implementations.
+In particular, it supports using the Divide and Conquer technique to derive
+parallel implementations that optimally utilize memory caches.
+\end{abstract}
+
+\category{CR-number}{subcategory}{third-level}
+
+\keywords
+synthesis, dynamic programming, smt
+
+\end{document}
