@@ -19,6 +19,15 @@ import java.io.ByteArrayOutputStream
 
 object Reflection {
   
+  case class Compound(val definitions: List[Term], val proposition: Term)
+  object Compound {
+    def apply(p: Term): Compound = Compound(List(), p)
+    def apply(d: List[Term], ps: List[Term]): Compound = ps match {
+      case List(p) => Compound(List(), p)
+      case _ => ???
+    }
+  }
+  
   case class Consolidated(term: Term) extends Term(term.root, term.subtrees)
   def isConsolidated(term: Term) = term match {
     case Consolidated(_) | TypedTerm(_, Consolidated(_)) => true
@@ -316,7 +325,12 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   def solve(assumptions: List[Term], goals: List[Term]): Trench[Term] = solve(List(), assumptions, goals)
     
     
-  def solve(definitions: List[Term], assumptions: List[Term], goals: List[Term]) = {
+  def solve(definitions: List[Term], assumptions: List[Term], goals: List[Term]): Trench[Term] = {
+    solve(definitions, assumptions, goals map (Compound(_)))
+  }
+  
+  
+  def solve(definitions: List[Term], assumptions: List[Term], goals: List[Compound])(implicit d: DummyImplicit) = {
     import semantics.smt.Z3Sugar
     import syntax.Piping._
     
@@ -334,9 +348,21 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     val fo_assumptions = (e(definitions) map_/ (reflect(_)(Role.Definition))) ++ 
                          (e(assumptions) map_/ reflect)
     
-    val fo_goals = e(goals) map_/ reflect flatMap (_.split(new Identifier("&", "connective")))
+    val fo_goals = goals map { case Compound(definitions, proposition) => 
+      (e(definitions) map_/ (reflect(_)(Role.Definition)),
+       e(List(proposition)) map_/ reflect) // flatMap (_.split(new Identifier("&", "connective")))
+    }
 
-    val fo_symbols = (fo_assumptions.toList ++ fo_goals.toList) flatMap (_.nodes map (_.root)) toSet
+    def preludeFor(goal: (Trench[Term], Trench[Term])) = {
+      val fo_all = fo_assumptions.toList ++ goal._1.toList ++ goal._2.toList
+      val fo_symbols = (fo_all) flatMap (_.nodes map (_.root)) toSet
+      
+      val prelude = typeinfo ++ curryAxioms(fo_symbols) ++ equality(fo_symbols)
+      val fo_prelude = e(prelude) map_/ reflect filter (_ != TRUE)
+      fo_prelude
+    }
+    val fo_all_formulas = fo_assumptions.toList ++ (fo_goals flatMap { case (x,y) => x.toList ++ y.toList })
+    val fo_symbols = (fo_all_formulas) flatMap (_.nodes map (_.root)) toSet
     
     val prelude = typeinfo ++ curryAxioms(fo_symbols) ++ equality(fo_symbols)
     val fo_prelude = e(prelude) map_/ reflect filter (_ != TRUE)
@@ -346,19 +372,31 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     Trench.display(fo_assumptions)
     report.NotebookLog.out += Trench.displayRich(fo_assumptions)
     Trench.display(fo_prelude)
-    Trench.display(fo_goals, "◦")
+    for ((fo_gdefs, fo_goal) <- fo_goals) {
+      //Trench.display(fo_gdefs)
+      Trench.display(fo_goal, "◦")
+    }
     
     val (z3g, fo_base) = TypeTranslation toSmt List(env)
 
+    import semantics.smt.Z3Gate
+    
     val status =
       z3g.solve(fo_base ++ (
-        for (atn <- fo_assumptions.toList ++ fo_prelude.toList if atn != TRUE) yield {
+        for (atn <- fo_assumptions.toList /* ++ fo_prelude.toList*/ if atn != TRUE) yield {
           z3g.formula(atn)
         }),
-        fo_goals.toList map z3g.formula)
+        fo_goals.toStream flatMap { case g@(d,ps) => 
+          Trench.display(ps, "◦")
+          ps.toList map (p =>
+            Z3Gate.Sequent((d ++ preludeFor(g)).toList map z3g.formula, p |> z3g.formula)) 
+        })
+            //z3g.formula map (g => Z3Gate.Sequent(List(), g)))
         
-    val statusMap = (fo_goals.toList map (new Id(_))) zip status toMap
-    val results = fo_goals map_/ (s => TI(statusMap(s).toPretty))
+    val fo_goals_pn = fo_goals map (_._2) reduce (_ ++ _)
+          
+    val statusMap = (fo_goals_pn.toList map (new Id(_))) zip status toMap
+    val results = fo_goals_pn map_/ (s => TI(statusMap(s).toPretty))
     
     Trench.display(results, "◦")
     report.NotebookLog.out += Trench.displayRich(results, "◦")

@@ -12,7 +12,6 @@ import com.microsoft.z3.Status
 import com.microsoft.z3.ArithExpr
 import com.microsoft.z3.Z3Exception
 import com.microsoft.z3.Params
-import java.util.regex.Pattern
 
 
 
@@ -64,100 +63,5 @@ object Z3Sugar {
   def func(namesorts: (Symbol, Seq[Sort])): FuncDecl = func(namesorts._1, namesorts._2:_*)
 
   
-  // -----------
-  // Solver part
-  // -----------
-
-  object ProverStatus extends Enumeration {
-    type ProverStatus = Value
-    val VALID, INVALID, UNKNOWN = Value
-
-    def fromStatus(status: Status) = {
-      status match {
-        case Status.UNSATISFIABLE => VALID 
-        case Status.SATISFIABLE => INVALID
-        case Status.UNKNOWN => UNKNOWN
-      }
-    }
-    
-    def toPretty(status: Value) = status.toString.toLowerCase
-    
-    implicit class Pretty(v: Value) {
-      def toPretty = v.toString.toLowerCase
-    }
-  }
   
-  import ProverStatus._
-
-  def solve(assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
-    val s = ctx mkSolver()
-    /*val p = ctx mkParams()
-    p.add("soft_timeout", 1000)
-    s.setParameters(p)*/
-    save(assumptions, goals)
-    assumptions foreach (s.add(_))
-    goals map (check(s, _))
-  }
-  
-  def solveAndPrint(assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
-    val s = ctx mkSolver()
-    
-    for (a <- assumptions) {
-      println(s" * $a")
-      s add a
-    }
-      
-    for (g <- goals) yield {
-      println("-" * 80)
-      println(s" ? $g")
-      checkAndPrint(s, g)
-    }
-  }
-  
-  def check(s: Solver, goal: BoolExpr) = {
-    s.push
-    s add ~goal
-    try ProverStatus.fromStatus(s.check)
-    finally s.pop
-  }
-  
-  def checkAndPrint(s: Solver, goal: BoolExpr): ProverStatus = {
-    s.push
-    s add ~goal
-    try checkAndPrint(s)
-    finally s.pop
-  }
-
-  def checkAndPrint(s: Solver): ProverStatus = {
-    val status = s.check
-    status match {
-      case Status.UNSATISFIABLE => 
-        println("valid")
-        ProverStatus.VALID
-      case Status.SATISFIABLE =>
-        println("invalid")
-        println(s.getModel)
-        ProverStatus.INVALID
-      case Status.UNKNOWN => 
-        println(s"unknown (${s.getReasonUnknown})")
-        ProverStatus.UNKNOWN
-    }
-  }
-  
-  import syntax.Piping._
-
-  def save(assumptions: List[BoolExpr], goals: List[BoolExpr]) {
-    import java.io._
-    goals.zipWithIndex foreach { case(goal, i) =>
-      val f = new PrintWriter(new File(s"/tmp/benchmark${i}.txt"))
-      f write ctx.benchmarkToSMTString("bell", "", "unknown", "", assumptions toArray, ~goal) |> standardize
-      f close
-    }
-  }
-  
-  def standardize(smt: String) = {
-    def declare_sort(smt: String) = Pattern.compile(raw"\((declare-sort .*?)\)") matcher smt replaceAll "($1 0)"
-    def implies(smt: String) = smt.replace("implies", "=>")  // TODO word boundaries
-    smt |> declare_sort |> implies
-  }
 }

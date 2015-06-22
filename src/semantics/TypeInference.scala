@@ -318,38 +318,42 @@ object TypeInference {
       else if (n =~ ("@", 2)) {
         List(n) ++ n.subtrees map nodeType match {
           case List(Some(y), Some(f), Some(x)) =>
-            val (farg, fret) = TypePrimitives.curry(f)(scope)
-            val arg = TypePrimitives.intersection(scope, List(x, farg))
-            val ret = TypePrimitives.intersection(scope, List(y, fret))
-            val xy = TypePrimitives.intersection(scope, List(f, x -> y))
-            if (log.isLoggable(Level.INFO)) {
-              println(s"|- $n")
-              println(s"   :: ${y toPretty}  ∩  ${fret toPretty}  =>  ${ret toPretty}")
-              println(s"   ${n.subtrees(0)} :: ${f toPretty}  ∩  ${(x -> y) toPretty}  =>  ${xy toPretty}")
-              println(s"   ${n.subtrees(1)} :: ${x toPretty}  ∩  ${farg toPretty}  =>  ${arg toPretty}")
+            if (f != (x -> y)) {
+              val (farg, fret) = TypePrimitives.curry(f)(scope)
+              val arg = TypePrimitives.intersection(scope, List(x, farg))
+              val ret = TypePrimitives.intersection(scope, List(y, fret))
+              val xy = TypePrimitives.intersection(scope, List(f, x -> y))
+              if (log.isLoggable(Level.INFO)) {
+                println(s"|- $n")
+                println(s"   :: ${y toPretty}  ∩  ${fret toPretty}  =>  ${ret toPretty}")
+                println(s"   ${n.subtrees(0)} :: ${f toPretty}  ∩  ${(x -> y) toPretty}  =>  ${xy toPretty}")
+                println(s"   ${n.subtrees(1)} :: ${x toPretty}  ∩  ${farg toPretty}  =>  ${arg toPretty}")
+              }
+              retype(n, ret)
+              retype(n.subtrees(0), xy)
+              retype(n.subtrees(1), arg)
             }
-            retype(n, ret)
-            retype(n.subtrees(0), xy)
-            retype(n.subtrees(1), arg)
           case _ =>
         }
       }
       else if (n =~ ("↦", 2)) {
         List(n) ++ n.subtrees map nodeType match {
           case List(Some(f), Some(x), Some(y)) =>
-            val (farg, fret) = TypePrimitives.curry(f)(scope)
-            val arg = TypePrimitives.intersection(scope, List(x, farg))
-            val ret = TypePrimitives.intersection(scope, List(y, fret))
-            val xy = TypePrimitives.intersection(scope, List(f, x -> y))
-            if (log.isLoggable(Level.INFO)) {
-              println(s"|- $n")
-              println(s"   :: ${f toPretty}  ∩  ${(x -> y) toPretty}  =>  ${xy toPretty}")
-              println(s"   ${n.subtrees(0)} :: ${x toPretty}  ∩  ${farg toPretty}  =>  ${arg toPretty}")
-              println(s"   ${n.subtrees(1)} :: ${y toPretty}  ∩  ${fret toPretty}  =>  ${ret toPretty}")
+            if (f != (x -> y)) {
+              val (farg, fret) = TypePrimitives.curry(f)(scope)
+              val arg = TypePrimitives.intersection(scope, List(x, farg))
+              val ret = TypePrimitives.intersection(scope, List(y, fret))
+              val xy = TypePrimitives.intersection(scope, List(f, x -> y))
+              if (log.isLoggable(Level.INFO)) {
+                println(s"|- $n")
+                println(s"   :: ${f toPretty}  ∩  ${(x -> y) toPretty}  =>  ${xy toPretty}")
+                println(s"   ${n.subtrees(0)} :: ${x toPretty}  ∩  ${farg toPretty}  =>  ${arg toPretty}")
+                println(s"   ${n.subtrees(1)} :: ${y toPretty}  ∩  ${fret toPretty}  =>  ${ret toPretty}")
+              }
+              retype(n.subtrees(0), arg)
+              retype(n.subtrees(1), ret)
+              retype(n, xy)
             }
-            retype(n.subtrees(0), arg)
-            retype(n.subtrees(1), ret)
-            retype(n, xy)
           case _ =>
         }
         val arg = n.subtrees(0)
@@ -358,10 +362,13 @@ object TypeInference {
       else if (n =~ ("/", 2)) {
         n +: n.subtrees map nodeType match {
           case List(Some(tpe), Some(ltpe), Some(rtpe)) =>
-            val join = TypePrimitives.union(scope, List(ltpe, rtpe)) //reinforce(List(ltpe, rtpe))(resolve.join)
-            if (join != tpe) {
-              val force = step1(n, tpe)
-              //retype(n, force)
+            if (tpe != ltpe || tpe != rtpe) {
+              val join = TypePrimitives.union(scope, List(ltpe, rtpe))
+              if (join != tpe) {
+                retype(n, step1(n, tpe, join))
+                retype(n.subtrees(0), step1(n.subtrees(0), ltpe, tpe))
+                retype(n.subtrees(1), step1(n.subtrees(1), rtpe, tpe))
+              }
             }
           case _ =>
         }

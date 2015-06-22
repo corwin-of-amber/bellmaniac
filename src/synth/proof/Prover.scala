@@ -20,6 +20,10 @@ import semantics.FormulaTranslation
 import semantics.Prelude
 import synth.pods.Pod
 import semantics.TypeTranslation.TypedIdentifier
+import semantics.TypedSubstitution
+import semantics.Reflection.Compound
+import semantics.Reflection.Compound
+import semantics.Trench
 
 
 /**
@@ -87,13 +91,33 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
       v
     }
     
+    def goal(formula: Term) = {
+      val (env1, typed) = e(formula)
+      val (v, v_t) = formulat(typed)
+      termlings += ((env1, List()))
+      Compound(v_t, v)
+    }
+    
     def intros(goal: Term) = {
       val (vars, g) = Prover.this.intros(goal)
       locals ++= vars map (_.leaf)
       g
     }
     
-    def commit(assumptions: List[Term], goals: List[Term]) = {
+    def commonSwitch(c: CommonSubexpressionElimination) = 
+      new TypedSubstitution(
+        c.cabinet filter (_.length > 1) flatMap { l =>
+          val se = l.head.compact
+          println(s"${l.length}  x  ${se.term toPretty}");
+          val uf = let(se.capsule):@(se.enclosure)
+          l map (_.term) map ((_, uf))
+        } toList)
+    
+    def commit(assumptions: List[Term], goals: List[Term])(implicit d: DummyImplicit): Trench[Term] = {
+      commit(assumptions, goals map (Compound(_)))
+    }
+    
+    def commit(assumptions: List[Term], goals: List[Compound]) = {
       val symbols = typedecl.keys ++ (pods flatMap (_.decl.symbols)) ++ termb.intermediates ++ locals
       val env1 = (env /: termlings) { case (env, (env1, _)) => env ++ env1 }
       val terms1 = termlings map (_._2)
@@ -116,4 +140,36 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
     }
     
   }
+  
+  
+  import semantics.pattern.{SimplePattern,ExactMatch}
+  import collection.mutable.ListBuffer
+  
+  case class Subexpression(term: Term, enclosure: List[Term]) {
+    def compact = Subexpression(term, enclosure filter (term.leaves.contains))
+    def capsule = (enclosure :\ term)(_ ↦ _)
+  }
+  
+  class CommonSubexpressionElimination {
+    
+    def this(formulas: Iterable[Term], pattern: SimplePattern) = {
+      this; scan(formulas, pattern)
+    }
+    
+    val cabinet = ListBuffer[ListBuffer[Subexpression]]()
+    
+    def scan(formulas: Iterable[Term], pattern: SimplePattern) {
+      for (a <- formulas) {
+        pattern.find(a) foreach (mo => { 
+          def subexpr = Subexpression(mo.subterm, TypedLambdaCalculus.enclosure(a, mo.subterm) get)
+          cabinet.find { l => new ExactMatch(l.head.term) matchInclTypes (mo.subterm) } match {
+            case Some(l) => l += subexpr
+            case None => cabinet += ListBuffer(subexpr)
+          }
+        })
+      }    
+    }
+        
+  }
+  
 }

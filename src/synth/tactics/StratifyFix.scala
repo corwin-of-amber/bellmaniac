@@ -24,15 +24,13 @@ import synth.pods.NilPod
 import synth.pods.ConsPod
 import synth.pods.MinPod
 import synth.pods.NatPod
-import semantics.pattern.MacroMap
 import semantics.ProgressiveTypedSubstitution
 import semantics.Reflection.Consolidated
 import semantics.Binding
 import semantics.LambdaCalculus
-import semantics.pattern.SimplePattern
-import semantics.pattern.ExactMatch
 import syntax.transform.Extrude
 import synth.proof.Assistant
+import semantics.Trench
 
 
 
@@ -47,12 +45,47 @@ object StratifyFix {
  
   
   //def pair(x: Term, y: Term) = cons:@(x, cons:@(y, nil))
-
+  //def triple(x: Term, y: Term, z: Term) = cons:@(x, cons:@(y, cons:@(z, nil)))
+  //def tuple(x: Term, y: Term, z: Term, w: Term) = cons:@(x, cons:@(y, cons:@(z, cons:@(w, nil))))
   
-  def pair(x: Term, y: Term) = {
+  def tuple(x: Term, y: Term) = {
     import NatPod.{_0,_1}
     val ι = $TyTV("ι", N)
     ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1))
+  }
+  
+  def tuple(x: Term, y: Term, z: Term) = {
+    import NatPod.{_0,_1,_2}
+    val ι = $TyTV("ι", N)
+    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1), z |! (ι =:=  _2))
+  }
+  
+  def tuple(x: Term, y: Term, z: Term, w: Term) = {
+    import NatPod.{_0,_1,_2,_3}
+    val ι = $TyTV("ι", N)
+    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1), z |! (ι =:=  _2), z |! (ι =:=  _3))
+  }
+  
+  def pair(x: Term, y: Term) = tuple(x,y)
+
+  
+  class SpecPod(val J: Term) {
+    import examples.Paren.{<,θ,i,j,k,x,succ,f}
+    
+    val program = TI("program")(
+      fix((
+        TI("↦")(
+          θ :: ((J x J) ∩ <) ->: R , i :: J , j :: J ,
+          /::(
+            x:@i |! (succ:@(i,j)),
+            min:@ 
+            (k ↦
+              ( ((θ:@(i, k)) + (θ:@(k, j))) -: TV("item") )
+            )
+          )
+        )>> ) -: f
+      )
+    )
   }
   
   
@@ -94,19 +127,6 @@ object StratifyFix {
               )
             )
           )  -: TV("compute") */
-          /*
-          min:@
-          (
-            /::(
-              a ↦ (min:@ 
-                    (k ↦
-                      ( ((θ:@(i, k)) + (θ:@(k, j))) -: TV("item") )
-                    )
-                  ),
-              a ↦ (Ψ:@(i, j))
-            )
-          )
-          */
           /*(min:@ 
             (k ↦
               ( ((θ:@(i, k)) + (θ:@(k, j))) -: TV("item") )
@@ -116,6 +136,39 @@ object StratifyFix {
         ).foldRight /*:: (? ->: ((J x J) ∩ <) ->: R)*/ ) -: f )
     ))
   }
+  
+  object GapFix {
+    
+    class APod(val J: Term) {
+      import examples.Paren.{<,f,pred}
+      
+      val wv = TV("w")
+      val wh = TV("w'")
+      
+      val Ψ = $TV("Ψ")
+      val θ = $TV("θ")
+      val i = $TV("i")
+      val j = $TV("j")
+      val p = $TV("p")
+      val q = $TV("q")
+      
+      val program = TI("program")(
+        (Ψ :: ((J x J) -> R)) ↦ fix(
+          ((θ :: ((J x J) -> R)) ↦ (i ↦ (j ↦ (
+              min:@ tuple(
+                  Ψ:@(i,j),
+                  //θ:@(pred:@i,j),
+                  min:@(p ↦ ((θ:@(p,j)) |! (<(p,i)))),
+                  //min:@(p ↦ ((θ:@(p,j)) + ((wv :: (((J x J) ∩ <) -> R)):@(p,i)))),
+                  min:@(q ↦ (θ:@(i,q) |! (<(q,j))))
+              )
+          )))) -: f
+        )
+      )
+    }
+    
+  }
+  
     
   def main(args: Array[String]): Unit = {
 
@@ -127,11 +180,14 @@ object StratifyFix {
     val prenv = Paren.env
     implicit val scope = prenv.scope
     
+    val spec = new SpecPod(Paren.J)
     val A = new APod(Paren.J)
     val A0 = new APod(Paren.J0)
     val A1 = new APod(Paren.J1)
     
-    val (vassign, program) = TypeInference.infer( inline( prebind(InputPod.program(A.program).unfoldRight) ) )
+    val GA = new GapFix.APod(Paren.J)
+    
+    val (vassign, program) = TypeInference.infer( inline( prebind( spec.program ) ) )
     
     implicit val env = prenv ++ TypeTranslation.decl(scope, vassign + (V("+") -> (R ->: R ->: R)))
     
@@ -144,8 +200,8 @@ object StratifyFix {
     val nilNR = NilPod(N, R)
     val nilJR = NilPod(J, R)
     val consR = ConsPod(R)
-    val minJR = MinPod(J, R, toR.<)//, opaque=true)
-    val minNR = MinPod(N, R, toR.<)//, opaque=true)
+    val minJR = MinPod(J, R, toR.<) //, opaque=true)
+    val minNR = MinPod(N, R, toR.<) //, opaque=true)
     import toR.<
     val plustot = ∀:(R, (a,b) => ↓(a + b))
     val plusmono = ∀:(R, (a,b,c,d) => ~(< :@(a, c)) ->: ~(< :@(b, d)) ->: ~(< :@(a + b, c + d)))
@@ -160,13 +216,9 @@ object StratifyFix {
     val j = $TV("j")
     val r = $TV("r")
     
+    val spec_f = spec.program :/ "f"
     val A_f = A.program :-/ "f"
-    val B_f = { val Ψ = $TV("Ψ")
-                val θ = $TV("θ")
-                ((Ψ :: (((J x J) ∩ Paren.<) -> R)) ↦ 
-                    ((θ :: (((J x J) ∩ Paren.<) -> R)) ↦ (/::((Ψ) :: ((? x J0) -> ?),
-                              ((A.program :-/ "f") :@ (Ψ,θ)) :: ((? x J1) -> ?))))) }
-                       
+    val GA_f = GA.program :-/ "f"                       
     
     val a = new Assistant
        
@@ -189,11 +241,29 @@ object StratifyFix {
     def se(e: Term) = (e :: ((J1 x J1) -> ?))
     def quadrants(enw: Term, ene: Term, esw: Term, ese: Term) = /::(nw(enw), ne(ene), sw(esw), se(ese))
     
-    val phase0 = quadrants(A_f :@ (Ψ,θ), Ψ, ⊥, Ψ)
-    val phase1 = Ψ ↦ quadrants(Ψ, A_f :@ (Ψ,θ), ⊥, A_f :@ (Ψ,θ))
+    /*
+    val init = θ ↦ (i ↦ ((j::J) ↦ (x:@i |! (succ:@(i,j)))))
+    val phase0 = θ ↦ quadrants(A_f :@ (Ψ,θ), Ψ, ⊥, Ψ)
+    val phase1 = Ψ ↦ (θ ↦ (quadrants(Ψ, A_f :@ (Ψ,θ), ⊥, A_f :@ (Ψ,θ))))
+
+    val phase2 = θ ↦ quadrants(Ψ, Ψ, ⊥, A_f :@ (Ψ,θ))
+    val phase3 = Ψ ↦ (θ ↦ (quadrants(Ψ, A_f :@ (Ψ,θ), ⊥, Ψ)))
+    */
     
-    val assumptions = List(↓(NatPod._0) & ↓(NatPod._1) & ~(NatPod._0 =:= NatPod._1), ∀:(J, (x,y) => ~(↓(⊥ :@(x,y))))) map a.compile
-    val goals = List( (phase1:@phase0 ) =:= (A_f :@ (Ψ,θ)) ) map a.compile map a.intros
+    val phase0 = (θ ↦ quadrants(GA_f :@ (Ψ,θ), Ψ, Ψ, Ψ))
+    val phase1 = (Ψ ↦ (θ ↦ (quadrants(Ψ, GA_f :@ (Ψ,θ), GA_f :@ (Ψ,θ), GA_f :@ (Ψ,θ)))))
+    
+    val assumptions = List(↓(NatPod._0) & ↓(NatPod._1) & ↓(NatPod._2) & ↓(NatPod._3) & ~(NatPod._0 =:= NatPod._1)
+        /*& ~(NatPod._0 =:= NatPod._2) & ~(NatPod._1 =:= NatPod._2)*/,       
+        ∀:( J, (x,y) => ↓(pred:@(x)) -> Paren.<(pred:@(x), x) ),
+        ∀:(J, (x,y) => ~(↓(⊥ :@(x,y))))) map a.compile
+    val goals = List( /*init:@(A_f:@(ζ,θ))   =:=   init:@ζ,
+                      A_f:@(init:@θ,θ)     =:=   spec_f :@ θ,*/
+                      (phase0:@(phase1:@(ζ,θ)) ) =:= (phase0 :@ (ζ)),
+                      (phase1:@(phase0:@θ,θ)) =:= (GA_f :@ (Ψ,θ))/*,
+                      phase2:@(phase3:@(ζ,θ))  =:= phase2 :@ (ζ),
+                      phase3:@(phase2:@θ,θ)   =:= phase1 :@ (Ψ,θ) */
+    ) map a.compile map a.intros
     
     
     def m(k: Term, e: Term) = min:@(k ↦ e)
@@ -214,8 +284,7 @@ object StratifyFix {
     val goals = List( (/::(Ψ :: ((J0 x J0) -> R), (i ↦ (j ↦ r)) :: ((? x J1) -> R)):: ((? x J0) -> R)) =:= (Ψ :: ((J0 x J0) -> R)) ) map a.compile map a.intros
     */
     
-    val p = new Prover(List(NatPod, toR, minJR, minNR, consR, nilNR))
-    val t = new p.Transaction
+    val p = new Prover(List(/*NatPod,*/ toR, minJR, minNR, consR, nilNR))
     
     val extrude = Extrude(Set(I("/"), cons.root))
 
@@ -223,41 +292,19 @@ object StratifyFix {
     
     goals foreach (Rewrite.display(_))
     
-    //System.exit(0)
-    
-    /*
-    import collection.mutable.ListBuffer
-    val common = ListBuffer[ListBuffer[Term]]()
-    for (a <- ((assumptions ++ goals))) {
-      new SimplePattern(min :@ ?).find(a) foreach (mo => { 
-        Rewrite.display(mo.subterm) ; println(" ." * 40) 
-        common.find { l => new ExactMatch(l.head) matchInclTypes (mo.subterm) } match {
-          case Some(l) => l += mo.subterm
-          case None => common += ListBuffer(mo.subterm)
-        }
-      })
+    val results =
+    for (g <- goals) yield {
+      val goals = List(g)
+    //{
+      import semantics.pattern.SimplePattern
+      val t = new p.Transaction
+      val switch = t.commonSwitch(new p.CommonSubexpressionElimination(goals, new SimplePattern(min :@ ?)))
+      
+      t.commit(assumptions map a.simplify map t.prop, goals map (switch(_)) map a.simplify map t.goal)
     }
     
-    val switch = new TypedSubstitution(
-      common filter (_.length > 1) flatMap { l =>
-        println(s"${l.length}  x  ${l.head toPretty}");
-        val uf = t.let(l.head)
-        l map ((_, uf))
-      } toList)
-    
-    for (a <- ((assumptions ++ goals))) {
-      println(s"${a toPretty}   --->   ${switch(a) toPretty}")
-    }
-    
-        
-    for (a <- ((assumptions ++ goals) map (switch(_)) map a.simplify map p.e map (_._2))) {
-      //Rewrite.display(a)
-      println(a toPretty)
-    }*/
-
-    //System.exit(0)
-    
-    t.commit(assumptions map a.simplify map t.prop, goals /*map (switch(_))*/ map a.simplify map t.prop)
+    println("=" * 80)
+    Trench.display(results reduce (_ ++ _), "◦")
   }
   
 }

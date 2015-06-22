@@ -57,6 +57,8 @@ object Paren {
   
   def x = TV("x")
   def _1 = TI(1)
+  def succ = TV("+1")
+  def pred = TV("-1")
   
   def TT(v: Any) = T(new Identifier(v, "type variable"))
   
@@ -127,8 +129,9 @@ object Paren {
     val h = scope.sorts.hierarchy.replaceDescendants(ley map (t => (t, T(t.root, List(T(newbot, t.subtrees))))))
     scope.sorts.hierarchy = h
 
-    (TypeTranslation.subsorts(scope) + (<.root, new Declaration(T(TypedIdentifier(<.root, J ->: J ->: B))))) where 
+    TypeTranslation.subsorts(scope) ++ TypeTranslation.decl(scope, Map(< ~> (J ->: J ->: B), succ ~> (J ->: J ->: B), pred ~> (J -> J))) where 
          ( transitive(J)(<), antisymm(J)(<),
+           ∀:( J, (x,y,z) => succ(x,z) -> (<(x,z) & ~(<(x,y) & <(y,z))) ),
            compl(J)(J0, J1), allToAll(J)(J0, <, J1), ∀:( J, x => ~T(newbot)(x) )
            /*partition(J)(J0, K0, K1), partition(J)(J1, K2, K3),
            allToAll(J)(K0, <, K1), allToAll(J)(K2, <, K3),

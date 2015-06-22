@@ -23,6 +23,8 @@ object NatPod extends Pod {
   
   val _0 = TyTV("0", N)
   val _1 = TyTV("1", N)
+  val _2 = TyTV("2", N)
+  val _3 = TyTV("3", N)
   val z =  TyTV("z", N -> B)
   val nz = TyTV("~z", N -> B)
   val s =  TyTV("s", N -> N)

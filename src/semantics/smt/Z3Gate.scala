@@ -1,6 +1,7 @@
 
 package semantics.smt
 
+import java.util.regex.Pattern
 import scala.collection.mutable.HashMap
 import com.microsoft.z3.Expr
 import com.microsoft.z3.Sort
@@ -12,6 +13,8 @@ import semantics.TypeTranslation.TypedIdentifier
 import com.microsoft.z3.BoolExpr
 import com.microsoft.z3.Z3Exception
 import scala.util.Either
+import com.microsoft.z3.Status
+import com.microsoft.z3.Solver
 
 
 
@@ -186,15 +189,172 @@ class Z3Gate {
     try op
     finally rollback
   }
-  
-  def solveAndPrint(assumptions: List[BoolExpr], goals: List[BoolExpr]) =
-    Z3Sugar.solveAndPrint(assumptions, goals)
-  
+
+  // -----------
+  // Solver part
+  // -----------
+
   def solve(assumptions: List[BoolExpr], goals: List[BoolExpr], verbose: Boolean=false) =
     if (verbose)
-      Z3Sugar.solveAndPrint(assumptions, goals)
+      Z3Gate.solveAndPrint(assumptions, goals)
     else      
-      Z3Sugar.solve(assumptions, goals)
+      Z3Gate.solve(assumptions, goals)
+      
+  def solveAndPrint(assumptions: List[BoolExpr], goals: List[BoolExpr]) = solve(assumptions, goals, true)
+  
+  def solve(assumptions: List[BoolExpr], goal: Iterable[Z3Gate.Sequent]) = Z3Gate.solve(assumptions, goal)
+}
+
+
+object Z3Gate {
+  
+  import Z3Sugar._
+
+  // -----------
+  // Solver part
+  // -----------
+
+  import Z3Sugar.ctx
+  
+  def mkSolver = {
+    val s = ctx mkSolver()
+    /*val p = ctx mkParams()
+    p.add("soft_timeout", 1000)
+    s.setParameters(p)*/
+    s
+  }
+  
+  object ProverStatus extends Enumeration {
+    type ProverStatus = Value
+    val VALID, INVALID, UNKNOWN = Value
+
+    def fromStatus(status: Status) = {
+      status match {
+        case Status.UNSATISFIABLE => VALID 
+        case Status.SATISFIABLE => INVALID
+        case Status.UNKNOWN => UNKNOWN
+      }
+    }
+    
+    def toPretty(status: Value) = status.toString.toLowerCase
+    
+    implicit class Pretty(v: Value) {
+      def toPretty = v.toString.toLowerCase
+    }
+  }
+  
+  import ProverStatus._
+
+  case class Sequent(val negative: List[BoolExpr], val positive: BoolExpr)
+  
+  def solve(assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
+    val s = mkSolver
+    save(assumptions, goals)
+    assumptions foreach (s.add(_))
+    goals map (checkAndPrint(s, _))
+  }
+  
+  def solveAndPrint(assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
+    val s = mkSolver
+    
+    for (a <- assumptions) {
+      println(s" * $a")
+      s add a
+    }
+      
+    for (g <- goals) yield {
+      println("-" * 80)
+      println(s" ? $g")
+      checkAndPrint(s, g)
+    }
+  }
+
+  def solve(assumptions: List[BoolExpr], goals: Iterable[Sequent])(implicit d: DummyImplicit)  = {
+    val s = mkSolver
+    save(assumptions, goals)
+    assumptions foreach (s.add(_))
+    goals map (check(s, _))
+  }
+    
+  def check(s: Solver, goal: BoolExpr) = {
+    s.push
+    s add ~goal
+    try ProverStatus.fromStatus(s.check)
+    finally s.pop
+  }
+  
+  def checkAndPrint(s: Solver, goal: BoolExpr): ProverStatus = {
+    s.push
+    s add ~goal
+    try checkAndPrint(s)
+    finally s.pop
+  }
+
+  def check(s: Solver, goal: Sequent) = {
+    s.push
+    goal.negative foreach (s add _)
+    s add ~goal.positive
+    try ProverStatus.fromStatus(s.check)
+    finally s.pop
+  }
+  
+  def checkAndPrint(s: Solver, goal: Sequent): ProverStatus = {
+    s.push
+    goal.negative foreach (s add _)
+    s add ~goal.positive
+    try checkAndPrint(s)
+    finally s.pop
+  }
+
+  def checkAndPrint(s: Solver): ProverStatus = {
+    val status = s.check
+    status match {
+      case Status.UNSATISFIABLE => 
+        println("valid")
+        ProverStatus.VALID
+      case Status.SATISFIABLE =>
+        println("invalid")
+        println(s.getModel)
+        ProverStatus.INVALID
+      case Status.UNKNOWN => 
+        println(s"unknown (${s.getReasonUnknown})")
+        ProverStatus.UNKNOWN
+    }
+  }
+    
+  // --------------
+  // Benchmark Part
+  // --------------
+      
+  import syntax.Piping._
+
+  var benchmarkCounter = 0;
+  
+  def save(assumptions: List[BoolExpr], goals: List[BoolExpr]) {
+    import java.io._
+    goals.zipWithIndex foreach { case(goal, i) =>
+      val f = new PrintWriter(new File(s"/tmp/benchmark${benchmarkCounter}-${i}.txt"))
+      f write ctx.benchmarkToSMTString("bellmania", "", "unknown", "", assumptions toArray, ~goal) |> standardize
+      f close
+    }
+    benchmarkCounter = benchmarkCounter + 1
+  }
+  
+  def save(assumptions: List[BoolExpr], goals: Iterable[Sequent])(implicit d: DummyImplicit)  {
+    import java.io._
+    goals.zipWithIndex foreach { case(goal, i) =>
+      val f = new PrintWriter(new File(s"/tmp/benchmark${benchmarkCounter}-${i}.txt"))
+      f write ctx.benchmarkToSMTString("bellmania", "", "unknown", "", (assumptions ++ goal.negative) toArray, ~goal.positive) |> standardize
+      f close
+    }
+    benchmarkCounter = benchmarkCounter + 1
+  }
+  
+  def standardize(smt: String) = {
+    def declare_sort(smt: String) = Pattern.compile(raw"\((declare-sort .*?)\)") matcher smt replaceAll "($1 0)"
+    def implies(smt: String) = smt.replace("implies", "=>")  // TODO word boundaries
+    smt |> declare_sort |> implies
+  }
 }
 
 

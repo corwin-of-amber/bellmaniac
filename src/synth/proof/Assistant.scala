@@ -86,7 +86,11 @@ class Assistant(implicit env: Environment) {
       simplify(TypedTerm.preserve( term, TypedTerm.preserveBoth(sub(0), x) :@ sub(1) )))))
     else if (term =~ ("|!", 2)) {
       val cond = term.subtrees(1) // do not simplify guard conds
-      if (sub(0) =~ ("|!", 2) && subsumesGuard(sub(0).subtrees(1), term.subtrees(1))) sub(0)
+      if (sub(0) =~ ("|!", 2)) {
+        val mcond = mergeConds(sub(0).subtrees(1), cond)
+        if (mcond == sub(0).subtrees(1)) sub(0)
+        else TypedTerm.preserveBoth(term, TypedTerm.preserve(sub(0), sub(0).subtrees(0) |! mcond))
+      }
       else TypedTerm.preserve(term, sub(0) |! cond)
     }
     else if (term =~ (":", 2)) sub(1) // TODO only throw away labels when necessary?
@@ -100,8 +104,8 @@ class Assistant(implicit env: Environment) {
     else TypedTerm.replaceDescendant(fun, (body, TypedTerm.preserve(body, body |! &&(checks))))
   }
   
-  def subsumesGuard(condA: Term, condB: Term) = {
+  def mergeConds(condA: Term, condB: Term) = {
     val a = condA.split(I("&"))
-    condB.split(I("&")) forall a.contains
+    && (a ++ (condB.split(I("&")) filterNot a.contains))
   }
 }
