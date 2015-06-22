@@ -441,9 +441,14 @@ object TypeInference {
     
     private def step1(node: Term, types: Term*) = {
       /**/ assume(!types.isEmpty) /**/
-      val least = TypePrimitives.intersection(scope, types toList)
-      if (log.isLoggable(Level.INFO)) _printNicely(node, types, List(least))
-      least
+      try {
+        val least = TypePrimitives.intersection(scope, types toList)
+        if (log.isLoggable(Level.INFO)) _printNicely(node, types, List(least))
+        least
+        }
+      catch { 
+        case x: Scope.TypingException => throw x.at(node)
+      }
     }
     
     def _printNicely(node: Term, terms: Seq[Term], force: Seq[Term]) {

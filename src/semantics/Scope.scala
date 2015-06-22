@@ -164,6 +164,16 @@ class Scope {
 }
 
 object Scope {
-  class TypingException(msg: String) extends Exception(msg) {}
+  class TypingException(msg: String) extends Exception(msg) {
+    import syntax.AstSugar._
+    
+    var formula: Term = null;
+    def at(formula: Term): TypingException = {
+      this.formula = formula; this
+    }
+    
+    override def getMessage = if (formula == null) super.getMessage 
+      else s"$msg\n\tin: ${formula.toPretty}"
+  }
 }
 
