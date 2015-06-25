@@ -26,6 +26,7 @@ The optimal cost is given by the following recurrence:
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
+\label{intro:gap spec}
 \end{equation}
 
 \smallskip\noindent
@@ -86,17 +87,14 @@ The algorithm designer then writes the following pseudo-code:
   \STATE Compute \qbox4 using data from \qbox2 and \qbox3.
 \end{algorithmic}
 
-\newcommand\fig{}
-
 We say that the computation is \newterm{stratified},
 in the sense that information flows only in one direction. It can be depicted as
 a sequence of steps, each of which reads some regions from the array (possibly none)
-and writes into a target region. It can be viewed as a chain, like the one on
-Figure~\fig\ref{intro:chain}.
+and writes into a target region. It can be viewed as a chain, like the one in
+\Cref{intro:chain}.
 
 \begin{figure}
-\fig\label{intro:chain}
-\caption{}
+\caption{\label{intro:chain}}
 \end{figure}
 
 At this point it can be noticed that step 1 is equivalent to the original
@@ -104,6 +102,173 @@ algorithm when given as input the prefixes of $x$ and $y$ whose length correspon
 height and width of \qbox1.
 
 With the other three steps, however, things are not so simple:
-each of them is required to receive some data in addition to the input.
+each of them is required to process some data in addition to the input.
 For example, step 2 is required to read values from \qbox1, due to the expression
-$\min_{0\leq q<j} G_{iq}+w_{qj}$. 
+$G_{iq}$ (where $\scriptstyle 0\leq q<j$).
+In order to reason more formally, we define $J$ and $K$ the index sets of the rows
+and columns, respectively; $J_0$, $J_1$ for the top and bottom row indexes, respectively;
+and $K_0$, $K_1$ for the left and right column indexes (\Cref{intro:slice G}).
+The specifications for step 2 then take the following form:
+
+\begin{figure}
+\[
+\renewcommand\arraystretch{2}
+\begin{array}{c|c|c|c|}
+  \multicolumn{2}{c}{} & \multicolumn{2}{c}{K} \\ \cline{3-4}
+  \multicolumn{2}{c}{} & \multicolumn{1}{c}{K_0}  & \multicolumn{1}{c}{K_1}\\ \cline{3-4}
+  \multirow{2}{*}{$J$} & J_0 & 1 & 2 \\ \cline{3-4}
+    & J_1 & 3 & 4 \\ \cline{3-4}
+\end{array}
+\]
+\caption{\label{intro:slice G}}
+\end{figure}
+
+\makeatletter
+\newcommand{\LeftEqNo}{\let\veqno\@@leqno}
+\makeatother
+
+\begin{equation}\LeftEqNo
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l}
+	G_{\,(i :: J_0)\,(j :: K_1)} ~=~  \\
+	\qquad
+	\begin{cases}
+		0                        & i=j=0 \\
+		w_{0j}                   & i=0, j>0 \\
+		w'_{i0}                  & i>0, j=0 \\
+		\begin{array}{@{}l@{~}l}
+		  \min\langle & \underset{0\leq (q::K) <j}\min ~ G_{iq} + w_{qj}, \\
+		              & \underset{0\leq (p::J_0) <i}\min ~ G_{pj} + w'_{pi}~\rangle
+		\end{array}              & i,j>0
+	\end{cases}
+\end{array}
+\end{equation}
+
+\medskip
+Type annotations have been placed on $i$, $j$, $p$, and $q$ to define the regions
+over which they range. $i::J_0, j::K_1$ means that the element $G_{ij}$
+is always in \qbox2. Similarly, $G_{pj}$ is also in \qbox2. $G_{iq}$ is either in
+\qbox1 or in \qbox2.
+
+\begin{figure}
+\begin{tabular}{l}\includegraphics{img/gap-depend}\end{tabular}
+\todo{for the simplified version, the cell (i-1,j-1) should not be grayed}
+\caption{\label{intro:gap dependency matrix}}
+\end{figure}
+
+To address the situation, the algorithm designer would like to separate the parts
+of the computation that read from \qbox1 from the parts that read from \qbox2.
+This can be achieved here by splitting the $\min_{0\leq(q::K)<j}$ into two
+ranges, according to the region in which $G_iq$ resides.
+
+\begin{equation}\LeftEqNo
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l}
+	G_{\,(i :: J_0)\,(j :: K_1)} ~=~  \\
+	\qquad
+	\begin{cases}
+		0                        & i=j=0 \\
+		w_{0j}                   & i=0, j>0 \\
+		w'_{i0}                  & i>0, j=0 \\
+		\begin{array}{@{}l@{~}l}
+		  \min\langle & \underset{(q::K_0)}\min ~ G_{iq} + w_{qj}, \\
+		              & \underset{(q::K_1) <j}\min ~ G_{iq} + w_{qj}, \\
+		              & \underset{0\leq (p::J_0) <i}\min ~ G_{pj} + w'_{pi}~\rangle
+		\end{array}              & i,j>0
+	\end{cases}
+\end{array}
+\end{equation}
+
+The path becomes clear: compute $\min_{(q::K_0)} ~ G_{iq} + w_{qj}$ first, for all $i$, $j$
+in \qbox2. Then use the results to compute $G_{ij}$.
+
+\begin{equation}\LeftEqNo
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l}
+	G_{\,(i :: J_0)\,(j :: K_1)} ~=~  \\
+	\qquad
+	\textrm{let}~\psi_{ij} = \underset{(q::K_0)}\min ~ G_{iq} + w_{qj} \\
+	\qquad\textrm{in} \\
+	\qquad
+	\begin{cases}
+		0                        & i=j=0 \\
+		w_{0j}                   & i=0, j>0 \\
+		w'_{i0}                  & i>0, j=0 \\
+		\begin{array}{@{}l@{~}l}
+		  \min\langle & \psi_{ij}, \\
+		              & \underset{(q::K_1) <j}\min ~ G_{iq} + w_{qj}, \\
+		              & \underset{0\leq (p::J_0) <i}\min ~ G_{pj} + w'_{pi}~\rangle
+		\end{array}              & i,j>0
+	\end{cases}
+\end{array}
+\label{intro:let in 2}
+\end{equation}
+
+\medskip
+The second part in \eqref{intro:let in 2} starts to look similar to \eqref{intro:gap spec}:
+in particular, the types of $p$ and $q$ are the same as those of $i$ and $j$.
+In fact, if we set $\psi_{ij}=\infty$, we get \eqref{intro:gap spec} as a special case,
+only with $J_0$ and $K_1$ instead of $J$ and $K$.
+It therefore makes sense to write a version that generalizes both.
+
+\begin{equation}\LeftEqNo
+\renewcommand\arraystretch{1.5}
+\begin{array}{l}
+	A_{\,\psi\, (i :: J)\, (j :: K)} ~=~  \\
+	\qquad
+	\begin{cases}
+		0                        & i=j=0 \\
+		w_{0j}                   & i=0, j>0 \\
+		w'_{i0}                  & i>0, j=0 \\
+		\begin{array}{@{}l@{~}l}
+		  \min\langle & \psi_{ij}, \\
+		              & \underset{(q::K)<j}\min ~ A_{\psi iq} + w_{qj}, \\
+		              & \underset{(p::J)<i}\min ~ A_{\psi pj} + w'_{pi}~\rangle
+		\end{array}              & i,j>0
+	\end{cases}
+\end{array}
+\label{intro:gap phase A}
+\end{equation}
+
+\medskip
+And we can now rewrite \eqref{intro:gap spec} and \eqref{intro:let in 2} as
+%
+\begin{equation}
+	G_{ij} ~=~ A_{\,(\infty^{JK})\,(i::J)\,(j::K)}
+\end{equation}
+%
+\begin{equation}
+\renewcommand\arraystretch{1.3}
+\begin{array}{l@{}l}
+	G_{\,(i :: J_0)\,(j :: K_1)} ~=~ 
+	& \textrm{let}~\psi_{ij} = \underset{(q::K_0)}\min ~ G_{iq} + w_{qj} \\
+	& \textrm{in}~A_{\,\psi\,(i::J_0)\,(j::K_1)}
+\end{array}	
+\label{intro:let in 2 using A}
+\end{equation}
+
+\medskip
+It takes a bit more insight to notice that \eqref{intro:let in 2 using A} can be further
+generalized into:
+%
+\begin{equation}
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l}
+	A_{\,\psi\,(i :: J)\,(j :: K)} ~=~  \qquad\mbox{(if $i\in J_0$, $j\in K_1$)}\\
+	\qquad
+	\textrm{let}~\psi'_{ij} = \min \langle~\psi_{ij}, \underset{(q::K_0)}\min ~ G_{iq} + w_{qj}~\rangle \\
+	\qquad\textrm{in}~
+	A_{\,\psi'\,(i::J_0)\,(j::K_1)}
+\end{array}
+\label{intro:let in A}
+\end{equation}
+
+That is the core of the divide and conquer method: representing the output as a combination
+of smaller instances of the problem, or sub-problems, yielding a solution that is essentially
+a recursive routine, or a set of mutually recursive routines. In \eqref{intro:let in A}, the
+``let''-expression $\psi'_{ij} = \min \langle~\psi_{ij}, \min_{(q::K_0)} ~ G_{iq} + w_{qj}~\rangle$
+is another sub-problem that has to be addressed using the same slicing technique.
+Once all the pieces fit together, it is possible to cut the space into arbitrarily small pieces,
+that fit nicely in each core's local cache. This greately increases performance, as demonstrated
+by~\citneeded{perhaps include a table with exact figures}. 
+

@@ -1,9 +1,15 @@
 \documentclass[preprint]{sigplanconf}
 
+\usepackage{cleveref}
 \usepackage{amsmath,amssymb}
 \usepackage{algorithmic,algorithm}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{color}
 
 \newcommand\newterm[1]{{\em #1}}
+\newcommand\todo[1]{{\color{blue} \footnote{\color{blue} TODO: {#1}}}}
+\newcommand\citneeded[1]{{\color{blue} \cite{?}\footnote{\color{blue} citation needed. #1}}}
 
 \begin{document}
 
