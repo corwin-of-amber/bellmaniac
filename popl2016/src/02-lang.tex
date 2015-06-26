@@ -1,0 +1,57 @@
+\section{A Unified Language}
+
+\newcommand\semp[1]{[\![{#1}]\!]}
+\newcommand\fix{\operatorname{fix}}
+
+Bellmania uses the same language for specifications and for programs.  Its core is simply-typed
+$\lambda$-calculus with universally quantified type variables (polymorphic types).
+
+We write abstraction terms as $(v:\T)\mapsto e$, where $\T$ is the type of the argument $v$ and $e$ is
+the body. Curried functions $(v_1:\T_1)\mapsto (v_2:\T_2) \mapsto \cdots \mapsto (v_n:\T_n) \mapsto e$ are abbreviated 
+as $(v_1:\T_1)\cdots(v_n:\T_n)\mapsto e$.
+
+The semantics differ slightly from that of traditional functional languages: arrow types $\T_1\to\T_2$
+are interpreted as {\bf mappings} from values of type $\T_1$ to values of type $\T_2$. Algebraically,
+interpretations of types, $\semp{\T_1}$, $\semp{\T_2}$, are sets, and interpretations of arrow-typed terms,
+$f : \T_1\to\T_2$, are {\bf partial functions} --- $\semp{f} : \semp{T_1}\rightharpoonup\semp{T_2}$.
+This implies that a term $t : \T$ may evaluate to an \newterm{undefined} value, $\semp{t}=\bot_\T$
+(We would shorten it to $\semp{t}=\bot$ when the type is either insignificant or understood from the context).
+For simplicity, we shall identify $\bot_{\T_1\to\T_2}$ with the empty mapping $(v:\T_1)\mapsto\bot_{\T_2}$.
+
+\subsection{Liquid Types}
+
+The core is augmented with predicate abstraction in the form of logically quantified data types 
+(Liquid Types~\citneeded{}). These are refinement types restricted via a set of abstraction predicates,
+called \newterm{qualifiers}, which are defined over the base types.
+Some qualifiers are built-in, and more can defined by the user. To keep the syntax simple, we somewhat
+limit the use of qualifiers, allowing only the following forms:
+
+\begin{itemize}
+  \item $\{v:\T ~|~ P(v)\}$, abbreviated as $\T\cap P$. When the signature of $P$ is known (which is
+  almost always), it is enough to write $P$.
+  \item $\{v:\T ~|~ P(v)\land Q(v)\}$, abbreviated as $\T\cap P\cap Q$, or just $P\cap Q$. This extends
+  to any number of conjuncts of the same form.
+  \item $x : \T_2 \to \{v:\T_2 ~|~ R(x,v)\} \to \T_3$, abbreviated as $\big((\T_1\times\T_2)\cap R\big)\to\T_3$.
+  Note that the first parameter to $R$ must be the preceding argument. This extends to quantifiers of
+  any arity. Also note that the language does not define tuple types; hence there is no distinction
+  between curried and uncurried function types.
+\end{itemize}
+
+The type refinement operators $\cap$ and $\times$ may be composed to create conjunctions of qualifiers,
+as long as their argument sets are either disjoint or contained, but not overlapping;
+for example, \[x:\{v:\T_1~|~P(v)\}\to \{v:\T_2~|~Q(v)\land R(x,v)\}\to\T_3\] can be written as
+$\big((P\times Q)\cap R\big)\to\T_3$, but \[x:T_1\to y:\{v:\T_2~|~R(x,v)\} \to \{v:\T_3~|~R(y,v)\}\to\T_4\]
+cannot be represented by this restricted fragment.
+
+\subsection{Operators}
+
+{\color{Gray}
+\begin{itemize}
+  \item Fixed point operator $\fix f$
+  \item Slash operator $/$
+  \item Cast operator $t :: \T$ inside expressions
+\end{itemize}
+}
+
+\subsection{Example \hrulefill}
+\hrule

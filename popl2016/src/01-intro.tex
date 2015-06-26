@@ -1,8 +1,8 @@
 \section{Introduction}
 
-$\vdots$
+\begin{center}$\vdots$\end{center}
 
-As a motivate example, we consider the Simplified Gap problem.
+As a motivating example, we consider the Simplified Gap problem.
 An intelligent agent is given two strings $x$ and $y$, and is requested
 to make them equal by deleting the characters at index range $[i..j)$
 from $x$, at a cost of $w_{ij}$ ($0\leq i<j\leq |x|$), from $y$,
@@ -271,4 +271,19 @@ is another sub-problem that has to be addressed using the same slicing technique
 Once all the pieces fit together, it is possible to cut the space into arbitrarily small pieces,
 that fit nicely in each core's local cache. This greately increases performance, as demonstrated
 by~\citneeded{perhaps include a table with exact figures}. 
+
+\begin{center}$\vdots$
+\end{center}
+
+\subsection{Main Contributions}
+
+\begin{enumerate}
+  \item We develop a small set of tactics that can be used to transform a class of recurrence
+  specifications intro equivalent divide-and-conquer programs, that admit parallel cache-local
+  implementations, in a principled, systematic manner.
+  \item We prove that these tactics are semantics-preserving, assuming some side conditions are met
+  at the point when the tactic is applied.
+  \item We show that the side conditions can be effectively translated into first-order closed
+  formulas, and verified automatically by SMT solvers.
+\end{enumerate}
 

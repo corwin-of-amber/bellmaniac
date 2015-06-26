@@ -1,15 +1,20 @@
 \documentclass[preprint]{sigplanconf}
 
 \usepackage{cleveref}
-\usepackage{amsmath,amssymb}
+\usepackage{amsmath,amssymb,amsopn}
 \usepackage{algorithmic,algorithm}
 \usepackage{multirow}
 \usepackage{graphicx}
-\usepackage{color}
+\usepackage[usenames,dvipsnames]{color}
 
-\newcommand\newterm[1]{{\em #1}}
 \newcommand\todo[1]{{\color{blue} \footnote{\color{blue} TODO: {#1}}}}
 \newcommand\citneeded[1]{{\color{blue} \cite{?}\footnote{\color{blue} citation needed. #1}}}
+
+\newcommand\newterm[1]{{\it #1}}
+\newcommand\R{\mathbb{R}}
+\newcommand\N{\mathbb{N}}
+\newcommand\B{\mathbb{B}}
+\newcommand\T{\mathcal{T}}
 
 \begin{document}
 
@@ -69,5 +74,6 @@ parallel implementations that optimally utilize memory caches.
 synthesis, dynamic programming, smt
 
 \input{01-intro}
+\input{02-lang}
 
 \end{document}
