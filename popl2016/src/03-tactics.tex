@@ -1,0 +1,83 @@
+\section{Tactics}
+
+A \newterm{tactic} is a scheme of equalities that can be used for rewriting.
+When applied to a program term, any occurrence of the left-hand side is replaced by the right-hand side.
+A valid application of a tactic is an instance of the scheme that is well-typed and logically valid
+(that is, the two sides have the same interpretation in any structure that interprets the free
+variables occurring in the equality).
+
+We associate with each tactic some \newterm{proof obligations}, listed after the word {\bf Obligations}
+in each of the following subsections.
+When applying a tactic instance,
+these obligations are also instantiated and given to an automated prover. If verified successfully,
+they entail the validity of the instance. Clearly the tactic itself can be used as its proof obligation,
+if it is easy enough to prove automatically; in such cases we write ``{\bf Obligations:} tactic.''
+
+\newcommand\Obligations{\medskip\noindent{\bf Obligations:} }
+
+\subsection{Main Tactics}
+
+\subsubsection{Slice}
+\[f ~=~ f\big|_{X_1} ~\Big/~ f\big|_{X_2} ~\Big/ ~\cdots~ \Big/~ f\big|_{X_r}\]
+
+This tactic partitions a mapping into sub-regions. Each $X_i$ may be a $\times$-expression
+according to the arity of $f$.
+
+\Obligations tactic.
+
+Informally, the recombination expression is equal to $f$
+when $X_{1..r}$ ``cover'' all the defined points of $f$ (also known as the \newterm{support} of $f$).
+
+\subsubsection{Shrink}
+\[f ~=~ f :: \T\]
+
+Used to extra-specify the type of a sub-term.
+
+\Obligations tactic.
+
+For arrow-typed terms, this essentially requires to prove that $f$ is undefined anyway for
+argument values outside the domain of $\T$, and that the defined values are in the range of $\T$.
+
+\subsubsection{Stratify}
+\[\fix (f\applt g) ~=~ \fix f ~\applt~ \psi\mapsto \fix (\dot\psi\applt g)\]
+%
+where $\dot\psi$ abbreviates $\theta\mapsto\psi$, with fresh variable $\theta$.
+
+$\psi$ may be fresh, or it may reuse a variable already occurring in $g$, rebinding those occurrences.
+The example of this section will illustrate why this is useful.
+
+\Obligations Let $h=f\applt g$ and $g'=\psi\mapsto\dot\psi\applt g$. Let $\theta,\zeta$ be
+fresh variables.
+\begin{equation}
+\renewcommand\arraystretch{1.5}
+\begin{array}{l}
+f\,(g'\,\zeta\,\theta) ~=~ f\,\zeta \\
+g'\,(f\,\theta)\,\theta ~=~ h\,\theta
+\end{array}
+\label{tactics:Stratify obligations}
+\end{equation}
+
+Although the proof is not hard, we defer it to a later theorem.
+
+\subsection{Minor Tactics}
+
+\subsubsection{Associativity}
+\[\mathrm{reduce}\,(x {\scriptstyle\,++\,} y) ~=~ \mathrm{reduce}\,\langle \mathrm{reduce}\,x, \mathrm{reduce}\,y\rangle\]
+
+\subsubsection{Distributivity}
+Let $e$ be an expression with a hole, $e[\square] = (\cdots \square \cdots)$.
+%
+\[e[f_1/\cdots/f_r] ~=~ e[f_1] / \cdots / e[f_r]\]
+
+\subsubsection{Elimination}
+\[e[t] ~=~ e[\bot]\]
+
+\subsubsection{Let Insertion}
+
+Let $e$ be an expression with a hole, $e[\square] = (\cdots x_1 \mapsto \cdots x_k\mapsto \cdots \square \cdots)$, 
+where $x_{1..k}\mapsto$ are abstraction terms enclosing $\square$. The bodies may contain arbitrary terms
+in addition to these abstractions. Let $t$ be some other term.
+%
+\[e[t] ~=~ (\overline{x}\mapsto t) ~\applt~ z\mapsto e[z\,\overline{x}]\]
+%
+where $\overline{x}=x_{1..k}$, and $z$ is a fresh variable.

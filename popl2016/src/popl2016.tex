@@ -1,9 +1,10 @@
 \documentclass[preprint]{sigplanconf}
 
-\usepackage{cleveref}
 \usepackage{amsmath,amssymb,amsopn}
+\usepackage[T1]{fontenc}
 \usepackage{algorithmic,algorithm}
 \usepackage{multirow}
+\usepackage{cleveref}
 \usepackage{graphicx}
 \usepackage[usenames,dvipsnames]{color}
 
@@ -15,6 +16,7 @@
 \newcommand\N{\mathbb{N}}
 \newcommand\B{\mathbb{B}}
 \newcommand\T{\mathcal{T}}
+\renewcommand\S{\mathcal{S}}
 
 \begin{document}
 
@@ -75,5 +77,6 @@ synthesis, dynamic programming, smt
 
 \input{01-intro}
 \input{02-lang}
+\input{03-tactics}
 
 \end{document}

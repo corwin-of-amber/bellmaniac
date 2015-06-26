@@ -43,15 +43,45 @@ for example, \[x:\{v:\T_1~|~P(v)\}\to \{v:\T_2~|~Q(v)\land R(x,v)\}\to\T_3\] can
 $\big((P\times Q)\cap R\big)\to\T_3$, but \[x:T_1\to y:\{v:\T_2~|~R(x,v)\} \to \{v:\T_3~|~R(y,v)\}\to\T_4\]
 cannot be represented by this restricted fragment.
 
+As with any refinement type system, we define the \newterm{shape} of a type $\T$ to be the raw type
+obtained from it by removing all qualifiers.
+
 \subsection{Operators}
+
+\newcommand\applt{\textrm{{\scriptsize\,}\guillemotright{\scriptsize\,}}}
 
 {\color{Gray}
 \begin{itemize}
   \item Fixed point operator $\fix f$
   \item Slash operator $/$
-  \item Cast operator $t :: \T$ inside expressions
+  \item Cast operator $t :: \T$ inside expressions (and $t|_{\setlength{\fboxsep}{2pt}\fbox{}}$)
+  \item Left application $x \applt f$
 \end{itemize}
 }
 
+\subsection{Typing Rules}
+
+We define a Bellmania program to be well-typed iff its \newterm{raw form}, obtained by replacing all types by
+their shapes, is well-typed. This gives a simple characteristic of type safety without the need to
+explictly write any new typing rules. It also means that for $f:\T_1\to\T_2$, $x:T_3$, then $f\,x:\T_2$ whenever
+$\T_1$ and $\T_3$ have the same shape. This is much more permissive than the original Liquid Types,
+and requires some explanation.\todo{covariance and coercion}
+
+\subsection{Type Inference}
+
+\subsection{Primitives}
+
+The standard library contains some common primitives:
+
+\begin{itemize}
+  \item ${+}, {-} : \forall \T.~\T\to\T\to\T$ --- polymorphic binary operators.
+  \item ${<} : \forall \T. ~\T\to\T\to\B$ --- a polymorphic order relation.
+  \item $\min, \max, \Sigma : \forall \T\,\S.~ (\T\to\S)\to\S$ --- reduction operators
+    on ordered/unordered sequences\todo{bags? multisets?}. The sequence is represented by a mapping $f : \T\to\S$,
+    so that e.g. \[\semp{\min f} = \min \{\semp{f}\,v \;|\; v\in\semp{A}, \semp{f}\,v\neq\bot\}\]
+    The sequences are expected to be finite.
+\end{itemize}
+
 \subsection{Example \hrulefill}
 \hrule
+\bigskip
