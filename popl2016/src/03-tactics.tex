@@ -6,6 +6,9 @@ A valid application of a tactic is an instance of the scheme that is well-typed 
 (that is, the two sides have the same interpretation in any structure that interprets the free
 variables occurring in the equality).
 
+The application of tactics yields a sequence of program terms, each of which is checked to
+be equivalent to the previous one. We refer to this sequence by the name \newterm{development}.
+
 We associate with each tactic some \newterm{proof obligations}, listed after the word {\bf Obligations}
 in each of the following subsections.
 When applying a tactic instance,
@@ -59,6 +62,20 @@ g'\,(f\,\theta)\,\theta ~=~ h\,\theta
 
 Although the proof is not hard, we defer it to a later theorem.
 
+\subsubsection{Synth}
+\[\fix\Big(h_1 ~\big/~ \cdots ~\big/~ h_r\Big) ~=~ 
+  (\fix f_1) :: \T_1 ~\big/~ \cdots ~\big/~ (\fix f_r) :: \T_r\]
+
+This tactic is used to generate recursive calls to sub-programs. For $i=1..r$, $f_i$
+is typically either $h_i$ or a sub-term occurring earlier in the development.
+
+\Obligations Let $h=h_1/\cdots/h_r$, let $\overline\theta\!=\!\theta_{1..r}$ be $r$ fresh variables, and let
+$f = \theta_{1..r} \mapsto (f_1\,\theta_1)::\T_1/\cdots/(f_r\,\theta_r)::\T_r$.
+\begin{itemize}
+  \item $\T_{1..r}$ are disjoint mappings.
+  \item $h\,(f\,\overline\theta) = f\,\overline\theta$.
+\end{itemize}
+
 \subsection{Minor Tactics}
 
 \subsubsection{Associativity}
@@ -81,3 +98,8 @@ in addition to these abstractions. Let $t$ be some other term.
 \[e[t] ~=~ (\overline{x}\mapsto t) ~\applt~ z\mapsto e[z\,\overline{x}]\]
 %
 where $\overline{x}=x_{1..k}$, and $z$ is a fresh variable.
+
+
+\subsection{Example \hrulefill}
+\hrule
+\bigskip

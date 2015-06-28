@@ -74,9 +74,10 @@ and requires some explanation.\todo{covariance and coercion}
 The standard library contains some common primitives:
 
 \begin{itemize}
-  \item ${+}, {-} : \forall \T.~\T\to\T\to\T$ --- polymorphic binary operators.
-  \item ${<} : \forall \T. ~\T\to\T\to\B$ --- a polymorphic order relation.
-  \item $\min, \max, \Sigma : \forall \T\,\S.~ (\T\to\S)\to\S$ --- reduction operators
+  \item $\R$, a type for real numbers; $\N$ for natural numbers; $\B$ for Boolean true/false.
+  \item ${+}, {-} : \forall \T.~\T\to\T\to\T$, polymorphic binary operators.
+  \item ${<} : \forall \T. ~\T\to\T\to\B$, a polymorphic order relation.
+  \item $\min, \max, \Sigma : \forall \T\,\S.~ (\T\to\S)\to\S$, reduction operators
     on ordered/unordered sequences\todo{bags? multisets?}. The sequence is represented by a mapping $f : \T\to\S$,
     so that e.g. \[\semp{\min f} = \min \{\semp{f}\,v \;|\; v\in\semp{A}, \semp{f}\,v\neq\bot\}\]
     The sequences are expected to be finite.
