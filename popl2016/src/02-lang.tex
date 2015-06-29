@@ -69,20 +69,70 @@ and requires some explanation.\todo{covariance and coercion}
 
 \subsection{Type Inference}
 
+Base types are inferred normally as in a classical Hindley-Milner type system.
+Qualifiers are also inferred by defining a type intersection operator $\sqcap$ that
+takes two types of the same shape $\T_1$, $\T_2$ and returns a type with a conjunction of all the qualifiers
+occuring in either $\T_1$ or $\T_2$. The operator is defined in terms of the corresponding liquid types.
+\begin{itemize}
+  \item If $\T_1=\{v:\T ~|~ \varphi_1\}$ and $\T_2=\{v:\T ~|~ \varphi_2\}$,
+	\[\T_1\sqcap\T_2 ~=~ \{v:\T ~|~ \varphi_1\land\varphi_2\}\]
+  \item If $\T_1=x:\S_1\to\S_2$, $\T_2=x:\S_3\to\S_4$ (named arguments are normalized so that $\T_1$ and $\T_2$ use the same names),
+    \[\T_1\sqcap\T_2 ~=~ x:(\S_1\sqcap\S_3)\to(\S_2\sqcap\S_4)\]
+\end{itemize}
+
+We then define the \newterm{type refinement} steps for $e$ a sub-term:
+\begin{itemize}
+  \item If $e=e_1\,e_2$, where $\Gamma \vdash e:\T_0, e_1:\T_1, e_2:\T_2\to\S_2$,
+    \[\Gamma ~\vdash~ e:\T_0\sqcap\S_2, e_1:\T_1\sqcap\T_2, e_2:(\T_0\to\T_1)\sqcap(\T_2\to\S_2)\]
+  \item If $e=(v::\T)\mapsto e_1$, where $\Gamma\vdash e:\T_0\to\S_0$ and $\Gamma,v:\T\sqcap\T_0\vdash e_1:\T_1$,
+    \[\Gamma ~\vdash~ e:(\T_0\to\S_0)\sqcap(\T\to\T_1)\]
+    \[\Gamma,v:\T\sqcap\T_0 ~\vdash~ e_1:\T_1\sqcap\S_0\]
+  \item If $e=v$ (a leaf) and $\Gamma,v:\T_1\vdash e:\T_0$,
+    \[\Gamma,v:\T_1 ~\vdash~ e:\T_0\sqcap\T_1\]
+  \item If $e=e_1/e_2$ and $\Gamma\vdash e:\T_0, e_1:\T_1, e_2:\T_2$,
+    \[\Gamma ~\vdash~ e_1:T_1\sqcap\T_0, e_2:T_2\sqcap\T_0\]
+\end{itemize}
+
+These rules are applied continuously until a fixed point is reached.
+The resulting type are eventually converted back to a canonical form that uses $\cap$ and $\times$.
+
+Note that two syntactically identical terms in different sub-trees may be assigned
+different types by this method. This is a desirable property, as (some) context information
+gets encoded in the type that way.
+
 \subsection{Primitives}
 
 The standard library contains some common primitives:
 
 \begin{itemize}
   \item $\R$, a type for real numbers; $\N$ for natural numbers; $\B$ for Boolean true/false.
-  \item ${+}, {-} : \forall \T.~\T\to\T\to\T$, polymorphic binary operators.
-  \item ${<} : \forall \T. ~\T\to\T\to\B$, a polymorphic order relation.
-  \item $\min, \max, \Sigma : \forall \T\,\S.~ (\T\to\S)\to\S$, reduction operators
-    on ordered/unordered sequences\todo{bags? multisets?}. The sequence is represented by a mapping $f : \T\to\S$,
+  \item ${=} : \T\to\T\to\B$, always interpreted as equality.
+  \item ${+}, {-} : \T\to\T\to\T$, polymorphic binary operators.
+  \item ${<} : \T\to\T\to\B$, a polymorphic order relation.
+  \item $\min, \max, \Sigma : (\T\to\S)\to\S$, reduction operators
+    on ordered/unordered collections. The collection is represented by a mapping $f : \T\to\S$,
     so that e.g. \[\semp{\min f} = \min \{\semp{f}\,v \;|\; v\in\semp{A}, \semp{f}\,v\neq\bot\}\]
-    The sequences are expected to be finite.
+    The collections are expected to be finite.
 \end{itemize}
 
 \subsection{Example \hrulefill}
+
+The specification of the Simplified Gap will be written as
+%
+\[\renewcommand\arraystretch{1.5}
+  \begin{array}{@{}l@{}l@{}l@{}}
+    \lspan3{w :: ((J\times J)\cap{<})\to\R} \\
+    \lspan3{w' :: ((K\times K)\cap{<})\to\R} \\
+    G ~=~ \fix \theta\,i\,j\mapsto{}
+      & \lspan2{0\big|_{i=0\land j=0} ~\Big/~ w_{0j}\big|_{i=0} ~\Big/~ w_{i0}\Big|_{j=0} ~\Big/~} \\
+      & \min~\langle~ & \min p\mapsto\theta_{pj}+w_{pi}, \\
+      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle
+  \end{array}\]
+
+\medskip
+We are using $f_{xy}$
+as a more readable alternative typography for $f\,x\,y$,
+where $f$ is a function symbol and $x$, $y$ are its arguments.
+
+\medskip
 \hrule
-\bigskip

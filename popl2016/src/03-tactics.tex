@@ -17,6 +17,8 @@ they entail the validity of the instance. Clearly the tactic itself can be used 
 if it is easy enough to prove automatically; in such cases we write ``{\bf Obligations:} tactic.''
 
 \newcommand\Obligations{\medskip\noindent{\bf Obligations:} }
+\newcommand\reduce{\operatorname{reduce}}
+\newcommand\listConcat{{\scriptstyle \,++\,}}
 
 \subsection{Main Tactics}
 
@@ -79,25 +81,62 @@ $f = \theta_{1..r} \mapsto (f_1\,\theta_1)::\T_1/\cdots/(f_r\,\theta_r)::\T_r$.
 \subsection{Minor Tactics}
 
 \subsubsection{Associativity}
-\[\mathrm{reduce}\,(x {\scriptstyle\,++\,} y) ~=~ \mathrm{reduce}\,\langle \mathrm{reduce}\,x, \mathrm{reduce}\,y\rangle\]
+\[\reduce\big\langle \reduce\langle\overline x\rangle, \reduce\langle\overline y\rangle\big\rangle ~=~ \reduce \langle \overline x, \overline y\rangle\]
+%
+where $\reduce$ is a built-in aggregation ($\min$, $\max$, $\Sigma$), 
+and $x$, $y$ are lists of terms (of the same type).
+
+\Obligations none.
 
 \subsubsection{Distributivity}
 Let $e$ be an expression with a hole, $e[\square] = (\cdots \square \cdots)$.
 %
-\[e[f_1/\cdots/f_r] ~=~ e[f_1] / \cdots / e[f_r]\]
+\[\renewcommand\arraystretch{1.2}
+  \begin{array}{@{}r@{~}c@{~}l@{}}
+    e[t_1/\cdots/t_r] &=& e[t_1] / \cdots / e[t_r] \\
+    e[t_1/\cdots/t_r] &=& \reduce\langle e[t_1],\cdots,e[t_r]\rangle \\
+    \reduce e[t_1/\cdots/t_r] &=& \reduce\langle \reduce e[t_1],\cdots,\reduce e[t_r]\rangle
+  \end{array}\]
+
+This tactic provides several alternatives for different uses of aggregations.
+Clearly, $\big/$ does not distribute over any expression; we give just a few examples
+where this tactic is applicable.
+\begin{itemize}
+  \item $(x/y)+1 ~=~ (x+1)~/~(y+1)$
+  \item $x/0 ~=~ \max\langle x,0\rangle$ ~(for $x:\N$)
+  \item $\min \big(f\big|_{J_0}~\big/~f\big|_{J_1}\big) ~=~
+         \min\left\langle \min f\big|_{J_0} ~,~ \min f\big|_{J_1}\right\rangle$
+\end{itemize}
+
+\Obligations tactic.
 
 \subsubsection{Elimination}
 \[e[t] ~=~ e[\bot]\]
+%
+Used to eliminate a sub-term that is either always undefined or has no effect
+in the context in which it occurs.
+
+\Obligations tactic.
 
 \subsubsection{Let Insertion}
 
 Let $e$ be an expression with a hole, $e[\square] = (\cdots x_1 \mapsto \cdots x_k\mapsto \cdots \square \cdots)$, 
 where $x_{1..k}\mapsto$ are abstraction terms enclosing $\square$. The bodies may contain arbitrary terms
-in addition to these abstractions. Let $t$ be some other term.
+in addition to these abstractions.
 %
 \[e[t] ~=~ (\overline{x}\mapsto t) ~\applt~ z\mapsto e[z\,\overline{x}]\]
 %
-where $\overline{x}=x_{1..k}$, and $z$ is a fresh variable.
+where $\overline{x}=x_{1..k}$, and $z$ is either an existing or a fresh variable.
+
+\Obligations tactic, if $z$ occurs free in $e$; otherwise none.
+
+\subsubsection{Padding}
+\[t ~=~ \big(t~/~f_1/\cdots/f_r\big) :: \T\]
+%
+where $\T$ is the type of $t$. This tactic is commonly used with Let insertion,
+to make the type of a sub-term match the type of the entire term.
+
+\Obligations tactic.
 
 
 \subsection{Example \hrulefill}
