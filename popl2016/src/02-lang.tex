@@ -13,7 +13,7 @@ as $(v_1:\T_1)\cdots(v_n:\T_n)\mapsto e$.
 The semantics differ slightly from that of traditional functional languages: arrow types $\T_1\to\T_2$
 are interpreted as {\bf mappings} from values of type $\T_1$ to values of type $\T_2$. Algebraically,
 interpretations of types, $\semp{\T_1}$, $\semp{\T_2}$, are sets, and interpretations of arrow-typed terms,
-$f : \T_1\to\T_2$, are {\bf partial functions} --- $\semp{f} : \semp{T_1}\rightharpoonup\semp{T_2}$.
+$f : \T_1\to\T_2$, are {\bf partial functions} --- $\semp{f} : \semp{\T_1}\rightharpoonup\semp{\T_2}$.
 This implies that a term $t : \T$ may evaluate to an \newterm{undefined} value, $\semp{t}=\bot_\T$
 (We would shorten it to $\semp{t}=\bot$ when the type is either insignificant or understood from the context).
 For simplicity, we shall identify $\bot_{\T_1\to\T_2}$ with the empty mapping $(v:\T_1)\mapsto\bot_{\T_2}$.
@@ -40,32 +40,69 @@ limit the use of qualifiers, allowing only the following forms:
 The type refinement operators $\cap$ and $\times$ may be composed to create conjunctions of qualifiers,
 as long as their argument sets are either disjoint or contained, but not overlapping;
 for example, \[x:\{v:\T_1~|~P(v)\}\to \{v:\T_2~|~Q(v)\land R(x,v)\}\to\T_3\] can be written as
-$\big((P\times Q)\cap R\big)\to\T_3$, but \[x:T_1\to y:\{v:\T_2~|~R(x,v)\} \to \{v:\T_3~|~R(y,v)\}\to\T_4\]
+$\big((P\times Q)\cap R\big)\to\T_3$, but \[x:\T_1\to y:\{v:\T_2~|~R(x,v)\} \to \{v:\T_3~|~R(y,v)\}\to\T_4\]
 cannot be represented by this restricted fragment.
 
 As with any refinement type system, we define the \newterm{shape} of a type $\T$ to be the raw type
 obtained from it by removing all qualifiers.
 
-\subsection{Operators}
-
-\newcommand\applt{\textrm{{\scriptsize\,}\guillemotright{\scriptsize\,}}}
-
-{\color{Gray}
-\begin{itemize}
-  \item Fixed point operator $\fix f$
-  \item Slash operator $/$
-  \item Cast operator $t :: \T$ inside expressions (and $t|_{\setlength{\fboxsep}{2pt}\fbox{}}$)
-  \item Left application $x \applt f$
-\end{itemize}
-}
-
 \subsection{Typing Rules}
+
+\newcommand\powerset[1]{\mathbf{P}({#1})}
 
 We define a Bellmania program to be well-typed iff its \newterm{raw form}, obtained by replacing all types by
 their shapes, is well-typed. This gives a simple characteristic of type safety without the need to
 explictly write any new typing rules. It also means that for $f:\T_1\to\T_2$, $x:T_3$, then $f\,x:\T_2$ whenever
 $\T_1$ and $\T_3$ have the same shape. This is much more permissive than the original Liquid Types,
 and requires some explanation.\todo{covariance and coercion}
+
+Considering a (partial) function $\T\to\S$ to be a set of pairs of elements $\langle x,y\rangle$ 
+from its domain $\T$ and range $\S$, respectively, it is clear to see that any function of type $\T_1\to\S_1$,
+such that $\semp{\T_1}\subseteq\semp{\T}$, $\semp{\S_1}\subseteq\semp{\S}$, 
+is \emph{also} a function of type $\T\to\S$, since $\semp{\T_1}\times\semp{\S_1}\subseteq\semp{\T}\times\semp{\S}$.
+%and therefore $\powerset{\semp{\T_1}\times\semp{\S_1}} \subseteq \powerset{\semp{\T}\times\semp{\S}}$.
+If we define subtyping as inclusion of the domains, i.e. $\T_1 <:\T$ whenever $\semp{\T_1}\subseteq\semp{\T}$,
+this translates into:
+%
+\[\T_1<:\T ~\land~ \S_1<:\S ~~\Rightarrow~~ (\T_1\to\S_1) <: (\T\to\S)\]
+
+In this case, the type constructor $\to$ is {\bf covariant} in both arguments.\footnote{This is different from classical view, and holds in this case because we interpret functions as \emph{mappings}.}
+With this in mind, a function $g:(\T\to\S)\to \S_2$ can be called with an argument $a: \T_1\to\S_1$,
+by regular subtyping rules, and $g\,a : \S_2$.
+
+When the argument's type is not a subtype, but has the same shape as that of the expected type,
+it is \newterm{coereced} to the required type by restricting the values to the desired proper subset.
+%
+\[\mbox{For }h:\T\to\S \qquad \semp{h\,a} ~=~ \semp{h}\big(\semp{a} :: \T\big)\]
+
+Where $::$ is defined as follows:
+\begin{itemize}
+  \item For scalar (non-arrow) type $\T$, \[x :: \T ~=~ \begin{cases}x & \mbox{if }x\in\semp{\T} \\ \bot & \mbox{if }x\not\in\semp{\T}\end{cases}\]
+  \item $f :: \T\to\S ~=~ x\mapsto \big(f\,(x :: \T)\big) :: \S$
+\end{itemize}
+
+\subsection{Operators}
+
+\newcommand\applt{\textrm{{\scriptsize\,}\guillemotright{\scriptsize\,}}}
+
+We define the following intrinsic operators:
+
+\begin{itemize}
+  \item Fixed point operator $\fix f$, with the denotational semantics
+    \[\semp{\fix f} ~=~ \sigma x.~ (\semp f\,x=x)\]
+  we assume that recurrences given in specifications are well-defined, 
+  such that $\semp f$ has a single fixed point.
+  In other words, we ignore nonterminating computations.
+  \item Slash operator $/$,
+  \[\begin{array}{ll}
+      \mbox{For base type $\S$, $x,y:\S$} & x/y = \begin{cases}x & \mbox{if }x\neq\bot \\ y & \mbox{if }x=\bot\end{cases} \\
+      \mbox{For $f,g:\T_1\to\T_2$} & f/g = (v:\T_1)\mapsto (f\,v)/(g\,v)
+    \end{array}\]
+  \item Cast operator $t :: \T$ inside expressions (and $t|_{\setlength{\fboxsep}{2pt}\fbox{}}$)
+  \item Left application $x \applt f$
+\end{itemize}
+
+\todo{typing rules for operators}
 
 \subsection{Type Inference}
 
