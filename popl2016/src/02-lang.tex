@@ -117,17 +117,20 @@ The standard library contains some common primitives:
 
 \subsection{Example \hrulefill}
 
-The specification of the Simplified Gap will be written as
+The specification of the Simplified Gap (\eqref{intro:gap spec} from \Cref{intro}) will be written as
 %
-\[\renewcommand\arraystretch{1.5}
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
   \begin{array}{@{}l@{}l@{}l@{}}
     \lspan3{w :: ((J\times J)\cap{<})\to\R} \\
     \lspan3{w' :: ((K\times K)\cap{<})\to\R} \\
     G ~=~ \fix \theta\,i\,j\mapsto{}
-      & \lspan2{0\big|_{i=0\land j=0} ~\Big/~ w_{0j}\big|_{i=0} ~\Big/~ w_{i0}\Big|_{j=0} ~\Big/~} \\
+      & \lspan2{0\big|_{i=0\land j=0} ~\Big/~ w'_{0j}\big|_{i=0} ~\Big/~ w_{i0}\big|_{j=0} ~\Big/~} \\
       & \min~\langle~ & \min p\mapsto\theta_{pj}+w_{pi}, \\
       & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle
-  \end{array}\]
+  \end{array}
+  \label{lang:gap spec}
+\end{equation}
 
 \medskip
 We are using $f_{xy}$

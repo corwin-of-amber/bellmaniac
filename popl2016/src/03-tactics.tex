@@ -65,7 +65,7 @@ g'\,(f\,\theta)\,\theta ~=~ h\,\theta
 Although the proof is not hard, we defer it to a later theorem.
 
 \subsubsection{Synth}
-\[\fix\Big(h_1 ~\big/~ \cdots ~\big/~ h_r\Big) ~=~ 
+\[\fix\big(h_1 ~\big/~ \cdots ~\big/~ h_r\big) ~=~ 
   (\fix f_1) :: \T_1 ~\big/~ \cdots ~\big/~ (\fix f_r) :: \T_r\]
 
 This tactic is used to generate recursive calls to sub-programs. For $i=1..r$, $f_i$
@@ -140,5 +140,92 @@ to make the type of a sub-term match the type of the entire term.
 
 
 \subsection{Example \hrulefill}
+
+For simplicity of the example, we assume that the input to the Simplified Gap problem
+satisfies triangle inequalities:
+%
+\begin{equation}
+w_{ij} \leq w_{ik} + w_{kj} \qquad w'_{ij} \leq w'_{ik} + w'_{kj}
+\label{equ:triangle}
+\end{equation}
+%
+for all (appropriately typed) $i<k<j$.
+
+\medskip
+Starting from the specification in \eqref{lang:gap spec}, we apply Synth to turn
+$\fix (\theta\,i\,j\mapsto\square/\min\langle\cdots\rangle)$ into $\fix\theta\,i\,j\mapsto\min\langle\square,\cdots\rangle$.
+Distributivity and Associativity are used to obtain $f_1$, but the proof is deferred until
+Synth is applied so that the prover can use the extra context.
+
+\begin{center}
+\fbox{$\begin{array}{l@{}l@{}l}
+       \mbox{\underline{Synth}} \\ 
+       r=1\\
+       h_1=\theta\,i\,j\mapsto{}
+	      & \lspan2{0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0} ~\big/~} \\
+	      & \min\,\langle~ & \min p\mapsto\theta_{pj}+w_{pi}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle \\
+       f_1=\theta\,i\,j\mapsto{}
+	      & \min\,\langle~ & 0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0}, \\
+	      & & \min p\mapsto\theta_{pj}+w_{pi}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle
+       \end{array}$}
+\end{center}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{}l@{}l@{}l@{}}
+    G ~=~ \fix \theta\,i\,j\mapsto{}
+	      & \min\,\langle~ & 0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0}, \\
+	      & & \min p\mapsto\theta_{pj}+w_{pi}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle
+  \end{array}
+  \label{lang:gap spec}
+\end{equation}
+
+We then apply Let Insertion, followed by Stratify, to obtain the general form of A from \Cref{intro}.
+
+\begin{center}
+\fbox{$\begin{array}{l@{}l}
+       \mbox{\underline{Let}} \\ 
+       e[\square] ~=~ \theta\,i\,j\mapsto\min\langle~ & \square, \\
+	      & \min p\mapsto\theta_{pj}+w_{pi}, \\
+	      & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle \\
+       \lspan2{~~t ~=~
+	      0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0}}
+       \end{array}$}
+\end{center}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{}l@{}l@{}l@{}l@{}}
+    G ~=~ & \fix \big(\,& \lspan2{(\theta\,i\,j\mapsto 0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0})\applt} \\
+	      & & z\,\theta\,i\,j \mapsto \min\,\langle~& z_{\theta ij}, \\
+	      & & & \min p\mapsto\theta_{pj}+w_{pi}, \\
+	      & & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle\,\big)
+  \end{array}
+  \label{lang:gap spec}
+\end{equation}
+
+\begin{center}
+\fbox{$\begin{array}{l}
+       \mbox{\underline{Stratify}} \\ 
+       f ~=~ \theta\,i\,j\mapsto 0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0} \\
+       g ~=~ z\,\theta\,i\,j\mapsto \min\langle z_{\theta ij},\cdots\rangle
+       \end{array}$}
+\end{center}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{}l@{}l@{}l@{}}
+    G ~=~ & \lspan2{\big(\fix \theta\,i\,j\mapsto
+	              0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0}\big)\applt} \\
+	      & \psi\mapsto \fix \theta\,i\,j\mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & \min p\mapsto\theta_{pj}+w_{pi}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle
+  \end{array}
+  \label{lang:gap spec}
+\end{equation}
+
 \hrule
 \bigskip
