@@ -1,0 +1,42 @@
+\section{Case Studies}
+
+We tested our technique on two representative problems. The full version of the Gap problem,
+for which the running example in this paper is a simplified version, where the cost of replacing
+the character $x_i$ with the character $y_j$ is given by $c_{ij}$ (\Cref{evaluation:gap spec});
+and the Parenthesis Assignment problem, where the goal is a program computing
+an optimal placements of parenthesis in a long chain of products, e.g. of matrices, where the input is
+a cost function for performing each individual multiplication: initial cost $x_i$ for the $i$-th
+element, $w_{ikj}$ is the cost for multiplying elements $[i,k)$ by elements $[k,j)$
+ (\Cref{evaluation:paren spec}).
+
+\begin{figure}
+\[
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{}l@{}l@{}l@{}}
+    \lspan3{w :: ((J\times J)\cap{<})\to\R} \\
+    \lspan3{w' :: ((K\times K)\cap{<})\to\R} \\
+    G ~=~ \fix \theta\,i\,j\mapsto{}
+      & \lspan2{0\big|_{i=0\land j=0} ~\Big/~ w'_{0j}\big|_{i=0} ~\Big/~ w_{i0}\big|_{j=0} ~\Big/~} \\
+      & \min~\langle~ & \theta_{(i-1)\,(j-1)} + c_{ij},\\
+      & & \min p\mapsto\theta_{pj}+w_{pi}, \\
+      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle
+  \end{array}
+\]
+\caption{\label{evaluation:gap spec}
+  Specifications for the full version of the Gap DP problem.}
+\end{figure}
+
+\begin{figure}
+\[
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{}l@{}l@{}l@{}}
+    \lspan3{x :: J\to\R} \\
+    \lspan3{w :: (J\times J\times J)\to\R} \\
+    E ~=~ \fix \theta\,i\,j\mapsto{}
+      & \lspan2{x_{ij}\big|_{i+1=j} ~\Big/~} \\
+      & \min k\mapsto\theta_{ik}+\theta_{kj}+w_{ikj} \\
+  \end{array}
+\]
+\caption{\label{evaluation:paren spec}
+  Specifications for the Parenthesis Assignment DP problem.}
+\end{figure}
