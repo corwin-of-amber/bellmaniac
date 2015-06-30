@@ -47,6 +47,7 @@ As with any refinement type system, we define the \newterm{shape} of a type $\T$
 obtained from it by removing all qualifiers.
 
 \subsection{Typing Rules}
+\label{lang:typing rules}
 
 \newcommand\powerset[1]{\mathbf{P}({#1})}
 
@@ -98,7 +99,7 @@ We define the following intrinsic operators:
       \mbox{For base type $\S$, $x,y:\S$} & x/y = \begin{cases}x & \mbox{if }x\neq\bot \\ y & \mbox{if }x=\bot\end{cases} \\
       \mbox{For $f,g:\T_1\to\T_2$} & f/g = (v:\T_1)\mapsto (f\,v)/(g\,v)
     \end{array}\]
-  \item Cast operator $t :: \T$ inside expressions (and $t|_{\setlength{\fboxsep}{2pt}\fbox{}}$)
+  \item Cast operator $t :: \T$, as described in \Cref{lang:typing rules} inside expressions (and $t|_{\setlength{\fboxsep}{2pt}\fbox{}}$)
   \item Left application $x \applt f$
 \end{itemize}
 
@@ -120,10 +121,12 @@ occuring in either $\T_1$ or $\T_2$. The operator is defined in terms of the cor
 We then define the \newterm{type refinement} steps for $e$ a sub-term:
 \begin{itemize}
   \item If $e=e_1\,e_2$, where $\Gamma \vdash e:\T_0, e_1:\T_1, e_2:\T_2\to\S_2$,
-    \[\Gamma ~\vdash~ e:\T_0\sqcap\S_2, e_1:\T_1\sqcap\T_2, e_2:(\T_0\to\T_1)\sqcap(\T_2\to\S_2)\]
+    \[\begin{array}{l@{}l}
+        \Gamma ~\vdash~ & e:\T_0\sqcap\S_2, \\ & e_1:\T_1\sqcap\T_2, \\ & e_2:(\T_0\to\T_1)\sqcap(\T_2\to\S_2)
+      \end{array}\]
   \item If $e=(v::\T)\mapsto e_1$, where $\Gamma\vdash e:\T_0\to\S_0$ and $\Gamma,v:\T\sqcap\T_0\vdash e_1:\T_1$,
-    \[\Gamma ~\vdash~ e:(\T_0\to\S_0)\sqcap(\T\to\T_1)\]
-    \[\Gamma,v:\T\sqcap\T_0 ~\vdash~ e_1:\T_1\sqcap\S_0\]
+    \[\begin{array}{l}\Gamma ~\vdash~ e:(\T_0\to\S_0)\sqcap(\T\to\T_1)\\
+      \Gamma,v:\T\sqcap\T_0 ~\vdash~ e_1:\T_1\sqcap\S_0 \end{array}\]
   \item If $e=v$ (a leaf) and $\Gamma,v:\T_1\vdash e:\T_0$,
     \[\Gamma,v:\T_1 ~\vdash~ e:\T_0\sqcap\T_1\]
   \item If $e=e_1/e_2$ and $\Gamma\vdash e:\T_0, e_1:\T_1, e_2:\T_2$,
@@ -131,7 +134,8 @@ We then define the \newterm{type refinement} steps for $e$ a sub-term:
 \end{itemize}
 
 These rules are applied continuously until a fixed point is reached.
-The resulting type are eventually converted back to a canonical form that uses $\cap$ and $\times$.
+The resulting types are eventually converted back to a canonical form that uses $\cap$ and $\times$.
+Qualifiers that cannot be expressed in this form are discarded.
 
 Note that two syntactically identical terms in different sub-trees may be assigned
 different types by this method. This is a desirable property, as (some) context information

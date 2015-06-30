@@ -20,9 +20,9 @@ if it is easy enough to prove automatically; in such cases we write ``{\bf Oblig
 \newcommand\reduce{\operatorname{reduce}}
 \newcommand\listConcat{{\scriptstyle \,++\,}}
 
-\subsection{Main Tactics}
+\subsection{Major Tactics}
 
-\subsubsection{Slice}
+\subsubsection{Slice} \label{tactics:Slice}
 \[f ~=~ f\big|_{X_1} ~\Big/~ f\big|_{X_2} ~\Big/ ~\cdots~ \Big/~ f\big|_{X_r}\]
 
 This tactic partitions a mapping into sub-regions. Each $X_i$ may be a $\times$-expression
@@ -33,7 +33,7 @@ according to the arity of $f$.
 Informally, the recombination expression is equal to $f$
 when $X_{1..r}$ ``cover'' all the defined points of $f$ (also known as the \newterm{support} of $f$).
 
-\subsubsection{Shrink}
+\subsubsection{Shrink} \label{tactics:Shrink}
 \[f ~=~ f :: \T\]
 
 Used to extra-specify the type of a sub-term.
@@ -43,7 +43,7 @@ Used to extra-specify the type of a sub-term.
 For arrow-typed terms, this essentially requires to prove that $f$ is undefined anyway for
 argument values outside the domain of $\T$, and that the defined values are in the range of $\T$.
 
-\subsubsection{Stratify}
+\subsubsection{Stratify} \label{tactics:Stratify}
 \[\fix (f\applt g) ~=~ \fix f ~\applt~ \psi\mapsto \fix (\dot\psi\applt g)\]
 %
 where $\dot\psi$ abbreviates $\theta\mapsto\psi$, with fresh variable $\theta$.
@@ -64,7 +64,7 @@ g'\,(f\,\theta)\,\theta ~=~ h\,\theta
 
 Although the proof is not hard, we defer it to a later theorem.
 
-\subsubsection{Synth}
+\subsubsection{Synth} \label{tactics:Synth}
 \[\fix\big(h_1 ~\big/~ \cdots ~\big/~ h_r\big) ~=~ 
   (\fix f_1) :: \T_1 ~\big/~ \cdots ~\big/~ (\fix f_r) :: \T_r\]
 
@@ -180,7 +180,6 @@ Synth is applied so that the prover can use the extra context.
 	      & & \min p\mapsto\theta_{pj}+w_{pi}, \\
 	      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle
   \end{array}
-  \label{lang:gap spec}
 \end{equation}
 
 We then apply Let Insertion, followed by Stratify, to obtain the general form of A from \Cref{intro}.
@@ -204,7 +203,6 @@ We then apply Let Insertion, followed by Stratify, to obtain the general form of
 	      & & & \min p\mapsto\theta_{pj}+w_{pi}, \\
 	      & & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle\,\big)
   \end{array}
-  \label{lang:gap spec}
 \end{equation}
 
 \begin{center}
@@ -224,7 +222,6 @@ We then apply Let Insertion, followed by Stratify, to obtain the general form of
 	      & & \min p\mapsto\theta_{pj}+w_{pi}, \\
 	      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle
   \end{array}
-  \label{lang:gap spec}
 \end{equation}
 
 \begin{figure}[b]
@@ -236,3 +233,65 @@ We then apply Let Insertion, followed by Stratify, to obtain the general form of
 
 \hrule
 \bigskip
+
+
+\subsection{Soundness}
+
+\newtheorem{theorem}{Theorem}
+\renewenvironment{proof}{\noindent{\bf Proof.~}}{}
+
+\begin{theorem}
+Let $s=s'$ be an instance of one of the tactics introduced in this section.
+let $a_i=b_i$, $i=1..k$, be the proof obligations. If $\semp{a_i}=\semp{b_i}$
+for all interpretations of the free variables of $a_i$ and $b_i$, then
+$\semp{s}=\semp{s'}$ for all interpretations of the free variables of $s$ and $s'$.
+\end{theorem}
+
+\begin{proof}
+For the tactics with {\bf Obligations:} tactic, the theorem is trivial.
+
+\medskip
+For Stratify, let $f$, $g$ be partial functions such that
+\[\renewcommand\arraystretch{1.3}
+  \forall \theta,\zeta.\quad \begin{array}{l}f\,(g\,\zeta\,\theta) ~=~ f\,\zeta \\
+  g\,(f\,\theta)\,\theta ~=~ h\,\theta
+  \end{array}\quad\]
+  
+Assume that $\zeta = \fix f$ and $\theta = \fix (g\,\zeta)$. That is,
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l}
+    f\,\zeta = \zeta\\
+    g\,\zeta\,\theta = \theta
+  \end{array}\]
+  
+Then ---
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{}l}
+   h\,\theta & {}= g\,(f\,\theta)\,\theta = g\,(f\,(g\,\zeta\,\theta))\,\theta = \\
+             & {}= g\,(f\,\zeta)\,\theta = \theta
+  \end{array}\]
+  
+So $\theta = \fix h$. We get $\fix h = \fix \big(g \,(\fix f)\big)$, or, equivalently,
+\[\fix h = \fix f \applt \psi\mapsto\fix (g\,\psi)\]
+
+Now instantiate $h$, $f$, and $g$, with $f\applt g$, $f$, and $g'$ from \Cref{tactics:Stratify},
+and we obtain the equality in the tactic.
+
+\medskip
+For Synth, assume
+\[\renewcommand\arraystretch{1.3}
+  \forall \overline\theta.\quad h\,(f\,\overline\theta)=f\,\overline\theta \quad\]
+
+And let $\theta=\theta_{1..r}$ such that $\theta_i=\fix f_i$. So $f_i\,\theta_i=\theta_i$.
+Let $\theta=\theta_1::\T_1/\cdots/\theta_r::\T_r$.
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{}l}
+   f\,\overline\theta & {}= (f_1\,\theta_1)::\T_1 / \cdots / (f_r\,\theta_r)::\T_r =  \\
+     & {}= \theta_1::\T_1 / \cdots / \theta_r::\T_r = \theta \\[.5em]
+   h\,\theta & {}= h\,(f\,\overline\theta) = f\,\overline\theta = \theta
+   \end{array}\qquad\]
+   
+Then $\theta=\fix h$;\\
+We get $\fix h = (\fix f_1)::\T_1 / \cdots / (\fix f_r)::\T_r$,
+as required.
+\end{proof}
