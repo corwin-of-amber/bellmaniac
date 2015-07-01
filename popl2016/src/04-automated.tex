@@ -29,3 +29,18 @@ the interpretation of the node depends on the values of these variables, it is
 ``skolemized'', i.e., its type is prefixed by the types of enclosing variables.
 For example, if $e:\T$, then inside the term $(v:\S)\mapsto e$ it would be treated as
 type $\S\to\T$.
+
+When a function is being used as an argument in an application term (first-class functions), 
+we take its arrow type $\T\to\S$ and create a corresponding \newterm{faux type} $F_{\T\to\S}$,
+and an operator $@ : F_{\T\to\S}\to\T\to\S$, with the \newterm{extensionality axiom} ---
+\begin{equation}
+\forall \alpha\alpha'.~ \big(\forall\beta.~ @(\alpha,\beta)=@(\alpha',\beta)\big)\limplies \alpha=\alpha'
+\label{automated:extensionality}
+\end{equation}
+
+And for each such function symbol $f^k:\T\to\S$ used as argument, create its 
+\newterm{reflection} $f^0:F_{\T\to\S}$ defined by
+\begin{equation}
+\forall \overline\alpha.~~@(f^0,\overline\alpha)=f^k(\overline\alpha)
+\label{automated:reflection}
+\end{equation}

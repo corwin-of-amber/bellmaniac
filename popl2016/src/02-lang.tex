@@ -55,7 +55,7 @@ We define a Bellmania program to be well-typed iff its \newterm{raw form}, obtai
 their shapes, is well-typed. This gives a simple characteristic of type safety without the need to
 explictly write any new typing rules. It also means that for $f:\T_1\to\T_2$, $x:T_3$, then $f\,x:\T_2$ whenever
 $\T_1$ and $\T_3$ have the same shape. This is much more permissive than the original Liquid Types,
-and requires some explanation.\todo{covariance and coercion}
+and requires some explanation.
 
 Considering a (partial) function $\T\to\S$ to be a set of pairs of elements $\langle x,y\rangle$ 
 from its domain $\T$ and range $\S$, respectively, it is clear to see that any function of type $\T_1\to\S_1$,
@@ -99,13 +99,41 @@ We define the following intrinsic operators:
       \mbox{For base type $\S$, $x,y:\S$} & x/y = \begin{cases}x & \mbox{if }x\neq\bot \\ y & \mbox{if }x=\bot\end{cases} \\
       \mbox{For $f,g:\T_1\to\T_2$} & f/g = (v:\T_1)\mapsto (f\,v)/(g\,v)
     \end{array}\]
-  \item Cast operator $t :: \T$, as described in \Cref{lang:typing rules} inside expressions (and $t|_{\setlength{\fboxsep}{2pt}\fbox{}}$)
-  \item Left application $x \applt f$
+  \item Cast operator $t :: \T$, as described in \Cref{lang:typing rules}.
 \end{itemize}
+
+For the purpose of Hindley-Milner type checking, these operators behave like polymorphic
+constants of types ${\fix} : (\T\to\T)\to\T$, ${/} : \T\to\T\to\T$ and $(::\T) : \mathrm{shape}[\T]\to\mathrm{shape}[\T]$.
+They also have type refinement rules as shown in \Cref{lang:type refinement for operators}.
+
+\begin{figure*}
+\[
+\begin{array}{ll}
+  \displaystyle
+  \frac{e=\fix e_1 \quad \Gamma\vdash e:\T, e_1:\T_1\to\T_2}
+       {\Gamma\vdash e: \T\sqcap\T_2} &
+  \frac{e=e_1/e_2 \quad \Gamma\vdash e:\T, e_1:\T_1, e_2:\T_2}
+       {\begin{array}{@{}l@{}l@{}}\Gamma\vdash{} & e_1:\T_1\sqcap\T \\ & e_2:\T_2\sqcap\T\end{array}}
+\end{array}
+\]
+\caption{\label{lang:type refinement for operators}}
+\end{figure*}
 
 \todo{typing rules for operators}
 
+We also adopt some syntactic sugar to make complex terms more managable:
+
+\begin{itemize}
+  \item $x \applt f ~=~ f\,x$ for application from the left.
+  \item $t\big|_{\square}$ abbreviates $t::\square\to\T$, where $\T$ is a fresh type variable
+    to be inferred (see \Cref{lang:type inf}). As a special case, $\big|$ can also be applied
+    to scalar (non-arrow) expressions by supplying a Boolean condition,
+    interpreted as a (nullary) qualifier:
+    \[x\big|_{C} ~=~ x :: (\T\cap C) ~=~ \begin{cases}x & \mbox{if }C \\ \bot & \mbox{if }\lnot C\end{cases}\]
+\end{itemize}
+
 \subsection{Type Inference}
+\label{lang:type inf}
 
 Base types are inferred normally as in a classical Hindley-Milner type system.
 Qualifiers are also inferred by defining a type intersection operator $\sqcap$ that

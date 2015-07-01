@@ -135,15 +135,15 @@ The specifications for step 2 then take the following form:
 \begin{equation}\LeftEqNo
 \renewcommand\arraystretch{1.5}
 \begin{array}{l@{}l}
-	G_{\,(i :: J_0)\,(j :: K_1)} ~=~  \\
+	G_{\,(i : J_0)\,(j : K_1)} ~=~  \\
 	\qquad
 	\begin{cases}
 		0                        & i=j=0 \\
 		w_{0j}                   & i=0, j>0 \\
 		w'_{i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
-		  \min\langle & \underset{0\leq (q::K) <j}\min ~ G_{iq} + w_{qj}, \\
-		              & \underset{0\leq (p::J_0) <i}\min ~ G_{pj} + w'_{pi}~\rangle
+		  \min\langle & \underset{0\leq (q:K) <j}\min ~ G_{iq} + w_{qj}, \\
+		              & \underset{0\leq (p:J_0) <i}\min ~ G_{pj} + w'_{pi}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
@@ -151,7 +151,7 @@ The specifications for step 2 then take the following form:
 
 \medskip
 Type annotations have been placed on $i$, $j$, $p$, and $q$ to define the regions
-over which they range. $i::J_0, j::K_1$ means that the element $G_{ij}$
+over which they range. $i:J_0, j:K_1$ means that the element $G_{ij}$
 is always in \qbox2. Similarly, $G_{pj}$ is also in \qbox2. $G_{iq}$ is either in
 \qbox1 or in \qbox2.
 
@@ -163,7 +163,7 @@ is always in \qbox2. Similarly, $G_{pj}$ is also in \qbox2. $G_{iq}$ is either i
 
 To address the situation, the algorithm designer would like to separate the parts
 of the computation that read from \qbox1 from the parts that read from \qbox2.
-This can be achieved here by splitting the $\min_{0\leq(q::K)<j}$ into two
+This can be achieved here by splitting the $\min_{0\leq(q:K)<j}$ into two
 ranges, according to the region in which $G_iq$ resides.
 
 \begin{equation}\LeftEqNo
@@ -176,21 +176,21 @@ ranges, according to the region in which $G_iq$ resides.
 		w_{0j}                   & i=0, j>0 \\
 		w'_{i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
-		  \min\langle & \underset{(q::K_0)}\min ~ G_{iq} + w_{qj}, \\
-		              & \underset{(q::K_1) <j}\min ~ G_{iq} + w_{qj}, \\
-		              & \underset{0\leq (p::J_0) <i}\min ~ G_{pj} + w'_{pi}~\rangle
+		  \min\langle & \underset{(q:K_0)}\min ~ G_{iq} + w_{qj}, \\
+		              & \underset{(q:K_1) <j}\min ~ G_{iq} + w_{qj}, \\
+		              & \underset{0\leq (p:J_0) <i}\min ~ G_{pj} + w'_{pi}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
 \end{equation}
 
-The path becomes clear: compute $\min_{(q::K_0)} ~ G_{iq} + w_{qj}$ first, for all $i$, $j$
+The path becomes clear: compute $\min_{(q:K_0)} ~ G_{iq} + w_{qj}$ first, for all $i$, $j$
 in \qbox2. Then use the results to compute $G_{ij}$.
 
 \begin{equation}\LeftEqNo
 \renewcommand\arraystretch{1.5}
 \begin{array}{l@{}l}
-	G_{\,(i :: J_0)\,(j :: K_1)} ~=~  \\
+	G_{\,(i : J_0)\,(j : K_1)} ~=~  \\
 	\qquad
 	\textrm{let}~\psi_{ij} = \underset{(q::K_0)}\min ~ G_{iq} + w_{qj} \\
 	\qquad\textrm{in} \\
@@ -201,8 +201,8 @@ in \qbox2. Then use the results to compute $G_{ij}$.
 		w'_{i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
 		  \min\langle & \psi_{ij}, \\
-		              & \underset{(q::K_1) <j}\min ~ G_{iq} + w_{qj}, \\
-		              & \underset{0\leq (p::J_0) <i}\min ~ G_{pj} + w'_{pi}~\rangle
+		              & \underset{(q:K_1) <j}\min ~ G_{iq} + w_{qj}, \\
+		              & \underset{0\leq (p:J_0) <i}\min ~ G_{pj} + w'_{pi}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
@@ -219,7 +219,7 @@ It therefore makes sense to write a version that generalizes both.
 \begin{equation}\LeftEqNo
 \renewcommand\arraystretch{1.5}
 \begin{array}{l}
-	A_{\,\psi\, (i :: J)\, (j :: K)} ~=~  \\
+	A^{^{JK}}_{\,\psi\, i\, j} ~=~  \\
 	\qquad
 	\begin{cases}
 		0                        & i=j=0 \\
@@ -227,8 +227,8 @@ It therefore makes sense to write a version that generalizes both.
 		w'_{i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
 		  \min\langle & \psi_{ij}, \\
-		              & \underset{(q::K)<j}\min ~ A_{\psi iq} + w_{qj}, \\
-		              & \underset{(p::J)<i}\min ~ A_{\psi pj} + w'_{pi}~\rangle
+		              & \underset{(q:K)<j}\min ~ A^{^{JK}}_{\psi iq} + w_{qj}, \\
+		              & \underset{(p:J)<i}\min ~ A^{^{JK}}_{\psi pj} + w'_{pi}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
@@ -239,46 +239,201 @@ It therefore makes sense to write a version that generalizes both.
 And we can now rewrite \eqref{intro:gap spec} and \eqref{intro:let in 2} as
 %
 \begin{equation}
-	G_{ij} ~=~ A_{\,(\infty^{JK})\,(i::J)\,(j::K)}
+	G_{ij} ~=~ A^{^{JK}}_{\,(\infty^{J\times K})\,(i:J)\,(j:K)}
 \end{equation}
 %
 \begin{equation}
 \renewcommand\arraystretch{1.3}
 \begin{array}{l@{}l}
-	G_{\,(i :: J_0)\,(j :: K_1)} ~=~ 
-	& \textrm{let}~\psi_{ij} = \underset{(q::K_0)}\min ~ G_{iq} + w_{qj} \\
-	& \textrm{in}~A_{\,\psi\,(i::J_0)\,(j::K_1)}
+	G_{\,(i : J_0)\,(j : K_1)} ~=~ 
+	& \textrm{let}~\psi_{ij} = \underset{(q:K_0)}\min ~ G_{iq} + w_{qj} \\
+	& \textrm{in}~A^{^{J_0K_1}}_{\,\psi ij}
 \end{array}	
 \label{intro:let in 2 using A}
 \end{equation}
+
+\newcommand\otherwise{\textrm{\small otherwise}}
 
 \medskip
 It takes a bit more insight to notice that \eqref{intro:let in 2 using A} can be further
 generalized into:
 %
-\begin{equation}
+\begin{equation}\LeftEqNo
 \renewcommand\arraystretch{1.5}
 \begin{array}{l@{}l}
-	A_{\,\psi\,(i :: J)\,(j :: K)} ~=~  \qquad\mbox{(if $i\in J_0$, $j\in K_1$)}\\
+	A^{^{JK}}_{\,\psi\,(i : J_0)\,(j : K_1)} ~=~ \\
 	\qquad
-	\textrm{let}~\psi'_{ij} = \min \langle~\psi_{ij}, \underset{(q::K_0)}\min ~ G_{iq} + w_{qj}~\rangle \\
+	\textrm{let}~\psi'_{ij} = \begin{cases}
+	  \begin{array}{@{}l@{}l@{}}\min\langle & \psi_{ij}, \\ & \!\underset{(q:K_0)}\min ~ A^{^{J_0K_0}}_{\,\psi iq} + w_{qj}\rangle\end{array} & \langle i,j\rangle\mbox{ in }\qbox2 \\
+	  \psi_{ij} & \otherwise
+	\end{cases} \\
 	\qquad\textrm{in}~
-	A_{\,\psi'\,(i::J_0)\,(j::K_1)}
+	A^{^{J_0K_1}}_{\,\psi' ij}
 \end{array}
-\label{intro:let in A}
+\label{intro:let in A 2}
 \end{equation}
 
 That is the core of the divide and conquer method: representing the output as a combination
 of smaller instances of the problem, or sub-problems, yielding a solution that is essentially
-a recursive routine, or a set of mutually recursive routines. In \eqref{intro:let in A}, the
-``let''-expression $\psi'_{ij} = \min \langle~\psi_{ij}, \min_{(q::K_0)} ~ G_{iq} + w_{qj}~\rangle$
-is another sub-problem that has to be addressed using the same slicing technique.
+a recursive routine, or a set of mutually recursive routines. 
 Once all the pieces fit together, it is possible to cut the space into arbitrarily small pieces,
 that fit nicely in each core's local cache. This greately increases performance, as demonstrated
 by~\citneeded{perhaps include a table with exact figures}. 
+\todo{Find a way to make this statement earlier}
+
+\medskip
+Similarly for \qbox3 and \qbox4:
+%
+\begin{equation}\LeftEqNo
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l}
+	A^{^{JK}}_{\,\psi\,(i : J_1)\,(j : K_0)} ~=~ \\
+	\qquad
+	\textrm{let}~\psi'_{ij} = \begin{cases} 
+	  \begin{array}{@{}l@{}l@{}}\min\langle & \psi_{ij}, \\ & \!\underset{(p:J_0)}\min ~ A^{^{J_0K_0}}_{\,\psi pj} + w'_{pi}\rangle \end{array} & \langle i,j\rangle\mbox{ in }\qbox3 \\
+	  \psi_{ij} & \otherwise \\
+	\end{cases} \\
+	\qquad\textrm{in}~
+	A^{^{J_1K_0}}_{\,\psi' ij}
+\end{array}
+\label{intro:let in A 3}
+\end{equation}
+
+\begin{equation}\LeftEqNo
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l}
+	A^{^{JK}}_{\,\psi\,(i : J_1)\,(j : K_1)} ~=~ \\
+	\qquad
+	\textrm{let}~\psi'_{ij} = \begin{cases} 
+	  \begin{array}{@{}l@{}l@{}}\min\langle & \psi_{ij}, \\
+         & \!\underset{(q:K_0)}\min ~ A^{^{J_1K_0}}_{\,\psi iq} + w'_{qj}\rangle \\
+         & \!\underset{(p:J_0)}\min ~ A^{^{J_0K_1}}_{\,\psi pj} + w'_{pi}\rangle \end{array} & \langle i,j\rangle\mbox{ in }\qbox4 \\
+	  \psi_{ij} & \otherwise \\
+	\end{cases} \\
+	\qquad\textrm{in}~
+	A^{^{J_1K_0}}_{\,\psi' ij}
+\end{array}
+\label{intro:let in A 4}
+\end{equation}
+
+Evidently there are some common sub-expressions. Defining
+\begin{equation}
+\renewcommand\arraystretch{1.3}
+\begin{array}{l@{}l@{}l}
+	B^{^{JK_0K_1}}_{\,\psi\,(i : J)\,(j : K_1)} ~=~ &
+	  \min\langle & \psi_{ij}, \\ 
+	&  & \!\underset{(q:K_0)}\min ~ \psi_{iq} + w_{qj}\rangle \\[.8em]
+	C^{^{J_0J_1K}}_{\,\psi\,(i : J_1)\,(j : K)} ~=~ &
+	  \min\langle & \psi_{ij}, \\ 
+	&  & \!\underset{(p:J_0)}\min ~ \psi_{pj} + w'_{pi}\rangle 
+\end{array}
+\end{equation}
+
+We can write \eqref{intro:let in A 2}, \eqref{intro:let in A 3}, \eqref{intro:let in A 4} as ---
+
+\begin{equation}\LeftEqNo
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l}
+	A^{^{JK}}_{\,\psi\,(i : J_0)\,(j : K_1)} ~=~ \\
+	\qquad
+	\textrm{let}~\psi'_{ij} = \begin{cases}
+	  B^{^{J_0K_0K_1}}_{\psi ij} & \langle i,j\rangle\mbox{ in }\qbox2 \\
+	  \psi_{ij} & \otherwise
+	\end{cases} \\
+	\qquad\textrm{in}~
+	A^{^{J_0K_1}}_{\,\psi' ij}
+\end{array}
+\label{intro:let in A 2 using B}
+\end{equation}
+
+\begin{equation}\LeftEqNo
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l}
+	A^{^{JK}}_{\,\psi\,(i : J_1)\,(j : K_0)} ~=~ \\
+	\qquad
+	\textrm{let}~\psi'_{ij} = \begin{cases}
+	  C^{^{J_0J_1K_0}}_{\psi ij} & \langle i,j\rangle\mbox{ in }\qbox3 \\
+	  \psi_{ij} & \otherwise
+	\end{cases} \\
+	\qquad\textrm{in}~
+	A^{^{J_1K_0}}_{\,\psi' ij}
+\end{array}
+\label{intro:let in A 2 using B}
+\end{equation}
+
+\begin{equation}\LeftEqNo
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l}
+	\lspan2{A^{^{JK}}_{\,\psi\,(i : J_1)\,(j : K_1)} ~=~} \\
+	\qquad
+	\textrm{let}~ & \psi'_{ij} = \begin{cases}
+	  B^{^{J_1K_0K_1}}_{\psi ij} & \langle i,j\rangle\mbox{ in }\qbox4 \\
+	  \psi_{ij} & \otherwise
+	\end{cases} \\[1.2em]
+	& \psi''_{ij} = \begin{cases}
+	  C^{^{J_0J_1K_1}}_{\psi' ij} & \langle i,j\rangle\mbox{ in }\qbox4 \\
+	  \psi_{ij} & \otherwise
+	\end{cases} \\
+	\lspan2{
+	\qquad\textrm{in}~A^{^{J_1K_0}}_{\,\psi'' ij}
+	}
+\end{array}
+\label{intro:let in A 2 using B}
+\end{equation}
+
+$B$ and $C$ are two more sub-problems that have to be addressed using the same slicing technique.
+Seems we have completed one task but created two? --- Fortunately, $B$ and $C$ are much simpler instances\todo{for once, they are not recursive}
+and are quite easy to develop.\todo{show this? Forget about this paragraph??}
+
 
 \begin{center}$\vdots$
 \end{center}
+
+\begin{figure*}
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}
+	\begin{axis}[
+	    ymode=log,
+		xlabel=$n$,
+		ylabel=Time ({\it s}),
+		scaled x ticks=false, %{real:1000}
+		log basis y=2, ymajorgrids=true]
+	\addplot[color=red,thick,mark=*,smooth] coordinates {
+		(512,   0.1)
+		(1024,  0.5)
+		(4096,  8)
+		(8192  64)
+		(16384, 496)
+	};
+	\end{axis}
+\end{tikzpicture}
+\begin{tikzpicture}
+	\begin{semilogyaxis}[
+		xlabel=$n$]
+	\addplot[color=red,thick,mark=*,smooth] coordinates {
+		(512,   0.1)
+		(1024,  0.5)
+		(4096,  8)
+		(8192  64)
+		(16384, 496)
+	};
+	\end{semilogyaxis}
+\end{tikzpicture}
+\begin{tikzpicture}
+	\begin{semilogyaxis}[
+		xlabel=$n$]
+	\addplot[color=red,thick,mark=*,smooth] coordinates {
+		(512,   0.1)
+		(1024,  0.5)
+		(4096,  8)
+		(8192  64)
+		(16384, 496)
+	};
+	\end{semilogyaxis}
+\end{tikzpicture}
+}
+\caption{\label{intro:coz speedup}}
+\end{figure*}
 
 \subsection{Main Contributions}
 
