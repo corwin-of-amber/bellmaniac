@@ -1,14 +1,25 @@
 \section{Introduction}
 \label{intro}
 
+
+\newcommand{\xidx}{i}
+\newcommand{\yidx}{j}
+\newcommand{\xw}[1]{w_{#1}}
+\newcommand{\yw}[1]{w'_{#1}}
+
+
+
+
 \begin{center}$\vdots$\end{center}
 
 As a motivating example, we consider the Simplified Arbiter problem.
 Two processes $x$ and $y$ are scheduled to run $|x|$ and $|y|$ time slots,
 respectively. Execution starts at $t=0$, and the length of each time slot is
 one time unit. The cost for scheduling the slots $[i..p)$ of $x$ at $t=i+j$
-is given by $w_{ipj}$, and the cost for schedulting the slots $[j..q)$ of $y$
-is given by $w'_{jqi}$.
+is given by $\xw{ipj}$, and the cost for schedulting the slots $[j..q)$ of $y$
+also at $t=i+j$ is given by $\yw{jqi}$.
+
+
 
 The optimal cost for scheduling the first $i$ slots of $x$ and the first $j$ slots
 of $y$ is given by the recurrence:
@@ -19,18 +30,24 @@ of $y$ is given by the recurrence:
 	G_{ij} ~=~  &
 	\begin{cases}
 		0                        & i=j=0 \\
-		w_{0j0}                  & i=0, j>0 \\
-		w'_{i00}                 & i>0, j=0 \\
+		\yw{0j0}                  & i=0, j>0 \\
+		\xw{0i0}                 & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
-		  \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + w_{qji}, \\
-		              & \underset{0\leq p<i}\min ~ G_{pj} + w'_{pij}~\rangle
+		  \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
+		              & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
 \label{intro:gap spec}
 \end{equation}
-
 \smallskip\noindent
+By way of intuition, the seconc case corresponds to the case when all the 
+time has been allocated to $y$, so $i=0$ and the cost will be 
+$\yw{0j0}$ by definition, and similarly for the third case. In the fourth case,
+either the schedule ends with time allocated to $x$, in which case $x$ was allocated
+time from 
+
+
 So that the cost for the entire schedule is $G_{|x||y|}$.
 
 \medskip
