@@ -409,50 +409,54 @@ and are quite easy to develop.\todo{show this? Forget about this paragraph??}
 \begin{center}$\vdots$
 \end{center}
 
+
 \begin{figure*}
 \resizebox{\textwidth}{!}{
 \begin{tikzpicture}
 	\begin{axis}[
+	    title=Parenthesis,
 	    ymode=log,
 		xlabel=$n$,
 		ylabel=Time ({\it s}),
 		scaled x ticks=false, %{real:1000}
 		log basis y=2, ymajorgrids=true]
-	\addplot[color=red,thick,mark=*,smooth] coordinates {
-		(512,   0.1)
-		(1024,  0.5)
-		(4096,  8)
-		(8192  64)
-		(16384, 496)
-	};
+	\addplot[color=blue!50!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=COZ] {data/plot1.dat}
+	  [yshift=-8pt] node[pos=0] {CO};
+	\addplot[color=red!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=Tiled/Par] {data/plot1.dat}
+	  [yshift=-10pt] node[pos=0] {PluTo};
 	\end{axis}
 \end{tikzpicture}
 \begin{tikzpicture}
-	\begin{semilogyaxis}[
-		xlabel=$n$]
-	\addplot[color=red,thick,mark=*,smooth] coordinates {
-		(512,   0.1)
-		(1024,  0.5)
-		(4096,  8)
-		(8192  64)
-		(16384, 496)
-	};
-	\end{semilogyaxis}
+	\begin{axis}[
+	    title=Gap,
+	    ymode=log,
+		xlabel=$n$,
+		scaled x ticks=false, %{real:1000}
+		log basis y=2, ymajorgrids=true]
+	\addplot[color=blue!50!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=COZ] {data/plot2.dat}
+	  [yshift=-8pt] node[pos=0] {CO};
+	\addplot[color=red!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=Tiled/Par] {data/plot2.dat}
+	  [yshift=-8pt] node[pos=0] {PoCC};
+	\end{axis}
 \end{tikzpicture}
 \begin{tikzpicture}
-	\begin{semilogyaxis}[
-		xlabel=$n$]
-	\addplot[color=red,thick,mark=*,smooth] coordinates {
-		(512,   0.1)
-		(1024,  0.5)
-		(4096,  8)
-		(8192  64)
-		(16384, 496)
-	};
-	\end{semilogyaxis}
+	\begin{axis}[
+	    title=Floyd-Warshall,
+	    ymode=log,
+		xlabel=$n$,
+		scaled x ticks=false, %{real:1000}
+		log basis y=2, ymajorgrids=true]
+	\addplot[color=blue!50!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=COZ] {data/plot3.dat}
+	  [yshift=-8pt] node[pos=0] {CO};
+	\addplot[color=red!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=Tiled/Par] {data/plot3.dat}
+	  [yshift=-8pt] node[pos=0] {PoCC};
+	\end{axis}
 \end{tikzpicture}
 }
-\caption{\label{intro:coz speedup}}
+\caption{\label{intro:coz speedup}
+  Comparison of the the best performance obtained using polyhedral compilers 
+  (PluTo\,\cite{HPC10/Pouchet}, PoCC\,\cite{PLDI08/Bondhugula})
+  for parallelization, vs. manually crafted recursive divide-and-conquer implementations (CO).}
 \end{figure*}
 
 \subsection{Main Contributions}
