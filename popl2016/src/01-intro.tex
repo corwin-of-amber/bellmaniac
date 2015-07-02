@@ -364,6 +364,7 @@ Evidently there are some common sub-expressions. Defining
 	  \min\langle & \psi_{ij}, \\ 
 	&  & \!\underset{(p:J_0)}\min ~ \psi_{pj} + w'_{pi}\rangle 
 \end{array}
+\label{intro:spec of B,C}
 \end{equation}
 
 We can write \eqref{intro:let in A 2}, \eqref{intro:let in A 3}, \eqref{intro:let in A 4} as ---
@@ -395,7 +396,7 @@ We can write \eqref{intro:let in A 2}, \eqref{intro:let in A 3}, \eqref{intro:le
 	\qquad\textrm{in}~
 	A^{^{J_1K_0}}_{\,\psi' ij}
 \end{array}
-\label{intro:let in A 2 using B}
+\label{intro:let in A 3 using C}
 \end{equation}
 
 \begin{equation}\LeftEqNo
@@ -415,12 +416,22 @@ We can write \eqref{intro:let in A 2}, \eqref{intro:let in A 3}, \eqref{intro:le
 	\qquad\textrm{in}~A^{^{J_1K_0}}_{\,\psi'' ij}
 	}
 \end{array}
-\label{intro:let in A 2 using B}
+\label{intro:let in A 4 using B,C}
 \end{equation}
 
-$B$ and $C$ are two more sub-problems that have to be addressed using the same slicing technique.
+\begin{figure*}
+\begin{center}
+\includegraphics[width=.9\textwidth]{img/gap-stratify-A}
+\end{center}
+\caption{\label{intro:gap stratify A chain}}
+\end{figure*}
+
+This leads to the further stratified version shown in \Cref{intro:gap stratify A chain}.
+The phases
+$B$ and $C$ \eqref{intro:spec of B,C} are two more sub-problems that have to be addressed using the same slicing technique.
 Seems we have completed one task but created two? --- Fortunately, $B$ and $C$ are much simpler instances\todo{for once, they are not recursive}
 and are quite easy to develop.\todo{show this? Forget about this paragraph??}
+
 
 
 \begin{center}$\vdots$
