@@ -3,15 +3,15 @@
 
 \begin{center}$\vdots$\end{center}
 
-As a motivating example, we consider the Simplified Gap problem.
-An intelligent agent is given two strings $x$ and $y$, and is requested
-to make them equal by deleting the characters at index range $[i..j)$
-from $x$, at a cost of $w_{ij}$ ($0\leq i<j\leq |x|$), from $y$,
-at a cost of $w'_{ij}$ ($0\leq i<j\leq |y|$), or by repeating these steps
-an arbitrary number of times.
-\footnote{In the full version of the gap problem, the agent is also allowed to replace a character $\alpha$ with a character $\beta$, at some cost $c_{\alpha\beta}$.}
+As a motivating example, we consider the Simplified Arbiter problem.
+Two processes $x$ and $y$ are scheduled to run $|x|$ and $|y|$ time slots,
+respectively. Execution starts at $t=0$, and the length of each time slot is
+one time unit. The cost for scheduling the slots $[i..p)$ of $x$ at $t=i+j$
+is given by $w_{ipj}$, and the cost for schedulting the slots $[j..q)$ of $y$
+is given by $w'_{jqi}$.
 
-The optimal cost is given by the following recurrence:
+The optimal cost for scheduling the first $i$ slots of $x$ and the first $j$ slots
+of $y$ is given by the recurrence:
 
 \begin{equation}
 \renewcommand\arraystretch{1.5}
@@ -19,11 +19,11 @@ The optimal cost is given by the following recurrence:
 	G_{ij} ~=~  &
 	\begin{cases}
 		0                        & i=j=0 \\
-		w_{0j}                   & i=0, j>0 \\
-		w'_{i0}                  & i>0, j=0 \\
+		w_{0j0}                  & i=0, j>0 \\
+		w'_{i00}                 & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
-		  \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + w_{qj}, \\
-		              & \underset{0\leq p<i}\min ~ G_{pj} + w'_{pi}~\rangle
+		  \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + w_{qji}, \\
+		              & \underset{0\leq p<i}\min ~ G_{pj} + w'_{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
@@ -31,7 +31,7 @@ The optimal cost is given by the following recurrence:
 \end{equation}
 
 \smallskip\noindent
-where the desired value is $G_{|x||y|}$.
+So that the cost for the entire schedule is $G_{|x||y|}$.
 
 \medskip
 With standard dynamic programming, this recurrence can be computed
@@ -47,14 +47,14 @@ to bottom.
 \renewcommand\arraystretch{1.3}
 \begin{algorithmic}
   \STATE $G_{00} := 0$
-  \FORLINE{$j=1..|y|$}  $G_{0j} := w_{0j}$  
+  \FORLINE{$j=1..|y|$}  $G_{0j} := w_{0j0}$  
   \FOR{$i=1..|x|$}
-    \STATE $G_{i0} := w'_{i0}$
+    \STATE $G_{i0} := w'_{i00}$
     \FOR{$j=1..|y|$}
       \STATE $G_{ij} :=
         \begin{array}[t]{@{}l@{~}l} 
-          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + w_{qj}, \\
-                      & \underset{0\leq p<i}\min ~ G_{pj} + w'_{pi}~\rangle 
+          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + w_{qji}, \\
+                      & \underset{0\leq p<i}\min ~ G_{pj} + w'_{pij}~\rangle 
         \end{array}$
     \ENDFOR
   \ENDFOR
@@ -66,16 +66,19 @@ a parallel version of the same computation. The array $G$ is partitioned into
 quadrants and dependencies are observed at the level of quadrants. The same reasoning
 has to be repeated at a coarser level;
 so, say the quadrants are labeled 1, 2, 3, and 4, then the computations of 2 and 3 depend on 1,
-and the computation of 4 depends on 2 and 3.
+and the computation of 4 depends on 2 and 3 (\Cref{intro:quadrants}).
 
 \newcommand\qbox[1]{\fbox{\scriptsize#1}}
 
 \begin{figure}[b]
+\quad
 $\renewcommand\arraystretch{2}G ~=~
  \begin{array}{|@{\quad}c@{\quad}|@{\quad}c@{\quad}|} \hline 1 & 2 \\[1mm] \hline 3 & 4 \\[1mm] \hline\end{array}$
 \qquad
 $\begin{array}{l}\qbox1 \rightsquigarrow \qbox2 \\ 
 \qbox1 \rightsquigarrow \qbox3 \\ \qbox2\rightsquigarrow \qbox4 \\ \qbox3 \rightsquigarrow \qbox4\end{array}$
+\caption{\label{intro:quadrants}
+  Top-level data dependencies.}
 \end{figure}
 
 \medskip
@@ -156,9 +159,26 @@ is always in \qbox2. Similarly, $G_{pj}$ is also in \qbox2. $G_{iq}$ is either i
 \qbox1 or in \qbox2.
 
 \begin{figure}
-\begin{tabular}{l}\includegraphics{img/gap-depend}\end{tabular}
-\todo{for the simplified version, the cell (i-1,j-1) should not be grayed}
-\caption{\label{intro:gap dependency matrix}}
+\quad
+\begin{tikzpicture}[x=7mm,y=7mm,baseline=(center)]
+  \coordinate(center) at (3,3);
+  \draw[step=1] (0,0) grid (6,6);
+  \draw[ultra thick] (4,2) rectangle +(1,1);
+  \node at (4.5,2.5) {$\langle i,j\rangle$};
+  \fill[blue,opacity=0.2] (0,2) rectangle (4,3);
+  \fill[blue,opacity=0.2] (4,3) rectangle (5,6);
+  \node[anchor=south east](G) at (0,6) {$G$};
+  \draw[->] (G.east) -- +(1.5,0) node[anchor=west] {$j$};
+  \draw[->] (G.south) -- +(0,-1.5) node[anchor=north] {$i$};
+\end{tikzpicture}
+\qquad
+\begin{tikzpicture}[x=3mm,y=3mm,baseline=(squig)]
+  \draw[fill=blue, fill opacity=0.2] (0,0) rectangle +(1,1);
+  \draw[ultra thick] (2.6,0) rectangle +(1,1);
+  \node(squig) at (1.8,.5) {$\rightsquigarrow$};
+\end{tikzpicture}
+\caption{\label{intro:gap dependency matrix}
+  Cell-level data dependencies.}
 \end{figure}
 
 To address the situation, the algorithm designer would like to separate the parts
