@@ -6,15 +6,15 @@
 \usepackage{multirow}
 \usepackage{cleveref}
 \usepackage{graphicx}
-\usepackage[usenames,dvipsnames]{color}
+\usepackage[usenames,dvipsnames]{xcolor}
 
 \usepackage{tikz}
 \usepackage{pgfplots}
 \usepackage{pgfplotstable}
-\usepackage{filecontents}
+\pgfplotsset{compat=1.12}
 
-\newcommand\todo[1]{{\color{blue} \footnote{\color{blue} TODO: {#1}}}}
-\newcommand\citneeded[1]{{\color{blue} \cite{?}\footnote{\color{blue} citation needed. #1}}}
+\newcommand\todo[1]{{\color{NavyBlue} \footnote{\color{NavyBlue} TODO: {#1}}}}
+\newcommand\citneeded[1]{{\color{NavyBlue} \cite{?}\footnote{\color{NavyBlue} citation needed. #1}}}
 
 \newcommand\newterm[1]{{\it #1}}
 \newcommand\R{\mathbb{R}}
@@ -24,7 +24,15 @@
 \renewcommand\S{\mathcal{S}}
 
 \newcommand\lspan[2]{\multicolumn{#1}{@{}l}{#2}}
+\newcommand\cspan[2]{\multicolumn{#1}{@{}c}{#2}}
 
+% author comment macros
+\newcommand\authornote[3]{{\color{#2} \footnote{\color{#2} {#1}: {#3}}}}
+
+\newcommand\asolar[1]{\authornote{AS}{BrickRed}{#1}}  % Armando
+\newcommand\cel[1]{\authornote{CL}{OliveGreen}{#1}}   % Charles
+\newcommand\rch[1]{\authornote{RC}{RoyalPurple}{#1}}  % Rezaul
+\newcommand\pga[1]{\authornote{PG}{RawSienna}{#1}}    % Pramod
 
 \begin{document}
 
