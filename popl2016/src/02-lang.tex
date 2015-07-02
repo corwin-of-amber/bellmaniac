@@ -196,31 +196,34 @@ The standard library contains some common primitives:
   \item ${<} : \T\to\T\to\B$, a polymorphic order relation.
   \item $\min, \max, \Sigma : (\T\to\S)\to\S$, reduction operators
     on ordered/unordered collections. The collection is represented by a mapping $f : \T\to\S$,
-    so that e.g. \[\semp{\min f} = \min \{\semp{f}\,v \;|\; v\in\semp{A}, \semp{f}\,v\neq\bot\}\]
+    so that e.g. \[\semp{\min f} = \min \big\{\semp{f}\,v \;\big|\; v\in\semp{A}, \semp{f}\,v\neq\bot\big\}\]
     The collections are expected to be finite.
 \end{itemize}
 
 \subsection{Example \hrulefill}
 
-The specification of the Simplified Gap (\eqref{intro:gap spec} from \Cref{intro}) will be written as
+The specification of the Simplified Gap (\eqref{intro:arbiter spec} from \Cref{intro}) will be written as
 %
 \begin{equation}
   \renewcommand\arraystretch{1.5}
   \begin{array}{@{}l@{}l@{}l@{}}
-    \lspan3{w :: ((J\times J)\cap{<})\to\R} \\
-    \lspan3{w' :: ((K\times K)\cap{<})\to\R} \\
+    \lspan3{w : ((J\times J)\cap{<})\to K\to\R} \\
+    \lspan3{w' : ((K\times K)\cap{<})\to J\to\R} \\
     G ~=~ \fix \theta\,i\,j\mapsto{}
-      & \lspan2{0\big|_{i=0\land j=0} ~\Big/~ w'_{0j}\big|_{i=0} ~\Big/~ w_{i0}\big|_{j=0} ~\Big/~} \\
-      & \min~\langle~ & \min p\mapsto\theta_{pj}+w_{pi}, \\
-      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle
+      & \lspan2{0\big|_{i=0\land j=0} ~\Big/~ w'_{0j0}\big|_{i=0} ~\Big/~ w_{0i0}\big|_{j=0} ~\Big/~} \\
+      & \min~\langle~ & \min p\mapsto\theta_{pj}+w_{pij}, \\
+      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle
   \end{array}
-  \label{lang:gap spec}
+  \label{lang:arbiter spec}
 \end{equation}
 
 \medskip
 We are using $f_{xy}$
 as a more readable alternative typography for $f\,x\,y$,
 where $f$ is a function symbol and $x$, $y$ are its arguments.
+
+Note that the ranges for $\min p$ and $\min q$ are implicit, from the types of
+$w$, $w'$: \[w_{pij}\neq\bot\liff p<i \quad \mbox{and} \quad w_{qji}\neq\bot\liff q<j\]
 
 \medskip
 \hrule

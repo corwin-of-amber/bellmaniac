@@ -124,7 +124,24 @@ Let $e$ be an expression with a hole, $e[\square] = (\cdots x_1 \mapsto \cdots x
 where $x_{1..k}\mapsto$ are abstraction terms enclosing $\square$. The bodies may contain arbitrary terms
 in addition to these abstractions.
 %
-\[e[t] ~=~ (\overline{x}\mapsto t) ~\applt~ z\mapsto e[z\,\overline{x}]\]
+\[\renewcommand\arraystretch{1.2}
+  \begin{array}{@{}r@{}c@{}l@{}}
+  e[t] & ~=~ & (\overline{x}\mapsto t) ~\applt~ z\mapsto e[z\,\overline{x}] \\
+  e[\reduce \langle\overline{a},\overline{b}\rangle] & ~=~ &
+     (\overline{x}\mapsto \reduce\langle\overline{a}\rangle) ~\applt~ z\mapsto e[\reduce\langle z\,\overline{x}, \overline{b}\rangle]
+  \end{array}\]
+%
+where $\overline{x}=x_{1..k}$, and $z$ is either an existing or a fresh variable.
+This tactic also has a special version that involves $\reduce$.
+The items in $\langle \overline{a},\overline{b}\rangle$ may be interleaved, since
+$\min,\max,\Sigma$ are all happen to be commutative.\footnote{If non-commutative functions get added in the future, then this will change into $\langle \overline{a}, \overline{b}, \overline{c}\rangle$ non-interleaving, with the right hand side being $(\overline{x}\mapsto \reduce\langle\overline{b}\rangle) ~\applt~ z\mapsto e[\reduce\langle \overline{a}, z\,\overline{x}, \overline{c}\rangle]$.}
+
+\Obligations tactic, if $z$ occurs free in $e$; otherwise none.
+
+\subsubsection{Let Insertion [$\reduce$]}
+%
+\[e[\reduce \langle\overline{a},\overline{b}\rangle] ~=~ 
+  (\overline{x}\mapsto \reduce\langle\overline{a}\rangle) ~\applt~ z\mapsto e[\reduce\langle z\,\overline{x}, \overline{b}\rangle]\]
 %
 where $\overline{x}=x_{1..k}$, and $z$ is either an existing or a fresh variable.
 
@@ -141,34 +158,34 @@ to make the type of a sub-term match the type of the entire term.
 
 \subsection{Example \hrulefill}
 
-For simplicity of the example, we assume that the input to the Simplified Gap problem
+For simplicity of the example, we assume that the input to the Simplified Arbiter problem
 satisfies triangle inequalities:
 %
 \begin{equation}
-w_{ij} \leq w_{ik} + w_{kj} \qquad w'_{ij} \leq w'_{ik} + w'_{kj}
+w_{pij} \leq w_{pkj} + w_{kij} \qquad w'_{qji} \leq w'_{qki} + w'_{kji}
 \label{equ:triangle}
 \end{equation}
 %
-for all (appropriately typed) $i<k<j$.
+for all (appropriately typed) $p<k<i$, ~$q<k<j$.
 
 \medskip
-Starting from the specification in \eqref{lang:gap spec}, we apply Synth to turn
+Starting from the specification in \eqref{lang:arbiter spec}, we apply Synth to turn
 $\fix (\theta\,i\,j\mapsto\square/\min\langle\cdots\rangle)$ into $\fix\theta\,i\,j\mapsto\min\langle\square,\cdots\rangle$.
-Distributivity and Associativity are used to obtain $f_1$, but the proof is deferred until
-Synth is applied so that the prover can use the extra context.
+Distributivity and Associativity are used to obtain the tactic parameter $f_1$, 
+but the proof is deferred until Synth is applied so that the prover can use the extra context.
 
 \begin{center}
 \fbox{$\begin{array}{l@{}l@{}l}
        \mbox{\underline{Synth}} \\ 
        r=1\\
        h_1=\theta\,i\,j\mapsto{}
-	      & \lspan2{0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0} ~\big/~} \\
-	      & \min\,\langle~ & \min p\mapsto\theta_{pj}+w_{pi}, \\
-	      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle \\
+	      & \lspan2{0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0} ~\big/~} \\
+	      & \min\,\langle~ & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle \\
        f_1=\theta\,i\,j\mapsto{}
-	      & \min\,\langle~ & 0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0}, \\
-	      & & \min p\mapsto\theta_{pj}+w_{pi}, \\
-	      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle
+	      & \min\,\langle~ & 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}, \\
+	      & & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle
        \end{array}$}
 \end{center}
 
@@ -176,9 +193,9 @@ Synth is applied so that the prover can use the extra context.
   \renewcommand\arraystretch{1.5}
   \begin{array}{@{}l@{}l@{}l@{}}
     G ~=~ \fix \theta\,i\,j\mapsto{}
-	      & \min\,\langle~ & 0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0}, \\
-	      & & \min p\mapsto\theta_{pj}+w_{pi}, \\
-	      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle
+	      & \min\,\langle~ & 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}, \\
+	      & & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle
   \end{array}
 \end{equation}
 
@@ -188,27 +205,27 @@ We then apply Let Insertion, followed by Stratify, to obtain the general form of
 \fbox{$\begin{array}{l@{}l}
        \mbox{\underline{Let}} \\ 
        e[\square] ~=~ \theta\,i\,j\mapsto\min\langle~ & \square, \\
-	      & \min p\mapsto\theta_{pj}+w_{pi}, \\
-	      & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle \\
+	      & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle \\
        \lspan2{~~t ~=~
-	      0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0}}
+	      0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}}
        \end{array}$}
 \end{center}
 
 \begin{equation}
   \renewcommand\arraystretch{1.5}
   \begin{array}{@{}l@{}l@{}l@{}l@{}}
-    G ~=~ & \fix \big(\,& \lspan2{(\theta\,i\,j\mapsto 0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0})\applt} \\
+    G ~=~ & \fix \big(\,& \lspan2{(\theta\,i\,j\mapsto 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0})\applt} \\
 	      & & z\,\theta\,i\,j \mapsto \min\,\langle~& z_{\theta ij}, \\
-	      & & & \min p\mapsto\theta_{pj}+w_{pi}, \\
-	      & & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle\,\big)
+	      & & & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle\,\big)
   \end{array}
 \end{equation}
 
 \begin{center}
 \fbox{$\begin{array}{l}
        \mbox{\underline{Stratify}} \\ 
-       f ~=~ \theta\,i\,j\mapsto 0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0} \\
+       f ~=~ \theta\,i\,j\mapsto 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0} \\
        g ~=~ z\,\theta\,i\,j\mapsto \min\langle z_{\theta ij},\cdots\rangle
        \end{array}$}
 \end{center}
@@ -217,14 +234,14 @@ We then apply Let Insertion, followed by Stratify, to obtain the general form of
   \renewcommand\arraystretch{1.5}
   \begin{array}{@{}l@{}l@{}l@{}}
     G ~=~ & \lspan2{\big(\fix \theta\,i\,j\mapsto
-	              0|_{i=0\land j=0} ~\big/~ w'_{0j}|_{i=0} ~\big/~ w_{i0}|_{j=0}\big)\applt} \\
+	              0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}\big)\applt} \\
 	      & \psi\mapsto \fix \theta\,i\,j\mapsto\min\,\langle~ & \psi_{ij} \\
-	      & & \min p\mapsto\theta_{pj}+w_{pi}, \\
-	      & & \min q\mapsto\theta_{iq}+w'_{qj} ~\rangle
+	      & & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle
   \end{array}
 \end{equation}
 
-\begin{figure}[b]
+\begin{figure}
 \includegraphics[width=.47\textwidth]{img/gap-stratify2}\\
 \includegraphics[width=.47\textwidth]{img/gap-stratify3}
 \caption{
