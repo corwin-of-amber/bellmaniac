@@ -25,12 +25,12 @@ standard implementation approach by developing \emph{divide-and-conquer}
  implementation strategies that recursively
 partition the problem into smaller subproblems.  These strategies
 exhibit better temporal locality, and the partitioning can expose more
-optimization opportunities (see, e.g., \cite{ChowdhuryRa10}). 
+optimization opportunities (see, e.g., \cite{IPDPS15/Tithi}). 
 Even when compared with tiled implementations optimized by the best polyhedral compilers, 
 the divide-and-conquer implementations still show significantly better performance, in some cases
 by more than an order of magnitude as illustrated in \figref{performance}. 
 \asolar{Have these graphs been published in other papers? If yes, we need to say so and write the previous  par a little differently}
-
+\rch{Those plots appear in \cite{IPDPS15/Tithi}}
 Unfortunately, developing such implementations is quite difficult, as will become apparent in \secref{divideConquer}. 
 In this paper, we develop a new computer aided approach to formally deriving provably correct divide-and-conquer algorithms
 for dynamic programming problems. The approach relies on a new method to formalize the derivation of these algorithms, which
