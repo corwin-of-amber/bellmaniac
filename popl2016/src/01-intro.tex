@@ -50,52 +50,12 @@ Specifically, our paper makes the following contributions:
 
 
 \begin{figure*}
-\resizebox{\textwidth}{!}{
-\begin{tikzpicture}
-	\begin{axis}[
-	    title=Parenthesis,
-	    ymode=log,
-		xlabel=$n$,
-		ylabel=Time ({\it s}),
-		scaled x ticks=false, %{real:1000}
-		log basis y=2, ymajorgrids=true]
-	\addplot[color=blue!50!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=COZ] {data/plot1.dat}
-	  [yshift=-8pt] node[pos=0] {CO};
-	\addplot[color=red!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=Tiled/Par] {data/plot1.dat}
-	  [yshift=-10pt] node[pos=0] {PluTo};
-	\end{axis}
-\end{tikzpicture}
-\begin{tikzpicture}
-	\begin{axis}[
-	    title=Gap,
-	    ymode=log,
-		xlabel=$n$,
-		scaled x ticks=false, %{real:1000}
-		log basis y=2, ymajorgrids=true]
-	\addplot[color=blue!50!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=COZ] {data/plot2.dat}
-	  [yshift=-8pt] node[pos=0] {CO};
-	\addplot[color=red!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=Tiled/Par] {data/plot2.dat}
-	  [yshift=-8pt] node[pos=0] {PoCC};
-	\end{axis}
-\end{tikzpicture}
-\begin{tikzpicture}
-	\begin{axis}[
-	    title=Floyd-Warshall,
-	    ymode=log,
-		xlabel=$n$,
-		scaled x ticks=false, %{real:1000}
-		log basis y=2, ymajorgrids=true]
-	\addplot[color=blue!50!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=COZ] {data/plot3.dat}
-	  [yshift=-8pt] node[pos=0] {CO};
-	\addplot[color=red!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=Tiled/Par] {data/plot3.dat}
-	  [yshift=-8pt] node[pos=0] {PoCC};
-	\end{axis}
-\end{tikzpicture}
-}
+\resizebox{\textwidth}{!}{\input{charts}}
 \caption{\label{intro:performance}
   Comparison of the the best performance obtained using polyhedral compilers 
   (PluTo\,\cite{HPC10/Pouchet}, PoCC\,\cite{PLDI08/Bondhugula})
-  for parallelization, vs. manually crafted recursive divide-and-conquer implementations (CO).}
+  for parallelization, vs. manually crafted recursive divide-and-conquer implementations (CO),
+  taken from~\cite{IPDPS15/Tithi}.}
 \end{figure*}
 
 \section{Divide and Conquer DP}
@@ -161,7 +121,7 @@ In order to determine which is the case, and what is the optimal value of $p$ an
 the dynamic programming algorithm needs information from all cells above and to the left of $G_{ij}$.
 Once the algorithm completes the table, one can read the total cost of the entire schedule from $G_{|x||y|}$.
 
-\subsection{Iterative algorithm}
+\subsection{Iterative Algorithm}
 \label{intro:iterative}
 
 With standard dynamic programming, this recurrence can be computed
@@ -191,7 +151,7 @@ to bottom.
 \end{algorithm}
 
 
-\subsection{Divide and Conquer algorithm}
+\subsection{Divide-and-Conquer Algorithm}
 
 \newcommand\qbox[1]{\fbox{\scriptsize#1}}
 \begin{figure}
@@ -215,8 +175,9 @@ $\begin{array}[b]{l}\qbox1 \rightsquigarrow \qbox2 \\
   Dividing a two-dimensional array into quadrants; the dependencies are shown on the right.}
 \end{figure}
 
-In the divide-and-conquer algorithm, the array $G$ is partitioned into
-quadrants as illustrated in \Cref{intro:quadrants}, so the same reasoning we applied 
+Divide-and-conquer is an algorithm development pattern (\cite{SODA06/Chowdhury}, \cite{SPAA08/Chowdhury})\coa{should these (SODA/SPAA) be the ones to cite here?}, 
+where the DP table, in this case, $G$, is partitioned into
+regions, in this case, quadrants, as illustrated in \Cref{intro:quadrants}. The same reasoning we applied 
 in the iterative case leads us to conclude that the computations of 2 and 3 depend on 1,
 and the computation of 4 depends on 2 and 3.
 
@@ -228,6 +189,7 @@ four steps:
   \STATE Compute \qbox3 using data from \qbox1.
   \STATE Compute \qbox4 using data from \qbox2 and \qbox3.
 \end{algorithmic}
+
 Each step depends only on a subset of the steps that came before it, 
 as illustrated by \Cref{intro:chain}. However, this is not yet a divide-and-conquer algorithm; 
 of the four steps, only step \qbox1{} is an instance of the original problem; all the other steps
@@ -264,8 +226,7 @@ On the other hand, the computation of \qbox2 is {\bf not} a mere copy of $G^{I_0
 because the range of $q$ is not a subset of $J_1$, and therefore 
 some of the recursive references $G_{iq}$ are not confined to \qbox2.
 
-
-This can be addressed by adding yet another parameter to $G$, denoting the range of $q$.
+This can be addressed by splitting that range, adding yet range another parameter to $G$.
 
 \begin{equation}\LeftEqNo
 \begin{array}{l@{}l}
@@ -276,14 +237,15 @@ This can be addressed by adding yet another parameter to $G$, denoting the range
 		w_{0j0}                   & i=0, j>0 \\
 		w'_{0i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
-		  \min\langle & \underset{q\in J'\cap[0,j)}\min ~ G^{^{IJ'J'}}_{iq} + \yw{qji}, \\
+		  \min\langle & \underset{~q\in J'~}\min ~ G^{^{IJ'\!J'}}_{iq} + \yw{qji}, \\
+		              & \underset{q\in J'\cap[0,j)}\min ~ G^{^{IJJ}}_{iq} + \yw{qji}, \\
 		              & \underset{p\in I\cap[0,i)}\min ~ G^{^{IJJ'}}_{pj} + \xw{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
 \end{equation}
 
-The computation of \qbox2 is now a copy of $G^{I_0J_0J}$. ~$G$ can be further generalized in the following
+The computation of \qbox2 is now a copy of $G^{I_0J_1J_0}$. ~$G$ can be further generalized in the following
 way:
 
 \newcommand{\Ggen}{H}
@@ -306,8 +268,8 @@ way:
 \end{equation}
 
 It is easy to see that both $G$ and \qbox1 can be expressed in terms of $\Ggen^{IJ}$ by making $\psi_{ij}=\infty$, 
-but \qbox2 can now also be expressed in terms of $\Ggen^{I_0J_1}$ by making 
-$\psi_{ij} =  \underset{q\in K}\min ~ G^{I_0J_0J_0}_{iq} + \yw{qji}$.
+but more importantly, \qbox2 can now also be expressed in terms of $\Ggen^{I_0J_1}$ by making 
+$\psi_{ij} =  \underset{q\in J_0}\min ~ G^{I_0J_0J_0}_{iq} + \yw{qji}$.
 Moreover, the calls to $G$ inside $\Ggen$ can be replaced with recursive calls to $\Ggen$ itself,
 giving the form: 
 
@@ -329,8 +291,8 @@ giving the form:
 \end{equation}
 
 The same approach can be used to develop the computations of \qbox3 and \qbox4.
-The sub-computation of $\psi$ can also be transformed into a recursive divide-and-conquer subcomputation, further improving the locality of the resulting algorithm.
-So through these kind of transformations, it is possible to break the computation of the original $G$ into four subcomputations, each of which can be itself recursively partitioned into four subcomputations, giving us a true divide-and-conquer algorithm.
+The sub-computation of $\psi$ can also be transformed into four recursive sub-computations, further improving the locality of the resulting algorithm.
+So through these kind of transformations, it is possible to break the computation of the original $G$ into four (or more) subcomputations, each of which can be itself recursively partitioned into four subcomputations, giving us a true divide-and-conquer algorithm.
 When the pieces become small enough, the iterative algorithm from \Cref{intro:iterative} is executed.
 
 As was outlined in \Cref{intro}, prior work has shown that the performance results that can be achieved through these transformations can be dramatic. Unfortunately, the line of reasoning that was followed in the preceding section can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered this technique. In the next section, we formalize our approach for deriving divide-and-conquer DP algorithms and describe our computer aided approach for generating provably correct divide-and-conquer DP.
