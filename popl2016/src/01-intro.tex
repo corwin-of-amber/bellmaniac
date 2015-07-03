@@ -25,12 +25,12 @@ standard implementation approach by developing \emph{divide-and-conquer}
  implementation strategies that recursively
 partition the problem into smaller subproblems.  These strategies
 exhibit better temporal locality, and the partitioning can expose more
-optimization opportunities (see, e.g., \cite{ChowdhuryRa10}). 
+optimization opportunities (see, e.g., \cite{IPDPS15/Tithi}). 
 Even when compared with tiled implementations optimized by the best polyhedral compilers, 
 the divide-and-conquer implementations still show significantly better performance, in some cases
 by more than an order of magnitude as illustrated in \figref{performance}. 
 \asolar{Have these graphs been published in other papers? If yes, we need to say so and write the previous  par a little differently}
-
+\rch{Those plots appear in \cite{IPDPS15/Tithi}}
 Unfortunately, developing such implementations is quite difficult, as will become apparent in \secref{divideConquer}. 
 In this paper, we develop a new computer aided approach to formally deriving provably correct divide-and-conquer algorithms
 for dynamic programming problems. The approach relies on a new method to formalize the derivation of these algorithms, which
@@ -105,30 +105,33 @@ Two processes $x$ and $y$ are scheduled to run $|x|$ and $|y|$ time slots,
 respectively. Execution starts at $t=0$, and the length of each time slot is
 one time unit. The cost for scheduling the slots $[i..p)$ of $x$ at $t=i+j$
 is given by $\xw{ipj}$, and the cost for schedulting the slots $[j..q)$ of $y$
-also at $t=i+j$ is given by $\yw{jqi}$.
+also at $t=i+j$ is given by $\yw{jqi}$. \RC{$[i..p)$ or $(p..i]$? $[j..q)$ or $(q..j]$?
+$\xw{ipj}$ or $\xw{pij}$? $\yw{jqi}$ or $\yw{qji}$?}
 
 \begin{figure}
-\begin{tabular}{@{\hspace{-1pt}}r@{\hspace{-22pt}}p{3in}}
-\begin{tikzpicture}[x=4.1mm,y=4.1mm,baseline=(center)]
+\begin{tabular}{@{\hspace{-1pt}}r@{~}l@{}}
+\begin{tikzpicture}[x=4.1mm,y=4.1mm,baseline=(center), remember picture]
   \coordinate(center) at (3,3);
   \draw[step=1] (0,0) grid (6,6);
   \draw[ultra thick] (4,2) rectangle +(1,1);
-  \node at (4.5,2.5) {\tiny $\scriptscriptstyle\langle i,j\rangle$};
+  %\node(Gij) at (4.5,2.5) {\tiny $\scriptscriptstyle\langle i,j\rangle$};
+  \node[circle,fill=BrickRed,inner sep=0,minimum size=1mm](Gij) at (4.5,2.5) {};
+  \fill[black,opacity=0.1] (0,5) rectangle (6,6);
+  \fill[black,opacity=0.1] (0,0) rectangle (1,5);
   \fill[blue,opacity=0.2] (0,2) rectangle (4,3);
   \fill[blue,opacity=0.2] (4,3) rectangle (5,6);
   \node[anchor=south east](G) at (0,6) {\small$G$};
   \draw[->] (G.east) -- +(1.5,0) node[anchor=west] {\small $j$};
   \draw[->] (G.south) -- +(0,-1.5) node[anchor=north] {\small $i$};
 \end{tikzpicture}
-\vspace{10pt}
-%\includegraphics[scale=0.4, bb= 99  445  290 494]{./img/gap1.pdf}
 &
-\vspace{-50pt}
-{\small
-\[
-\begin{array}{l@{}l}
-	G_{ij} &~=~ \\
-	&\hspace{-10pt}\begin{cases}
+\small
+$
+\begin{array}{l}
+	\tikz[overlay, remember picture]{\draw[BrickRed] (0,0) -- (Gij);}
+	G_{ij} ~=~ \\
+	~
+	\begin{cases}
 		0                        & i=j=0 \\
 		\yw{0j0}                  & i=0, j>0 \\
 		\xw{0i0}                 & i>0, j=0 \\
@@ -138,10 +141,10 @@ also at $t=i+j$ is given by $\yw{jqi}$.
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
-\]
-}
+$
 \end{tabular}
-\caption{Recurence equation.}
+\vspace{5pt}
+\caption{Recurence equation and cell-level dependencies.}
 \figlabel{spec}
 \end{figure}
 
@@ -203,6 +206,7 @@ $
 $\begin{array}{l}\qbox1 \rightsquigarrow \qbox2 \\ 
 \qbox1 \rightsquigarrow \qbox3 \\ \qbox2\rightsquigarrow \qbox4 \\ \qbox3 \rightsquigarrow \qbox4\end{array}$
 \end{tabular}
+\vspace{5pt}
 \caption{\figlabel{quadrants}
   Dividing a two-dimensional array into quadrants; the dependencies are shown on the right.}
 \end{figure}
@@ -228,7 +232,7 @@ it is possible to define each of the four steps above recursively, leading to a 
 and significantly improved performance relative to the iterative algorithm.
 
 \newcommand{\range}[1]{\mathcal{D}(#1)}
-\newcommand{\real}{\mathcal{R}}
+\newcommand{\real}{\mathbb{R}}
 
 To illustrate how this is done, we first introduce a small amount of notation. First, we use $\range{A,B\ldots}$ as a shorthand
 for $(A\times B\times\ldots) \rightarrow \real$. 
