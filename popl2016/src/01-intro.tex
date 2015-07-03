@@ -1,5 +1,5 @@
 \section{Introduction}
-\seclabel{intro}
+\label{intro}
 
 
 \newcommand{\xidx}{i}
@@ -144,8 +144,8 @@ $
 $
 \end{tabular}
 \vspace{5pt}
-\caption{Recurence equation and cell-level dependencies.}
-\figlabel{spec}
+\caption{Recurrence equation and cell-level dependencies.}
+\label{intro:arbiter spec}
 \end{figure}
 
 
@@ -165,7 +165,7 @@ in \figref{spec}. Once the algorithm completes the table, one can read the total
 With standard dynamic programming, this recurrence can be computed
 with an iterative program by understanding the dependency pattern:
 each value $G_{ij}$ is computed from other values $G_{i'j'}$ with lower
-indexes, $i'<i$, ~$j'<j$ (see \Cref{intro:arbiter dependency matrix}). 
+indexes, $i'<i$, ~$j'<j$ (see \Cref{intro:arbiter spec}). 
 Therefore, considering $G$ as a two-dimensional
 array, it can be filled in a single pass from left to right and from top
 to bottom.
@@ -189,30 +189,33 @@ to bottom.
 \end{algorithmic}
 \end{algorithm}
 
+
 \subsection{Divide and Conquer algorithm}
+
 \newcommand\qbox[1]{\fbox{\scriptsize#1}}
 \begin{figure}
-\begin{tabular}{p{2in}p{2in}}
+\centering
+\begin{tabular}{c@{\hspace{.5in}}c}
 $
 \renewcommand\arraystretch{2}
-\begin{array}{c|c|c|c|}
-  \multicolumn{2}{c}{} & \multicolumn{2}{c}{K} \\ \cline{3-4}
-  \multicolumn{2}{c}{} & \multicolumn{1}{c}{K_0}  & \multicolumn{1}{c}{K_1}\\ \cline{3-4}
-  \multirow{2}{*}{$J$} & J_0 & 1 & 2 \\ \cline{3-4}
-    & J_1 & 3 & 4 \\ \cline{3-4}
+\begin{array}[b]{c|c|c|c|}
+  \multicolumn{2}{c}{} & \multicolumn{2}{c}{J} \\ \cline{3-4}
+  \multicolumn{2}{c}{} & \multicolumn{1}{c}{J_0}  & \multicolumn{1}{c}{J_1}\\ \cline{3-4}
+  \multirow{2}{*}{$I$} & I_0 & 1 & 2 \\ \cline{3-4}
+    & I_1 & 3 & 4 \\ \cline{3-4}
 \end{array}
 $
 & 
-$\begin{array}{l}\qbox1 \rightsquigarrow \qbox2 \\ 
+$\begin{array}[b]{l}\qbox1 \rightsquigarrow \qbox2 \\ 
 \qbox1 \rightsquigarrow \qbox3 \\ \qbox2\rightsquigarrow \qbox4 \\ \qbox3 \rightsquigarrow \qbox4\end{array}$
 \end{tabular}
 \vspace{5pt}
-\caption{\figlabel{quadrants}
+\caption{\label{intro:quadrants}
   Dividing a two-dimensional array into quadrants; the dependencies are shown on the right.}
 \end{figure}
 
 In the divide-and-conquer algorithm, the array $G$ is partitioned into
-quadrants as illustrated in \figref{quadrants}, so the same reasoning we applied 
+quadrants as illustrated in \Cref{intro:quadrants}, so the same reasoning we applied 
 in the iterative case leads us to conclude that the computations of 2 and 3 depend on 1,
 and the computation of 4 depends on 2 and 3.
 
@@ -231,96 +234,116 @@ look somewhat different from the original problem and lack significant locality.
 it is possible to define each of the four steps above recursively, leading to a true divide-and-conquer algorithm with very high locality 
 and significantly improved performance relative to the iterative algorithm.
 
-\newcommand{\range}[1]{\mathcal{D}(#1)}
-\newcommand{\real}{\mathbb{R}}
-
-To illustrate how this is done, we first introduce a small amount of notation. First, we use $\range{A,B\ldots}$ as a shorthand
-for $(A\times B\times\ldots) \rightarrow \real$. 
-As a first step, we will introduce types into the original definition of the algorithm from \figref{spec}. 
-\newcommand{\xsub}[1]{subx(#1)}
-\newcommand{\ysub}[1]{suby(#1)}
+To illustrate how this is done, we first introduce a small amount of notation. 
+We define $I$ and $J$ to be the index sets for the rows and columns, respectively.
+We then define partitions $I=I_0\cup I_1$ and $J=J_0\cup J_1$ as in \Cref{intro:quadrants}.
+$G$ is now parameterized on those index sets;
 
 \begin{equation}
 \begin{array}{l@{}l}
-	G_{i,j,\xw{},\yw{}}:\range{J,K,\range{J,J,K}, \range{K,K,J}} ~=~  \\
+	G^{^{IJ}}_{(i:I)\,(j:J)} ~=~  \\
 	\qquad
 	\begin{cases}
-		0                        & i=j=0 \\
+		0                         & i=j=0 \\
 		w_{0j0}                   & i=0, j>0 \\
 		w'_{0i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
-		  \min\langle & \underset{q\in[0,j)}\min ~ G_{i,q,\xw{}, \yw{}} + \yw{qji}, \\
-		              &\underset{p\in[0,i)}\min ~ G_{pj,\xw{}, \yw{}} + \xw{pij}~\rangle
+		  \min\langle & \underset{q\in J\cap[0,j)}\min ~ G^{^{IJ}}_{iq} + \yw{qji}, \\
+		              & \underset{p\in I\cap[0,i)}\min ~ G^{^{IJ}}_{pj} + \xw{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
-\\
-%\ysub{i,j,\xw{}, [0,j) }
 \end{array}
 \end{equation}
 
-The computation of \qbox1{} corresponds to computing $G$ within the sub-domain 
-$\range{J_0,K_0,\range{J_0,J_0,K_0}, \range{K_0,K_0,J_0}}$, making it an exact copy of $G$. On the other hand, 
-the computation of \qbox2{} has the type  $\range{J_0,K_1,\range{J_0,J_0,K}, \range{K,K,J_0}}$, and the recursive calls
-are not confined to \qbox2{}. 
+The computation of \qbox1 corresponds to computing $G^{IJ}$ within the sub-domain 
+$I_0\times J_0$, making it an exact copy of $G^{I_0J_0}$. This is due to the fact
+that for $j\in J_0$, ~$J\cap[0,j)=J_0\cap[0,j)$, and for $i\in I_0$, ~$I\cap[0,i)=I_0\cap[0,i)$.
 
-\newcommand{\Ggen}{A}
-
-This can be addressed by generalizing the computation of $G$ in the following way. 
-\asolar{I defined $\Ggen$ as a macro. The current name is not very good, but it can be easily changed}
+On the other hand, the computation of \qbox2 is {\bf not} a mere copy of $G^{I_0J_1}$, 
+because the range of $q$ is not a subset of $J_1$, and therefore 
+some of the recursive references $G_{iq}$ are not confined to \qbox2.
 
 
-\begin{equation}
+This can be addressed by adding yet another parameter to $G$, denoting the range of $q$.
+
+\begin{equation}\LeftEqNo
 \begin{array}{l@{}l}
-	\Ggen_{i,j, \psi, \xw{},\yw{}, }:\range{J,K, \range{J,K}, \range{J,J,K}, \range{K,K,J}} ~=~  \\
+	G^{^{IJJ'}}_{(i:I)\,(j:J)} ~=~  \\
 	\qquad
 	\begin{cases}
-		0                        & i=j=0 \\
+		0                         & i=j=0 \\
 		w_{0j0}                   & i=0, j>0 \\
 		w'_{0i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
-		  \min\langle & \psi_{ij}, \underset{q\in K\cap[0,j)}\min ~ G_{i,q,\xw{}, \yw{}} + \yw{qji}, \\
-		              &\underset{p\in[0,i)}\min ~ G_{pj,\xw{}, \yw{}} + \xw{pij}~\rangle
+		  \min\langle & \underset{q\in J'\cap[0,j)}\min ~ G^{^{IJ'J'}}_{iq} + \yw{qji}, \\
+		              & \underset{p\in I\cap[0,i)}\min ~ G^{^{IJJ'}}_{pj} + \xw{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
-\\
 \end{array}
 \end{equation}
 
-It is easy to see that both $G$ and \qbox1{} can be expressed in terms of $\Ggen$ by making $\psi_{ij}=\infty$, but \qbox2{} can now also be expressed in terms of $\Ggen$ by making $\psi_{ij} =  \underset{q\in K}\min ~ G_{i,q,\xw{}, \yw{}} + \yw{qji}$. Moreover, because the parameters of the calls to $G$ inside $\Ggen$ are now guaranteed to stay within the input range of $\Ggen$, they can be replaced with recursive calls to $\Ggen$ itself. $\Ggen$ can be further generalized so that it can also be used to compute \qbox3{} and \qbox4{}. The sub-computation of $\psi$ can also be transformed into a recursive divide-and-conquer subcomputation, further improving the locality of the resulting algorithm. So through these kind of transformations, it is possible to break the computation of the original $G$ into four subcomputations, each of which is isomorphic to the original, and therefore, each of which can be itself recursively partitioned into four subcomputations, giving us a true divide-and-conquer algorithm. 
+The computation of \qbox2 is now a copy of $G^{I_0J_0J}$. ~$G$ can be further generalized in the following
+way:
 
-As was outlined in \secref{intro}, prior work has shown that the performance results that can be achieved through these transformations can be dramatic. Unfortunately, the line of reasoning that was followed in the preceding section can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered this technique. In the next section, we formalize our approach for deriving divide-and-conquer DP algorithms and describe our computer aided approach for generating provably correct divide-and-conquer DP.
+\newcommand{\Ggen}{H}
+
+\begin{equation}\LeftEqNo
+\begin{array}{l@{}l}
+	\Ggen^{^{IJ}}_{(i:I)\,(j:J)\,\psi} ~=~  \\
+	\qquad
+	\begin{cases}
+		0                         & i=j=0 \\
+		w_{0j0}                   & i=0, j>0 \\
+		w'_{0i0}                  & i>0, j=0 \\
+		\begin{array}{@{}l@{~}l}
+		  \min\langle & \psi_{ij}, \\
+		              & \!\underset{q\in J\cap[0,j)}\min ~ G^{^{IJJ}}_{iq} + \yw{qji}, \\
+		              & \!\underset{p\in I\cap[0,i)}\min ~ G^{^{IJJ}}_{pj} + \xw{pij}~\rangle
+		\end{array}              & i,j>0
+	\end{cases}
+\end{array}
+\end{equation}
+
+It is easy to see that both $G$ and \qbox1 can be expressed in terms of $\Ggen^{IJ}$ by making $\psi_{ij}=\infty$, 
+but \qbox2 can now also be expressed in terms of $\Ggen^{I_0J_1}$ by making 
+$\psi_{ij} =  \underset{q\in K}\min ~ G^{I_0J_0J_0}_{iq} + \yw{qji}$.
+Moreover, the calls to $G$ inside $\Ggen$ can be replaced with recursive calls to $\Ggen$ itself,
+giving the form: 
+
+\begin{equation}\LeftEqNo
+\begin{array}{l@{}l}
+	\Ggen^{^{IJ}}_{(i:I)\,(j:J)\,\psi} ~=~  \\
+	\qquad
+	\begin{cases}
+		0                         & i=j=0 \\
+		w_{0j0}                   & i=0, j>0 \\
+		w'_{0i0}                  & i>0, j=0 \\
+		\begin{array}{@{}l@{~}l}
+		  \min\langle & \psi_{ij}, \\
+		              & \!\underset{q\in J\cap[0,j)}\min ~ H^{^{IJ}}_{iq} + \yw{qji}, \\
+		              & \!\underset{p\in I\cap[0,i)}\min ~ H^{^{IJ}}_{pj} + \xw{pij}~\rangle
+		\end{array}              & i,j>0
+	\end{cases}
+\end{array}
+\end{equation}
+
+The same approach can be used to develop the computations of \qbox3 and \qbox4.
+The sub-computation of $\psi$ can also be transformed into a recursive divide-and-conquer subcomputation, further improving the locality of the resulting algorithm.
+So through these kind of transformations, it is possible to break the computation of the original $G$ into four subcomputations, each of which can be itself recursively partitioned into four subcomputations, giving us a true divide-and-conquer algorithm. 
+
+As was outlined in \Cref{intro}, prior work has shown that the performance results that can be achieved through these transformations can be dramatic. Unfortunately, the line of reasoning that was followed in the preceding section can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered this technique. In the next section, we formalize our approach for deriving divide-and-conquer DP algorithms and describe our computer aided approach for generating provably correct divide-and-conquer DP.
+
+
+\begin{figure}
+\includegraphics[width=.47\textwidth]{img/gap-stratify1}
+\caption[caption]{\label{intro:chain}
+  Stratified computation for Simplified Arbiter. \\[.2em]
+  Thick borders indicate the region that is read at each step.}
+\end{figure}
 
 
 \subsection{old stuff}
 
-
- $G_{\,(i : J_0)\,(j : K_0)}$; \ie{} it is the
- same as that of G, but restricted to $J_0$ and $K_0$. Similarly, the computation of \qbox2{} corresponds to $G_{\,(i : J_0)\,(j : K_1)}$; 
-note that in this case, however, the range of $q$ in $\ysub{}$ will not be limited to $K_1$, but instead has to range over all of $K$. 
-In order to make recursive sub-problems, the computation of \qbox2 can be broken down in the following way: 
-\begin{equation}
-\begin{array}{l@{}l}
-	G_{\,(i : J_0)\,(j : K_1)} ~=~  \\
-	\qquad
-	\begin{cases}
-		0                        & i=j=0 \\
-		w_{0j0}                   & i=0, j>0 \\
-		w'_{0i0}                  & i>0, j=0 \\
-		\begin{array}{@{}l@{~}l}
-		  \min\langle & \ysub{i,j,K_0 }, \ysub{i,j,K_1 \cap [0,j) }, \\
-		              &\xsub{i,j,[0,i)}~\rangle
-		\end{array}              & i,j>0
-	\end{cases}
-\\
-\end{array}
-\end{equation}
-
-\begin{figure}
-\includegraphics[width=.47\textwidth]{img/gap-stratify1}
-\caption[caption]{\figlabel{chain}
-  Stratified computation for Simplified Gap. \\[.2em]
-  Thick borders indicate the region that is read at each step.}
-\end{figure}
 
 At this point it can be noticed that step 1 is equivalent to the original
 algorithm when given as input the prefixes of $x$ and $y$ whose length correspond to the
@@ -619,17 +642,4 @@ and are quite easy to develop.\todo{show this? Forget about this paragraph??}
 \begin{center}$\vdots$
 \end{center}
 
-
-\subsection{Main Contributions}
-
-\begin{enumerate}
-  \item We develop a small set of formal tactics that can be used to transform a class of recurrence
-  specifications, written in a simple functional language, 
-  into equivalent divide-and-conquer programs, that admit parallel cache-local
-  implementations, in a principled, systematic manner.
-  \item We prove that these tactics are semantics-preserving, assuming some side conditions are met
-  at the point when the tactic is applied.
-  \item We show that the side conditions can be effectively translated into first-order closed
-  formulas, and verified automatically by SMT solvers.
-\end{enumerate}
 
