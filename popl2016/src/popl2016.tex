@@ -26,6 +26,13 @@
 \newcommand\lspan[2]{\multicolumn{#1}{@{}l}{#2}}
 \newcommand\cspan[2]{\multicolumn{#1}{@{}c}{#2}}
 
+\makeatletter
+\newcommand{\LeftEqNo}{\let\veqno\@@leqno}
+\makeatother
+
+\newcommand\limplies{\rightarrow}
+\newcommand\liff{\leftrightarrow}
+
 % author comment macros
 \newcommand\authornote[3]{{\color{#2} \footnote{\color{#2} {#1}: {#3}}}}
 

@@ -108,14 +108,27 @@ is given by $\xw{ipj}$, and the cost for schedulting the slots $[j..q)$ of $y$
 also at $t=i+j$ is given by $\yw{jqi}$.
 
 \begin{figure}
-\begin{tabular}{@{\hspace{-1pt}}r@{\hspace{-6pt}}p{3in}}
-\includegraphics[scale=0.4, bb= 99  445  290 494]{./img/gap1.pdf}
+\begin{tabular}{@{\hspace{-1pt}}r@{\hspace{-22pt}}p{3in}}
+\begin{tikzpicture}[x=4.1mm,y=4.1mm,baseline=(center)]
+  \coordinate(center) at (3,3);
+  \draw[step=1] (0,0) grid (6,6);
+  \draw[ultra thick] (4,2) rectangle +(1,1);
+  \node at (4.5,2.5) {\tiny $\scriptscriptstyle\langle i,j\rangle$};
+  \fill[blue,opacity=0.2] (0,2) rectangle (4,3);
+  \fill[blue,opacity=0.2] (4,3) rectangle (5,6);
+  \node[anchor=south east](G) at (0,6) {\small$G$};
+  \draw[->] (G.east) -- +(1.5,0) node[anchor=west] {\small $j$};
+  \draw[->] (G.south) -- +(0,-1.5) node[anchor=north] {\small $i$};
+\end{tikzpicture}
+\vspace{10pt}
+%\includegraphics[scale=0.4, bb= 99  445  290 494]{./img/gap1.pdf}
 &
+\vspace{-50pt}
 {\small
 \[
 \begin{array}{l@{}l}
 	G_{ij} &~=~ \\
-	&\begin{cases}
+	&\hspace{-10pt}\begin{cases}
 		0                        & i=j=0 \\
 		\yw{0j0}                  & i=0, j>0 \\
 		\xw{0i0}                 & i>0, j=0 \\
@@ -131,6 +144,7 @@ also at $t=i+j$ is given by $\yw{jqi}$.
 \caption{Recurence equation.}
 \figlabel{spec}
 \end{figure}
+
 
 The optimal cost for scheduling the first $i$ slots of $x$ and the first $j$ slots
 of $y$ is given by the recurrence in \figref{spec}. When $i$ is zero, it means that
@@ -148,7 +162,8 @@ in \figref{spec}. Once the algorithm completes the table, one can read the total
 With standard dynamic programming, this recurrence can be computed
 with an iterative program by understanding the dependency pattern:
 each value $G_{ij}$ is computed from other values $G_{i'j'}$ with lower
-indexes, $i'<i$, ~$j'<j$. Therefore, considering $G$ as a two-dimensional
+indexes, $i'<i$, ~$j'<j$ (see \Cref{intro:arbiter dependency matrix}). 
+Therefore, considering $G$ as a two-dimensional
 array, it can be filled in a single pass from left to right and from top
 to bottom.
 
@@ -164,7 +179,7 @@ to bottom.
     \FOR{$j=1..|y|$}
       \STATE $G_{ij} :=
         \begin{array}[t]{@{}l@{~}l} 
-          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\                      
+          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
         \end{array}$
     \ENDFOR
   \ENDFOR
@@ -296,7 +311,6 @@ In order to make recursive sub-problems, the computation of \qbox2 can be broken
 \end{array}
 \end{equation}
 
-
 \begin{figure}
 \includegraphics[width=.47\textwidth]{img/gap-stratify1}
 \caption[caption]{\figlabel{chain}
@@ -317,11 +331,6 @@ and columns, respectively; $J_0$, $J_1$ for the top and bottom row indexes, resp
 and $K_0$, $K_1$ for the left and right column indexes (\Cref{intro:slice G}).
 The specifications for step 2 then take the following form:
 
-
-\makeatletter
-\newcommand{\LeftEqNo}{\let\veqno\@@leqno}
-\makeatother
-
 \begin{equation}\LeftEqNo
 \renewcommand\arraystretch{1.5}
 \begin{array}{l@{}l}
@@ -329,11 +338,11 @@ The specifications for step 2 then take the following form:
 	\qquad
 	\begin{cases}
 		0                        & i=j=0 \\
-		w_{0j}                   & i=0, j>0 \\
-		w'_{i0}                  & i>0, j=0 \\
+		w'_{0j0}                 & i=0, j>0 \\
+		w_{0i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
-		  \min\langle & \underset{0\leq (q:K) <j}\min ~ G_{iq} + w_{qj}, \\
-		              & \underset{0\leq (p:J_0) <i}\min ~ G_{pj} + w'_{pi}~\rangle
+		  \min\langle & \underset{0\leq (q:K) <j}\min ~ G_{iq} + w'_{qji}, \\
+		              & \underset{0\leq (p:J_0) <i}\min ~ G_{pj} + w_{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
@@ -346,30 +355,30 @@ is always in \qbox2. Similarly, $G_{pj}$ is also in \qbox2. $G_{iq}$ is either i
 \qbox1 or in \qbox2.
 
 
-
 To address the situation, the algorithm designer would like to separate the parts
 of the computation that read from \qbox1 from the parts that read from \qbox2.
 This can be achieved here by splitting the $\min_{0\leq(q:K)<j}$ into two
-ranges, according to the region in which $G_iq$ resides.
+ranges, according to the region in which $G_{iq}$ resides.
 
 \begin{equation}\LeftEqNo
 \renewcommand\arraystretch{1.5}
 \begin{array}{l@{}l}
-	G_{\,(i :: J_0)\,(j :: K_1)} ~=~  \\
+	G_{\,(i : J_0)\,(j : K_1)} ~=~  \\
 	\qquad
 	\begin{cases}
 		0                        & i=j=0 \\
-		w_{0j}                   & i=0, j>0 \\
-		w'_{i0}                  & i>0, j=0 \\
+		w'_{0j0}                 & i=0, j>0 \\
+		w_{0i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
-		  \min\langle & \underset{(q:K_0)}\min ~ G_{iq} + w_{qj}, \\
-		              & \underset{(q:K_1) <j}\min ~ G_{iq} + w_{qj}, \\
-		              & \underset{0\leq (p:J_0) <i}\min ~ G_{pj} + w'_{pi}~\rangle
+		  \min\langle & \underset{(q:K_0)}\min ~ G_{iq} + w'_{qji}, \\
+		              & \underset{(q:K_1) <j}\min ~ G_{iq} + w'_{qji}, \\
+		              & \underset{0\leq (p:J_0) <i}\min ~ G_{pj} + w_{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
 \end{equation}
 
+\medskip
 The path becomes clear: compute $\min_{(q:K_0)} ~ G_{iq} + w_{qj}$ first, for all $i$, $j$
 in \qbox2. Then use the results to compute $G_{ij}$.
 
@@ -378,17 +387,17 @@ in \qbox2. Then use the results to compute $G_{ij}$.
 \begin{array}{l@{}l}
 	G_{\,(i : J_0)\,(j : K_1)} ~=~  \\
 	\qquad
-	\textrm{let}~\psi_{ij} = \underset{(q::K_0)}\min ~ G_{iq} + w_{qj} \\
+	\textrm{let}~\psi_{ij} = \underset{(q::K_0)}\min ~ G_{iq} + w'_{qji} \\
 	\qquad\textrm{in} \\
 	\qquad
 	\begin{cases}
 		0                        & i=j=0 \\
-		w_{0j}                   & i=0, j>0 \\
-		w'_{i0}                  & i>0, j=0 \\
+		w'_{0j0}                 & i=0, j>0 \\
+		w_{0i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
 		  \min\langle & \psi_{ij}, \\
-		              & \underset{(q:K_1) <j}\min ~ G_{iq} + w_{qj}, \\
-		              & \underset{0\leq (p:J_0) <i}\min ~ G_{pj} + w'_{pi}~\rangle
+		              & \underset{(q:K_1) <j}\min ~ G_{iq} + w'_{qji}, \\
+		              & \underset{0\leq (p:J_0) <i}\min ~ G_{pj} + w_{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
@@ -396,33 +405,33 @@ in \qbox2. Then use the results to compute $G_{ij}$.
 \end{equation}
 
 \medskip
-The second part in \eqref{intro:let in 2} starts to look similar to \eqref{intro:gap spec}:
+The second part in \eqref{intro:let in 2} starts to look similar to \eqref{intro:arbiter spec}:
 in particular, the types of $p$ and $q$ are the same as those of $i$ and $j$.
-In fact, if we set $\psi_{ij}=\infty$, we get \eqref{intro:gap spec} as a special case,
+In fact, if we set $\psi_{ij}=\infty$, we get \eqref{intro:arbiter spec} as a special case,
 only with $J_0$ and $K_1$ instead of $J$ and $K$.
 It therefore makes sense to write a version that generalizes both.
 
 \begin{equation}\LeftEqNo
 \renewcommand\arraystretch{1.5}
 \begin{array}{l}
-	A^{^{JK}}_{\,\psi\, i\, j} ~=~  \\
+	A^{^{JK}}_{\,\psi ij} ~=~  \\
 	\qquad
 	\begin{cases}
 		0                        & i=j=0 \\
-		w_{0j}                   & i=0, j>0 \\
-		w'_{i0}                  & i>0, j=0 \\
+		w'_{0j0}                 & i=0, j>0 \\
+		w_{0i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
 		  \min\langle & \psi_{ij}, \\
-		              & \underset{(q:K)<j}\min ~ A^{^{JK}}_{\psi iq} + w_{qj}, \\
-		              & \underset{(p:J)<i}\min ~ A^{^{JK}}_{\psi pj} + w'_{pi}~\rangle
+		              & \underset{(q:K)<j}\min ~ A^{^{JK}}_{\psi iq} + w'_{qji}, \\
+		              & \underset{(p:J)<i}\min ~ A^{^{JK}}_{\psi pj} + w_{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
-\label{intro:gap phase A}
+\label{intro:arbiter phase A}
 \end{equation}
 
 \medskip
-And we can now rewrite \eqref{intro:gap spec} and \eqref{intro:let in 2} as
+And we can now rewrite \eqref{intro:arbiter spec} and \eqref{intro:let in 2} as
 %
 \begin{equation}
 	G_{ij} ~=~ A^{^{JK}}_{\,(\infty^{J\times K})\,(i:J)\,(j:K)}
@@ -450,7 +459,7 @@ generalized into:
 	A^{^{JK}}_{\,\psi\,(i : J_0)\,(j : K_1)} ~=~ \\
 	\qquad
 	\textrm{let}~\psi'_{ij} = \begin{cases}
-	  \begin{array}{@{}l@{}l@{}}\min\langle & \psi_{ij}, \\ & \!\underset{(q:K_0)}\min ~ A^{^{J_0K_0}}_{\,\psi iq} + w_{qj}\rangle\end{array} & \langle i,j\rangle\mbox{ in }\qbox2 \\
+	  \begin{array}{@{}l@{}l@{}}\min\langle & \psi_{ij}, \\ & \!\underset{(q:K_0)}\min ~ A^{^{J_0K_0}}_{\,\psi iq} + w'_{qji}\rangle\end{array} & \langle i,j\rangle\mbox{ in }\qbox2 \\
 	  \psi_{ij} & \otherwise
 	\end{cases} \\
 	\qquad\textrm{in}~
@@ -460,7 +469,7 @@ generalized into:
 \end{equation}
 
 That is the core of the divide and conquer method: representing the output as a combination
-of smaller instances of the problem, or sub-problems, yielding a solution that is essentially
+of solutions to sub-problems, yielding an algorithm that is essentially
 a recursive routine, or a set of mutually recursive routines. 
 Once all the pieces fit together, it is possible to cut the space into arbitrarily small pieces,
 that fit nicely in each core's local cache. This greately increases performance, as demonstrated
@@ -468,7 +477,7 @@ by~\citneeded{perhaps include a table with exact figures}.
 \todo{Find a way to make this statement earlier}
 
 \medskip
-Similarly for \qbox3 and \qbox4:
+We can apply similar treatment to \qbox3 and \qbox4:
 %
 \begin{equation}\LeftEqNo
 \renewcommand\arraystretch{1.5}
@@ -476,7 +485,7 @@ Similarly for \qbox3 and \qbox4:
 	A^{^{JK}}_{\,\psi\,(i : J_1)\,(j : K_0)} ~=~ \\
 	\qquad
 	\textrm{let}~\psi'_{ij} = \begin{cases} 
-	  \begin{array}{@{}l@{}l@{}}\min\langle & \psi_{ij}, \\ & \!\underset{(p:J_0)}\min ~ A^{^{J_0K_0}}_{\,\psi pj} + w'_{pi}\rangle \end{array} & \langle i,j\rangle\mbox{ in }\qbox3 \\
+	  \begin{array}{@{}l@{}l@{}}\min\langle & \psi_{ij}, \\ & \!\underset{(p:J_0)}\min ~ A^{^{J_0K_0}}_{\,\psi pj} + w_{pij}\rangle \end{array} & \langle i,j\rangle\mbox{ in }\qbox3 \\
 	  \psi_{ij} & \otherwise \\
 	\end{cases} \\
 	\qquad\textrm{in}~
@@ -492,8 +501,8 @@ Similarly for \qbox3 and \qbox4:
 	\qquad
 	\textrm{let}~\psi'_{ij} = \begin{cases} 
 	  \begin{array}{@{}l@{}l@{}}\min\langle & \psi_{ij}, \\
-         & \!\underset{(q:K_0)}\min ~ A^{^{J_1K_0}}_{\,\psi iq} + w'_{qj}\rangle \\
-         & \!\underset{(p:J_0)}\min ~ A^{^{J_0K_1}}_{\,\psi pj} + w'_{pi}\rangle \end{array} & \langle i,j\rangle\mbox{ in }\qbox4 \\
+         & \!\underset{(q:K_0)}\min ~ A^{^{J_1K_0}}_{\,\psi iq} + w'_{qji}\rangle \\
+         & \!\underset{(p:J_0)}\min ~ A^{^{J_0K_1}}_{\,\psi pj} + w_{pij}\rangle \end{array} & \langle i,j\rangle\mbox{ in }\qbox4 \\
 	  \psi_{ij} & \otherwise \\
 	\end{cases} \\
 	\qquad\textrm{in}~
@@ -508,42 +517,56 @@ Evidently there are some common sub-expressions. Defining
 \begin{array}{l@{}l@{}l}
 	B^{^{JK_0K_1}}_{\,\psi\,(i : J)\,(j : K_1)} ~=~ &
 	  \min\langle & \psi_{ij}, \\ 
-	&  & \!\underset{(q:K_0)}\min ~ \psi_{iq} + w_{qj}\rangle \\[.8em]
+	&  & \!\underset{(q:K_0)}\min ~ \psi_{iq} + w'_{qji}\rangle \\[.8em]
 	C^{^{J_0J_1K}}_{\,\psi\,(i : J_1)\,(j : K)} ~=~ &
 	  \min\langle & \psi_{ij}, \\ 
-	&  & \!\underset{(p:J_0)}\min ~ \psi_{pj} + w'_{pi}\rangle 
+	&  & \!\underset{(p:J_0)}\min ~ \psi_{pj} + w_{pij}\rangle 
 \end{array}
 \label{intro:spec of B,C}
 \end{equation}
 
 We can write \eqref{intro:let in A 2}, \eqref{intro:let in A 3}, \eqref{intro:let in A 4} as ---
 
+\newcommand\qqquad{\qquad\qquad}
+
 \begin{equation}\LeftEqNo
 \renewcommand\arraystretch{1.5}
-\begin{array}{l@{}l}
-	A^{^{JK}}_{\,\psi\,(i : J_0)\,(j : K_1)} ~=~ \\
-	\qquad
-	\textrm{let}~\psi'_{ij} = \begin{cases}
-	  B^{^{J_0K_0K_1}}_{\psi ij} & \langle i,j\rangle\mbox{ in }\qbox2 \\
+\begin{array}{@{}l@{}l}
+    \lspan2{
+	A^{^{JK}}_{\,\psi\,(i : J_0)\,(j : K_1)} ~=~ } \\
+	\qqquad
+	\textrm{let}~ & \psi'_{ij} = \begin{cases}
+	  A^{^{J_0K_0}}_{\psi ij} & \langle i,j\rangle\mbox{ in }\qbox1 \\
 	  \psi_{ij} & \otherwise
+	\end{cases} \\[1.2em]
+	& \psi''_{ij} = \begin{cases}
+	  B^{^{J_0K_0K_1}}_{\psi' ij} & \langle i,j\rangle\mbox{ in }\qbox2 \\
+	  \psi'_{ij} & \otherwise
 	\end{cases} \\
-	\qquad\textrm{in}~
-	A^{^{J_0K_1}}_{\,\psi' ij}
+	\lspan2{
+	\qqquad\textrm{in}~
+	A^{^{J_0K_1}}_{\,\psi'' ij} }
 \end{array}
 \label{intro:let in A 2 using B}
 \end{equation}
 
 \begin{equation}\LeftEqNo
 \renewcommand\arraystretch{1.5}
-\begin{array}{l@{}l}
-	A^{^{JK}}_{\,\psi\,(i : J_1)\,(j : K_0)} ~=~ \\
-	\qquad
-	\textrm{let}~\psi'_{ij} = \begin{cases}
+\begin{array}{@{}l@{}l}
+    \lspan2{
+	A^{^{JK}}_{\,\psi\,(i : J_1)\,(j : K_0)} ~=~ } \\
+	\qqquad
+	\textrm{let}~ & \psi'_{ij} = \begin{cases}
+	  A^{^{J_0K_0}}_{\psi ij} & \langle i,j\rangle\mbox{ in }\qbox1 \\
+	  \psi_{ij} & \otherwise
+	\end{cases} \\[1.2em]
+	& \psi''_{ij} = \begin{cases}
 	  C^{^{J_0J_1K_0}}_{\psi ij} & \langle i,j\rangle\mbox{ in }\qbox3 \\
 	  \psi_{ij} & \otherwise
 	\end{cases} \\
-	\qquad\textrm{in}~
-	A^{^{J_1K_0}}_{\,\psi' ij}
+	\lspan2{
+	\qqquad\textrm{in}~
+	A^{^{J_1K_0}}_{\,\psi' ij} }
 \end{array}
 \label{intro:let in A 3 using C}
 \end{equation}
@@ -554,15 +577,20 @@ We can write \eqref{intro:let in A 2}, \eqref{intro:let in A 3}, \eqref{intro:le
 	\lspan2{A^{^{JK}}_{\,\psi\,(i : J_1)\,(j : K_1)} ~=~} \\
 	\qquad
 	\textrm{let}~ & \psi'_{ij} = \begin{cases}
-	  B^{^{J_1K_0K_1}}_{\psi ij} & \langle i,j\rangle\mbox{ in }\qbox4 \\
+	  A^{^{J_0K_1}}_{\psi ij} & \langle i,j\rangle\mbox{ in }\qbox2 \\
+	  A^{^{J_1K_0}}_{\psi ij} & \langle i,j\rangle\mbox{ in }\qbox3 \\
 	  \psi_{ij} & \otherwise
-	\end{cases} \\[1.2em]
+	\end{cases} \\[1.8em]
 	& \psi''_{ij} = \begin{cases}
-	  C^{^{J_0J_1K_1}}_{\psi' ij} & \langle i,j\rangle\mbox{ in }\qbox4 \\
-	  \psi_{ij} & \otherwise
+	  B^{^{J_1K_0K_1}}_{\psi' ij} & \langle i,j\rangle\mbox{ in }\qbox4 \\
+	  \psi'_{ij} & \otherwise
+	\end{cases} \\[1.2em]
+	& \psi'''_{ij} = \begin{cases}
+	  C^{^{J_0J_1K_1}}_{\psi'' ij} & \langle i,j\rangle\mbox{ in }\qbox4 \\
+	  \psi''_{ij} & \otherwise
 	\end{cases} \\
 	\lspan2{
-	\qquad\textrm{in}~A^{^{J_1K_0}}_{\,\psi'' ij}
+	\qquad\textrm{in}~A^{^{J_1K_0}}_{\,\psi''' ij}
 	}
 \end{array}
 \label{intro:let in A 4 using B,C}
@@ -572,13 +600,14 @@ We can write \eqref{intro:let in A 2}, \eqref{intro:let in A 3}, \eqref{intro:le
 \begin{center}
 \includegraphics[width=.9\textwidth]{img/gap-stratify-A}
 \end{center}
-\caption{\label{intro:gap stratify A chain}}
+\caption{\label{intro:arbiter stratify A chain}}
 \end{figure*}
 
-This leads to the further stratified version shown in \Cref{intro:gap stratify A chain}.
+This leads to the further stratified version shown in \Cref{intro:arbiter stratify A chain}.
 The phases
 $B$ and $C$ \eqref{intro:spec of B,C} are two more sub-problems that have to be addressed using the same slicing technique.
-Seems we have completed one task but created two? --- Fortunately, $B$ and $C$ are much simpler instances\todo{for once, they are not recursive}
+At first, it may seem that we have completed one task but created two; 
+fortunately, $B$ and $C$ are much simpler instances\todo{for once, they are not recursive}
 and are quite easy to develop.\todo{show this? Forget about this paragraph??}
 
 
