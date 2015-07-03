@@ -13,7 +13,7 @@ algorithms exploit this overlap to explore otherwise exponential-sized
 problem spaces in polynomial time, making them central to many
 important applications ranging from logistics to computational
 biology. A recent textbook \cite{DurbinEdKr98} on biological sequence analysis, for example,
-lists $11$ applications of DP in bioinformatics in its introductory
+lists 11 applications of DP in bioinformatics in its introductory
 chapter with many more in chapters that follow.
 
 
@@ -28,10 +28,10 @@ exhibit better temporal locality, and the partitioning can expose more
 optimization opportunities (see, e.g., \cite{IPDPS15/Tithi}). 
 Even when compared with tiled implementations optimized by the best polyhedral compilers, 
 the divide-and-conquer implementations still show significantly better performance, in some cases
-by more than an order of magnitude as illustrated in \figref{performance}. 
-\asolar{Have these graphs been published in other papers? If yes, we need to say so and write the previous  par a little differently}
+by more than an order of magnitude as illustrated in \Cref{intro:performance}. 
 \rch{Those plots appear in \cite{IPDPS15/Tithi}}
-Unfortunately, developing such implementations is quite difficult, as will become apparent in \secref{divideConquer}. 
+\asolar{write the previous  par a little differently to account for the recent publication}
+Unfortunately, developing such implementations is quite difficult, as will become apparent in \Cref{divide}.
 In this paper, we develop a new computer aided approach to formally deriving provably correct divide-and-conquer algorithms
 for dynamic programming problems. The approach relies on a new method to formalize the derivation of these algorithms, which
 allows an algorithm designer to guide the derivation process through a small number of very high-level tactics. 
@@ -92,14 +92,15 @@ Specifically, our paper makes the following contributions:
 	\end{axis}
 \end{tikzpicture}
 }
-\caption{\figlabel{performance}
+\caption{\label{intro:performance}
   Comparison of the the best performance obtained using polyhedral compilers 
   (PluTo\,\cite{HPC10/Pouchet}, PoCC\,\cite{PLDI08/Bondhugula})
   for parallelization, vs. manually crafted recursive divide-and-conquer implementations (CO).}
 \end{figure*}
 
 \section{Divide and Conquer DP}
-\seclabel{divConquer}
+\label{divide}
+
 As a motivating example, we consider the Simplified Arbiter problem.
 Two processes $x$ and $y$ are scheduled to run $|x|$ and $|y|$ time slots,
 respectively. Execution starts at $t=0$, and the length of each time slot is
@@ -127,7 +128,7 @@ $\xw{ipj}$ or $\xw{pij}$? $\yw{jqi}$ or $\yw{qji}$?}
 &
 \small
 $
-\begin{array}{l}
+\begin{array}{l@{}}
 	\tikz[overlay, remember picture]{\draw[BrickRed] (0,0) -- (Gij);}
 	G_{ij} ~=~ \\
 	~
@@ -150,24 +151,24 @@ $
 
 
 The optimal cost for scheduling the first $i$ slots of $x$ and the first $j$ slots
-of $y$ is given by the recurrence in \figref{spec}. When $i$ is zero, it means that
+of $y$ is given by the recurrence in \Cref{intro:arbiter spec}. When $i$ is zero, it means that
 only $y$ has been scheduled, so the cost is $\yw{0j0}$, and similarly when $j$ is zero, 
 the cost is $\xw{0i0}$. In the general case, either the schedule ends with time allocated to $x$, 
 in which case $x$ was allocated time from some step $p$ to $i$, and the cost is 
 $G_{pj} + \xw{pij}$, or the schedule ends with time allocated to $y$, in which case, 
 $y$ was allocated time from some step $q$ to $j$, and the cost is $G_{iq} + \yw{qji}$.
 In order to determine which is the case, and what is the optimal value of $p$ and $q$, 
-the dynamic programming algorithm needs information from all cells above and to the right of $G_{ij}$ as illustrated
-in \figref{spec}. Once the algorithm completes the table, one can read the total cost of the entire schedule from $G_{|x||y|}$.
+the dynamic programming algorithm needs information from all cells above and to the left of $G_{ij}$.
+Once the algorithm completes the table, one can read the total cost of the entire schedule from $G_{|x||y|}$.
 
 \subsection{Iterative algorithm}
+\label{intro:iterative}
 
 With standard dynamic programming, this recurrence can be computed
 with an iterative program by understanding the dependency pattern:
 each value $G_{ij}$ is computed from other values $G_{i'j'}$ with lower
 indexes, $i'<i$, ~$j'<j$ (see \Cref{intro:arbiter spec}). 
-Therefore, considering $G$ as a two-dimensional
-array, it can be filled in a single pass from left to right and from top
+Therefore, considering $G$ as a two-dimensional array, it can be filled in a single pass from left to right and from top
 to bottom.
 
 \newcommand\FORLINE[1]{\STATE\algorithmicfor~{#1} \algorithmicdo~}
@@ -228,7 +229,7 @@ four steps:
   \STATE Compute \qbox4 using data from \qbox2 and \qbox3.
 \end{algorithmic}
 Each step depends only on a subset of the steps that came before it, 
-as illustrated by \figref{chain}. However, this is not yet a divide-and-conquer algorithm; 
+as illustrated by \Cref{intro:chain}. However, this is not yet a divide-and-conquer algorithm; 
 of the four steps, only step \qbox1{} is an instance of the original problem; all the other steps
 look somewhat different from the original problem and lack significant locality. With some algebraic manipulation, however, 
 it is possible to define each of the four steps above recursively, leading to a true divide-and-conquer algorithm with very high locality 
@@ -329,7 +330,8 @@ giving the form:
 
 The same approach can be used to develop the computations of \qbox3 and \qbox4.
 The sub-computation of $\psi$ can also be transformed into a recursive divide-and-conquer subcomputation, further improving the locality of the resulting algorithm.
-So through these kind of transformations, it is possible to break the computation of the original $G$ into four subcomputations, each of which can be itself recursively partitioned into four subcomputations, giving us a true divide-and-conquer algorithm. 
+So through these kind of transformations, it is possible to break the computation of the original $G$ into four subcomputations, each of which can be itself recursively partitioned into four subcomputations, giving us a true divide-and-conquer algorithm.
+When the pieces become small enough, the iterative algorithm from \Cref{intro:iterative} is executed.
 
 As was outlined in \Cref{intro}, prior work has shown that the performance results that can be achieved through these transformations can be dramatic. Unfortunately, the line of reasoning that was followed in the preceding section can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered this technique. In the next section, we formalize our approach for deriving divide-and-conquer DP algorithms and describe our computer aided approach for generating provably correct divide-and-conquer DP.
 
