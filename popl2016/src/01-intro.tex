@@ -299,7 +299,57 @@ As was outlined in \Cref{intro}, prior work has shown that the performance resul
 
 
 \begin{figure}
-\includegraphics[width=.47\textwidth]{img/gap-stratify1}
+\centering
+\begin{tikzpicture}[>=latex,x=6mm,y=6mm,
+    every path/.style={step=1},
+    every node/.style={inner sep=.5pt},
+    block/.style={rectangle,draw,ultra thick,fill=blue, fill opacity=0.15, inner sep=0}]
+    
+  \def\dx{1.75cm}
+  \def\x{3mm}
+    
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\x]{img/arrow}};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1'};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
+  \node(s)[block,fit={(0,1) (1,2)}] {};
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\x]{img/arrow}};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1'};  \node(2) at (1.5,1.5) {\,2'};
+  \node(3) at (.5,.5) {3};      \node(4) at (1.5,.5) {4};
+  \draw (s.70) edge[->,out=20] (2);
+  \node(s)[block,fit={(0,1) (1,2)}] {};
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\x]{img/arrow}};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1'};   \node(2) at (1.5,1.5) {\,2'};
+  \node(3) at (.5,.5) {\,3'};    \node(4) at (1.5,.5) {4};
+  \draw (s.south) edge[->,out=-40,in=-150] (3.250);
+  \fill[block] (0,0) -- (0,1) -- (.92,1) -- (1,1.08) -- (1,2) -- (2,2) -- (2,1) -- (1.08,1) -- (1,.92) -- (1,0) -- cycle;
+  \coordinate(s) at (1,0);
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\x]{img/arrow}};
+
+  \tikzset{xshift=\dx}
+
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {~1'};   \node(2) at (1.5,1.5) {2'};
+  \node(3) at (.5,.5) {~3'};    \node(4) at (1.5,.5) {4'};
+  \draw (s.south) edge[->,out=-40,in=-150] (4);
+  
+\end{tikzpicture}
+%\includegraphics[width=.47\textwidth]{img/gap-stratify1}
 \caption[caption]{\label{intro:chain}
   Stratified computation for Simplified Arbiter. \\[.2em]
   Thick borders indicate the region that is read at each step.}
