@@ -241,11 +241,129 @@ We then apply Let Insertion, followed by Stratify, to obtain the general form of
   \end{array}
 \end{equation}
 
+Setting the base case aside, let $A^{IJ}$ be the second term,
+where the postscript parameterizes the types of $i$, $j$ and $p$, $q$.
+
+\newcommand\vtyped[2]{\underset{\scriptscriptstyle ( #2 )}{ #1 }}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}l@{}l@{}c@{}c@{}l@{}l@{}}
+    A^{^{IJ}} ~=~ 
+	      & \psi\mapsto \fix \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I)}} & ^{^{(J)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle
+  \end{array}
+\end{equation}
+
+Vertical typeset was used to save some horizontal space, but $\vtyped v\T$
+should be read as just $v:\T$.
+
+Next, we apply Slice to get the four quadrants. As a result, the term is
+going to grow quite large; to make such terms easy to read and refer to, we provide
+boxed letters as labels for sub-terms, using them as abbreviations where they
+occur in the larger expression.
+
+\makeatletter
+\newcommand{\quadrants@normal}[4]{
+  \renewcommand\arraystretch{1.5}
+   \begin{array}{c|c}
+     #1 & #2 \\ \hline
+     #3 & #4
+   \end{array}}
+\newcommand{\quadrants@small}[4]{
+  \renewcommand\arraystretch{0.9}
+   \begin{array}{@{~}c@{~}|@{~}c@{~}}
+     \scriptstyle #1 & \scriptstyle #2 \\ \hline
+     \scriptstyle #3 & \scriptstyle #4
+   \end{array}}
+\newcommand\quadrants{\@ifstar\quadrants@small\quadrants@normal}
+\makeatother
+
+In addition, to allude to the reader's intuition, expressions of the form
+$a/b/c/d$ will be written as $\quadrants*{a}{b}{c}{d}$ when the slices
+represent quadrants.
+
+\makeatletter
+\newcommand{\lbox@small}[1]{ {\setlength{\fboxsep}{1pt}\fbox{\small #1}} }
+\newcommand{\lbox@tiny}[1]{ {\setlength{\fboxsep}{1pt}\fbox{\tiny #1}} }
+\newcommand\lbox{\@ifstar\lbox@tiny\lbox@small}
+\makeatother
+
+\begin{center}
+\fbox{$\begin{array}{ll}
+       \mbox{\underline{Slice}} \\ 
+       f ~=~ \theta\,i\,j\mapsto \cdots \\
+       X_1 ~=~ \_\times I_0\times J_0 &
+       X_2 ~=~ \_\times I_0\times J_1 \\
+       X_3 ~=~ \_\times I_1\times J_0 &
+       X_4 ~=~ \_\times I_1\times J_1 \\[.5em]
+       \cspan2{\mbox{\small ({\it recall that each} ``\_'' {\it is a fresh type variable})}}
+       \end{array}$}
+\end{center}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}r@{}l@{}c@{}c@{}l@{}l@{}}
+    A^{^{IJ}} =~ & \lspan5{\psi\mapsto \fix \quadrants{\lbox A}{\lbox B}{\lbox C}{\lbox D}} \\
+	\lbox A ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I_0)}} & ^{^{(J_0)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+	\lbox B ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I_0)}} & ^{^{(J_1)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+	\lbox C ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I_1)}} & ^{^{(J_0)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+	\lbox D ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I_1)}} & ^{^{(J_1)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+  \end{array}
+\end{equation}
+
+\begin{center}
+\fbox{$\begin{array}{ll}
+       \mbox{\underline{Let[with Padding]}} \\ 
+       e[\square] ~=~ \quadrants*{\square::\_\to I_0\to J_0\to\_}{\lbox*B}{\lbox*C}{\lbox*D} \\
+       t ~=~ \quadrants*{\lbox*A}{\dot\psi}{\dot\psi}{\dot\psi}
+       & \mbox{\small (recall $\dot\psi=\theta\mapsto\psi$)}
+       \end{array}$}
+\end{center}
+
+\begin{equation}
+  A^{^{IJ}} =~ \psi\mapsto \fix \left(\quadrants{\lbox A}{\dot\psi}{\dot\psi}{\dot\psi} \applt z\mapsto\quadrants{z}{\lbox B}{\lbox C}{\lbox D}\right)
+\end{equation}
+
+\begin{center}
+\fbox{$\begin{array}{l}
+       \mbox{\underline{Stratify}} \\ 
+       f ~=~ \quadrants*{\lbox*A}{\dot\psi}{\dot\psi}{\dot\psi} \\
+       g ~=~ z\mapsto\quadrants*{z}{\lbox*{B}}{\lbox*C}{\lbox*D}
+       \end{array}$}
+\end{center}
+
+\begin{equation}
+  A^{^{IJ}} =~ \psi\mapsto \fix \quadrants{\lbox A}{\dot\psi}{\dot\psi}{\dot\psi} ~\applt~ \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\lbox C}{\lbox D}
+\end{equation}
+
+The three tactics Padding, Let, and Stratify are now applied in the same manner to $\lbox B$
+and $\lbox D$. We do not list the applications as they are analogous to the previous ones.
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{l@{}l}
+    A^{^{IJ}} =~ \psi\mapsto{} & \fix \quadrants{\lbox A}{\dot\psi}{\dot\psi}{\dot\psi} ~\applt~ 
+                 \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} ~\applt \\
+               & \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\lbox C}{\dot\psi} ~\applt~
+                 \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\dot\psi}{\lbox D}
+  \end{array}
+\end{equation}
+
 \begin{figure}
-\includegraphics[width=.47\textwidth]{img/gap-stratify2}\\
-\includegraphics[width=.47\textwidth]{img/gap-stratify3}
+\includegraphics[width=.47\textwidth]{img/arbiter-stratify2}\\
+\includegraphics[width=.47\textwidth]{img/arbiter-stratify3}
 \caption{
-  Stratification steps for phase ``A'' of Simplified Gap.}
+  Stratification steps for phase ``A'' of Simplified Arbiter.}
 \end{figure}
 
 \hrule

@@ -64,10 +64,9 @@ Specifically, our paper makes the following contributions:
 As a motivating example, we consider the Simplified Arbiter problem.
 Two processes $x$ and $y$ are scheduled to run $|x|$ and $|y|$ time slots,
 respectively. Execution starts at $t=0$, and the length of each time slot is
-one time unit. The cost for scheduling the slots $[i..p)$ of $x$ at $t=i+j$
-is given by $\xw{ipj}$, and the cost for schedulting the slots $[j..q)$ of $y$
-also at $t=i+j$ is given by $\yw{jqi}$. \rch{$[i..p)$ or $(p..i]$? $[j..q)$ or $(q..j]$?
-$\xw{ipj}$ or $\xw{pij}$? $\yw{jqi}$ or $\yw{qji}$?}
+one time unit. The cost for scheduling the slots $[a..b)$ of $x$ at $t=a+c$
+is given by $\xw{abc}$, and the cost for schedulting the slots $[a..b)$ of $y$
+at same $t=a+c$ is given by $\yw{abc}$. \coa{I changed $i$,$j$,$p$,$q$ to $a$,$b$,$c$ to avoid confusion with what comes later on.}
 
 \begin{figure}
 \begin{tabular}{@{\hspace{-1pt}}r@{~}l@{}}
@@ -344,8 +343,8 @@ As was outlined in \Cref{intro}, prior work has shown that the performance resul
   \tikzset{xshift=\dx}
 
   \draw (0,0) grid (2,2);
-  \node(1) at (.5,1.5) {~1'};   \node(2) at (1.5,1.5) {2'};
-  \node(3) at (.5,.5) {~3'};    \node(4) at (1.5,.5) {4'};
+  \node(1) at (.5,1.5) {\,1'};   \node(2) at (1.5,1.5) {2'};
+  \node(3) at (.5,.5) {\,3'};    \node(4) at (1.5,.5) {4'};
   \draw (s.south) edge[->,out=-30,in=-150] (4);
   
 \end{tikzpicture}
