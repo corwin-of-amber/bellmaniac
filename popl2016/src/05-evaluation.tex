@@ -1,13 +1,27 @@
 \section{Case Studies}
 
-We tested our technique on two representative problems. The full version of the Gap problem,
-for which the running example in this paper is a simplified version, where the cost of replacing
-the character $x_i$ with the character $y_j$ is given by $c_{ij}$ (\Cref{evaluation:gap spec});
-and the Parenthesis Assignment problem, where the goal is a program computing
-an optimal placements of parenthesis in a long chain of products, e.g. of matrices, where the input is
-a cost function for performing each individual multiplication: initial cost $x_i$ for the $i$-th
-element, $w_{ikj}$ is the cost for multiplying elements $[i,k)$ by elements $[k,j)$
- (\Cref{evaluation:paren spec}).
+In addition to the somewhat artificial Simplified Arbiter,
+we tested our technique on two representative problems:
+\begin{paragraph}{Gap problem.}
+A generalized minimal edit distance problem. Given two input strings 
+$\overline{x}=x_1\cdots x_m$ and $\overline{y}=y_1\cdots y_n$,
+compute the cost of transforming $x$ into $y$ by any combination of the
+following steps
+\begin{itemize}
+  \item Replacing $x_i$ with $y_j$, at cost $c_{ij}$.
+  \item Deleting $x_{p+1}\cdots x_q$, at cost $w_{pq}$.
+  \item Inserting $y_{p+1}\cdots y_q$ in $\overline{x}$, at cost $w'_{pq}$.
+\end{itemize}
+
+The computation is given by the recurrence \Cref{evaluation:gap spec}.
+\end{paragraph}
+
+\begin{paragraph}{Parenthesis problem.} Compute
+an optimal placements of parenthesis in a long chain of multiplication, e.g. of matrices, where the input is
+are cost functions $x_i$ for accessing the $i$-th element and
+$w_{ikj}$ for multiplying elements $[i,k)$ by elements $[k,j)$.
+The corresponding recurrence is shown in \Cref{evaluation:paren spec}.
+\end{paragraph}
 
 \begin{figure}
 \[
@@ -198,10 +212,10 @@ generalized into:
 That is the core of the divide and conquer method: representing the output as a combination
 of solutions to sub-problems, yielding an algorithm that is essentially
 a recursive routine, or a set of mutually recursive routines. 
-Once all the pieces fit together, it is possible to cut the space into arbitrarily small pieces,
-that fit nicely in each core's local cache. This greately increases performance, as demonstrated
-by~\citneeded{perhaps include a table with exact figures}. 
-\todo{Find a way to make this statement earlier}
+%Once all the pieces fit together, it is possible to cut the space into arbitrarily small pieces,
+%that fit nicely in each core's local cache. This greately increases performance, as demonstrated
+%by~\citneeded{perhaps include a table with exact figures}. 
+%\todo{Find a way to make this statement earlier}
 
 \medskip
 We can apply similar treatment to \qbox3 and \qbox4:

@@ -199,7 +199,7 @@ but the proof is deferred until Synth is applied so that the prover can use the 
   \end{array}
 \end{equation}
 
-We then apply Let Insertion, followed by Stratify, to obtain the general form of A from \Cref{intro}.
+We then apply Let Insertion, followed by Stratify, to obtain the general form $\Ggen$ from \Cref{intro}.
 
 \begin{center}
 \fbox{$\begin{array}{l@{}l}
@@ -242,7 +242,7 @@ We then apply Let Insertion, followed by Stratify, to obtain the general form of
 \end{equation}
 
 Setting the base case aside, let $A^{IJ}$ be the second term,
-where the postscript parameterizes the types of $i$, $j$ and $p$, $q$.
+where the superscript parameterizes the types of $i$, $j$ and $p$, $q$.
 
 \newcommand\vtyped[2]{\underset{\scriptscriptstyle ( #2 )}{ #1 }}
 
@@ -365,6 +365,33 @@ and $\lbox D$. We do not list the applications as they are analogous to the prev
 \caption{
   Stratification steps for phase ``A'' of Simplified Arbiter.}
 \end{figure}
+
+\begin{center}
+\fbox{$\begin{array}{l@{}c@{}c@{}l@{}l}
+       \mbox{\underline{Synth}} \\ 
+       r=4\\
+       \lspan5{~~h_1= \lbox A} \\
+       \lspan5{~~h_{2,3,4}=\dot\psi} \\
+	   f_1 = \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & ^{^{(I_0)}} & ^{^{(J_0)}} & & \min \vtyped p {I_0} \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & \min \vtyped q {J_0} \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+	   \lspan5{~~f_{2,3,4} = h_{2,3,4}}
+       \end{array}$}
+\end{center}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{l@{}l}
+    A^{^{IJ}} =~ \psi\mapsto{} & \quadrants{A^{^{I_0J_0}}\!\!\!}{\psi}{\psi}{\psi} ~\applt~ 
+                 \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} ~\applt \\
+               & \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\lbox C}{\dot\psi} ~\applt~
+                 \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\dot\psi}{\lbox D}
+  \end{array}
+\end{equation}
+
+We note that $\fix f_1=A^{^{I_0J_0}}$, those terms are identical. Also, we took the liberty
+to simplify $\fix\dot\psi$ into $\psi$, although this is not necessary --- just to display
+a shorter term.
 
 \hrule
 \bigskip
