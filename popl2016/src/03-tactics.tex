@@ -1,6 +1,7 @@
 \section{Tactics}
 
-A \newterm{tactic} is a scheme of equalities that can be used for rewriting.
+We now define the method by which that our framework transforms program terms, by means of \newterm{tactics}.
+A tactic is a scheme of equalities that can be used for rewriting.
 When applied to a program term, any occurrence of the left-hand side is replaced by the right-hand side.
 A valid application of a tactic is an instance of the scheme that is well-typed and logically valid
 (that is, the two sides have the same interpretation in any structure that interprets the free
@@ -9,21 +10,27 @@ variables occurring in the equality).
 The application of tactics yields a sequence of program terms, each of which is checked to
 be equivalent to the previous one. We refer to this sequence by the name \newterm{development}.
 
-We associate with each tactic some \newterm{proof obligations}, listed after the word {\bf Obligations}
-in each of the following subsections.
-When applying a tactic instance,
-these obligations are also instantiated and given to an automated prover. If verified successfully,
-they entail the validity of the instance. Clearly the tactic itself can be used as its proof obligation,
-if it is easy enough to prove automatically; in such cases we write ``{\bf Obligations:} tactic.''
+We associate with each tactic some \newterm{proof obligations}, listed after the word \textbf{\textit{Obligations}}
+in the following paragraph.
+When applying a tactic instance, these obligations are also instantiated and given to an automated prover. 
+If verified successfully, they entail the validity of the instance. 
+Clearly the tactic itself can be used as its proof obligation, if it is easy enough to prove automatically; 
+in such cases we write ``\textbf{\textit{Obligations}:} tactic.''
 
-\newcommand\Obligations{\medskip\noindent{\bf Obligations:} }
+The following are the major tactics exposed by our framework. 
+More tactic definitions are given in the appendix.
+
+\newcommand\Obligations{\medskip\noindent\textbf{\textit{Obligations}:} }
 \newcommand\reduce{\operatorname{reduce}}
 \newcommand\listConcat{{\scriptstyle \,++\,}}
 
-\subsection{Major Tactics}
+\theoremstyle{definition}
+\newtheorem{tactic}{Tactic}
 
-\subsubsection{Slice} \label{tactics:Slice}
-\[f ~=~ f\big|_{X_1} ~\Big/~ f\big|_{X_2} ~\Big/ ~\cdots~ \Big/~ f\big|_{X_r}\]
+\newcommand\tacticdef[1]{\subsection*{#1}}
+
+\tacticdef{Slice} \label{tactics:Slice}
+\[f ~=~ f\big|_{X_1} ~\Big/~ f\big|_{X_2} ~\Big/ ~\cdots~ \Big/~ f\big|_{X_r}\] 
 
 This tactic partitions a mapping into sub-regions. Each $X_i$ may be a $\times$-expression
 according to the arity of $f$.
@@ -33,8 +40,8 @@ according to the arity of $f$.
 Informally, the recombination expression is equal to $f$
 when $X_{1..r}$ ``cover'' all the defined points of $f$ (also known as the \newterm{support} of $f$).
 
-\subsubsection{Shrink} \label{tactics:Shrink}
-\[f ~=~ f :: \T\]
+\tacticdef{Shrink} \label{tactics:Shrink}
+\[f ~=~ f :: \T\] 
 
 Used to extra-specify the type of a sub-term.
 
@@ -43,7 +50,7 @@ Used to extra-specify the type of a sub-term.
 For arrow-typed terms, this essentially requires to prove that $f$ is undefined anyway for
 argument values outside the domain of $\T$, and that the defined values are in the range of $\T$.
 
-\subsubsection{Stratify} \label{tactics:Stratify}
+\tacticdef{Stratify} \label{tactics:Stratify}
 \[\fix (f\applt g) ~=~ \fix f ~\applt~ \psi\mapsto \fix (\dot\psi\applt g)\]
 %
 where $\dot\psi$ abbreviates $\theta\mapsto\psi$, with fresh variable $\theta$.
@@ -64,7 +71,7 @@ g'\,(f\,\theta)\,\theta ~=~ h\,\theta
 
 Although the proof is not hard, we defer it to a later theorem.
 
-\subsubsection{Synth} \label{tactics:Synth}
+\tacticdef{Synth} \label{tactics:Synth}
 \[\fix\big(h_1 ~\big/~ \cdots ~\big/~ h_r\big) ~=~ 
   (\fix f_1) :: \T_1 ~\big/~ \cdots ~\big/~ (\fix f_r) :: \T_r\]
 
@@ -77,86 +84,6 @@ $f = \theta_{1..r} \mapsto (f_1\,\theta_1)::\T_1/\cdots/(f_r\,\theta_r)::\T_r$.
   \item $\T_{1..r}$ are disjoint mappings.
   \item $h\,(f\,\overline\theta) = f\,\overline\theta$.
 \end{itemize}
-
-\subsection{Minor Tactics}
-
-\subsubsection{Associativity}
-\[\reduce\big\langle \reduce\langle\overline x_1\rangle,\cdots, \reduce\langle\overline x_r\rangle\big\rangle ~=~ \reduce \langle \overline x_1, \cdots, \overline x_r\rangle\]
-%
-where $\reduce$ is a built-in aggregation ($\min$, $\max$, $\Sigma$), 
-and $\overline x_i$ are lists of terms (of the same type).
-If any of $\overline x_i$ is of length one, $\reduce\langle\overline x_i\rangle$ can be
-replaced by $\overline x_i$.
-
-\Obligations none.
-
-\subsubsection{Distributivity}
-Let $e$ be an expression with a hole, $e[\square] = (\cdots \square \cdots)$.
-%
-\[\renewcommand\arraystretch{1.2}
-  \begin{array}{@{}r@{~}c@{~}l@{}}
-    e[t_1/\cdots/t_r] &=& e[t_1] / \cdots / e[t_r] \\
-    e[t_1/\cdots/t_r] &=& \reduce\langle e[t_1],\cdots,e[t_r]\rangle \\
-    \reduce e[t_1/\cdots/t_r] &=& \reduce\langle \reduce e[t_1],\cdots,\reduce e[t_r]\rangle
-  \end{array}\]
-
-This tactic provides several alternatives for different uses of aggregations.
-Clearly, $\big/$ does not distribute over any expression; we give just a few examples
-where this tactic is applicable.
-\begin{itemize}
-  \item $(x/y)+1 ~=~ (x+1)~/~(y+1)$
-  \item $x/0 ~=~ \max\langle x,0\rangle$ ~(for $x:\N$)
-  \item $\min \big(f\big|_{J_0}~\big/~f\big|_{J_1}\big) ~=~
-         \min\left\langle \min f\big|_{J_0} ~,~ \min f\big|_{J_1}\right\rangle$
-\end{itemize}
-
-\Obligations tactic.
-
-\subsubsection{Elimination}
-\[e[t] ~=~ e[\bot]\]
-%
-Used to eliminate a sub-term that is either always undefined or has no effect
-in the context in which it occurs.
-
-\Obligations tactic.
-
-\subsubsection{Let Insertion}
-
-Let $e$ be an expression with a hole, $e[\square] = (\cdots x_1 \mapsto \cdots x_k\mapsto \cdots \square \cdots)$, 
-where $x_{1..k}\mapsto$ are abstraction terms enclosing $\square$. The bodies may contain arbitrary terms
-in addition to these abstractions.
-%
-\[\renewcommand\arraystretch{1.2}
-  \begin{array}{@{}r@{}c@{}l@{}}
-  e[t] & ~=~ & (\overline{x}\mapsto t) ~\applt~ z\mapsto e[z\,\overline{x}] \\
-  e[\reduce \langle\overline{a},\overline{b}\rangle] & ~=~ &
-     (\overline{x}\mapsto \reduce\langle\overline{a}\rangle) ~\applt~ z\mapsto e[\reduce\langle z\,\overline{x}, \overline{b}\rangle]
-  \end{array}\]
-%
-where $\overline{x}=x_{1..k}$, and $z$ is either an existing or a fresh variable.
-This tactic also has a special version that involves $\reduce$.
-The items in $\langle \overline{a},\overline{b}\rangle$ may be interleaved, since
-$\min,\max,\Sigma$ all happen to be commutative.\footnote{If non-commutative functions get added in the future, then this will change into $\langle \overline{a}, \overline{b}, \overline{c}\rangle$ non-interleaving, with the right hand side being $(\overline{x}\mapsto \reduce\langle\overline{b}\rangle) ~\applt~ z\mapsto e[\reduce\langle \overline{a}, z\,\overline{x}, \overline{c}\rangle]$.}
-
-\Obligations tactic, if $z$ occurs free in $e$; otherwise none.
-
-\subsubsection{Let Insertion [$\reduce$]}
-%
-\[e[\reduce \langle\overline{a},\overline{b}\rangle] ~=~ 
-  (\overline{x}\mapsto \reduce\langle\overline{a}\rangle) ~\applt~ z\mapsto e[\reduce\langle z\,\overline{x}, \overline{b}\rangle]\]
-%
-where $\overline{x}=x_{1..k}$, and $z$ is either an existing or a fresh variable.
-
-\Obligations tactic, if $z$ occurs free in $e$; otherwise none.
-
-\subsubsection{Padding}
-\[t ~=~ \big(t~/~f_1/\cdots/f_r\big) :: \T\]
-%
-where $\T$ is the type of $t$. This tactic is commonly used with Let insertion,
-to make the type of a sub-computation match the type of the entire term.
-
-\Obligations tactic.
-
 
 \subsection{Example \hrulefill}
 
@@ -178,10 +105,8 @@ $\fix (\theta\,i\,j\mapsto\square/\min\langle\cdots\rangle)$ into $\fix\theta\,i
 Distributivity and Associativity are used to obtain the tactic parameter $f_1$, 
 but the proof is deferred until Synth is applied so that the prover can use the extra context.
 
-\begin{center}
-\fbox{$\begin{array}{l@{}l@{}l}
-       \mbox{\underline{Synth}} \\ 
-       r=1\\
+\begin{tacticbox}{Synth}
+  \begin{array}{l@{}l@{}l}
        h_1=\theta\,i\,j\mapsto{}
 	      & \lspan2{0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0} ~\big/~} \\
 	      & \min\,\langle~ & \min p\mapsto\theta_{pj}+w_{pij}, \\
@@ -190,8 +115,8 @@ but the proof is deferred until Synth is applied so that the prover can use the 
 	      & \min\,\langle~ & 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}, \\
 	      & & \min p\mapsto\theta_{pj}+w_{pij}, \\
 	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle
-       \end{array}$}
-\end{center}
+  \end{array}
+\end{tacticbox}
 
 \begin{equation}
   \renewcommand\arraystretch{1.5}
@@ -203,18 +128,18 @@ but the proof is deferred until Synth is applied so that the prover can use the 
   \end{array}
 \end{equation}
 
-We then apply Let Insertion, followed by Stratify, to obtain the general form $\Ggen$ from \Cref{intro}.
+We then apply Let Insertion, followed by Stratify, to separate the base case and obtain a more general 
+form, similar to $\Ggen$ of \eqref{intro:Ggen}.
 
-\begin{center}
-\fbox{$\begin{array}{l@{}l}
-       \mbox{\underline{Let}} \\ 
-       e[\square] ~=~ \theta\,i\,j\mapsto\min\langle~ & \square, \\
-	      & \min p\mapsto\theta_{pj}+w_{pij}, \\
-	      & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle \\
-       \lspan2{~~t ~=~
-	      0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}}
-       \end{array}$}
-\end{center}
+\begin{tacticbox}{Let}
+  \begin{array}{l@{}l}
+   e[\square] ~=~ \theta\,i\,j\mapsto\min\langle~ & \square, \\
+      & \min p\mapsto\theta_{pj}+w_{pij}, \\
+      & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+   \lspan2{~~t ~=~
+      0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}}
+  \end{array}
+\end{tacticbox}
 
 \begin{equation}
   \renewcommand\arraystretch{1.5}
@@ -226,13 +151,12 @@ We then apply Let Insertion, followed by Stratify, to obtain the general form $\
   \end{array}
 \end{equation}
 
-\begin{center}
-\fbox{$\begin{array}{l}
-       \mbox{\underline{Stratify}} \\ 
+\begin{tacticbox}{Stratify}
+  \begin{array}{l}
        f ~=~ \theta\,i\,j\mapsto 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0} \\
        g ~=~ z\,\theta\,i\,j\mapsto \min\langle z_{\theta ij},\cdots\rangle
-       \end{array}$}
-\end{center}
+  \end{array}
+\end{tacticbox}
 
 \begin{equation}
   \renewcommand\arraystretch{1.5}

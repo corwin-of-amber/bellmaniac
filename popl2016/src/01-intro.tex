@@ -18,11 +18,11 @@ and approaches. These can be roughly sorted into ``inductive'' approaches, which
 values and execution traces, and ``deductive'' approaches, employing symbolic reasoning and treating
 programs as composable mathematical objects.
 
-While the former contains many techniques that make heavy use of solvers\marginpar{Sketch, Leon\ldots},
+While the former contains many techniques that make heavy use of solvers\marginpar{\tiny Sketch, Leon\ldots},
 The latter relies mostly on theorem proof assistants such as Isabelle/HOL and Coq.
-In a framework developed by Manna and Waldinger \marginpar{(e.g. 1980, 1992)}, the specification
+In a framework developed by Manna and Waldinger \marginpar{\tiny (e.g. 1980, 1992)}, the specification
 is stated as a logical goal to be proven. The program is than read by interpreting the proof via the Curry-Howard
-correspondance (also known as ``proofs-as-programs''). \newterm{Transformational} approaches\marginpar{KIDS/Specware, Spiral, AutoBayes, and also Fiat},
+correspondance (also known as ``proofs-as-programs''). \newterm{Transformational} approaches\marginpar{\tiny KIDS/Specware, Spiral, AutoBayes, and also Fiat},
 by contrast, maintain a knowledge base of valid transformations that are used to gradually refine a
 specification down to the level of detail required to execute it.
 
@@ -32,7 +32,7 @@ a high level of automation has been achieved thanks to the use of SAT and SMT so
 to generate parameters and for checking candidate solution against the input specification.
 We strive to harness their strength in a deductive setting, where 
 \begin{itemize}
-  \item The solver can directly check that a program term is requivalent to another term,
+  \item The solver can directly check that a program term is equivalent to another term,
     thus merging branches and reducing repetitive manual labor.
   \item The solver can prove validity of side conditions that ensure the soundness of each individual
     transformations. This allows the construction of a library of \newterm{tactics} that can effect
@@ -42,6 +42,7 @@ We strive to harness their strength in a deductive setting, where
     check each context in which they are applied.
 \end{itemize}
 
+\todo{Refactor so ``Divide and conquer DP'' occurs hear}
 As a playground\coa{for loss of a better word?} in which to test and demonstrate our approach,
 we explore the domain of divide-and-conquer dynamic programming algorithms.
 Dynamic Programming (DP) algorithms build optimal solutions to a problem by combining
@@ -72,7 +73,7 @@ Unfortunately, developing such implementations is quite difficult, as will becom
 In this paper, we develop a new computer aided approach to formally deriving provably correct divide-and-conquer algorithms
 for dynamic programming problems. The approach relies on a new method to formalize the derivation of these algorithms, which
 allows an algorithm designer to guide the derivation process through a small number of very high-level tactics. 
-Specifically, our paper makes the following contributions:
+Specifically, our paper makes the following contributions\coa{Move earlier?}:
 \begin{enumerate}
   \item We develop a small set of formal tactics that can be used to transform a class of recurrence
   specifications, written in a simple functional language, 
@@ -157,15 +158,14 @@ In order to determine which is the case, and what is the optimal value of $p$ an
 the dynamic programming algorithm needs information from all cells above and to the left of $G_{ij}$.
 Once the algorithm completes the table, one can read the total cost of the entire schedule from $G_{|x||y|}$.
 
-\subsection{Iterative Algorithm}
-\label{intro:iterative}
-
+\begin{paragraph}{Iterative Algorithm.}
 With standard dynamic programming, this recurrence can be computed
 with an iterative program by understanding the dependency pattern:
 each value $G_{ij}$ is computed from other values $G_{i'j'}$ with lower
 indexes, $i'<i$, ~$j'<j$ (see \Cref{intro:arbiter spec}). 
 Therefore, considering $G$ as a two-dimensional array, it can be filled in a single pass from left to right and from top
 to bottom.
+\end{paragraph}
 
 \newcommand\FORLINE[1]{\STATE\algorithmicfor~{#1} \algorithmicdo~}
 
@@ -184,12 +184,15 @@ to bottom.
     \ENDFOR
   \ENDFOR
 \end{algorithmic}
+\caption{\label{intro:iterative}
+   Iterative Simplified Arbiter}
 \end{algorithm}
 
 
-\subsection{Divide-and-Conquer Algorithm}
-
 \newcommand\qbox[1]{\fbox{\scriptsize#1}}
+
+\begin{paragraph}{Divide-and-Conquer Algorithm}
+
 \begin{figure}
 \centering
 \begin{tabular}{c@{\hspace{.5in}}c}
@@ -216,6 +219,7 @@ where the DP table, in this case, $G$, is partitioned into
 regions, in this case, quadrants, as illustrated in \Cref{intro:quadrants}. The same reasoning we applied 
 in the iterative case leads us to conclude that the computations of 2 and 3 depend on 1,
 and the computation of 4 depends on 2 and 3.
+\end{paragraph}
 
 The computation of these quadrants can be \emph{stratified} into the following
 four steps:
@@ -301,6 +305,7 @@ way:
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
+\label{intro:Ggen}
 \end{equation}
 
 It is easy to see that both $G$ and \qbox1 can be expressed in terms of $\Ggen^{IJ}$ by making $\psi_{ij}=\infty$, 
@@ -329,7 +334,7 @@ giving the form:
 The same approach can be used to develop the computations of \qbox3 and \qbox4.
 The sub-computation of $\psi$ can also be transformed into four recursive sub-computations, further improving the locality of the resulting algorithm.
 So through these kind of transformations, it is possible to break the computation of the original $G$ into four (or more) subcomputations, each of which can be itself recursively partitioned into four subcomputations, giving us a true divide-and-conquer algorithm.
-When the pieces become small enough, the iterative algorithm from \Cref{intro:iterative} is executed.
+When the pieces become small enough, the iterative algorithm (\Cref{intro:iterative}) is executed.
 
 As was outlined in \Cref{intro}, prior work has shown that the performance results that can be achieved through these transformations can be dramatic. Unfortunately, the line of reasoning that was followed in the preceding section can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered this technique. In the next section, we formalize our approach for deriving divide-and-conquer DP algorithms and describe our computer aided approach for generating provably correct divide-and-conquer DP.
 
