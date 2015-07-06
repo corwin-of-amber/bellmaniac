@@ -29,7 +29,7 @@ For example, if $e:\T$, then inside the term $(v:\S)\mapsto e$ it would be treat
 type $\S\to\T$.
 
 When a function is being used as an argument in an application term (first-class functions), 
-we take its arrow type $\T\to\S$ and create a corresponding \newterm{faux type} $F_{\T\to\S}$,
+we take its arrow type $\T\to\S$ and create a corresponding \newterm{faux sort} $F_{\T\to\S}$,
 and an operator $@ : F_{\T\to\S}\to\T\to\S$, with the \newterm{extensionality axiom} ---
 \begin{equation}
 \forall \alpha\alpha'.~ \big(\forall\beta.~ @(\alpha,\beta)=@(\alpha',\beta)\big)\limplies \alpha=\alpha'
@@ -42,3 +42,17 @@ And for each such function symbol $f^k:\T\to\S$ used as argument, create its
 \forall \overline\alpha.~~@(f^0,\overline\alpha)=f^k(\overline\alpha)
 \label{automated:reflection}
 \end{equation}
+
+Typically, the goal is an equality between functions $f=g$. This naturally translates
+to first-order logic as
+\[\forall\overline{a}.~\big(|f|(\overline\alpha)\liff|g|(\overline\alpha)\big) \land
+  \big(|f|(\overline\alpha) \limplies f^k(\overline\alpha)=g^k(\overline\alpha)\big)\]
+  
+\subsection{Simplification}
+
+When $f$,$g$ of the goal, $f=g$, are abstraction terms, the above can be simplified by
+introducing $k$ fresh variables, $\overline x=x_1\cdots x_k$, and writing the goal as
+$f\,\overline x = g\,\overline x$. The types of $\overline x$ are inferred from the types
+of $f$ and $g$ (which should have the same shape). We can then apply $\beta$-reduction as
+a simplification step. This dramatically reduces the number of quantifiers in the first-order
+theory representing the goal, making SMT solving feasible.
