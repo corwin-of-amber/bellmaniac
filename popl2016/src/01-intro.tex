@@ -7,7 +7,44 @@
 \newcommand{\xw}[1]{w_{#1}}
 \newcommand{\yw}[1]{w'_{#1}}
 
-Dynamic Programming algorithms (DP) build optimal solutions to a problem by combining
+\cel{Start with a general statement of the research trajectory, then explain why we chose DP and Divide-and-Conquer as an example.}
+
+% inductive :> PL, ML
+% deductive :> proof (deductive), transformational
+
+Software synthesis, the process of turning high-level specifications into executable, efficient
+program code, has been a subject for research for about 30 years, yielding a wide range of techniques
+and approaches. These can be roughly sorted into ``inductive'' approaches, which utilize concrete
+values and execution traces, and ``deductive'' approaches, employing symbolic reasoning and treating
+programs as composable mathematical objects.
+
+While the former contains many techniques that make heavy use of solvers\marginpar{Sketch, Leon\ldots},
+The latter relies mostly on theorem proof assistants such as Isabelle/HOL and Coq.
+In a framework developed by Manna and Waldinger \marginpar{(e.g. 1980, 1992)}, the specification
+is stated as a logical goal to be proven. The program is than read by interpreting the proof via the Curry-Howard
+correspondance (also known as ``proofs-as-programs''). \newterm{Transformational} approaches\marginpar{KIDS/Specware, Spiral, AutoBayes, and also Fiat},
+by contrast, maintain a knowledge base of valid transformations that are used to gradually refine a
+specification down to the level of detail required to execute it.
+
+While we stage our approach within the transformational synthesis camp, we strive to adopt factors
+that contributed to the success of inductive synthesis over the past few years. In particular,
+a high level of automation has been achieved thanks to the use of SAT and SMT solvers. These are used
+to generate parameters and for checking candidate solution against the input specification.
+We strive to harness their strength in a deductive setting, where 
+\begin{itemize}
+  \item The solver can directly check that a program term is requivalent to another term,
+    thus merging branches and reducing repetitive manual labor.
+  \item The solver can prove validity of side conditions that ensure the soundness of each individual
+    transformations. This allows the construction of a library of \newterm{tactics} that can effect
+    many kinds of transformations. The tactics gain more freedom and can be designed to be much more
+    generic than if they were purely symbolic, since they do not have to represent logically valid
+    equivalences: instead, they can represent equalities that are {\bf sometimes} true, and carefully
+    check each context in which they are applied.
+\end{itemize}
+
+As a playground\coa{for loss of a better word?} in which to test and demonstrate our approach,
+we explore the domain of divide-and-conquer dynamic programming algorithms.
+Dynamic Programming (DP) algorithms build optimal solutions to a problem by combining
 together optimal solutions to many overlapping subproblems.  DP
 algorithms exploit this overlap to explore otherwise exponential-sized
 problem spaces in polynomial time, making them central to many
