@@ -102,11 +102,13 @@ for all (appropriately typed) $p<k<i$, ~$q<k<j$.
 \medskip
 Starting from the specification in \eqref{lang:arbiter spec}, we apply Synth to turn
 $\fix (\theta\,i\,j\mapsto\square/\min\langle\cdots\rangle)$ into $\fix\theta\,i\,j\mapsto\min\langle\square,\cdots\rangle$.
-Distributivity and Associativity are used to obtain the tactic parameter $f_1$, 
-but the proof is deferred until Synth is applied so that the prover can use the extra context.
+While not absolutely necessary, we will see that it makes some expressions easier to handle later
+on.
+Distributivity and Associativity (refer to \Cref{more-tactics}) are used to obtain the tactic parameter $f_1$;
+the proof is deferred until Synth is applied so that the prover can use the extra context.
 
 \begin{tacticbox}{Synth}
-  \begin{array}{l@{}l@{}l}
+  \begin{array}{@{} l @{} l @{} l @{}}
        h_1=\theta\,i\,j\mapsto{}
 	      & \lspan2{0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0} ~\big/~} \\
 	      & \min\,\langle~ & \min p\mapsto\theta_{pj}+w_{pij}, \\
