@@ -405,10 +405,47 @@ This gives the stratified version as shown in \Cref{evaluation:arbiter stratify 
 The read and write regions are already encoded in the types of $A$, $B$, $C$ in 
 \eqref{fix A}, \eqref{fix B}, \eqref{fix C}, and \eqref{fix D}.
 
+\medskip
 \hrule
 \bigskip
 
+We finish this section by presenting some numbers: \Cref{evaluation:solving time}
+shows measurements done using two SMT solvers, Z3 and CVC4, and a sample set of tactic
+applications used in the derivation of Gap and Parenthesis divide-and-conquer DP implementations.
 
+\begin{table}
+\centering
+\renewcommand\a{({\it i})}    % relax! it's only for this figure
+\renewcommand\b{({\it ii})}
+\renewcommand\c{({\it iii})}
+\begin{tabular}{|l@{\,}c@{\,}|rr|}
+  \cline{3-4}
+  \multicolumn{2}{c|}{} & \multicolumn{2}{c|}{\small Solving time ({\it s})} \\
+  \multicolumn{2}{c|}{} & \multicolumn{1}{c|}{~Z3~} & \multicolumn{1}{c|}{CVC4} \\
+  \hline
+  {\bf \hspace{-.1cm}Gap} & &  & \\
+  \hline
+  Synth                                   &    & T/O & 2.8 \\
+  Stratify \qbox1                         &    & 6.2 & 5.8 \\
+  Stratify \qbox2                         &    & 3.5 & 0.5 \\
+  Let[$\reduce$] + Stratify in \qbox2     &    & 3.1 & 1.9 \\
+  Let[$\reduce$] + Stratify in \qbox4     & \a &  10 & 3.9 \\
+                                          & \b & 5.7 & 4.7 \\
+                                          & \c & 4.7 & 4.3 \\
+  \hline
+  {\bf \hspace{-.1cm}Parenthesis} & & & \\
+  \hline
+  Stratify \!\lbox{$\diagdown$}           &    & 0.4 & 0.1 \\
+  Stratify \qbox1                         &    & 1.8 & 2.5 \\
+  Stratify \qbox2                         &    & 1.7 & 0.6 \\
+  \hline
+\end{tabular}
+\caption{\label{evaluation:solving time}
+  Proof search time for proof obligations in a few sample tactic applications.}
+\end{table}
+
+
+\begin{comment}
 \subsection{old stuff}
 
 
@@ -690,6 +727,8 @@ We can write \eqref{intro:let in A 2}, \eqref{intro:let in A 3}, \eqref{intro:le
 \label{intro:let in A 4 using B,C}
 \end{equation}
 
+\end{comment}
+
 \begin{figure*}
 \begin{center}
 \includegraphics[width=.9\textwidth]{img/gap-stratify-A}
@@ -697,6 +736,7 @@ We can write \eqref{intro:let in A 2}, \eqref{intro:let in A 3}, \eqref{intro:le
 \caption{\label{evaluation:arbiter stratify A chain}}
 \end{figure*}
 
+\begin{comment}
 This leads to the further stratified version shown in \Cref{evaluation:arbiter stratify A chain}.
 The phases
 $B$ and $C$ \eqref{intro:spec of B,C} are two more sub-problems that have to be addressed using the same slicing technique.
@@ -709,4 +749,4 @@ and are quite easy to develop.\todo{show this? Forget about this paragraph??}
 \begin{center}$\vdots$
 \end{center}
 
-
+\end{comment}
