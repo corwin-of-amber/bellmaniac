@@ -358,13 +358,13 @@ this approach is demonstrated by engineering specialized tactics for the domain 
     block/.style={rectangle,draw,thick,fill=blue, fill opacity=0.15, inner sep=0}]
     
   \def\dx{1.75cm}
-  \def\x{3mm}
+  \def\w{3mm}
     
   \draw (0,0) grid (2,2);
   \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
   \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
 
-  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\x]{img/arrow}};
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
 
   \tikzset{xshift=\dx}
   
@@ -372,7 +372,7 @@ this approach is demonstrated by engineering specialized tactics for the domain 
   \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {2};
   \node(3) at (.5,.5) {3};         \node(4) at (1.5,.5) {4};
   \node(s)[block,fit={(0,1) (1,2)}] {};
-  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\x]{img/arrow}};
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
 
   \tikzset{xshift=\dx}
   
@@ -381,7 +381,7 @@ this approach is demonstrated by engineering specialized tactics for the domain 
   \node(3) at (.5,.5) {3};        \node(4) at (1.5,.5) {4};
   \draw (s.70) edge[->,out=20] (2);
   \node(s)[block,fit={(0,1) (1,2)}] {};
-  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\x]{img/arrow}};
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
 
   \tikzset{xshift=\dx}
   
@@ -391,7 +391,7 @@ this approach is demonstrated by engineering specialized tactics for the domain 
   \draw (s.south) edge[->,out=-40,in=-150] (3.250);
   \fill[block] (0,0) |- (.92,1) to[out=0,in=-90] (1,1.08) |- (2,2) |- (1.08,1) to[out=180,in=90] (1,.92) |- cycle;
   \coordinate(s) at (.8,0);
-  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\x]{img/arrow}};
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
 
   \tikzset{xshift=\dx}
 

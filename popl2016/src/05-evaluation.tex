@@ -730,10 +730,97 @@ We can write \eqref{intro:let in A 2}, \eqref{intro:let in A 3}, \eqref{intro:le
 \end{comment}
 
 \begin{figure*}
-\begin{center}
-\includegraphics[width=.9\textwidth]{img/gap-stratify-A}
-\end{center}
-\caption{\label{evaluation:arbiter stratify A chain}}
+\centering
+\begin{tikzpicture}[>=latex,x=7mm,y=7mm,
+    every path/.style={step=1},
+    every node/.style={inner sep=.5pt},
+    below edge/.style={below=1mm},
+    above edge/.style={above=1mm},
+    block/.style={rectangle,draw,thick,fill=blue, fill opacity=0.15, inner sep=0}]
+    
+  \def\dx{2.1cm}
+  \def\dy{1cm}
+  \def\w{3mm}
+    
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
+  \node(s)[block,fit={(0,1) (1,2)}] {};
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+  
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
+  \draw[->] (s.60) to[out=30] node[above edge] {$A$} (1);
+  \node(s)[block,fit={(.05,1) (2.05,2)}] {};
+  \node(t)[block,fit={(0,2.05) (1,0)}] {};
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+  
+  \tikzset{xshift=\dx, yshift=\dy}
+ 
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {\,2$'$};
+  \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
+  \draw[->] (s.60) to[out=80,looseness=1.2] node[above edge] {$B$} (2.120);
+  \node(s)[block,fit={(1,1) (2,2)}] {};
+
+  \tikzset{yshift=-2*\dy}
+ 
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5,.5) {\,3$'$};    \node(4) at (1.5,.5) {4};
+  \draw[->] (t.-80) to[out=-60,in=-140] node[below edge] {$C$} (3.-120);
+  \node(t)[block,fit={(0,0) (1,1)}] {};
+
+  \tikzset{yshift=\dy} % back to middle
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+  
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {\,\,2$''$};
+  \node(3) at (.5,.5) {\,\,3$''$};    \node(4) at (1.5,.5) {4};
+  \draw[->] (s) to[out=40,in=120] node[above edge,xshift=1mm] {$A$}  (2);
+  \draw[->] (t) to[out=-60,in=-120] node[below edge] {$A$}  (3);
+  \node(s)[block,fit={(1,0) (2,2)}] {};
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+
+  \tikzset{xshift=\dx}
+
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {\,\,2$''$};
+  \node(3) at (.5,.5) {\,\,3$''$};    \node(4) at (1.5,.5) {\,4$'$};
+  \draw[->] (s.-80) to[out=-40,in=-120] node[below edge] {$C$}  (4);
+  \node(s)[block,fit={(0,0) (2,1)}] {};
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+
+  \tikzset{xshift=\dx}
+
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {\,\,2$''$};
+  \node(3) at (.5,.5) {\,\,3$''$};    \node(4) at (1.5,.5) {\,\,4$''$};
+  \draw[->] (s.-40) to[out=-40,in=-120] node[below edge] {$B$} (4);
+  \node(s)[block,fit={(1,0) (2,1)}] {};
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+
+  \tikzset{xshift=\dx}
+
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {\,\,2$''$};
+  \node(3) at (.5,.5) {\,\,3$''$};    \node(4) at (1.5,.5) {\,\,\,4$'''$};
+  \draw[->] (s.-80) to[out=-40,in=-120] node[below edge] {$A$} (4);
+
+\end{tikzpicture}
+\caption{\label{evaluation:arbiter stratify A chain}
+  Fully divide-and-conquered version of $A^{IJ}$ in the example development.}
 \end{figure*}
 
 \begin{comment}
