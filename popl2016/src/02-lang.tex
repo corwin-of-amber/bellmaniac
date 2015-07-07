@@ -3,6 +3,7 @@
 \newcommand\semp[1]{[\![{#1}]\!]}
 \newcommand\fix{\operatorname{fix}}
 
+We first set up a formal language that we will use to describe computations and reason about them.
 Bellmania uses the same language for specifications and for programs.  Its core is simply-typed
 $\lambda$-calculus with universally quantified type variables (polymorphic types).
 
@@ -32,11 +33,14 @@ limit the use of qualifiers, allowing only the following forms:
   \item $\{v:\T ~|~ P(v)\land Q(v)\}$, abbreviated as $\T\cap P\cap Q$, or just $P\cap Q$. This extends
   to any number of conjuncts of the same form.
   \item $x : \T_2 \to \{v:\T_2 ~|~ R(x,v)\} \to \T_3$, abbreviated as $\big((\T_1\times\T_2)\cap R\big)\to\T_3$.
-  Note that the first parameter to $R$ must be the preceding argument. This extends to quantifiers of
-  any arity. Also note that the language does not define tuple types; hence there is no distinction
-  between curried and uncurried function types.
+  The first parameter to $R$ must be the preceding argument; this extends to predicates of
+  any arity (that is, the first $k-1$ arguments to a $k$-ary predicates must be the preceding $k-1$
+  arguments, in that order).
 \end{itemize}
 
+Note that the language does not define tuple types; hence there is no distinction between curried and uncurried function types.
+
+\medskip  
 The type refinement operators $\cap$ and $\times$ may be composed to create conjunctions of qualifiers,
 as long as their argument sets are either disjoint or contained, but not overlapping;
 for example, \[x:\{v:\T_1~|~P(v)\}\to \{v:\T_2~|~Q(v)\land R(x,v)\}\to\T_3\] can be written as
@@ -53,15 +57,14 @@ obtained from it by removing all qualifiers.
 
 We define a Bellmania program to be well-typed iff its \newterm{raw form}, obtained by replacing all types by
 their shapes, is well-typed. This gives a simple characteristic of type safety without the need to
-explictly write any new typing rules. It also means that for $f:\T_1\to\T_2$, $x:T_3$, then $f\,x:\T_2$ whenever
-$\T_1$ and $\T_3$ have the same shape. This is much more permissive than the original Liquid Types,
-and requires some explanation.
+explictly write any new typing rules. It also means that for $f:\T_1\to\T_2$, $x:T_3$, we obtain $f\,x:\T_2$ whenever
+$\T_1$ and $\T_3$ have the same shape. This is much more permissive than most type systems,
+including Liquid Types, and requires some explanation.
 
 Considering a (partial) function $\T\to\S$ to be a set of pairs of elements $\langle x,y\rangle$ 
 from its domain $\T$ and range $\S$, respectively, it is clear to see that any function of type $\T_1\to\S_1$,
 such that $\semp{\T_1}\subseteq\semp{\T}$, $\semp{\S_1}\subseteq\semp{\S}$, 
 is \emph{also} a function of type $\T\to\S$, since $\semp{\T_1}\times\semp{\S_1}\subseteq\semp{\T}\times\semp{\S}$.
-%and therefore $\powerset{\semp{\T_1}\times\semp{\S_1}} \subseteq \powerset{\semp{\T}\times\semp{\S}}$.
 If we define subtyping as inclusion of the domains, i.e. $\T_1 <:\T$ whenever $\semp{\T_1}\subseteq\semp{\T}$,
 this translates into:
 %

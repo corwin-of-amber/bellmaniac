@@ -42,6 +42,18 @@ We strive to harness their strength in a deductive setting, where
     check each context in which they are applied.
 \end{itemize}
 
+
+\begin{figure*}[b]
+\centering
+\resizebox{.9\textwidth}{!}{\input{charts}}
+\caption{\label{intro:performance}
+  Comparison of the the best performance obtained using polyhedral compilers 
+  (PluTo\,\cite{HPC10/Pouchet}, PoCC\,\cite{PLDI08/Bondhugula})
+  for parallelization, vs. manually crafted recursive divide-and-conquer implementations (CO),
+  taken from~\cite{IPDPS15/Tithi}.}
+\end{figure*}
+
+
 \todo{Refactor so ``Divide and conquer DP'' occurs hear}
 As a playground\coa{for loss of a better word?} in which to test and demonstrate our approach,
 we explore the domain of divide-and-conquer dynamic programming algorithms.
@@ -66,16 +78,15 @@ exhibit better temporal locality, and the partitioning can expose more
 optimization opportunities (see, e.g., \cite{IPDPS15/Tithi}). 
 Even when compared with tiled implementations optimized by the best polyhedral compilers, 
 the divide-and-conquer implementations still show significantly better performance, in some cases
-by more than an order of magnitude as illustrated in \Cref{intro:performance}. 
-\rch{Those plots appear in \cite{IPDPS15/Tithi}}
-\asolar{write the previous  par a little differently to account for the recent publication}
-Unfortunately, developing such implementations is quite difficult, as will become apparent in \Cref{divide}.
+by more several orders of magnitude as illustrated in \Cref{intro:performance}. 
+
+Developing such implementations, however, is quite difficult, as will become apparent in \Cref{divide}.
 In this paper, we develop a new computer aided approach to formally deriving provably correct divide-and-conquer algorithms
 for dynamic programming problems. The approach relies on a new method to formalize the derivation of these algorithms, which
 allows an algorithm designer to guide the derivation process through a small number of very high-level tactics. 
 Specifically, our paper makes the following contributions\coa{Move earlier?}:
 \begin{enumerate}
-  \item We develop a small set of formal tactics that can be used to transform a class of recurrence
+  \item We develop a small set of formal \newterm{solver-aided tactics} that can be used to transform a class of recurrence
   specifications, written in a simple functional language, 
   into equivalent divide-and-conquer programs, that admit parallel cache-local
   implementations, in a principled, systematic manner.
@@ -86,16 +97,6 @@ Specifically, our paper makes the following contributions\coa{Move earlier?}:
 \end{enumerate}
 
 
-
-\begin{figure*}
-\resizebox{\textwidth}{!}{\input{charts}}
-\caption{\label{intro:performance}
-  Comparison of the the best performance obtained using polyhedral compilers 
-  (PluTo\,\cite{HPC10/Pouchet}, PoCC\,\cite{PLDI08/Bondhugula})
-  for parallelization, vs. manually crafted recursive divide-and-conquer implementations (CO),
-  taken from~\cite{IPDPS15/Tithi}.}
-\end{figure*}
-
 \section{Divide and Conquer DP}
 \label{divide}
 
@@ -104,7 +105,7 @@ Two processes $x$ and $y$ are scheduled to run $|x|$ and $|y|$ time slots,
 respectively. Execution starts at $t=0$, and the length of each time slot is
 one time unit. The cost for scheduling the slots $[a..b)$ of $x$ at $t=a+c$
 is given by $\xw{abc}$, and the cost for schedulting the slots $[a..b)$ of $y$
-at same $t=a+c$ is given by $\yw{abc}$. \coa{I changed $i$,$j$,$p$,$q$ to $a$,$b$,$c$ to avoid confusion with what comes later on.}
+at same $t=a+c$ is given by $\yw{abc}$.
 
 \begin{figure}
 \begin{tabular}{@{\hspace{-1pt}}r@{~}l@{}}
@@ -150,19 +151,21 @@ $
 The optimal cost for scheduling the first $i$ slots of $x$ and the first $j$ slots
 of $y$ is given by the recurrence in \Cref{intro:arbiter spec}. When $i$ is zero, it means that
 only $y$ has been scheduled, so the cost is $\yw{0j0}$, and similarly when $j$ is zero, 
-the cost is $\xw{0i0}$. In the general case, either the schedule ends with time allocated to $x$, 
-in which case $x$ was allocated time from some step $p$ to $i$, and the cost is 
-$G_{pj} + \xw{pij}$, or the schedule ends with time allocated to $y$, in which case, 
-$y$ was allocated time from some step $q$ to $j$, and the cost is $G_{iq} + \yw{qji}$.
-In order to determine which is the case, and what is the optimal value of $p$ and $q$, 
-the dynamic programming algorithm needs information from all cells above and to the left of $G_{ij}$.
-Once the algorithm completes the table, one can read the total cost of the entire schedule from $G_{|x||y|}$.
+the cost is $\xw{0i0}$. When $i$ and $j$ are both positive, there are two options:
+either the schedule ends with an allocation to $x$, 
+where slots $[p..i)$ of $x$ were scheduled at $t=p+j$, and the cost is 
+$G_{pj} + \xw{pij}$; or it ends with an allocation to $y$, where
+slots $[q..j)$ of $y$ were scheduled at $t=i+q$, and the cost is $G_{iq} + \yw{qji}$.
+The minimum over all respective $p<i$ and $q<j$ is taken.
+Eventually, the optimal cost of the entire schedule is given by $G_{|x||y|}$.
 
 \begin{paragraph}{Iterative Algorithm.}
-With standard dynamic programming, this recurrence can be computed
+Using a standard dynamic programming method, Richard, an algorithms expert, computes this recurrence
 with an iterative program by understanding the dependency pattern:
-each value $G_{ij}$ is computed from other values $G_{i'j'}$ with lower
-indexes, $i'<i$, ~$j'<j$ (see \Cref{intro:arbiter spec}). 
+to compute the $\min\langle\rangle$ expression in \Cref{intro:arbiter spec} and find the optimal
+values for $p$ and $q$, the algorithm needs information from all cells above and to the left of $G_{ij}$.
+In particular, each value $G_{ij}$ is computed from other values $G_{i'j'}$ with lower
+indexes, $i'<i$, ~$j'<j$. 
 Therefore, considering $G$ as a two-dimensional array, it can be filled in a single pass from left to right and from top
 to bottom.
 \end{paragraph}
@@ -191,7 +194,7 @@ to bottom.
 
 \newcommand\qbox[1]{\fbox{\scriptsize#1}}
 
-\begin{paragraph}{Divide-and-Conquer Algorithm}
+\begin{paragraph}{Divide-and-Conquer Algorithm.}
 
 \begin{figure}
 \centering
@@ -215,13 +218,16 @@ $\begin{array}[b]{l}\qbox1 \rightsquigarrow \qbox2 \\
 \end{figure}
 
 Divide-and-conquer is an algorithm development pattern (\cite{SODA06/Chowdhury}, \cite{SPAA08/Chowdhury})\coa{should these (SODA/SPAA) be the ones to cite here?}, 
-where the DP table, in this case, $G$, is partitioned into
-regions, in this case, quadrants, as illustrated in \Cref{intro:quadrants}. The same reasoning we applied 
-in the iterative case leads us to conclude that the computations of 2 and 3 depend on 1,
+where the DP table is partitioned into regions, and each region is expressed as a sub-problem
+to be solved.
+
+In our case, Richard takes the two-dimensional array $G$ and partitions it into
+quadrants, as illustrated in \Cref{intro:quadrants}. He then applies the same reasoning
+as in the iterative case, concluding that the computations of 2 and 3 depend on 1,
 and the computation of 4 depends on 2 and 3.
 \end{paragraph}
 
-The computation of these quadrants can be \emph{stratified} into the following
+Richard \emph{stratified} the computations on these quadrants into the following
 four steps:
 \begin{algorithmic}[1]
   \STATE Compute \qbox1 (using only input data $w,w'$).
@@ -231,7 +237,7 @@ four steps:
 \end{algorithmic}
 
 Each step depends only on a subset of the steps that came before it, 
-as illustrated by \Cref{intro:chain}. However, this is not yet a divide-and-conquer algorithm; 
+as illustrated by \Cref{intro:chain}. However, this is not yet a divide-and-conquer algorithm: 
 of the four steps, only step \qbox1{} is an instance of the original problem; all the other steps
 look somewhat different from the original problem and lack significant locality. With some algebraic manipulation, however, 
 it is possible to define each of the four steps above recursively, leading to a true divide-and-conquer algorithm with very high locality 
@@ -263,8 +269,8 @@ $I_0\times J_0$, making it an exact copy of $G^{I_0J_0}$. This is due to the fac
 that for $j\in J_0$, ~$J\cap[0,j)=J_0\cap[0,j)$, and for $i\in I_0$, ~$I\cap[0,i)=I_0\cap[0,i)$.
 
 On the other hand, the computation of \qbox2 is {\bf not} a mere copy of $G^{I_0J_1}$, 
-because the range of $q$ is not a subset of $J_1$, and therefore 
-some of the recursive references $G_{iq}$ are not confined to \qbox2.
+because the range $q\in J\cap[0,j)$ is not a subset of $J_1$, so that
+some of the recursive references $G_{iq}$ are outside of \qbox2.
 
 This can be addressed by splitting that range, adding yet range another parameter to $G$.
 
@@ -336,7 +342,12 @@ The sub-computation of $\psi$ can also be transformed into four recursive sub-co
 So through these kind of transformations, it is possible to break the computation of the original $G$ into four (or more) subcomputations, each of which can be itself recursively partitioned into four subcomputations, giving us a true divide-and-conquer algorithm.
 When the pieces become small enough, the iterative algorithm (\Cref{intro:iterative}) is executed.
 
-As was outlined in \Cref{intro}, prior work has shown that the performance results that can be achieved through these transformations can be dramatic. Unfortunately, the line of reasoning that was followed in the preceding section can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered this technique. In the next section, we formalize our approach for deriving divide-and-conquer DP algorithms and describe our computer aided approach for generating provably correct divide-and-conquer DP.
+\medskip
+As was outlined in \Cref{intro}\coa{check the ref, I suspect it is going to move}, prior work has shown that the performance results that can be achieved through these transformations can be dramatic. Unfortunately, the line of reasoning that was followed in this section can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered this technique. 
+
+In the following sections, we describe the parts that make Bellmania --- a formal framework for deriving algorithms from specifications. 
+It utilizes \newterm{solver-aided tactics} to generate provably correct pseudo-code; 
+this approach is demonstrated by engineering specialized tactics for the domain of divide-and-conquer DP.
 
 
 \begin{figure}

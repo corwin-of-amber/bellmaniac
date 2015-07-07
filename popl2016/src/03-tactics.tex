@@ -17,7 +17,7 @@ If verified successfully, they entail the validity of the instance.
 Clearly the tactic itself can be used as its proof obligation, if it is easy enough to prove automatically; 
 in such cases we write ``\textbf{\textit{Obligations}:} tactic.''
 
-The following are the major tactics exposed by our framework. 
+The following are the major tactics provided by our framework. 
 More tactic definitions are given in the appendix.
 
 \newcommand\Obligations{\medskip\noindent\textbf{\textit{Obligations}:} }
@@ -82,8 +82,11 @@ is typically either $h_i$ or a sub-term occurring earlier in the development.
 $f = \theta_{1..r} \mapsto (f_1\,\theta_1)::\T_1/\cdots/(f_r\,\theta_r)::\T_r$.
 \begin{itemize}
   \item $\T_{1..r}$ are disjoint mappings.
-  \item $h\,(f\,\overline\theta) = f\,\overline\theta$.
+  \item {\bf Either}\quad $h\,(f\,\overline\theta) = f\,\overline\theta$ \quad{\bf or}\quad
+  $h\,\theta=\theta ~\limplies~ f_{1..r}\,\theta=\theta$
 \end{itemize}
+
+(We give two alternatives, as the first is usually easier to prove, but may hold in less cases)
 
 \subsection{Example \hrulefill}
 
@@ -99,12 +102,17 @@ w_{pij} \leq w_{pkj} + w_{kij} \qquad w'_{qji} \leq w'_{qki} + w'_{kji}
 %
 for all (appropriately typed) $p<k<i$, ~$q<k<j$.
 
+\begin{comment}
+\label{annex:more tactics} % make TeXlipse happy
+\end{comment}
+
 \medskip
 Starting from the specification in \eqref{lang:arbiter spec}, we apply Synth to turn
 $\fix (\theta\,i\,j\mapsto\square/\min\langle\cdots\rangle)$ into $\fix\theta\,i\,j\mapsto\min\langle\square,\cdots\rangle$.
 While not absolutely necessary, we will see that it makes some expressions easier to handle later
 on.
-Distributivity and Associativity (refer to \Cref{more-tactics}) are used to obtain the tactic parameter $f_1$;
+
+Distributivity and Associativity (refer to \Cref{annex:more tactics}) are used to obtain the tactic parameter $f_1$;
 the proof is deferred until Synth is applied so that the prover can use the extra context.
 
 \begin{tacticbox}{Synth}
@@ -122,7 +130,7 @@ the proof is deferred until Synth is applied so that the prover can use the extr
 
 \begin{equation}
   \renewcommand\arraystretch{1.5}
-  \begin{array}{@{}l@{}l@{}l@{}}
+  \begin{array}{@{\!\!\!}l@{}l@{}l@{}}
     G ~=~ \fix \theta\,i\,j\mapsto{}
 	      & \min\,\langle~ & 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}, \\
 	      & & \min p\mapsto\theta_{pj}+w_{pij}, \\
@@ -163,7 +171,7 @@ form, similar to $\Ggen$ of \eqref{intro:Ggen}.
 \begin{equation}
   \renewcommand\arraystretch{1.5}
   \begin{array}{@{}l@{}l@{}l@{}}
-    G ~=~ & \lspan2{\big(\fix \theta\,i\,j\mapsto
+    G ~=~ & \lspan2{\fix \big(\theta\,i\,j\mapsto
 	              0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}\big)\applt} \\
 	      & \psi\mapsto \fix \theta\,i\,j\mapsto\min\,\langle~ & \psi_{ij} \\
 	      & & \min p\mapsto\theta_{pj}+w_{pij}, \\
@@ -184,358 +192,15 @@ where the superscript parameterizes the types of $i$, $j$ and $p$, $q$.
 	      & & ^{^{(I)}} & ^{^{(J)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
 	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle
   \end{array}
+  \label{tactics:arbiter phase A}
 \end{equation}
 
 Vertical typeset was used to save some horizontal space, but $\vtyped v\T$
 should be read as just $v:\T$.
 
-\bigskip
-Next, we apply Slice to get the four quadrants. $I_0$, $I_1$, $J_0$, $J_1$
-(\Cref{intro:quadrants}) are defined as unary qualifiers with the axioms:
-\[
-\begin{array}{c@{\qquad}c}
-  \forall i{:}I.~~I_0(i)\lor I_1(i)   &    \forall i_0{:}I_0,~i_1{:}I_1.~~i_0<i_1 \\
-  \forall j{:}J.~~J_0(j)\lor J_1(j)   &    \forall j_0{:}J_0,~j_1{:}J_1.~~j_0<j_1 \\
-\end{array}
-\]
-
-As a result, the term is
-going to grow quite large; to make such terms easy to read and refer to, we provide
-boxed letters as labels for sub-terms, using them as abbreviations where they
-occur in the larger expression.
-
-\makeatletter
-\newcommand{\quadrants@normal}[4]{
-  \renewcommand\arraystretch{1.5}
-   \begin{array}{c|c}
-     #1 & #2 \\ \hline
-     #3 & #4
-   \end{array}}
-\newcommand{\quadrants@small}[4]{
-  \renewcommand\arraystretch{0.9}
-   \begin{array}{@{~}c@{~}|@{~}c@{~}}
-     \scriptstyle #1 & \scriptstyle #2 \\ \hline
-     \scriptstyle #3 & \scriptstyle #4
-   \end{array}}
-\newcommand\quadrants{\@ifstar\quadrants@small\quadrants@normal}
-\makeatother
-
-In addition, to allude to the reader's intuition, expressions of the form
-$a/b/c/d$ will be written as $\quadrants*{a}{b}{c}{d}$ when the slices
-represent quadrants.
-
-\makeatletter
-\newcommand{\lbox@small}[1]{ {\setlength{\fboxsep}{1pt}\fbox{\small #1}} }
-\newcommand{\lbox@tiny}[1]{ {\setlength{\fboxsep}{1pt}\fbox{\tiny #1}} }
-\newcommand\lbox{\@ifstar\lbox@tiny\lbox@small}
-\makeatother
-
-\begin{center}
-\fbox{$\begin{array}{ll}
-       \mbox{\underline{Slice}} \\ 
-       f ~=~ \theta\,i\,j\mapsto \cdots \\
-       X_1 ~=~ \_\times I_0\times J_0 &
-       X_2 ~=~ \_\times I_0\times J_1 \\
-       X_3 ~=~ \_\times I_1\times J_0 &
-       X_4 ~=~ \_\times I_1\times J_1 \\[.5em]
-       \cspan2{\mbox{\small ({\it recall that each} ``\_'' {\it is a fresh type variable})}}
-       \end{array}$}
-\end{center}
-
-\begin{equation}
-  \renewcommand\arraystretch{1.2}
-  \begin{array}{@{}r@{}l@{}c@{}c@{}l@{}l@{}}
-    A^{^{IJ}} =~ & \lspan5{\psi\mapsto \fix \quadrants{\lbox A}{\lbox B}{\lbox C}{\lbox D}} \\
-	\lbox A ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
-	      & & ^{^{(I_0)}} & ^{^{(J_0)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
-	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
-	\lbox B ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
-	      & & ^{^{(I_0)}} & ^{^{(J_1)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
-	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
-	\lbox C ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
-	      & & ^{^{(I_1)}} & ^{^{(J_0)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
-	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
-	\lbox D ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
-	      & & ^{^{(I_1)}} & ^{^{(J_1)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
-	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
-  \end{array}
-  \label{tactics:A sliced}
-\end{equation}
-
-\begin{tacticbox}{Let}
-   e[\square] ~=~ \quadrants*{\square}{\lbox*B}{\lbox*C}{\lbox*D} \qquad
-   t ~=~ \lbox A
-\end{tacticbox}
-
-\begin{equation}
-  A^{^{IJ}} =~ \psi\mapsto \fix \left(\lbox A \applt z\mapsto\quadrants{z}{\lbox B}{\lbox C}{\lbox D}\right)
-\end{equation}
-
-\begin{tacticbox}{Stratify[with Padding]}
-  \begin{array}{@{} l @{} l @{}}
-    f ~=~ \quadrants*{\lbox*A}{\dot\psi}{\dot\psi}{\dot\psi}
-         & \mbox{\small ({\it recall that } $\dot\psi=\theta\mapsto\psi$)} \\
-    g ~=~ z\mapsto\quadrants*{z}{\lbox*{B}}{\lbox*C}{\lbox*D} &
-    \qquad\psi=\psi
-  \end{array}
-\end{tacticbox}
-
-\begin{equation}
-  A^{^{IJ}} =~ \psi\mapsto \fix \quadrants{\lbox A}{\dot\psi}{\dot\psi}{\dot\psi} ~\applt~ \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\lbox C}{\lbox D}
-\end{equation}
-
-Notice that an existing variable $\psi$ is reused, rebinding any occurrences within $\lbox B$, $\lbox C$, $\lbox D$.
-This effect is useful, as it limits the context of the expression: the inner $\psi$ shadows the outer $\psi$,
-meaning $\lbox B$, $\lbox C$, $\lbox D$ do not need to access the data that was input to $\lbox A$, only its
-output.
-
 \medskip
-The sequence Let, Stratify[with Padding] is now applied in the same manner to $\lbox B$
-and $\lbox C$. We do not list the applications as they are analogous to the previous ones.
-
-\begin{equation}
-  \renewcommand\arraystretch{1.5}
-  \begin{array}{l@{}l}
-    A^{^{IJ}} =~ \psi\mapsto{} & \fix \quadrants{\lbox A}{\dot\psi}{\dot\psi}{\dot\psi} ~\applt~ 
-                 \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} ~\applt \\
-               & \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\lbox C}{\dot\psi} ~\applt~
-                 \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\dot\psi}{\lbox D}
-  \end{array}
-\end{equation}
-
-\begin{figure}
-\includegraphics[width=.47\textwidth]{img/arbiter-stratify2}\\
-\includegraphics[width=.47\textwidth]{img/arbiter-stratify3}
-\caption{
-  Stratification steps for phase ``A'' of Simplified Arbiter.}
-\end{figure}
-
-\begin{tacticbox}{Synth}
-	\begin{array}{@{}l@{}c@{}c@{}l@{}l}
-       \lspan5{h_1= \lbox A} \\
-       \lspan5{h_{2,3,4}=\dot\psi} \\
-	   f_1 = \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
-	      & ^{^{(I_0)}} & ^{^{(J_0)}} & & \min \vtyped p {I_0} \mapsto\theta_{pj}+w_{pij}, \\
-	      & & & & \min \vtyped q {J_0} \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
-	   \lspan5{f_{2,3,4} = \dot\psi}
-   \end{array}
-\end{tacticbox}
-
-\begin{equation}
-  \renewcommand\arraystretch{1.5}
-  \begin{array}{l@{}l}
-    A^{^{IJ}} =~ \psi\mapsto{} & \quadrants{A^{^{I_0J_0}}_\psi\!\!\!}{\psi}{\psi}{\psi} ~\applt~ 
-                 \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} ~\applt \\
-               & \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\lbox C}{\dot\psi} ~\applt~
-                 \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\dot\psi}{\lbox D}
-  \end{array}
-  \label{fix A}
-\end{equation}
-
-We note that $\fix f_1=A^{^{I_0J_0}}$ are {\bf identical} terms. Also, we took the liberty
-to simplify $\fix\dot\psi$ into $\psi$ --- although this is not necessary --- just to display
-a shorter term.
-
-\medskip
-The next few tactics will focus on the subterm $\lbox B$ from \eqref{tactics:A sliced}.
-
-\begin{equation}
-  \renewcommand\arraystretch{1.2}
-  \begin{array}{@{}r@{}l@{}c@{}c@{}l@{}l@{}}
-	\lbox B ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
-	      & & ^{^{(I_0)}} & ^{^{(J_1)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
-	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle
-  \end{array}
-\end{equation}
-
-\begin{tacticbox}{Slice}
-  \begin{array}{@{} l @{}}
-    f = \min \vtyped q J \mapsto \theta_{iq}+w'_{qji} \\
-    X_1 = J_0\to\_ \qquad X_2 = J_1\to\_
-  \end{array}
-\end{tacticbox}
-
-\begin{equation}
-  \renewcommand\arraystretch{1.2}
-  \begin{array}{@{}r@{}l@{}c@{}c@{}l@{}l@{}l@{}}
-	\lbox B ~=~ & \theta\,& i & j & \mapsto\min\,\big\langle~ & \psi_{ij} \\
-	      & & ^{^{(I_0)}} & ^{^{(J_1)}} & & \lspan2{\min \vtyped p I \mapsto\theta_{pj}+w_{pij},} \\
-	      & & & & & \min \big( & (\vtyped q {J_0} \mapsto\theta_{iq}+w'_{qji}) ~\big/~ \\
-	      & & & & & & (\vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji})\big)  ~\big\rangle
-  \end{array}
-\end{equation}
-
-\begin{tacticbox}{Distributivity}
-  \begin{array}{@{} l @{}}
-    e[\square] = \min\square \\
-    t_1 = \min \vtyped q {J_0} \mapsto \theta_{iq}+w'_{qji} \\
-    t_2 = \min \vtyped q {J_1} \mapsto \theta_{iq}+w'_{qji} \\
-  \end{array}
-\end{tacticbox}
-
-\begin{tacticbox}{Associativity}
-  \begin{array}{@{} l @{} l @{}}
-    \lspan2{\reduce = \min} \\
-    \overline x_1 ={} & \psi_{ij} \\
-    \overline x_2 ={} & \min \vtyped p I \mapsto\theta_{pj}+w_{pij} \\
-    \overline x_3 ={} & \min \vtyped q {J_0} \mapsto \theta_{iq}+w'_{qji} ~, \\
-                      & \min \vtyped q {J_1} \mapsto \theta_{iq}+w'_{qji}
-  \end{array}
-\end{tacticbox}
-
-\begin{equation}
-  \renewcommand\arraystretch{1.2}
-  \begin{array}{@{}r@{}l@{}c@{}c@{}l@{}l@{}}
-	\lbox B ~=~ & \theta\,& i & j & \mapsto\min\,\big\langle~ & \psi_{ij} \\
-	      & & ^{^{(I_0)}} & ^{^{(J_1)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
-	      & & & & & \min \vtyped q {J_0} \mapsto\theta_{iq}+w'_{qji}, \\
-	      & & & & & \min \vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji} ~\big\rangle
-  \end{array}
-\end{equation}
-
-\begin{tacticbox}{Let[$\reduce$]}
-  \begin{array}{@{} r @{} l @{}}
-    e[\square] ={} & \quadrants{\dot\psi}{\theta\,i\,j\mapsto\square}{\dot\psi}{\dot\psi} \\
-    \overline a ={} & \psi_{ij}, ~\min \vtyped q{J_0}\mapsto \theta_{iq}+w'_{qji} \\
-    \overline b ={} & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
-                    & \min \vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji}
-  \end{array}
-\end{tacticbox}
-
-\begin{equation}
-  \renewcommand\arraystretch{1.2}
-  \begin{array}{r @{} l @{} c @{} c @{} l @{} l}
-    \lspan6{
-    \quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} =
-      \fix\left(\lbox E \applt z\mapsto\quadrants{\dot\psi}{\lbox F}{\dot\psi}{\dot\psi}\right) 
-    } \\[1.5em]
-    ~\lbox E ={} &
-      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
-             & & ^{^{(I_0)}} & ^{^{(J_1)}} &
-                                          & \min \vtyped q{J_0}\mapsto\theta_{iq}+w'_{qji} \rangle \\
-    ~\lbox F ={} &
-      \theta & i & j & \mapsto\min\langle & z_{\theta ij}, \\
-             & & ^{^{(I_0)}} & ^{^{(J_1)}} &
-                                         & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
-             & & & &                     & \min \vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji}\rangle
-  \end{array}
-\end{equation}
-
-\begin{tacticbox}{Stratify[with Padding]}
-  \begin{array}{@{} l @{}}
-    f ~=~ \quadrants*{\dot\psi}{\lbox*E}{\dot\psi}{\dot\psi} \\
-    g ~=~ z\mapsto\quadrants*{\dot\psi}{\lbox*F}{\dot\psi}{\dot\psi}
-    \qquad\psi=\psi
-  \end{array}
-\end{tacticbox}
-
-\begin{equation}
-  \renewcommand\arraystretch{1.2}
-  \begin{array}{r @{} l @{} c @{} c @{} l @{} l}
-    \lspan6{
-    \fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} =
-      \fix\quadrants{\dot\psi}{\lbox E}{\dot\psi}{\dot\psi} \applt
-      \psi\mapsto\fix\quadrants{\dot\psi}{\lbox F}{\dot\psi}{\dot\psi}
-    } \\[1.5em]
-    ~\lbox E ={} &
-      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
-             & & ^{^{(I_0)}} & ^{^{(J_1)}} &
-                                          & \min \vtyped q{J_0}\mapsto\theta_{iq}+w'_{qji} \rangle \\
-    ~\lbox F ={} &
-      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
-             & & ^{^{(I_0)}} & ^{^{(J_1)}} &
-                                          & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
-             & & & &                      & \min \vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji}\rangle
-  \end{array}
-\end{equation}
-
-\noindent
-Define
-\begin{equation}
-  \renewcommand\arraystretch{1.2}
-  \begin{array}{@{}l @{} l @{\!} c @{} c @{} l @{} l@{}}
-  B^{^{IJ_0J_1}} =~ & \psi\mapsto \\
-      & \fix
-      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
-           & & ^{^{(I)}} & ^{^{(J_1)}} &
-                                          & \min \vtyped q{J_0}\mapsto\theta_{iq}+w'_{qji} \rangle
-  \end{array}
-\end{equation}
-
-\begin{tacticbox}{Synth}
-  \begin{array}{@{} l @{} c @{} c @{} l @{} l @{}}
-    \lspan5{h_2 = \lbox E} \\
-    \lspan5{h_{1,3,4} = \dot\psi} \\
-    f_2 = 
-      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
-             & ^{^{(I_0)}} & ^{^{(J_1)}} &
-                                          & \min \vtyped q {J_0} \mapsto\theta_{iq}+w'_{qji}\rangle \\
-    \lspan5{f_{1,3,4} = \dot\psi}
-  \end{array}
-\end{tacticbox}
-
-\begin{tacticbox}{Synth}
-  \begin{array}{@{} l @{} c @{} c @{} l @{} l @{}}
-    \lspan5{h_2 = \lbox F} \\
-    \lspan5{h_{1,3,4} = \dot\psi} \\
-    f_2 = 
-      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
-             & ^{^{(I_0)}} & ^{^{(J_1)}} &
-                                          & \min \vtyped p {I_0} \mapsto\theta_{pj}+w_{pij}, \\
-             & & &                        & \min \vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji}\rangle \\
-    \lspan5{f_{1,3,4} = \dot\psi}
-  \end{array}
-\end{tacticbox}
-
-\begin{equation}
-  \fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} ~=~
-    \quadrants{\psi}{B^{^{I_0J_0J_1}}_\psi\!\!\!\!}{\psi}{\psi} ~\applt~
-    \psi\mapsto\quadrants{\psi}{A^{^{I_0J_1}}_\psi\!\!\!}{\psi}{\psi}
-  \label{fix B}
-\end{equation}
-
-\medskip\noindent
-In a similar manner, we will obtain the following:
-
-\begin{equation}
-  \fix\quadrants{\dot\psi}{\dot\psi}{\lbox C}{\dot\psi} ~=~
-    \quadrants{\psi}{\psi}{C^{^{I_0I_1J_0}}_\psi\!\!\!\!}{\psi} ~\applt~
-    \psi\mapsto\quadrants{\psi}{\psi}{A^{^{I_1J_0}}_\psi\!\!\!}{\psi}
-  \label{fix C}
-\end{equation}
-
-\begin{equation}
-  \renewcommand\arraystretch{1.2}
-  \begin{array}{@{}l @{} l @{\!} c @{} c @{} l @{} l@{}}
-  C^{^{I_0I_1J}} =~ & \psi\mapsto \\
-      & \fix
-      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
-           & & ^{^{(I_1)}} & ^{^{(J)}} &
-                                          & \min \vtyped p {I_0} \mapsto\theta_{pj}+w_{pij} \rangle
-  \end{array}
-\end{equation}
-
-\medskip\noindent
-And\coa{Do we want to expand these?} ---
-
-\begin{equation}
-  \begin{array}{@{} l @{} l @{}}
-    \fix\quadrants{\dot\psi}{\dot\psi}{\dot\psi}{\lbox D} ~=~ &
-      \quadrants{\psi}{\psi}{\psi}{B^{^{I_1J_0J_1}}_\psi\!\!\!\!} ~\applt~
-      \psi\mapsto\quadrants{\psi}{\psi}{\psi}{C^{^{I_0I_1J_1}}_\psi\!\!\!} \\
-    &
-       ~\applt~ \psi\mapsto\quadrants{\psi}{\psi}{\psi}{A^{^{I_1J_1}}_\psi\!\!\!}
-  \end{array}
-  \label{fix D}
-\end{equation}
-
-This gives the stratified version as shown in \Cref{evaluation:arbiter stratify A chain}.
-The read and write regions are already encoded in the types of $A$, $B$, $C$ in 
-\eqref{fix A}, \eqref{fix B}, \eqref{fix C}, and \eqref{fix D}.
-
 \hrule
 \bigskip
-
 
 \subsection{Soundness}
 
