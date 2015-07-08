@@ -389,17 +389,17 @@ this approach is demonstrated by engineering specialized tactics for the domain 
   \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {\,2$'$};
   \node(3) at (.5,.5) {\,3$'$};    \node(4) at (1.5,.5) {4};
   \draw (s.south) edge[->,out=-40,in=-150] (3.250);
-  \fill[block] (0,0) |- (.92,1) to[out=0,in=-90] (1,1.08) |- (2,2) |- (1.08,1) to[out=180,in=90] (1,.92) |- cycle;
-  \coordinate(s) at (.8,0);
-  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+%  \fill[block] (0,0) |- (.92,1) to[out=0,in=-90] (1,1.08) |- (2,2) |- (1.08,1) to[out=180,in=90] (1,.92) |- cycle;
+  \coordinate (s) at (.8,0);
+  \node[inner sep=0 ] at (2.5,1) {\includegraphics[width=\w ]{img/arrow}};
 
-  \tikzset{xshift=\dx}
+  \tikzset{xshift=\dx};
 
   \draw (0,0) grid (2,2);
-  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {2$'$};
-  \node(3) at (.5,.5) {\,3$'$};    \node(4) at (1.5,.5) {4$'$};
+  \node (1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {2$'$};
+  \node (3) at (.5,.5) {\,3$'$};    \node(4) at (1.5,.5) {4$'$};
   \draw (s.south) edge[->,out=-30,in=-150] (4);
-  
+ 
 \end{tikzpicture}
 %\includegraphics[width=.47\textwidth]{img/gap-stratify1}
 \caption[caption]{\label{intro:chain}
