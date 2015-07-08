@@ -309,30 +309,30 @@ this approach is demonstrated by engineering specialized tactics for the domain 
 \begin{tikzpicture}[>=latex,x=6mm,y=6mm,
     every path/.style={step=1},
     every node/.style={inner sep=.5pt},
-    block/.style={rectangle,draw,thick,fill=blue, fill opacity=0.15, inner sep=0}]
+    block/.style={rectangle,draw,thick,fill=Orange, fill opacity=0.15, inner sep=0}]
     
   \def\dx{1.75cm}
   \def\w{3mm}
     
   \draw (0,0) grid (2,2);
-  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
-  \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
+  %\node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  %\node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
 
   \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
 
   \tikzset{xshift=\dx}
   
   \draw (0,0) grid (2,2);
-  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {2};
-  \node(3) at (.5,.5) {3};         \node(4) at (1.5,.5) {4};
+  \node(1) at (.5,1.5) {1};   %\node(2) at (1.5,1.5) {2};
+  %\node(3) at (.5,.5) {3};         \node(4) at (1.5,.5) {4};
   \node(s)[block,fit={(0,1) (1,2)}] {};
   \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
 
   \tikzset{xshift=\dx}
   
   \draw (0,0) grid (2,2);
-  \node(1) at (.5,1.5) {\,1$'$};  \node(2) at (1.5,1.5) {\,2$'$};
-  \node(3) at (.5,.5) {3};        \node(4) at (1.5,.5) {4};
+  \node(1) at (.5,1.5) {1};  \node(2) at (1.5,1.5) {2};
+  %\node(3) at (.5,.5) {3};        \node(4) at (1.5,.5) {4};
   \draw (s.70) edge[->,out=20] (2);
   \node(s)[block,fit={(0,1) (1,2)}] {};
   \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
@@ -340,25 +340,26 @@ this approach is demonstrated by engineering specialized tactics for the domain 
   \tikzset{xshift=\dx}
   
   \draw (0,0) grid (2,2);
-  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {\,2$'$};
-  \node(3) at (.5,.5) {\,3$'$};    \node(4) at (1.5,.5) {4};
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5,.5) {3};%    \node(4) at (1.5,.5) {4};
   \draw (s.south) edge[->,out=-40,in=-150] (3.250);
-%  \fill[block] (0,0) |- (.92,1) to[out=0,in=-90] (1,1.08) |- (2,2) |- (1.08,1) to[out=180,in=90] (1,.92) |- cycle;
+  %\fill[block] (0,0) |- (.9,1) to[out=0,in=-90] (1,1.1) |- (2,2) |- (1.1,1) to[out=180,in=90] (1,.9) |- cycle;
   \coordinate (s) at (.8,0);
-  \node[inner sep=0 ] at (2.5,1) {\includegraphics[width=\w ]{img/arrow}};
+  \node[inner sep=0 ] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
 
   \tikzset{xshift=\dx};
 
   \draw (0,0) grid (2,2);
-  \node (1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {2$'$};
-  \node (3) at (.5,.5) {\,3$'$};    \node(4) at (1.5,.5) {4$'$};
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
   \draw (s.south) edge[->,out=-30,in=-150] (4);
  
 \end{tikzpicture}
 %\includegraphics[width=.47\textwidth]{img/gap-stratify1}
 \caption[caption]{\label{intro:chain}
   Stratified computation for Simplified Arbiter. \\[.2em]
-  Shaded areas indicate the region that is read at each step.}
+  The array is initially empty; 
+  shaded areas indicate the region that is read at each step. }
 \end{figure}
 
 

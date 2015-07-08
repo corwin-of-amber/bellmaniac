@@ -43,11 +43,11 @@ The corresponding recurrence is shown in \Cref{evaluation:paren spec}.
 \begin{figure}
 \[
   \renewcommand\arraystretch{1.5}
-  \begin{array}{@{}l@{}l@{}l@{}}
-    \lspan3{x :: J\to\R} \\
-    \lspan3{w :: (J\times J\times J)\to\R} \\
+  \begin{array}{@{}l@{}l}
+    \lspan2{x :: J\to\R} \\
+    \lspan2{w :: (J\times J\times J)\to\R} \\
     E ~=~ \fix \theta\,i\,j\mapsto{}
-      & \lspan2{x_{ij}\big|_{i+1=j} ~\Big/~} \\
+      & {x_{ij}\big|_{i+1=j} ~\Big/~} \\
       & \min k\mapsto\theta_{ik}+\theta_{kj}+w_{ikj} \\
   \end{array}
 \]
@@ -58,8 +58,8 @@ The corresponding recurrence is shown in \Cref{evaluation:paren spec}.
 
 The next example shows more steps for the Simplified Arbiter test case.
 
-
-\subsection{Example \hrulefill}
+\exampleTitle
+\begin{comment}\subsection{Example}\end{comment}
 
 Further developing $A^{IJ}$ \eqref{tactics:arbiter phase A}
 we apply Slice to get the four quadrants; $I_0$, $I_1$, $J_0$, $J_1$
@@ -163,7 +163,7 @@ output.
 
 \medskip
 The sequence Let, Stratify[with Padding] is now applied in the same manner to $\lbox B$
-and $\lbox C$. We do not list the applications as they are analogous to the previous ones.
+and $\lbox C$ (see \Cref{evaluation:stratify A}). We do not list the applications as they are analogous to the previous ones.
 
 \begin{equation}
   \renewcommand\arraystretch{1.5}
@@ -178,7 +178,7 @@ and $\lbox C$. We do not list the applications as they are analogous to the prev
 \begin{figure}
 \includegraphics[width=.47\textwidth]{img/arbiter-stratify2}\\
 \includegraphics[width=.47\textwidth]{img/arbiter-stratify3}
-\caption{
+\caption{\label{evaluation:stratify A}
   Stratification steps for phase ``A'' of Simplified Arbiter.}
 \end{figure}
 
@@ -204,7 +204,7 @@ and $\lbox C$. We do not list the applications as they are analogous to the prev
   \label{fix A}
 \end{equation}
 
-We note that $\fix f_1=A^{^{I_0J_0}}$ are {\bf identical} terms. Also, we took the liberty
+We note that $\fix f_1=A^{^{I_0J_0}}_\psi$ are identical up to $\beta$-reduction. Also, we took the liberty
 to simplify $\fix\dot\psi$ into $\psi$ --- although this is not necessary --- just to display
 a shorter term.
 
@@ -222,7 +222,7 @@ The next few tactics will focus on the subterm $\lbox B$ from \eqref{tactics:A s
 
 \begin{tacticbox}{Slice}
   \begin{array}{@{} l @{}}
-    f = \min \vtyped q J \mapsto \theta_{iq}+w'_{qji} \\
+    f = \vtyped q J \mapsto \theta_{iq}+w'_{qji} \\
     X_1 = J_0\to\_ \qquad X_2 = J_1\to\_
   \end{array}
 \end{tacticbox}
@@ -235,7 +235,13 @@ The next few tactics will focus on the subterm $\lbox B$ from \eqref{tactics:A s
 	      & & & & & \min \big( & (\vtyped q {J_0} \mapsto\theta_{iq}+w'_{qji}) ~\big/~ \\
 	      & & & & & & (\vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji})\big)  ~\big\rangle
   \end{array}
+  \label{evaluation:horiz sliced}
 \end{equation}
+
+For the intuition behind this, see the top-right part of \Cref{evaluation:slicing strategy}.
+The colors represent cell ranges that will be read by different sub-routines (presumably running on different cores).
+The range of $q$ is split into the part that lies within \qbox1 ($q\in J_0$) and the one that
+lies within \lbox2 ($q\in J_1$). The same reasoning is applied to the other quadrants.
 
 \begin{tacticbox}{Distributivity}
   \begin{array}{@{} l @{}}
@@ -293,6 +299,69 @@ The next few tactics will focus on the subterm $\lbox B$ from \eqref{tactics:A s
   \end{array}
 \end{equation}
 
+
+\begin{figure}
+\begin{tikzpicture}[x=4mm,y=4mm, node distance=1cm,
+    slicer/.style={ultra thick},
+    cell/.style={thick}, dot/.style={fill=BrickRed},
+    block C/.style={fill=OliveGreen, fill opacity=0.2},
+    block B/.style={fill=Orange, fill opacity=0.2},
+    block A/.style={fill=Purple, fill opacity=0.2},
+    label position=right,label distance=1pt,every label/.style={inner sep=0}]
+  \draw[help lines] (0,0) grid[step=1] (8,8);
+  \draw[slicer] (4,0) -- (4,8) (0,4) -- (8,4);
+  \fill[block A] (0,5) rectangle (2,6) rectangle (3,8);
+  \draw[cell] (2,5) rectangle +(1,1); \path[dot] (2.5,5.5) circle (1.5pt);
+  \path (2,8) node[above] {$q\in J_0$} (6,8) node[above] {$q\in J_1$};
+  \path (0,0) -- node[midway,above,sloped] {$p\in I_1$} (0,4)
+              -- node[midway,above,sloped] {$p\in I_0$} (0,8);
+
+  \tikzset{xshift=4cm}
+
+  \draw[help lines] (0,0) grid[step=1] (8,8);
+  \draw[slicer] (4,0) -- +(0,8) (0,4) -- +(8,0);
+  \fill[block B] (0,5) rectangle (4,6);
+  \fill[block A] (4,5) rectangle (6,6) rectangle (7,8);
+  \draw[cell] (6,5) rectangle +(1,1); \path[dot] (6.5,5.5) circle (1.5pt);
+  \path (2,8) node[above] {$q\in J_0$} (6,8) node[above] {$q\in J_1$};
+  \path (0,0) -- node[midway,above,sloped] {$p\in I_1$} (0,4)
+              -- node[midway,above,sloped] {$p\in I_0$} (0,8);
+              
+  \tikzset{yshift=-4cm,xshift=-4cm}
+  
+  \draw[help lines] (0,0) grid[step=1] (8,8);
+  \draw[slicer] (4,0) -- +(0,8) (0,4) -- +(8,0);
+  \fill[block C] (2,4) rectangle (3,8);
+  \fill[block A] (0,1) rectangle (2,2) rectangle (3,4);
+  \draw[cell] (2,1) rectangle +(1,1); \path[dot] (2.5,1.5) circle (1.5pt);
+  \path (2,8) node[above] {$q\in J_0$} (6,8) node[above] {$q\in J_1$};
+  \path (0,0) -- node[midway,above,sloped] {$p\in I_1$} (0,4)
+              -- node[midway,above,sloped] {$p\in I_0$} (0,8);
+
+  \tikzset{xshift=4cm}
+  
+  \draw[help lines] (0,0) grid[step=1] (8,8);
+  \draw[slicer] (4,0) -- +(0,8) (0,4) -- +(8,0);
+  \fill[block C] (6,4) rectangle (7,8);
+  \fill[block B] (0,1) rectangle (4,2);
+  \fill[block A] (4,1) rectangle (6,2) rectangle (7,4);
+  \draw[cell] (6,1) rectangle +(1,1); \path[dot] (6.5,1.5) circle (1.5pt);
+  \path (2,8) node[above] {$q\in J_0$} (6,8) node[above] {$q\in J_1$};
+  \path (0,0) -- node[midway,above,sloped] {$p\in I_1$} (0,4)
+              -- node[midway,above,sloped] {$p\in I_0$} (0,8);
+  
+  \tikzset{yshift=-.7cm,xshift=-2cm}
+  
+  \node(A)[rectangle,label=$A$,block A] {};
+  \node(B)[right=of A,rectangle,label=$B$,block B] {};
+  \node(C)[right=of B,rectangle,label=$C$,block C] {};
+  
+\end{tikzpicture}
+\medskip
+\caption{\label{evaluation:slicing strategy}
+  The strategy for applications of Slice in the case study.}
+\end{figure}
+
 \begin{tacticbox}{Stratify[with Padding]}
   \begin{array}{@{} l @{}}
     f ~=~ \quadrants*{\dot\psi}{\lbox*E}{\dot\psi}{\dot\psi} \\
@@ -326,11 +395,12 @@ Define
 \begin{equation}
   \renewcommand\arraystretch{1.2}
   \begin{array}{@{}l @{} l @{\!} c @{} c @{} l @{} l@{}}
-  B^{^{IJ_0J_1}} =~ & \psi\mapsto \\
+  B^{^{IJ_0J_1}} =~ \big( & \psi\mapsto \\
       & \fix
       \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
-           & & ^{^{(I)}} & ^{^{(J_1)}} &
-                                          & \min \vtyped q{J_0}\mapsto\theta_{iq}+w'_{qji} \rangle
+           & & ^{^{(I)}} & ^{^{(J)}} &
+                                          & \min \vtyped q{J_0}\mapsto\theta_{iq}+w'_{qji} \rangle\big) \\
+      & \lspan5{:: \big((I\times J_0)\to\R\big) \to \big((I\times J_1)\to\R\big)}
   \end{array}
 \end{equation}
 
@@ -379,16 +449,17 @@ In a similar manner, we will obtain the following:
 \begin{equation}
   \renewcommand\arraystretch{1.2}
   \begin{array}{@{}l @{} l @{\!} c @{} c @{} l @{} l@{}}
-  C^{^{I_0I_1J}} =~ & \psi\mapsto \\
+  C^{^{I_0I_1J}} =~ \big( & \psi\mapsto \\
       & \fix
       \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
-           & & ^{^{(I_1)}} & ^{^{(J)}} &
-                                          & \min \vtyped p {I_0} \mapsto\theta_{pj}+w_{pij} \rangle
+           & & ^{^{(I)}} & ^{^{(J)}} &
+                                          & \min \vtyped p {I_0} \mapsto\theta_{pj}+w_{pij} \rangle\big) \\
+      & \lspan5{:: \big((I_0\times J)\to\R\big) \to \big((I_1\times J)\to\R\big)}
   \end{array}
 \end{equation}
 
 \medskip\noindent
-And\coa{Do we want to expand these?} ---
+And ---
 
 \begin{equation}
   \begin{array}{@{} l @{} l @{}}
@@ -412,6 +483,7 @@ The read and write regions are already encoded in the types of $A$, $B$, $C$ in
 We finish this section by presenting some numbers: \Cref{evaluation:solving time}
 shows measurements done using two SMT solvers, Z3 and CVC4, and a sample set of tactic
 applications used in the derivation of Gap and Parenthesis divide-and-conquer DP implementations.
+The measurements were taken using MacBook Air, 1.7GHz Intel Core i7, with 4GB of RAM.
 
 \begin{table}
 \centering
@@ -435,7 +507,8 @@ applications used in the derivation of Gap and Parenthesis divide-and-conquer DP
   \hline
   {\bf \hspace{-.1cm}Parenthesis} & & & \\
   \hline
-  Stratify \!\lbox{$\diagdown$}           &    & 0.4 & 0.1 \\
+  Stratify \!\lbox{$\diagdown$} ({\it diagonal})
+                                          &    & 0.4 & 0.1 \\
   Stratify \qbox1                         &    & 1.8 & 2.5 \\
   Stratify \qbox2                         &    & 1.7 & 0.6 \\
   \hline

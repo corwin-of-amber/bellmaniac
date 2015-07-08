@@ -11,10 +11,10 @@
 \usepackage{stfloats}
 
 \usepackage{tikz}
-\usetikzlibrary{fit}
-\usepackage{pgfplots}
-\usepackage{pgfplotstable}
-\pgfplotsset{compat=1.12}
+\usetikzlibrary{fit,positioning}
+%\usepackage{pgfplots}
+%\usepackage{pgfplotstable}
+%\pgfplotsset{compat=1.12} 
 
 \newcommand\todo[1]{{\color{NavyBlue} \footnote{\color{NavyBlue} TODO: {#1}}}}
 \newcommand\citneeded[1]{{\color{NavyBlue} \cite{?}\footnote{\color{NavyBlue} citation needed. #1}}}
@@ -35,6 +35,16 @@
 
 \newcommand\limplies{\rightarrow}
 \newcommand\liff{\leftrightarrow}
+
+\newcommand\exampleTitle{
+\bigskip\noindent
+\begin{tikzpicture}
+  \draw (0,0) -- (5mm,0)
+    node(e)[draw,rectangle,rounded corners,right] {\bf Example};
+  \draw (e) -- (\columnwidth,0);
+\end{tikzpicture}%
+\medskip%
+}
 
 % author comment macros
 \newcommand\authornote[3]{{\color{#2} \footnote{\color{#2} {#1}: {#3}}}}
