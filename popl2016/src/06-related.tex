@@ -7,3 +7,12 @@
 \item Refinement Calculator \cite{TPHOLs96/Butler} \footnote{http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.28.4446}
 \item Doug Smith: Divide-and-conquer\cite{AI85/Smith} \footnote{http://www.sciencedirect.com/science/article/pii/0004370285900839}
 \end{itemize}
+
+Our ``$\big/$'' operator can be compared to the separating disjunction ``$\ast$'' of Separation Logic~\cite{LICS02/Reynolds},
+used to frame parts of the dynamic heap (which can be thought of as one large array),
+in particular while checking that a program only accesses the parts allocated to it in its precondition.
+While $\ast$ has the semantics of an existentially quantified predicate, Bellmania uses type qualifiers
+to explicitly specify a formula defining each part. In this sense, it is more closely related to
+Region Logic~\cite{ECOOP08/Banerjee}. These formulas make encoding in first-order logic straightforward,
+and the use of Liquid Types allows for any number of dimensions and for decidable checking of domain inclusion
+and disjointness.

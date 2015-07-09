@@ -221,7 +221,7 @@ On the other hand, the computation of \qbox2 is {\bf not} a mere copy of $G^{I_0
 because the range $q\in J\cap[0,j)$ is not a subset of $J_1$, so that
 some of the recursive references $G_{iq}$ are outside of \qbox2.
 
-This can be addressed by splitting that range, adding yet range another parameter to $G$.
+Richard addressed this problem by splitting the range $J$, adding yet range another parameter to $G$.
 
 \begin{equation}\LeftEqNo
 \begin{array}{l@{}l}
@@ -233,7 +233,7 @@ This can be addressed by splitting that range, adding yet range another paramete
 		w'_{0i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
 		  \min\langle & \underset{~q\in J'~}\min ~ G^{^{IJ'\!J'}}_{iq} + \yw{qji}, \\
-		              & \underset{q\in J'\cap[0,j)}\min ~ G^{^{IJJ}}_{iq} + \yw{qji}, \\
+		              & \underset{q\in J\cap[0,j)}\min ~ G^{^{IJJ}}_{iq} + \yw{qji}, \\
 		              & \underset{p\in I\cap[0,i)}\min ~ G^{^{IJJ'}}_{pj} + \xw{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
@@ -292,7 +292,7 @@ So through these kind of transformations, it is possible to break the computatio
 When the pieces become small enough, the iterative algorithm (\Cref{intro:iterative}) is executed.
 
 \medskip
-As was outlined in \Cref{divide}, prior work has shown that the performance results that can be achieved through these transformations can be dramatic. Unfortunately, the line of reasoning that was followed in this section can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered this technique. 
+As was outlined in \Cref{divide}, prior work has shown that the performance results that can be achieved through these transformations can be dramatic. Unfortunately, as we just demonstrated, the line of reasoning that one needs to follow to obtain them can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered the technique. 
 
 In the following sections, we describe the parts that make Bellmania --- a formal framework for deriving algorithms from specifications. 
 It utilizes \newterm{solver-aided tactics} to generate provably correct pseudo-code; 
