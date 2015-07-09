@@ -480,44 +480,6 @@ The read and write regions are already encoded in the types of $A$, $B$, $C$ in
 \hrule
 \bigskip
 
-We finish this section by presenting some numbers: \Cref{evaluation:solving time}
-shows measurements done using two SMT solvers, Z3 and CVC4, and a sample set of tactic
-applications used in the derivation of Gap and Parenthesis divide-and-conquer DP implementations.
-The measurements were taken using MacBook Air, 1.7GHz Intel Core i7, with 4GB of RAM.
-
-\begin{table}
-\centering
-\renewcommand\a{({\it i})}    % relax! it's only for this figure
-\renewcommand\b{({\it ii})}
-\renewcommand\c{({\it iii})}
-\begin{tabular}{|l@{\,}c@{\,}|rr|}
-  \cline{3-4}
-  \multicolumn{2}{c|}{} & \multicolumn{2}{c|}{\small Solving time ({\it s})} \\
-  \multicolumn{2}{c|}{} & \multicolumn{1}{c|}{~Z3~} & \multicolumn{1}{c|}{CVC4} \\
-  \hline
-  {\bf \hspace{-.1cm}Gap} & &  & \\
-  \hline
-  Synth                                   &    & T/O & 2.8 \\
-  Stratify \qbox1                         &    & 6.2 & 5.8 \\
-  Stratify \qbox2                         &    & 3.5 & 0.5 \\
-  Let[$\reduce$] + Stratify in \qbox2     &    & 3.1 & 1.9 \\
-  Let[$\reduce$] + Stratify in \qbox4     & \a &  10 & 3.9 \\
-                                          & \b & 5.7 & 4.7 \\
-                                          & \c & 4.7 & 4.3 \\
-  \hline
-  {\bf \hspace{-.1cm}Parenthesis} & & & \\
-  \hline
-  Stratify \!\lbox{$\diagdown$} ({\it diagonal})
-                                          &    & 0.4 & 0.1 \\
-  Stratify \qbox1                         &    & 1.8 & 2.5 \\
-  Stratify \qbox2                         &    & 1.7 & 0.6 \\
-  \hline
-\end{tabular}
-\caption{\label{evaluation:solving time}
-  Proof search time for proof obligations in a few sample tactic applications.}
-\end{table}
-
-
 \begin{comment}
 \subsection{old stuff}
 
@@ -910,3 +872,42 @@ and are quite easy to develop.\todo{show this? Forget about this paragraph??}
 \end{center}
 
 \end{comment}
+
+
+We finish this section by presenting some numbers: \Cref{evaluation:solving time}
+shows measurements done using two SMT solvers, Z3 and CVC4, and a sample set of tactic
+applications used in the derivation of Gap and Parenthesis divide-and-conquer DP implementations.
+The measurements were taken using MacBook Air, 1.7GHz Intel Core i7, with 4GB of RAM.
+
+\begin{table}
+\centering
+\renewcommand\a{({\it i})}    % relax! it's only for this figure
+\renewcommand\b{({\it ii})}
+\renewcommand\c{({\it iii})}
+\begin{tabular}{|l@{\,}c@{\,}|rr|}
+  \cline{3-4}
+  \multicolumn{2}{c|}{} & \multicolumn{2}{c|}{\small Solving time ({\it s})} \\
+  \multicolumn{2}{c|}{} & \multicolumn{1}{c|}{~Z3~} & \multicolumn{1}{c|}{CVC4} \\
+  \hline
+  {\bf \hspace{-.1cm}Gap} & &  & \\
+  \hline
+  Synth                                   &    & T/O & 2.8 \\
+  Stratify \qbox1                         &    & 6.2 & 5.8 \\
+  Stratify \qbox2                         &    & 3.5 & 0.5 \\
+  Let[$\reduce$] + Stratify in \qbox2     &    & 3.1 & 1.9 \\
+  Let[$\reduce$] + Stratify in \qbox4     & \a &  10 & 3.9 \\
+                                          & \b & 5.7 & 4.7 \\
+                                          & \c & 4.7 & 4.3 \\
+  \hline
+  {\bf \hspace{-.1cm}Parenthesis} & & & \\
+  \hline
+  Stratify \!\lbox{$\diagdown$} ({\it diagonal})
+                                          &    & 0.4 & 0.1 \\
+  Stratify \qbox1                         &    & 1.8 & 2.5 \\
+  Stratify \qbox2                         &    & 1.7 & 0.6 \\
+  \hline
+\end{tabular}
+\caption{\label{evaluation:solving time}
+  Proof search time for proof obligations in a few sample tactic applications.}
+\end{table}
+

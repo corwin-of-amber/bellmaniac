@@ -78,3 +78,14 @@ to make the type of a sub-computation match the type of the entire term.
 
 \Obligations tactic.
 
+\tacticdef{Pull Out}
+For $e[\square]$ as defined previously:
+\[z ~=~ \overline{x}\mapsto t\]
+%
+where $z$ is a fresh variable.
+
+Similar to Let Insertion, but does not change the original term; instead,
+it is used to single out and name a particular expression $t$, preserving the context
+in which it occurs in $e[t]$. It is not a tactic {\it per se}, as it does not
+actually effect any transformation on $e[t]$; instead, it is designed to increase
+readability of the development and simplify successive human-computer interaction.

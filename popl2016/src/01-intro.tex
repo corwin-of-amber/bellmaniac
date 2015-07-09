@@ -7,13 +7,7 @@
 \newcommand{\xw}[1]{w_{#1}}
 \newcommand{\yw}[1]{w'_{#1}}
 
-\cel{Start with a general statement of the research trajectory, then explain why we chose DP and Divide-and-Conquer as an example.}
-\asolar{Condensed the intro a little to minimize the ``history lesson'' and keep it focused on our contributions. Also moved most dp content to sec 2}
-
-% inductive :> PL, ML
-% deductive :> proof (deductive), transformational
-
-Software synthesis techniques can be broadly classified into two categories: \emph{inductive} approaches which generalize from concrete values or execution traces, and \emph{deductive} approaches which derive an implementation from a specification through deductive reasoning steps. Inductive synthesis techniques have been the focus of significant renewed interest thanks to two important developments: (a) the discovery of techniques that leverage SAT/SMT solvers to symbolically represent and search very large spaces of possible programs~\cite{APLAS09/Solar-Lezama, PLDI11/Gulwani}\coa{Rosette? not sure\ldots ask Armando}, and (b) the use of counterexample guided inductive synthesis (CEGIS), which allows one to leverage inductive techniques to find programs that satisfy more general specifications as long as one has access to an oracle that can check whether a given candidate solution satisfies the specification~\cite{APLAS09/Solar-Lezama}. Deductive techniques, however, still hold some important advantages over inductive approaches; in particular, their scalability is not limited by the power of a checking oracle, because the correctness of the implementation is guaranteed by construction; this makes them better suited for synthesizing large programs with strong correctness guarantees. 
+Software synthesis techniques can be broadly classified into two categories: \emph{inductive} approaches which generalize from concrete values or execution traces, and \emph{deductive} approaches which derive an implementation from a specification through deductive reasoning steps. Inductive synthesis techniques have been the focus of significant renewed interest thanks to two important developments: (a) the discovery of techniques that leverage SAT/SMT solvers to symbolically represent and search very large spaces of possible programs~\cite{APLAS09/Solar-Lezama, PLDI11/Gulwani, Onward13/Torlak}, and (b) the use of counterexample-guided inductive synthesis (CEGIS), which allows one to leverage inductive techniques to find programs that satisfy more general specifications as long as one has access to an oracle that can check whether a given candidate solution satisfies the specification~\cite{APLAS09/Solar-Lezama}. Deductive techniques, however, still hold some important advantages over inductive approaches; in particular, their scalability is not limited by the power of a checking oracle, because the correctness of the implementation is guaranteed by construction; this makes them better suited for synthesizing large programs with strong correctness guarantees. 
 
 In this paper, we present a new approach to deductive synthesis based on \emph{solver-aided tactics} that preserves the benefits of deductive synthesis techniques but reduces the burden on the user by relying heavily on the ability of SMT solvers to reason about the validity of transformations and lift the level of abstraction of deductive transformation rules. We believe the approach has the potential to be generally applicable to a variety of synthesis problems, but in this paper, we focus on a particular domain of \emph{divide-and-conquer dynamic programming} algorithms. As we illustrate in the next section, this domain is challenging not just as a synthesis target, but also for human experts. Therefore, in addition to serving as a test bed for a new synthesis approach, the development of a synthesis system for this domain is a significant achievement in itself.
 
@@ -61,7 +55,7 @@ one time unit. The cost for scheduling the slots $[a..b)$ of $x$ at $t=a+c$
 is given by $\xw{abc}$, and the cost for schedulting the slots $[a..b)$ of $y$
 at same $t=a+c$ is given by $\yw{abc}$.
 
-\begin{figure}
+\begin{figure}[b]
 \begin{tabular}{@{\hspace{-1pt}}r@{~}l@{}}
 \begin{tikzpicture}[x=4.1mm,y=4.1mm,baseline=(center), remember picture]
   \coordinate(center) at (3,3);
@@ -297,7 +291,7 @@ So through these kind of transformations, it is possible to break the computatio
 When the pieces become small enough, the iterative algorithm (\Cref{intro:iterative}) is executed.
 
 \medskip
-As was outlined in \Cref{intro}\coa{check the ref, I suspect it is going to move}, prior work has shown that the performance results that can be achieved through these transformations can be dramatic. Unfortunately, the line of reasoning that was followed in this section can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered this technique. 
+As was outlined in \Cref{divide}, prior work has shown that the performance results that can be achieved through these transformations can be dramatic. Unfortunately, the line of reasoning that was followed in this section can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered this technique. 
 
 In the following sections, we describe the parts that make Bellmania --- a formal framework for deriving algorithms from specifications. 
 It utilizes \newterm{solver-aided tactics} to generate provably correct pseudo-code; 

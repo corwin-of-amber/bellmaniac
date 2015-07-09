@@ -4,8 +4,9 @@
 \newcommand\fix{\operatorname{fix}}
 
 We first set up a formal language that we will use to describe computations and reason about them.
-Bellmania uses the same language for specifications and for programs.  Its core is simply-typed
-$\lambda$-calculus with universally quantified type variables (polymorphic types).
+Bellmania uses the same language for specifications and for programs.  Its core is the polymorphic
+$\lambda$-calculus, that is, simply typed $\lambda$-calculus with universally quantified type variables 
+(also known as \newterm{System F}).
 
 We write abstraction terms as $(v:\T)\mapsto e$, where $\T$ is the type of the argument $v$ and $e$ is
 the body. Curried functions $(v_1:\T_1)\mapsto (v_2:\T_2) \mapsto \cdots \mapsto (v_n:\T_n) \mapsto e$ are abbreviated 
@@ -18,6 +19,8 @@ $f : \T_1\to\T_2$, are {\bf partial functions} --- $\semp{f} : \semp{\T_1}\right
 This implies that a term $t : \T$ may evaluate to an \newterm{undefined} value, $\semp{t}=\bot_\T$
 (We would shorten it to $\semp{t}=\bot$ when the type is either insignificant or understood from the context).
 For simplicity, we shall identify $\bot_{\T_1\to\T_2}$ with the empty mapping $(v:\T_1)\mapsto\bot_{\T_2}$.
+
+All functions are naturally extended, so that $f\,\bot=\bot$.
 
 \subsection{Operators}
 \label{lang:operators}
@@ -76,8 +79,22 @@ for example, \[x:\{v:\T_1~|~P(v)\}\to \{v:\T_2~|~Q(v)\land R(x,v)\}\to\T_3\] can
 $\big((P\times Q)\cap R\big)\to\T_3$, but \[x:\T_1\to y:\{v:\T_2~|~R(x,v)\} \to \{v:\T_3~|~R(y,v)\}\to\T_4\]
 cannot be represented as a droplet.
 
-As with any refinement type system, we define the \newterm{shape} of a droplet $\T$ to be the raw type
+As with any refinement type system, we define the \newterm{shape} of a droplet to be the raw type
 obtained from it by removing all qualifiers.
+
+\noindent\hspace{-2pt}%
+\tikz[baseline=(E.base)]\node(E)[draw,rectangle,rounded corners=.7em] {\bf Example};
+The inputs $w$, $w'$ to the Simplified Arbiter (\Cref{intro:arbiter spec}) can be typed using these droplets:
+\[
+\begin{array}{l}
+  w : ((I\times I)\cap{<})\to J\to\R \\
+  w' : ((J\times J)\cap{<})\to I\to\R
+\end{array}
+\]
+
+This states that $w\,p\,i\,j$ is only defined for $p<i$. It doesn't {\em force} it to be defined,
+as it is still a partial function. This property is in fact useful: we now have a mechanism for
+specifying that some schedules are impossible!
 
 \subsubsection*{Typing Rules}
 
@@ -207,11 +224,11 @@ We also adopt some syntactic sugar to make complex terms more managable:
 
 \begin{itemize}
   \item $x \applt f ~=~ f\,x$ for application from the left.
-  \item $t\big|_{\square}$ abbreviates $t::\square\to\T$, where $\T$ is a fresh type variable
-    to be inferred (see \Cref{lang:type inf}). As a special case, $\big|$ can also be applied
+  \item $t\big|_{\square}$ abbreviates $t::\square\to\_\,$, where ``$\_$'' is a fresh type variable
+    to be inferred. As a special case, $\big|$ can also be applied
     to scalar (non-arrow) expressions by supplying a Boolean condition,
     interpreted as a (nullary) qualifier:
-    \[x\big|_{C} ~=~ x :: (\T\cap C) ~=~ \begin{cases}x & \mbox{if }C \\ \bot & \mbox{if }\lnot C\end{cases}\]
+    \[x\big|_{C} ~=~ x :: (\_\cap C) ~=~ \begin{cases}x & \mbox{if }C \\ \bot & \mbox{if }\lnot C\end{cases}\]
 \end{itemize}
 
 \subsection{Primitives}
@@ -232,13 +249,13 @@ The standard library contains some common primitives:
 \exampleTitle
 \begin{comment}\subsection{Example}\end{comment}
 
-The specification of the Simplified Gap (\eqref{intro:arbiter spec} from \Cref{intro}) will be written as
+The specification of the Simplified Gap (\Cref{intro:arbiter spec}) will be written as
 %
 \begin{equation}
   \renewcommand\arraystretch{1.5}
   \begin{array}{@{}l@{}l@{}l@{}}
-    \lspan3{w : ((J\times J)\cap{<})\to K\to\R} \\
-    \lspan3{w' : ((K\times K)\cap{<})\to J\to\R} \\
+    \lspan3{w : ((I\times I)\cap{<})\to J\to\R} \\
+    \lspan3{w' : ((J\times J)\cap{<})\to I\to\R} \\
     G ~=~ \fix \theta\,i\,j\mapsto{}
       & \lspan2{0\big|_{i=0\land j=0} ~\Big/~ w'_{0j0}\big|_{i=0} ~\Big/~ w_{0i0}\big|_{j=0} ~\Big/~} \\
       & \min~\langle~ & \min p\mapsto\theta_{pj}+w_{pij}, \\
@@ -253,7 +270,7 @@ as a more readable alternative typography for $f\,x\,y$,
 where $f$ is a function symbol and $x$, $y$ are its arguments.
 
 Note that the ranges for $\min p$ and $\min q$ are implicit, from the types of
-$w$, $w'$: \[w_{pij}\neq\bot\liff p<i \quad \mbox{and} \quad w_{qji}\neq\bot\liff q<j\]
+$w$, $w'$: \[w_{pij}\neq\bot\limplies p<i \quad \mbox{and} \quad w_{qji}\neq\bot\limplies q<j\]
 
 \medskip
 \hrule
