@@ -166,8 +166,9 @@ $\begin{array}[b]{l}\qbox1 \rightsquigarrow \qbox2 \\
   Dividing a two-dimensional array into quadrants; the dependencies are shown on the right.}
 \end{figure}
 
-Divide-and-conquer is an algorithm development pattern (\cite{SODA06/Chowdhury}, \cite{SPAA08/Chowdhury})\coa{should these (SODA/SPAA) be the ones to cite here?}, 
-where the DP table is partitioned into regions, and each region is expressed as a sub-problem
+Divide-and-conquer is a common algorithm development pattern~\cite{09/CLRS} that has recently
+been applied to DP (\cite{SODA06/Chowdhury,SPAA08/Chowdhury,TOCS10/Chowdhury,TCBB10/Chowdhury}).
+The DP table is partitioned into regions, and each region is expressed as a sub-problem
 to be solved.
 
 In our case, Richard takes the two-dimensional array $G$ and partitions it into
@@ -176,7 +177,7 @@ as in the iterative case, concluding that the computations of 2 and 3 depend on 
 and the computation of 4 depends on 2 and 3.
 \end{paragraph}
 
-Richard \emph{stratified} the computations on these quadrants into the following
+He \emph{stratified} the computations on these quadrants into the following
 four steps:
 \begin{algorithmic}[1]
   \STATE Compute \qbox1 (using only input data $w,w'$).
@@ -263,12 +264,11 @@ way:
 \label{intro:Ggen}
 \end{equation}
 
-It is easy to see that both $G$ and \qbox1 can be expressed in terms of $\Ggen^{IJ}$ by making $\psi_{ij}=\infty$, 
-but more importantly, \qbox2 can now also be expressed in terms of $\Ggen^{I_0J_1}$ by making 
+Richard immediately sees that both $G$ and \qbox1 can be expressed in terms of $\Ggen^{IJ}$ by making $\psi_{ij}=\infty$, 
+but more importantly, that \qbox2 can now also be expressed in terms of $\Ggen^{I_0J_1}$ by making 
 $\psi_{ij} =  \underset{q\in J_0}\min ~ G^{I_0J_0J_0}_{iq} + \yw{qji}$.
-Moreover, the calls to $G$ inside $\Ggen$ can be replaced with recursive calls to $\Ggen$ itself,
-giving the form: 
-
+Moreover, he replaces the calls to $G$ inside $\Ggen$ with recursive calls to $\Ggen$ itself:
+%
 \begin{equation}\LeftEqNo
 \begin{array}{l@{}l}
 	\Ggen^{^{IJ}}_{(i:I)\,(j:J)\,\psi} ~=~  \\
@@ -288,7 +288,7 @@ giving the form:
 
 The same approach can be used to develop the computations of \qbox3 and \qbox4.
 The sub-computation of $\psi$ can also be transformed into four recursive sub-computations, further improving the locality of the resulting algorithm.
-So through these kind of transformations, it is possible to break the computation of the original $G$ into four (or more) subcomputations, each of which can be itself recursively partitioned into four subcomputations, giving us a true divide-and-conquer algorithm.
+Eventually, through this kind of transformations, it is possible to break the computation of the original $G$ into four (or more) subcomputations, each of which can be itself recursively partitioned into four subcomputations, giving us a true divide-and-conquer algorithm.
 When the pieces become small enough, the iterative algorithm (\Cref{intro:iterative}) is executed.
 
 \medskip
@@ -304,7 +304,7 @@ this approach is demonstrated by engineering specialized tactics for the domain 
 \begin{tikzpicture}[>=latex,x=6mm,y=6mm,
     every path/.style={step=1},
     every node/.style={inner sep=.5pt},
-    block/.style={rectangle,draw,thick,fill=Orange, fill opacity=0.15, inner sep=0}]
+    block/.style={rectangle,draw,thick,fill=Orange, fill opacity=0.2, inner sep=0}]
     
   \def\dx{1.75cm}
   \def\w{3mm}

@@ -1,12 +1,16 @@
 \section{Related Work}
 \label{related}
 
-\begin{itemize}
-\color{Gray}
-\item Manohar Jonnalagedda: \cite{OOPSLA14/Jonnalagedda} \footnote{http://dl.acm.org/citation.cfm?doid=2660193.2660241}
-\item Refinement Calculator \cite{TPHOLs96/Butler} \footnote{http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.28.4446}
-\item Doug Smith: Divide-and-conquer\cite{AI85/Smith} \footnote{http://www.sciencedirect.com/science/article/pii/0004370285900839}
-\end{itemize}
+Classical work by Smith \etal~\cite{AI85/Smith} presents rule-based transformation, stringing it
+tightly with program verification. This lay the foundation for semi-automatic programming~\cite{CPS91/Blaine,TSE90/Smith,TPHOLs96/Butler}.
+More recently, a similar approach was introduced into Leon~\cite{OOPSLA13/Kneuss}, leveraging deductive
+tools as a way to boost CEGIS, thereby covering more programs. Bellmania takes a dual approach, where
+automated techniques based on SMT are leveraged to support and improve deductive synthesis.
+
+Fiat~\cite{POPL15/Delaware} is another recent system that admits stepwise transformation of specifications
+into programs via a refinement calculus. While Bellmania offloads proofs to automated solvers,
+Fiat formalizes refinements using the Coq proof assistant. The user is then responsible of proving
+the correctness of the derivation using a library of symbolic proof tactics.
 
 Our ``$\big/$'' operator can be compared to the separating disjunction ``$\ast$'' of Separation Logic~\cite{LICS02/Reynolds},
 used to frame parts of the dynamic heap (which can be thought of as one large array),
