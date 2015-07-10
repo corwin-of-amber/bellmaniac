@@ -27,19 +27,25 @@ class Extrude(val ops: Set[Identifier]) {
       else None
     val subterms = xoperands(term) match {
         case Some(operands) => operands map { x => (x, 
-          if (x.isLeaf) new ExtrudedTerms(new Tree(x), Map.empty)
-          else if (xoperands(x) isDefined) extrude0(x)
+          smallEnough(x) map (x => new ExtrudedTerms(new Tree(x), Map.empty)) getOrElse {
+          if (xoperands(x) isDefined) extrude0(x)
           else {
             val X = $TV("🅇")
             def applyRoot[T](op: T=>T, tree: Tree[T]) = new Tree(op(tree.root), tree.subtrees)
             def label(t: Term) = TypedTerm.preserve(t, X :- t)
             val ex = extrude0(x)
             new ExtrudedTerms(new Tree(X, List(applyRoot[Term](label, ex.terms))), ex.labels + (X.root -> x))
-          }) }
+          }}) }
         case _ => term.subtrees map (x => (x, extrude0(x)))
       }
     val xtr = new TypedSubstitution(subterms map (x => (x._1, x._2.terms.root)))(term, (_ eq _))
     new ExtrudedTerms(new Tree(xtr, subterms flatMap (_._2.terms.subtrees)), subterms flatMap (_._2.labels) toMap)
+  }
+  
+  def smallEnough(e: Term) = {
+    if (e.isLeaf) Some(e)
+    else if (e =~ ("↦", 2) && e.subtrees.forall(_.isLeaf) && e.subtrees(0).root == "?") Some(T(I(e.subtrees(1).root.literal + "̇")))
+    else None
   }
 }
 

@@ -11,6 +11,7 @@ import semantics.pattern.MacroMap
 trait Pod {
   val decl = new Declaration()
   val macros = MacroMap.empty
+  val program = Prelude.program
 }
 
 object Pod {
@@ -41,6 +42,11 @@ object NatPod extends Pod {
     )
 }
 
+object RealPod {
+  import Prelude.R
+  
+  val _0 = TyTV("0", R)
+}
 
 
 class TotalOrderPod(domain: Term) extends Pod {

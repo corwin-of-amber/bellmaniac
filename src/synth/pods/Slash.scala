@@ -25,7 +25,7 @@ object SlicePod {
 object SlashDistribPod {
   import TypedTerm.replaceDescendant
   
-  def apply(f: Term, box: Term) = {
+  def apply(f: Term, box: Term)(implicit scope: Scope) = {
     if (f.nodes exists (_ eq box)) {
       f =:= /::(box.split(I("/")) map (x => replaceDescendant(f, (box, x))))
     }
@@ -43,7 +43,7 @@ object StratifyPod {
    * q nondecreasing
    */
   
-  def apply(box: Term, quadrant: Term, sideburns: List[Term]=List()) = {
+  def apply(box: Term, quadrant: Term, sideburns: List[Term]=List())(implicit scope: Scope) = {
     val quadrants = splitSkip(box, I("/"))
     if (quadrants exists (_ eq quadrant)) {
       val θ = $TV("θ")
@@ -87,7 +87,7 @@ object LetPod {
   import TypedLambdaCalculus.{pullOut,enclosure}
   import TypedTerm.replaceDescendant
   
-  def apply(f: Term, component: Term) = {
+  def apply(f: Term, component: Term)(implicit scope: Scope) = {
     val (capsule, ctx) = (pullOut(f, component) get, enclosure(f, component) get)
     val let = { val y = $TV("y") ; y ↦ (replaceDescendant(f, (component, y :@ ctx))) }
     f =:= (let :@ capsule)
@@ -116,7 +116,7 @@ object StratifyReducePod {
    * g monotonic
    */
     
-  def apply(box: Term, components: List[Term]) = {
+  def apply(box: Term, components: List[Term])(implicit scope: Scope) = {
     val f = findContainingReduction(box, components) getOrElse { throw new TacticalError(s"cannot locate reduction containing '${components map (_ toPretty)}'") }
     val (capsule, ctx) = (pullOut(box, f) get, enclosure(box, f) get)
     /**/ assume(!ctx.isEmpty) /**/

@@ -381,13 +381,15 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
 
     import semantics.smt.Z3Gate
     
+    val start = System.currentTimeMillis
+    def finish = System.currentTimeMillis - start
+    
     val status =
       z3g.solve(fo_base ++ (
         for (atn <- fo_assumptions.toList /* ++ fo_prelude.toList*/ if atn != TRUE) yield {
           z3g.formula(atn)
         }),
         fo_goals.toStream flatMap { case g@(d,ps) => 
-          Trench.display(ps, "◦")
           ps.toList map (p =>
             Z3Gate.Sequent((d ++ preludeFor(g)).toList map z3g.formula, p |> z3g.formula)) 
         })
@@ -396,7 +398,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     val fo_goals_pn = fo_goals map (_._2) reduce (_ ++ _)
           
     val statusMap = (fo_goals_pn.toList map (new Id(_))) zip status toMap
-    val results = fo_goals_pn map_/ (s => TI(statusMap(s).toPretty))
+    val results = fo_goals_pn map_/ (s => TI(statusMap(s).toPretty + " " + finish))
     
     Trench.display(results, "◦")
     report.NotebookLog.out += Trench.displayRich(results, "◦")

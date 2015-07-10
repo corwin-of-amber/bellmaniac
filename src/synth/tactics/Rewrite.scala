@@ -73,10 +73,11 @@ object Rewrite {
     def apply(term: Term)(implicit env: Environment): Option[Term] = apply(term, Some(term))
     
     def apply(term: Term, within: Iterable[Term])(implicit env: Environment) = {
+      implicit val scope = env.scope
       val matches = 
         for ((from, to) <- ematch; subterm <- within; m <- from find subterm)
           yield ((m, Binding.prebind(to)))
-      Some(TypeInference.infer(TypedTerm.replaceDescendants(term, matches))(env.scope)._2)
+      Some(TypeInference.infer(TypedTerm.replaceDescendants(term, matches))._2)
     }
   }
   

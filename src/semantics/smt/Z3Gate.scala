@@ -105,7 +105,10 @@ class Z3Gate {
   def normalize(s: String) =
     if (s == "<") "lt"
     else if (s == "+") "plus"
-    else s.replace("'", "_").replace("|", "!").replace("@", "apply")
+    else {
+      val esc = s.replace("'", "_").replace(".", "_").replace("|", "!").replace("@", "apply")
+      if (Character.isJavaIdentifierStart(esc.charAt(0))) esc else "_" + esc;
+    }
 
   /**
    * just the stream of naturals (taken from Scala docs)
@@ -218,9 +221,10 @@ object Z3Gate {
   
   def mkSolver = {
     val s = ctx mkSolver()
-    /*val p = ctx mkParams()
-    p.add("soft_timeout", 1000)
-    s.setParameters(p)*/
+    val p = ctx mkParams()
+    //p.add("soft_timeout", 1000)
+    p.add("smt.macro_finder", true)
+    s.setParameters(p)
     s
   }
   

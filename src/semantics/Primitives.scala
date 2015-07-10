@@ -10,6 +10,8 @@ import semantics.TypeTranslation.TypedIdentifier
 import AstSugar.Term
 import report.console.NestedListTextFormat
 import syntax.transform.TreeSubstitution
+import semantics.pattern.MacroMap
+import semantics.pattern.Expansion
 
 
 
@@ -296,12 +298,12 @@ object TypedTerm {
     case _ => throw new Scope.TypingException(s"type needed for '${term toPretty}'")
   }
   
-  def replaceDescendant(term: Term, switch: (Term, Term)): Term = replaceDescendants(term, Some(switch))
+  def replaceDescendant(term: Term, switch: (Term, Term))(implicit scope: Scope): Term = replaceDescendants(term, Some(switch))
 
-  def replaceDescendants(term: Term, switch: Iterable[(Term, Term)]): Term = if (switch.isEmpty) term else
+  def replaceDescendants(term: Term, switch: Iterable[(Term, Term)])(implicit scope: Scope): Term = if (switch.isEmpty) term else
     switch find (_._1 eq term) match {
       case Some(sw) => sw._2
-      case _ => preserve(term, new Tree(term.root, term.subtrees map (replaceDescendants(_, switch))))
+      case _ => preserveBoth(term, new Tree(term.root, term.subtrees map (replaceDescendants(_, switch))))
     }
   
   def preserve(term: Term, newterm: Term) = typeOf(term) match {
@@ -371,10 +373,40 @@ object FolSimplify {
       else T(phi.root, sub)
     }
     else if (phi.root == "∀") {
-      if (sub.last == TRUE) TRUE
+      val body = sub.last
+      if (body == TRUE) TRUE
+      //else if (body.root == "&" && (body.unfold.subtrees forall (n => n =~ ("=", 2) || n =~ ("<->", 2) || n.root == "∀")))
+      //  &&(body.unfold.subtrees map (t => T(phi.root)((sub dropRight 1) :+ t)))
       else T(phi.root, sub)
     }
     else T(phi.root, sub)
+  }
+  
+  class Trivial
+  case object Identity extends Trivial
+  case class Constant(term: Term) extends Trivial
+  
+  def expandTrivials(theory: Iterable[Term]) = {
+    def collect(phi: Term)(implicit vars: List[Term]): Map[Identifier, Trivial] = {
+      if (phi.root == "&") phi.subtrees flatMap collect toMap
+      else if (phi =~ ("=", 2) || phi =~ ("<->", 2)) {
+        val List(lhs, rhs) = phi.subtrees
+        if (lhs.subtrees == vars) {
+          if (rhs == TRUE || rhs == FALSE) Map(lhs.root -> Constant(rhs))
+          else if (vars.length == 1 && rhs == vars(0)) Map(lhs.root -> Identity)
+          else Map()
+        }
+        else Map()
+      }
+      if (phi =~ ("∀", 2)) collect(phi.subtrees(1))(vars :+ phi.subtrees(0))
+      else Map()
+    }
+    val macros = theory flatMap (collect(_)(List())) map { 
+      case (id, Constant(term)) => (id -> ((x:Term) => Some(term) )) 
+      case (id, Identity) => (id -> ((x:Term) => Some(x.subtrees(0))))
+    } toSeq
+    
+    new Expansion( MacroMap(macros:_*) )
   }
   
 }

@@ -3,6 +3,7 @@ package syntax
 
 import report.data.TapeString
 import scala.collection.generic.CanBuildFrom
+import semantics.Prelude
 
 
 object AstSugar {
@@ -94,7 +95,7 @@ object AstSugar {
   }
   
   def &&(conjuncts: Term*): Term = &&(conjuncts.toList)
-  def &&(conjuncts: List[Term]) = TI("&")(conjuncts)<<
+  def &&(conjuncts: List[Term]) = if (conjuncts.isEmpty) Prelude.TRUE else TI("&")(conjuncts)<<
 
   def /::(parts: Term*): Term = /::(parts.toList)
   def /::(parts: List[Term]) = TI("/")(parts)>>
