@@ -55,6 +55,7 @@ argument values outside the domain of $\T$, and that the defined values are in t
 %
 where $\dot\psi$ abbreviates $\theta\mapsto\psi$, with fresh variable $\theta$.
 
+This tactic is used to break a long (recursive) computation into simpler sub-computations.
 $\psi$ may be fresh, or it may reuse a variable already occurring in $g$, rebinding those occurrences.
 The example of this section will illustrate why this is useful.
 
@@ -89,14 +90,15 @@ $f = \theta_{1..r} \mapsto (f_1\,\theta_1)::\T_1/\cdots/(f_r\,\theta_r)::\T_r$.
 
 (We give two alternatives, as the first is usually easier to prove, but may hold in less cases)
 
-\exampleTitle
-
-\begin{comment}\subsection{Example}\end{comment}
-
 \newenvironment{tacticbox}[1]{\begin{center}\begin{tabular}{|@{~~~~}l@{~~~~}|}\hline\rule{0pt}{2.3ex}\underline{#1}\\[.4em]$}{$\\[-1em] \\[.3ex] \hline\end{tabular}\end{center}}
+
+\noindent
+\begin{minipage}{\columnwidth}
+\exampleTitle \begin{comment}\subsection{Example}\end{comment}
 
 For simplicity of the example, we assume that the input to the Simplified Arbiter problem
 satisfies triangle inequalities:
+\end{minipage}
 %
 \begin{equation}
 w_{pij} \leq w_{pkj} + w_{kij} \qquad w'_{qji} \leq w'_{qki} + w'_{kji}
@@ -282,7 +284,7 @@ Hence,
 \medskip
 Our reliance on the termination of $\fix$ expressions may seem conspicuous, since some of these
 expressions are generated automatically by the system. However, a closer look reveals that whenever
-such a computation is introduced, it has a subset of the recursive calls made by an existing one.
+such a computation is introduced, the set of the recursive calls is makes is a subset of those made by the existing one.
 Therefore, if the original recurrence terminates, so does the new one. In any case, all the recurrences
 in our development have a trivial termination argument (the indexes $i$,$j$ change monotonically between calls),
 so practically, this should never become a problem.

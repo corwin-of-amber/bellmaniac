@@ -877,6 +877,9 @@ We finish this section by presenting some numbers: \Cref{evaluation:solving time
 shows measurements done using two SMT solvers, Z3 and CVC4, and a sample set of tactic
 applications used in the derivation of Gap and Parenthesis divide-and-conquer DP implementations.
 The measurements were taken using MacBook Air, 1.7GHz Intel Core i7, with 4GB of RAM.
+The numbers show wait times that are acceptable for interactive work. Synth goals are rather tricky
+as they involve quantified assumptions --- Z3 timed out while trying to find the proof, but we
+managed to complete it successfully via CVC4 in all cases.
 
 \begin{table}
 \centering
@@ -904,6 +907,8 @@ The measurements were taken using MacBook Air, 1.7GHz Intel Core i7, with 4GB of
                                           &    & 0.4 & 0.1 \\
   Stratify \qbox1                         &    & 1.8 & 2.5 \\
   Stratify \qbox2                         &    & 1.7 & 0.6 \\
+  Synth \qbox1                            &    & T/O & 0.5 \\
+  Synth \qbox2                            &    & T/O & 0.5 \\
   \hline
 \end{tabular}
 \caption{\label{evaluation:solving time}
