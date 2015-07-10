@@ -16,21 +16,21 @@ and a predicate $|f|: J\to\B$. The superscript indictes the function's arity,
 and the vertical bars indicate the support.
 
 For refinement-typed symbols, the first-order symbols are still defined in terms
-of the shape, and an assumption concerning the support is created. For example,
+of the shape, and an assumption concerning the support is emitted. For example,
 for $g: (J\cap P)\to\R$, the symbols $g^1:J\to\R$, $|g|:J\to\B$ are defined,
-and the assumption $\forall \alpha:J.~|g|(\alpha)\limplies P(\alpha)$.
+with the assumption $\forall \alpha:J.~|g|(\alpha)\limplies P(\alpha)$.
 
 Assumptions are similarly created for nodes of the syntax tree of the formula to
 be verified. We define the \newterm{enclosure} of a node to be the ordered set of
 all the variables bound by ancestor abstraction nodes ($v\mapsto\ldots$). Since
 the interpretation of the node depends on the values of these variables, it is
 ``skolemized'', i.e., its type is prefixed by the types of enclosing variables.
-For example, if $e:\T$, then inside the term $(v:\S)\mapsto e$ it would be treated as
+For example, if $e:\T$, then inside a term $(v:\S)\mapsto \cdots e\cdots$ it would be treated as
 type $\S\to\T$.
 
 When a function is being used as an argument in an application term (first-class functions), 
 we take its arrow type $\T\to\S$ and create a corresponding \newterm{faux sort} $F_{\T\to\S}$,
-and an operator $@ : F_{\T\to\S}\to\T\to\S$, with the \newterm{extensionality axiom} ---
+an operator $@ : F_{\T\to\S}\to\T\to\S$, and the \newterm{extensionality axiom} ---
 \begin{equation}
 \forall \alpha\alpha'.~ \big(\forall\beta.~ @(\alpha,\beta)=@(\alpha',\beta)\big)\limplies \alpha=\alpha'
 \label{automated:extensionality}
