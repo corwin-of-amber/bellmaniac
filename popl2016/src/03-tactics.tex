@@ -247,11 +247,10 @@ Now instantiate $h$, $f$, and $g$, with $f\applt g$, $f$, and $g'$ from \Cref{ta
 and we obtain the equality in the tactic.
 
 \medskip
-For Synth, assume
-\[\renewcommand\arraystretch{1.3}
-  \forall \overline\theta.\quad h\,(f\,\overline\theta)=f\,\overline\theta \quad\]
-
-And let $\theta=\theta_{1..r}$ such that $\theta_i=\fix f_i$. So $f_i\,\theta_i=\theta_i$.
+For Synth, ({\it i}) assume
+\[\forall \overline\theta.\quad h\,(f\,\overline\theta)=f\,\overline\theta \quad\]
+%
+and let $\theta=\theta_{1..r}$ such that $\theta_i=\fix f_i$. So $f_i\,\theta_i=\theta_i$.
 Let $\theta=\theta_1::\T_1/\cdots/\theta_r::\T_r$.
 \[\renewcommand\arraystretch{1.3}
   \begin{array}{l@{}l}
@@ -263,4 +262,27 @@ Let $\theta=\theta_1::\T_1/\cdots/\theta_r::\T_r$.
 Then $\theta=\fix h$;\\
 We get $\fix h = (\fix f_1)::\T_1 / \cdots / (\fix f_r)::\T_r$,
 as required.
+
+({\it ii}) assume
+\[\renewcommand\arraystretch{1.3}
+  \forall\theta. \quad
+  \begin{array}{l}
+  \displaystyle
+    h\,\theta = \theta ~\limplies \bigwedge_{i=1..r}(f_i\,\theta)::\T_i = \theta::\T_i \\
+    \theta = \theta::\T_1 ~\big/~ \cdots ~\big/~ \theta::\T_r
+  \end{array}  
+\]
+%
+and let $\theta=\fix h$. So $h\,\theta=\theta$, therefore $(f_i\,\theta)::\T_i=\theta::\T_i$.
+Since we assume that $\fix f_i$, we get by induction that $(\fix f_i)::\T_i=\theta::\T_i$.
+Hence,
+\[(\fix f_1)::\T_1 / \cdots / (\fix f_r)::\T_r = \theta::\T_1 / \cdots / \theta::\T_r = \theta\]
 \end{proof}
+
+\medskip
+Our reliance on the termination of $\fix$ expressions may seem conspicuous, since some of these
+expressions are generated automatically by the system. However, a closer look reveals that whenever
+such a computation is introduced, it has a subset of the recursive calls made by an existing one.
+Therefore, if the original recurrence terminates, so does the new one. In any case, all the recurrences
+in our development have a trivial termination argument (the indexes $i$,$j$ change monotonically between calls),
+so practically, this should never become a problem.
