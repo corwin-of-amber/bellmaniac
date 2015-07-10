@@ -56,3 +56,9 @@ $f\,\overline x = g\,\overline x$. The types of $\overline x$ are inferred from 
 of $f$ and $g$ (which should have the same shape). We can then apply $\beta$-reduction as
 a simplification step. This dramatically reduces the number of quantifiers in the first-order
 theory representing the goal, making SMT solving feasible.
+
+Moreover, if the goal has the form $f\,t_1 = f\,t_2$ (e.g. Stratify, \Cref{tactics}) it may
+be worth trying to prove that $t_1::\T = t_2::\T$, where $f:\T\to\S$.
+This trivially entails the goal and much easier to prove. To understand why
+this is a common case, consider \eqref{evaluation:stratify A 1} below: 
+notice how $g$ does not modify the quadrant from which $f$ reads.

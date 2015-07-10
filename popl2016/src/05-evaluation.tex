@@ -62,7 +62,7 @@ to give the reader a flavor of the technique.
 \exampleTitle
 \begin{comment}\subsection{Example}\end{comment}
 
-Further developing $A^{IJ}$ \eqref{tactics:arbiter phase A}
+Further developing $A^{IJ}$ \eqref{evaluation:arbiter phase A}
 we apply Slice to get the four quadrants; $I_0$, $I_1$, $J_0$, $J_1$
 (\Cref{intro:quadrants}) are defined as unary qualifiers with the axioms:
 \[
@@ -132,7 +132,7 @@ represent quadrants.
 	      & & ^{^{(I_1)}} & ^{^{(J_1)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
 	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
   \end{array}
-  \label{tactics:A sliced}
+  \label{evaluation:A sliced}
 \end{equation}
 
 \begin{tacticbox}{Let}
@@ -155,6 +155,7 @@ represent quadrants.
 
 \begin{equation}
   A^{^{IJ}} =~ \psi\mapsto \fix \quadrants{\lbox A}{\dot\psi}{\dot\psi}{\dot\psi} ~\applt~ \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\lbox C}{\lbox D}
+  \label{evaluation:stratify A 1}
 \end{equation}
 
 Notice that an existing variable $\psi$ is reused, rebinding any occurrences within $\lbox B$, $\lbox C$, $\lbox D$.
@@ -209,7 +210,7 @@ to simplify $\fix\dot\psi$ into $\psi$ --- although this is not necessary --- ju
 a shorter term.
 
 \medskip
-The next few tactics will focus on the subterm $\lbox B$ from \eqref{tactics:A sliced}.
+The next few tactics will focus on the subterm $\lbox B$ from \eqref{evaluation:A sliced}.
 
 \begin{equation}
   \renewcommand\arraystretch{1.2}
