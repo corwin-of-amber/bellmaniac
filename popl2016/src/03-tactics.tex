@@ -113,7 +113,7 @@ for all (appropriately typed) $p<k<i$, ~$q<k<j$.
 \end{comment}
 
 \medskip
-Starting from the specification in \eqref{lang:arbiter spec}, we apply Synth to turn
+Starting from the specification in \eqref{lang:arbiter spec}, Richard applies Synth to turn
 $\fix (\theta\,i\,j\mapsto\square/\min\langle\cdots\rangle)$ into $\fix\theta\,i\,j\mapsto\min\langle\square,\cdots\rangle$.
 While not absolutely necessary, we will see that it makes some expressions easier to handle later
 on.
@@ -144,7 +144,7 @@ the proof is deferred until Synth is applied so that the prover can use the extr
   \end{array}
 \end{equation}
 
-We then apply Let Insertion, followed by Stratify, to separate the base case and obtain a more general 
+He then applies Let Insertion, followed by Stratify, to separate the base case and obtain a more general 
 form, similar to $\Ggen$ of \eqref{intro:Ggen}.
 
 \begin{tacticbox}{Let}
@@ -201,6 +201,7 @@ where the superscript parameterizes the types of $i$, $j$ and $p$, $q$.
   \label{tactics:arbiter phase A}
 \end{equation}
 
+Which is exactly what Richard was after.
 Vertical typeset was used to save some horizontal space, but $\vtyped v\T$
 should be read as just $v:\T$.
 
@@ -282,7 +283,6 @@ Hence,
 \[(\fix f_1)::\T_1 / \cdots / (\fix f_r)::\T_r = \theta::\T_1 / \cdots / \theta::\T_r = \theta\]
 \end{proof}
 
-\medskip
 Our reliance on the termination of $\fix$ expressions may seem conspicuous, since some of these
 expressions are generated automatically by the system. However, a closer look reveals that whenever
 such a computation is introduced, the set of the recursive calls is makes is a subset of those made by the existing one.

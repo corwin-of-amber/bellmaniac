@@ -200,15 +200,15 @@ $G$ is now parameterized on those index sets;
 
 \begin{equation}
 \begin{array}{l@{}l}
-	G^{^{I_pJ_p}}_{(i:I_p)\,(j:J_p)} ~=~  \\
+	G^{^{\widehat I \widehat J}}_{(i:\widehat I)\,(j:\widehat J)} ~=~  \\
 	\qquad
 	\begin{cases}
 		0                         & i=j=0 \\
 		w_{0j0}                   & i=0, j>0 \\
 		w'_{0i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
-		  \min\langle & \underset{q\in J_p\cap[0,j)}\min ~ G^{^{I_pJ_p}}_{iq} + \yw{qji}, \\
-		              & \underset{p\in I_p\cap[0,i)}\min ~ G^{^{I_pJ_p}}_{pj} + \xw{pij}~\rangle
+		  \min\langle & \underset{q\in \widehat J\cap[0,j)}\min ~ G^{^{\widehat I \widehat J}}_{iq} + \yw{qji}, \\
+		              & \underset{p\in \widehat I\cap[0,i)}\min ~ G^{^{\widehat I \widehat J}}_{pj} + \xw{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
@@ -227,16 +227,16 @@ Richard addressed this problem by splitting the range $J$, adding yet range anot
 
 \begin{equation}\LeftEqNo
 \begin{array}{l@{}l}
-	G^{^{I_pJ_pJ'_p}}_{(i:I_p)\,(j:J_p)} ~=~  \\
+	G^{^{\widehat I \widehat J \widehat J'}}_{(i:\widehat I)\,(j:\widehat J)} ~=~  \\
 	\qquad
 	\begin{cases}
 		0                         & i=j=0 \\
 		w_{0j0}                   & i=0, j>0 \\
 		w'_{0i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
-		  \min\langle & \underset{~q\in J'_p~}\min ~ G^{^{I_pJ'_p\!J'_p}}_{iq} + \yw{qji}, \\
-		              & \underset{q\in J_p\cap[0,j)}\min ~ G^{^{I_pJ_pJ_p}}_{iq} + \yw{qji}, \\
-		              & \underset{p\in I_p\cap[0,i)}\min ~ G^{^{I_pJ_pJ'_p}}_{pj} + \xw{pij}~\rangle
+		  \min\langle & \underset{~q\in \widehat J'~}\min ~ G^{^{\widehat I \widehat J'\!\widehat J'}}_{iq} + \yw{qji}, \\
+		              & \underset{q\in \widehat J\cap[0,j)}\min ~ G^{^{\widehat I \widehat J \widehat J'}}_{iq} + \yw{qji}, \\
+		              & \underset{p\in \widehat I\cap[0,i)}\min ~ G^{^{\widehat I \widehat J \widehat J'}}_{pj} + \xw{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
@@ -249,7 +249,7 @@ way:
 
 \begin{equation}\LeftEqNo
 \begin{array}{l@{}l}
-	\Ggen^{^{IJ}}_{(i:I)\,(j:J)\,\psi} ~=~  \\
+	\Ggen^{^{\widehat I \widehat J \widehat J'}}_{(i:\widehat I)\,(j:\widehat J)\,\psi} ~=~  \\
 	\qquad
 	\begin{cases}
 		0                         & i=j=0 \\
@@ -257,22 +257,23 @@ way:
 		w'_{0i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
 		  \min\langle & \psi_{ij}, \\
-		              & \!\underset{q\in J\cap[0,j)}\min ~ G^{^{IJJ}}_{iq} + \yw{qji}, \\
-		              & \!\underset{p\in I\cap[0,i)}\min ~ G^{^{IJJ}}_{pj} + \xw{pij}~\rangle
+		              & \!\underset{q\in \widehat J\cap[0,j)}\min ~ G^{^{\widehat I\widehat J\widehat J'}}_{iq} + \yw{qji}, \\
+		              & \!\underset{p\in \widehat I\cap[0,i)}\min ~ G^{^{\widehat I\widehat J\widehat J'}}_{pj} + \xw{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
 \label{intro:Ggen}
 \end{equation}
 
-Richard immediately sees that both $G$ and \qbox1 can be expressed in terms of $\Ggen^{IJ}$ by making $\psi_{ij}=\infty$, 
-but more importantly, that \qbox2 can now also be expressed in terms of $\Ggen^{I_0J_1}$ by making 
+Richard immediately sees that both $G$ and \qbox1 can be expressed in terms of $\Ggen^{IJJ}$, $\Ggen^{I_0\!J_0\!J_0}$ by making $\psi_{ij}=\infty$, 
+but more importantly, that \qbox2 can now also be expressed in terms of $\Ggen^{I_0J_1J_0}$ by making 
 $\psi_{ij} =  \underset{q\in J_0}\min ~ G^{I_0J_0J_0}_{iq} + \yw{qji}$.
-Moreover, he replaces the calls to $G$ inside $\Ggen$ with recursive calls to $\Ggen$ itself:
+Moreover, he replaces the calls to $G$ inside $\Ggen$ with recursive calls to $\Ggen$ itself,
+so that the extra parameter $\widehat J'$ is no longer needed:
 %
 \begin{equation}\LeftEqNo
 \begin{array}{l@{}l}
-	\Ggen^{^{IJ}}_{(i:I)\,(j:J)\,\psi} ~=~  \\
+	\Ggen^{^{\widehat I\widehat J}}_{(i:\widehat I)\,(j:\widehat J)\,\psi} ~=~  \\
 	\qquad
 	\begin{cases}
 		0                         & i=j=0 \\
@@ -280,16 +281,16 @@ Moreover, he replaces the calls to $G$ inside $\Ggen$ with recursive calls to $\
 		w'_{0i0}                  & i>0, j=0 \\
 		\begin{array}{@{}l@{~}l}
 		  \min\langle & \psi_{ij}, \\
-		              & \!\underset{q\in J\cap[0,j)}\min ~ H^{^{IJ}}_{iq} + \yw{qji}, \\
-		              & \!\underset{p\in I\cap[0,i)}\min ~ H^{^{IJ}}_{pj} + \xw{pij}~\rangle
+		              & \!\underset{q\in \widehat J\cap[0,j)}\min ~ H^{^{\widehat I\widehat J}}_{iq\psi} + \yw{qji}, \\
+		              & \!\underset{p\in \widehat I\cap[0,i)}\min ~ H^{^{\widehat I\widehat J}}_{pj\psi} + \xw{pij}~\rangle
 		\end{array}              & i,j>0
 	\end{cases}
 \end{array}
 \end{equation}
 
-Richard must then use the same strategy to further generalize $\Ggen^{^{IJ}}$ so that it can also be used for \qbox3 and \qbox4.
+Richard must then use the same strategy to further generalize $\Ggen^{\widehat I\widehat J}$ so that it can also be used for \qbox3 and \qbox4.
 He will also transform the sub-computation of $\psi$  into four recursive sub-computations, further improving the locality of the resulting algorithm.
-Eventually, through this kind of transformations, Richard can succeed in breaking the computation of $G$ into recursive sub-computations leading to a true divide-and-conquer algorithm. Unfortunately, this line of reasoning can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered the technique. 
+Eventually, through this kind of transformations, he can succeed in breaking the computation of $G$ into recursive sub-computations leading to a true divide-and-conquer algorithm. Unfortunately, this line of reasoning can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered the technique. 
 
 Fortunately, these are the steps that are mechanized in Bellmania, allowing an algorithm designer like Richard to produce a provably
 correct implementation of this algorithm through a series of high-level commands. Once a divide and conquer algorithm is found, generating an optimal implementation still requires some additional work, such as finding the right point at which to switch to an iterative algorithm to leverage SIMD parallelism as well as low-level tuning and compiler optimization, but those steps can be performed by more traditional compiler optimization techniques that are outside the scope of this paper.
@@ -338,7 +339,7 @@ this approach is demonstrated by engineering specialized tactics for the domain 
   \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
   \node(3) at (.5,.5) {3};%    \node(4) at (1.5,.5) {4};
   \draw (s.south) edge[->,out=-40,in=-150] (3.250);
-  %\fill[block] (0,0) |- (.9,1) to[out=0,in=-90] (1,1.1) |- (2,2) |- (1.1,1) to[out=180,in=90] (1,.9) |- cycle;
+  \fill[block] (0,0) |- (.85,1) to[out=0,in=-90] (1,1.15) |- (2,2) |- (1.15,1) to[out=180,in=90] (1,.85) |- cycle;
   \coordinate (s) at (.8,0);
   \node[inner sep=0 ] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
 

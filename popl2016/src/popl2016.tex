@@ -16,9 +16,6 @@
 %\usepackage{pgfplotstable}
 %\pgfplotsset{compat=1.12} 
 
-\newcommand\todo[1]{{\color{NavyBlue} \footnote{\color{NavyBlue} TODO: {#1}}}}
-\newcommand\citneeded[1]{{\color{NavyBlue} \cite{?}\footnote{\color{NavyBlue} citation needed. #1}}}
-
 \newcommand\newterm[1]{{\it #1}}
 \newcommand\R{\mathbb{R}}
 \newcommand\N{\mathbb{N}}
@@ -47,7 +44,8 @@
 }
 
 % author comment macros
-\newcommand\authornote[3]{{\color{#2} \footnote{\color{#2} {#1}: {#3}}}}
+%\newcommand\authornote[3]{{\color{#2} \footnote{\color{#2} {#1}: {#3}}}}
+%\newcommand\todo[1]{{\color{NavyBlue} \footnote{\color{NavyBlue} TODO: {#1}}}}
 
 \newcommand\asolar[1]{\authornote{AS}{BrickRed}{#1}}  % Armando
 \newcommand\cel[1]{\authornote{CL}{OliveGreen}{#1}}   % Charles

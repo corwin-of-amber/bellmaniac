@@ -33,8 +33,9 @@ The core is augmented with the following intrinsic operators:
   we assume that recurrences given in specifications are well-defined, 
   such that $\semp f$ has a single fixed point.
   In other words, we ignore nonterminating computations.
-  \item A slash operator $/$,
-  \[\begin{array}{ll}
+  \item A slash operator $/$,     \vspace{-2pt}
+  \[\renewcommand\arraystretch{1.5}
+    \begin{array}{ll}
       \mbox{For base type $\S$, $x,y:\S$} & x/y = \begin{cases}x & \mbox{if }x\neq\bot \\ y & \mbox{if }x=\bot\end{cases} \\
       \mbox{For $f,g:\T_1\to\T_2$} & f/g = (v:\T_1)\mapsto (f\,v)/(g\,v)
     \end{array}\]
@@ -84,7 +85,8 @@ obtained from it by removing all qualifiers.
 
 \newcommand\examplePar{%
 \noindent\hspace{-2pt}%
-\tikz[baseline=(E.base)]\node(E)[draw,rectangle,rounded corners=.7em] {\bf Example};}
+\tikz[baseline=(E.base)]\node(E)[draw,rectangle,rounded corners=.7em] {\bf Example};
+}
 \examplePar
 The inputs $w$, $w'$ to the Simplified Arbiter (\Cref{intro:arbiter spec}) can be typed using these droplets:
 \[
@@ -245,6 +247,7 @@ inferences:
   \node(l1)[coordinate,below=4.5mm of l0] {};
   \node(l2)[coordinate,below=3.5mm of l1] {};
   \node(l3)[coordinate,below=3.5mm of l2] {};
+  \node(l4)[coordinate,below=3.5mm of l3] {};
   \def\ytip{2pt}
   \draw (l0 -| farg.west) -- +(0,-\ytip) -| (l0 -| farg.east) node[pos=0.25,below] {\tiny $I\to I\to T$};
   \draw (l0 -| f.west) -- +(0,-\ytip) -| (l0 -| f.east) node[pos=0.5,anchor=north east,inner xsep=0] {\tiny $I_0\to I_0\to T$};
@@ -254,6 +257,7 @@ inferences:
   \draw (l1 -| f.west) -- +(0,-\ytip) -| (l1 -| i1.east) node[pos=0.25,below] {\tiny $I_0\to T$};
   \draw (l2 -| f.west) -- +(0,-\ytip) -| (l2 -| i2.east) node[pos=0.25,below] {\tiny $T$};
   \draw (l3 -| f.west) -- +(0,-\ytip) -| (l3 -| zero.east) node[pos=0.25,below] {\tiny $T$};
+  \draw (l4 -| farg.west) -- +(0,-\ytip) -| (l4 -| zero.east) node[pos=0.25,below] {\tiny $(I\to I\to T)\to I_0\to T$};
 \end{tikzpicture}
 \hspace*{\fill}
 
