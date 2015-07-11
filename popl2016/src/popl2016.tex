@@ -87,35 +87,36 @@
 \maketitle
 
 \begin{abstract}
-Programmers almost never write optimal code right from the start.
-Instead, they usually begin with a simplified, possibly inefficient implementation, or even
-a na\"ive one. When the output is satisfactory, they would move
-on to revise the code in order to improve performance. These revisions normally
-change the code considerably compared to the original version. It is especially
-true for code that targets multi-core processors, since many considerations
-must be taken into account for parallel code in order to fully utilize all available
-resources.
+We introduce \newterm{solver-aided tactics} as a mechanism for transforming
+computational terms, expressed in a specialized form of $\lambda$-calculus,
+intro equivalent terms in the interest of deriving better, more efficient
+implementations. By stringing chains of transformations, a programmer can start
+with a compact specification of an algorithm and develop it towards concrete
+executable code, while addressing performance issues involved.
 
-Clearly, each iteration becomes more tedious as the code increases in complexity,
-and naturally holds more chance of introducing defects. The programmer must
-exercise care to make sure that each version is functionally equivalent to the
-previous one. This is when mechanical reasoning can prove useful, by 
-(a) packaging familiar techniques as routines, thus avoiding repetitive work, and
-(b) checking each modification step, warning the developer when functionality
-may be accidentally changed.
+Solver-aided tactics are unique in two ways: 
+(a) They combine symbolic pattern-matching
+with SMT technology to ensure a correct transformation; this means that a lot of the
+burden of proof is moved from the user of the system to automated solvers.
+(b) They make use of type annotations within program terms to maintain and utilize
+properties of those computations, in order to guide transformations and provide
+enough context for the automated proofs. For this purpose, we employ predicate
+abstraction as part of the type system.
 
-We present Bellmania, a framework comprising of a language for specifying
-dynamic programming algorithms as recurrences,
+We present Bellmania, a framework that brings together novel techniques from both
+inductive and deductive synthesis disciplines.
+Bellmania comprises of a language for specifying dynamic programming algorithms as recurrences,
 and a calculus that facilitates gradual transformation of these 
 specifications into efficient implementations.
-In particular, it supports using the Divide-and-Conquer technique to derive
+In particular, it provides tactics that formalize the Divide-and-Conquer technique to derive
 parallel implementations that optimally utilize memory caches.
 \end{abstract}
 
-\category{CR-number}{subcategory}{third-level}
+\category{D.1.2}{Programming Techniques}{Automatic Programming}
+\category{I.2.2}{Artificial Intelligence}{Automatic Programming}[Program synthesis]
 
 \keywords
-synthesis, dynamic programming, smt
+Synthesis; Dynamic Programming; SMT; Automated Reasoning; Transformational
 
 \input{01-intro}
 \input{02-lang}
