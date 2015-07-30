@@ -2,6 +2,7 @@ package examples
 
 import syntax.AstSugar._
 import semantics.Prelude._
+import synth.pods.Pod
 import synth.pods.ConsPod.{`⟨ ⟩`, `⟨ ⟩?`}
 import semantics.Scope
 import semantics.TypeTranslation.Environment
@@ -113,12 +114,14 @@ object Gap {
     import syntax.Piping._
 
     def instapod(it: Term)(implicit scope: Scope) = instantiate(it)._2
+    def instapod(it: Pod)(implicit scope: Scope) = instantiate(it.program)._2
     val * = TI("*")
     val j = TV("j")
     val p = TV("p")
     val q = TV("q")
     
     def rewriteA(implicit env: Environment, scope: Scope) {
+      val f = new FileLog(new java.io.File("/tmp/bell.json"))
       val extrude = new Extrude(Set(I("/"), cons.root))
 
       def fixer(A: Term, q: Term) = SimplePattern(fix(?)) find A map (_.subterm) filter (_.hasDescendant(q)) head
@@ -177,14 +180,29 @@ object Gap {
                                       (MinAssocPod(_)) filter (x => x.subtrees(0) != x.subtrees(1))) |>> instapod
                       for (A <- Rewrite(minassoc)(A)) {
                         val ex = extrude(A) |-- display
-                        val `.` = ex :/ "🄲"
-                        val strat = (SimplePattern(min:@(* :- ?)) find `.` flatMap (x => `⟨ ⟩?`(x(*)) map (elements => 
-                            StratifyReducePod(TermWithHole.puncture(fixee(A,`.`), x.subterm), min, elements, List(ex :/ "🅄"), ctx(A, `.`)("ψ")).program))
-                            ) |>> instapod
+                        // Stratify   🄴, 🄵     in  🄰
+                        //            🄽, 🄾, 🅁  in  🄱
+                        //            🅃, 🅄, 🅆  in  🄲
+                        def stratduce(A: Term, `.` : Term, subelements: List[Term]) =
+                          SimplePattern(min:@(* :- ?)) find `.` flatMap (x => `⟨ ⟩?`(x(*)) map (elements => 
+                            StratifyReducePod(TermWithHole.puncture(fixee(A,`.`), x.subterm), min, elements, subelements, ctx(A, `.`)("ψ"))))
+                        val strata = stratduce(A, ex :/ "🄰", List("🄴", "🄵") map (ex :/ _))
+                        val stratb = stratduce(A, ex :/ "🄱", List("🄽", "🄾", "🅁") map (ex :/ _))
+                        val stratc = stratduce(A, ex :/ "🄲", List("🅃", "🅄", "🅆") map (ex :/ _))
+                        val strat = (strata ++ stratb ++ stratc) |>> instapod
                         for (A <- Rewrite(strat)(A)) {
                           val ex = extrude(A) |-- display
-                          val f = new FileLog(new java.io.File("/tmp/bell.json"))
-                          f += Trench.displayRich(new Trench[Term](List(ex.terms)))
+                          // Stratify  🄷, 🄸, 🄽  in  🄰
+                          val strat = stratduce(A, ex :/ "🄰", List("🄷", "🄸", "🄽") map (ex :/ _)) |>> instapod
+                          for (A <- Rewrite(strat)(A)) {
+                            val ex = extrude(A) |-- display
+                            // Stratify  🄸, 🄹, 🄻  in  🄰
+                            val strat = stratduce(A, ex :/ "🄰", List("🄸", "🄹", "🄻") map (ex :/ _)) |>> instapod
+                            for (A <- Rewrite(strat)(A)) {
+                              val ex = extrude(A) |-- display
+                              f += Trench.displayRich(new Trench[Term](List(ex.terms)))
+                            }
+                          }
                         }
                       }
                     }

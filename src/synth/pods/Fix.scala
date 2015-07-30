@@ -8,6 +8,7 @@ import semantics.TypedTerm
 import semantics.Scope
 import syntax.Scheme
 import semantics.TypedLambdaCalculus
+import semantics.TypedSubstitution
 
 
 
@@ -62,7 +63,16 @@ object StratifySlashPod {
 }
 
 
-class TermWithHole(template: Term) extends Scheme.Template(List(TermWithHole.hole.leaf), template) {
+object TypedScheme {
+  class Template(vars: List[Identifier], template: Term) extends Scheme.Template(vars, template) {
+    override def apply(args: Term*): Term = {
+      val subst = new TypedSubstitution(vars map (T(_)) zip args)
+      subst(template)
+    }
+  }
+}
+
+class TermWithHole(template: Term) extends TypedScheme.Template(List(TermWithHole.hole.leaf), template) {
   import TermWithHole._
   
   def x̅ = TypedLambdaCalculus.enclosure(template, hole) get
@@ -82,8 +92,8 @@ class StratifyReducePod(val e: TermWithHole, val reduce: Term, val elements: Lis
   val x̅ = e.x̅
   
   val h = e(reduce:@`⟨ ⟩`(elements))
-  val f = x̅ ↦: (reduce:@`⟨ ⟩`(subelements))
-  val gψ = e(reduce:@`⟨ ⟩`((ψ:@(x̅ drop 1)) +: (elements filter (x => !subelements.exists(_ == x)))))
+  val f = e(reduce:@`⟨ ⟩`(subelements))
+  val gψ = e(reduce:@`⟨ ⟩`((ψ:@(x̅ drop 1)) +: (elements filter (x => !subelements.exists(_ eq x)))))
 
   override val program = 
       fix(h) =:= (TI("let") :- ((ψ ↦ fix (gψ)):@fix(f)))

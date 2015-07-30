@@ -143,15 +143,15 @@ object Formula {
       else {
         val lst = splitOp(term, "cons")
         if (lst.length > 1 && lst.last =~ ("nil", 0))
-          tape"⟨${lst dropRight 1 map display mkString ", "}⟩"
+          tape"⟨${lst dropRight 1 map display mkTapeString ", "}⟩"
         else
           tape"${display(fun, priority, Assoc.Left)} ${display(arg, priority, Assoc.Right)}"
       }
     }
     
-    def isOp(term: Term, op: String) = (term =~ ("@", 2)) && (term.subtrees(0) =~ ("@", 2)) && (term.subtrees(0).subtrees(0) =~ (op, 0))
+    def isOp(term: Term, op: Any) = (term =~ ("@", 2)) && (term.subtrees(0) =~ ("@", 2)) && (term.subtrees(0).subtrees(0) =~ (op, 0))
     
-    def splitOp(term: Term, op: String): List[Term] =
+    def splitOp(term: Term, op: Any): List[Term] =
       if (isOp(term, op)) 
         splitOp(term.subtrees(0).subtrees(1), op) ++ splitOp(term.subtrees(1), op)
       else List(term)
@@ -168,7 +168,7 @@ object Formula {
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
   
   def display(symbol: Identifier): TapeString = 
-    symbol.literal.toString |-| symbol
+    symbol.literal.toString //|-| symbol
   
   def display(term: AstSugar.Term): TapeString =
     if (QUANTIFIERS contains term.root.toString)
