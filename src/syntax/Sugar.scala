@@ -49,7 +49,8 @@ object AstSugar {
     def ->(that: Term) = TI("->")(term, that)
     def ->:(that: Term) = TI("->")(that, term)
     def ↦(that: Term) = TI("↦")(term, that)
-    def ↦:(args: Term*) = TI("↦")((args :+ term):_*)>>
+    def ↦:(that: Term) = TI("↦")(that, term)>>
+    def ↦:(args: List[Term]) = TI("↦")(args :+ term)>>
     def &(that: Term) = TI("&")(term, that)
     def |(that: Term) = TI("|")(term, that)
     def <->(that: Term) = TI("<->")(term, that)

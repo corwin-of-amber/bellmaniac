@@ -1,6 +1,8 @@
 package report
 
 import collection.JavaConversions._
+import java.io.File
+import java.io.FileWriter
 import java.io.ByteArrayOutputStream
 import com.mongodb.MongoClient
 import com.mongodb.DBCollection
@@ -28,6 +30,27 @@ trait AppendLog {
 
 class DevNull extends AppendLog {
   def +=(text: String) {}
+}
+
+class FileLog(val file: File) extends AppendLog {
+  val out = new FileWriter(file)
+  val SEP = "\n\n"
+  
+  def +=(text: String) {
+    this += new BasicDBObject("plain", text)
+  }
+  
+  def +=(json: DBObject) {
+    out.write(json.toString)
+    out.write(SEP)
+    out.flush
+  }
+  
+  override def +=(any: Any) = any match {
+    case json: DBObject => this += json
+    case as: DisplayAsJson => this += as.displayAsJson
+    case _ => super.+=(any)
+  }
 }
 
 class NotebookLog(cells: DBCollection) extends AppendLog {

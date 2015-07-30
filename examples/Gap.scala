@@ -2,7 +2,7 @@ package examples
 
 import syntax.AstSugar._
 import semantics.Prelude._
-import synth.pods.MinDistribPod.`⟨ ⟩`
+import synth.pods.ConsPod.{`⟨ ⟩`, `⟨ ⟩?`}
 import semantics.Scope
 import semantics.TypeTranslation.Environment
 import syntax.transform.Extrude
@@ -11,6 +11,10 @@ import synth.pods.SlashToReducePod
 import synth.pods.StratifyFixPod
 import semantics.TypedLambdaCalculus
 import synth.pods.StratifySlashPod
+import synth.pods.StratifyReducePod
+import synth.pods.TermWithHole
+import semantics.Trench
+import report.FileLog
 
 
 
@@ -145,7 +149,7 @@ object Gap {
               // Slice  🄱 ... p ↦ ?  [ J₀, J₁ ]
               //               θ      [ J₀, J₁ ] x ?
               // Slice  🄲 ... q ↦ ?  [ K₀, K₁ ]
-              //                      ? x [ K₀, K₁ ]
+              //               θ      ? x [ K₀, K₁ ]
               val slicea = (SimplePattern(q ↦ ?) find ex :/ "🄰" map (x => SlicePod(x.subterm, List(K0, K1)))) ++
                            (SimplePattern(p ↦ ?) find ex :/ "🄰" map (x => SlicePod(x.subterm, List(J0, J1)))) :+
                            (SlicePod((ex :/ "🄰") ? "θ", List(J0 x K0, J0 x K1, J1 x K0, J1 x K1)))
@@ -169,10 +173,19 @@ object Gap {
                                    (x => MinDistribPod(x(*).split))) |>> instapod
                     for (A <- Rewrite(mindist)(A)) {
                       // MinAssoc
-                      val minassoc = (SimplePattern(min :@ (* :- ?)) find A flatMap (_(*) |> MinAssocPod.`⟨ ⟩?`) map
+                      val minassoc = (SimplePattern(min :@ (* :- ?)) find A flatMap (_(*) |> `⟨ ⟩?`) map
                                       (MinAssocPod(_)) filter (x => x.subtrees(0) != x.subtrees(1))) |>> instapod
                       for (A <- Rewrite(minassoc)(A)) {
                         val ex = extrude(A) |-- display
+                        val `.` = ex :/ "🄲"
+                        val strat = (SimplePattern(min:@(* :- ?)) find `.` flatMap (x => `⟨ ⟩?`(x(*)) map (elements => 
+                            StratifyReducePod(TermWithHole.puncture(fixee(A,`.`), x.subterm), min, elements, List(ex :/ "🅄"), ctx(A, `.`)("ψ")).program))
+                            ) |>> instapod
+                        for (A <- Rewrite(strat)(A)) {
+                          val ex = extrude(A) |-- display
+                          val f = new FileLog(new java.io.File("/tmp/bell.json"))
+                          f += Trench.displayRich(new Trench[Term](List(ex.terms)))
+                        }
                       }
                     }
                   }
@@ -201,7 +214,7 @@ object Gap {
               // Slice  🄱 ... p ↦ ?  [ J₀, J₁ ]
               //               θ      [ J₀, J₁ ] x ?
               // Slice  🄲 ... q ↦ ?  [ K₀, K₁ ]
-              //                      ? x [ K₀, K₁ ]
+              //               θ      ? x [ K₀, K₁ ]
               val slicea = (SimplePattern(q ↦ ?) find ex :/ "🄰" map (x => SlicePod(x.subterm, List(K0, K1)))) ++
                            (SimplePattern(p ↦ ?) find ex :/ "🄰" map (x => SlicePod(x.subterm, List(J0, J1)))) :+
                            (SlicePod((ex :/ "🄰") ? "θ", List(J0 x K0, J0 x K1, J1 x K0, J1 x K1)))

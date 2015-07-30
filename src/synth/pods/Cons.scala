@@ -49,11 +49,23 @@ class ConsPod(val range: Term)(implicit env: Environment) extends Pod {
 
 object ConsPod {
   
-  import Prelude.N
+  import Prelude.{N,nil,cons}
   import NatPod.{z,p}
   import semantics.TypePrimitives
+  import semantics.LambdaCalculus.isAppOf
   
   def apply(range: Term)(implicit env: Environment) = new ConsPod(range)
+  
+  def `⟨ ⟩`(elements: List[Term]): Term = `⟨ ⟩`(elements:_*)
+    
+  def `⟨ ⟩`(elements: Term*) = 
+    (elements :\ nil)(cons :@ _ :@ _)
+    
+  def `⟨ ⟩?`(t: Term): Option[List[Term]] =
+    isAppOf(t, cons) match {
+      case Some(List(head, tail)) => `⟨ ⟩?`(tail) map (head +: _)
+      case _ => if (t == nil) Some(List()) else None
+    }
   
   def singleton(x: Term) = {
     val r = typeOf_!(x)

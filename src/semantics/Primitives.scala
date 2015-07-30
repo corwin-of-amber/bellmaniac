@@ -189,6 +189,17 @@ object LambdaCalculus {
     else (List(), fun)
   }
   
+  // destructs application terms
+  def isApp(t: Term): Option[(Term, List[Term])] = 
+    if (t =~ ("@", 2)) isApp(t.subtrees(0)) match {
+      case Some((f, args)) => Some((f, args :+ t.subtrees(1)))
+      case _ => Some((t.subtrees(0), t.subtrees drop 1))
+    }
+    else None
+
+  // destructs application terms with a specific head    
+  def isAppOf(t: Term, f: Term): Option[List[Term]] =
+    isApp(t) collect { case (f0, args) if f0 == f => args }  
 }
 
 object TypedLambdaCalculus {
@@ -301,9 +312,9 @@ object TypedTerm {
   def replaceDescendant(term: Term, switch: (Term, Term))(implicit scope: Scope): Term = replaceDescendants(term, Some(switch))
 
   def replaceDescendants(term: Term, switch: Iterable[(Term, Term)])(implicit scope: Scope): Term = if (switch.isEmpty) term else
-    switch find (_._1 eq term) match {
+    switch find (_._1 eq term) match {  // TODO implicit Scope unneeded here?
       case Some(sw) => sw._2
-      case _ => preserveBoth(term, new Tree(term.root, term.subtrees map (replaceDescendants(_, switch))))
+      case _ => preserve(term, new Tree(term.root, term.subtrees map (replaceDescendants(_, switch))))
     }
   
   def preserve(term: Term, newterm: Term) = typeOf(term) match {

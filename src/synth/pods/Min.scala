@@ -46,12 +46,8 @@ object MinPod {
 
 object MinDistribPod {
   import Prelude.{min,cons,nil}
+  import ConsPod.`⟨ ⟩`
   
-  def `⟨ ⟩`(elements: List[Term]): Term = `⟨ ⟩`(elements:_*)
-    
-  def `⟨ ⟩`(elements: Term*) = 
-    (elements :\ nil)(cons :@ _ :@ _)
-    
   def apply(fs: List[Term]) = {
     (min :@ (/::(fs))) =:= (min :@ `⟨ ⟩`(fs map (min :@ _)))
   }
@@ -59,23 +55,8 @@ object MinDistribPod {
 
 object MinAssocPod {
   import Prelude.{min,cons,nil}
-  import MinDistribPod.`⟨ ⟩`
-  
-  def isApp(t: Term): Option[(Term, List[Term])] = 
-    if (t =~ ("@", 2)) isApp(t.subtrees(0)) match {
-      case Some((f, args)) => Some((f, args :+ t.subtrees(1)))
-      case _ => Some((t.subtrees(0), t.subtrees drop 1))
-    }
-    else None
-    
-  def isAppOf(t: Term, f: Term): Option[List[Term]] =
-    isApp(t) collect { case (f0, args) if f0 == f => args }
-  
-  def `⟨ ⟩?`(t: Term): Option[List[Term]] =
-    isAppOf(t, cons) match {
-      case Some(List(head, tail)) => `⟨ ⟩?`(tail) map (head +: _)
-      case _ => if (t == nil) Some(List()) else None
-    }
+  import ConsPod.{`⟨ ⟩`, `⟨ ⟩?`}
+  import semantics.LambdaCalculus.isAppOf
   
   def apply(fs: List[Term]) = {
     def flatten(t: Term): List[Term] = isAppOf(t, min) match {
@@ -92,7 +73,7 @@ object MinAssocPod {
 
 object SlashToReducePod {
   
-  import MinDistribPod.`⟨ ⟩`
+  import ConsPod.`⟨ ⟩`
   
   // Expect fs to be of scalar type (otherwise reduce(`⟨ ⟩`(fs)) does not type-check)
   

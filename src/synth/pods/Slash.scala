@@ -94,14 +94,14 @@ object LetPod {
   }
 }
 
+/*
 object StratifyReducePod {
   import Prelude.{ω,ℐ,?}
   import TypedLambdaCalculus.{pullOut,enclosure}
   import TypedTerm.replaceDescendant
 
   import Prelude.{min,cons,nil}
-  import MinDistribPod.`⟨ ⟩`
-  import  MinAssocPod.`⟨ ⟩?`
+  import ConsPod.{`⟨ ⟩`, `⟨ ⟩?`}
   
   def findContainingReduction(box: Term, components: List[Term]) =
     box.nodes find (n => n =~ ("@", 2) && n.subtrees(0).root != "cons" && (`⟨ ⟩?`(n.subtrees(1)) match {
@@ -132,3 +132,4 @@ object StratifyReducePod {
     ω(box) =:= θ ↦ ((θ /: strata)((x,y) => y :@ x))
   }
 }
+*/

@@ -8,6 +8,7 @@ import semantics.TypeTranslation.Declaration
 import semantics.TypeTranslation.Environment
 import semantics.TypeTranslation.Declaration
 import semantics.TypeTranslation.TypedIdentifier
+import synth.pods.ConsPod.`⟨ ⟩?`
 
 
 
@@ -393,7 +394,7 @@ object Paren {
                 for (B <- Rewrite(mindistkfs)(B)) {
                   val extrude = Extrude(Set(I("/"), cons.root))
                   // MinAssoc
-                  val minassockfs = SimplePattern(min :@ (* :- ?)) find B flatMap (_(*) |> MinAssocPod.`⟨ ⟩?`) map
+                  val minassockfs = SimplePattern(min :@ (* :- ?)) find B flatMap (_(*) |> `⟨ ⟩?`) map
                                     (MinAssocPod(_)) filter (x => x.subtrees(0) != x.subtrees(1)) map instapod
                   for (B <- Rewrite(minassockfs)(B)) {
                     val ex = extrude(B) |-- display
@@ -403,11 +404,13 @@ object Paren {
                     val letout = List(StratifyReducePod(ex :/ "🄱" subtrees 0, ex :/ "🄸"),
                                       StratifyReducePod(ex :/ "🄲" subtrees 0, ex :/ "🄽")) |>> instapod
                                       */
+                    /*
                     val strat = List(StratifyReducePod(ex :/ "🄱" subtrees 0, List(ex :/ "🄸", ex :/ "🄺")),
                                      StratifyReducePod(ex :/ "🄲" subtrees 0, List(ex :/ "🄽", ex :/ "🄿"))) map instapod
                     for (B <- Rewrite(strat)(B)) {
                       val ex = extrude(B) |-- display
                     }
+                    */
                   }
                 }
               }
