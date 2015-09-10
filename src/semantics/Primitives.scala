@@ -1,12 +1,13 @@
 package semantics
 
+import report.data.SerializationContainer
 import syntax.Identifier
 import syntax.Tree
 import syntax.AstSugar
+import syntax.Scheme
 import TypeTranslation.{MicroCode,In,Out,Check}
 import TypeTranslation.InOut
 import TypeTranslation.{emit,simplify,canonical}
-import semantics.TypeTranslation.TypedIdentifier
 import AstSugar.Term
 import report.console.NestedListTextFormat
 import syntax.transform.TreeSubstitution
@@ -285,9 +286,22 @@ object `package` {
   }
 }
 
+case class TypedIdentifier(symbol: Identifier, val typ: Term)
+  extends Identifier(symbol.literal, symbol.kind, symbol.ns) {
+  import AstSugar._
+  override def toString = s"${super.toString} :: $typ"
+  def toPretty = s"${super.toString} :: ${typ.toPretty}"
+  def untype = new Identifier(symbol.literal, symbol.kind, symbol.ns)
+
+  override def asJson(container: SerializationContainer) =
+    super.asJson(container).append("type", typ.asJson(container))
+}
+
 case class TypedTerm(term: Term, val typ: Term)
   extends AstSugar.Term(term.root, term.subtrees) {
   override def toString = s"${super.toString} :: $typ"
+  override def asJson(container: SerializationContainer) =
+    super.asJson(container).append("type", typ.asJson(container))
   def untype = term.untype
 }
   
@@ -313,7 +327,7 @@ object TypedTerm {
 
   def replaceDescendants(term: Term, switch: Iterable[(Term, Term)])(implicit scope: Scope): Term = if (switch.isEmpty) term else
     switch find (_._1 eq term) match {  // TODO implicit Scope unneeded here?
-      case Some(sw) => sw._2
+      case Some(sw) => preserveBoth(term, sw._2)
       case _ => preserve(term, new Tree(term.root, term.subtrees map (replaceDescendants(_, switch))))
     }
   
@@ -330,6 +344,35 @@ object TypedTerm {
   }
   
 }
+
+
+object TypedScheme {
+  import AstSugar._
+  
+  class Template(vars: List[Identifier], template: Term) extends Scheme.Template(vars, template) {
+    override def apply(args: Term*): Term = {
+      val subst = new TypedSubstitution(vars map (T(_)) zip args)
+      subst(template)
+    }
+  }
+
+  class TermWithHole(template: Term) extends TypedScheme.Template(List(TermWithHole.hole.leaf), template) {
+  
+    val hole = template.nodes find (_ == TermWithHole.hole) get
+    
+    def x̅ = TypedLambdaCalculus.enclosure(template, hole) get
+  }
+  
+  
+  object TermWithHole {
+    import AstSugar._
+    val hole = TI("□")
+    
+    def puncture(term: Term, subterm: Term)(implicit scope: Scope) =
+      new TermWithHole(TypedTerm.replaceDescendant(term, (subterm, hole)))
+  }
+}
+
 
 class TypedSubstitution(substitutions: List[(Term, Term)]) extends TreeSubstitution[Identifier](substitutions) {
   override def preserve(old: Term, new_ : Term) = TypedTerm.preserve(old, new_)

@@ -4,7 +4,7 @@ import syntax.Identifier
 import syntax.Tree
 import semantics.TypeInference.ConservativeResolve
 import semantics.TypeTranslation.Declaration
-import semantics.TypeTranslation.TypedIdentifier
+import semantics.TypedIdentifier
 import semantics.Scope.TypingException
 import semantics.TypeTranslation.Environment
 import semantics.Scope.TypingException

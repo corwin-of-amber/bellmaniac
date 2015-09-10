@@ -1,20 +1,17 @@
 package examples
 
+import report.data.{Rich, DisplayContainer, SerializationContainer}
 import syntax.AstSugar._
-import semantics.Prelude._
-import synth.pods.Pod
-import synth.pods.ConsPod.{`⟨ ⟩`, `⟨ ⟩?`}
-import semantics.Scope
-import semantics.TypeTranslation.Environment
 import syntax.transform.Extrude
-import synth.pods.SlashDistribPod
-import synth.pods.SlashToReducePod
-import synth.pods.StratifyFixPod
-import semantics.TypedLambdaCalculus
-import synth.pods.StratifySlashPod
-import synth.pods.StratifyReducePod
-import synth.pods.TermWithHole
-import semantics.Trench
+
+import semantics.Prelude._
+import semantics.{TypeTranslation, Scope, TypedLambdaCalculus, Trench}
+import semantics.TypeTranslation.Environment
+import semantics.TypedScheme.TermWithHole
+
+import synth.pods._
+import synth.pods.ConsPod.{`⟨ ⟩`, `⟨ ⟩?`}
+
 import report.FileLog
 
 
@@ -38,8 +35,8 @@ object Gap {
   val _1 = TI(1)
   
   val program = TI("program")(
-      w :: ((K x K) ∩ <) -> R,
-      `w'` :: ((J x J) ∩ <) -> R,
+      w :: ((K x K) /*∩ <*/) -> R,
+      `w'` :: ((J x J) /*∩ <*/) -> R,
       S :: (J x K) -> R
     )
     
@@ -75,75 +72,97 @@ object Gap {
             `⟨ ⟩`(
               ψ:@(i,j),
               (θ:@(i-_1, j-_1)) + (S:@(i,j)),
-              min :@ (q ↦ ((θ:@(i,q)) + (w:@(q,j)))),
-              min :@ (p ↦ ((θ:@(p,j)) + (w:@(p,i))))
+              min :@ (q ↦ ((θ:@(i,q)) + (w:@(q,j))))
             )
           )) :: ((J x K0) -> ?) -> ((J x K1) -> ?)
         ))
       )
   }
   
+  object BPod {
+    def apply(J: Term, K0: Term, K1: Term) = new BPod(J, K0, K1)
+  }
+
+
+  implicit val env = {
+    import semantics.Domains._
+    val scope = new Scope
+    scope.sorts.declare(R)
+    scope.sorts.declare(N)
+    scope.sorts.declare(J)
+    scope.sorts.declare(K)
+
+    scope.sorts.declare(J0 :<: J)
+    scope.sorts.declare(J1 :<: J)
+    scope.sorts.declare(K0 :<: K)
+    scope.sorts.declare(K1 :<: K)
+
+    TypeTranslation.subsorts(scope) where
+      (compl(J)(J0, J1), compl(K)(K0, K1))
+  }
+
   def main(args: Array[String]) = BreakDown.main(args)
 
   
   object BreakDown {
     
     def main(args: Array[String]): Unit = {
-      import semantics.Domains._
-      implicit val scope = new Scope
-      scope.sorts.declare(R)
-      scope.sorts.declare(N)
-      scope.sorts.declare(J)
-      scope.sorts.declare(K)
-
-      scope.sorts.declare(J0 :<: J)
-      scope.sorts.declare(J1 :<: J)
-      scope.sorts.declare(K0 :<: K)
-      scope.sorts.declare(K1 :<: K)
-      
-      implicit val env = new Environment(scope, Map())
-      
+      implicit val scope = env.scope
       rewriteA
     }
     
     import syntax.transform.Extrude
     import semantics.pattern.SimplePattern 
-    import synth.tactics.Rewrite.{Rewrite,instantiate,display}
+    import synth.tactics.Rewrite.{Rewrite,instantiate}
     import synth.pods.{SlicePod,StratifyPod,StratifyReducePod,MinDistribPod,MinAssocPod}
     import semantics.TypedLambdaCalculus.{simplify,pullOut}
     import syntax.Piping._
+    import report.console.Console.display
 
     def instapod(it: Term)(implicit scope: Scope) = instantiate(it)._2
-    def instapod(it: Pod)(implicit scope: Scope) = instantiate(it.program)._2
+    def instapod(it: Pod)(implicit scope: Scope) = new Instantiated(it) // instantiate(it.program)._2
+//    def instapod[A <: Pod](it: A)(implicit scope: Scope) = new Instantiated[A](it) // instantiate(it.program)._2
+
+    class Instantiated[RawPod <: Pod](val it: RawPod)(implicit scope: Scope) extends Pod {
+      override val program = instantiate(it.program)._2
+      override val obligations = instantiate(it.obligations)._2
+    }
+
     val * = TI("*")
     val j = TV("j")
     val p = TV("p")
     val q = TV("q")
     
     def rewriteA(implicit env: Environment, scope: Scope) {
-      val f = new FileLog(new java.io.File("/tmp/bell.json"))
+      val f = new FileLog(new java.io.File("/tmp/bell.json"), new DisplayContainer)
       val extrude = new Extrude(Set(I("/"), cons.root))
 
       def fixer(A: Term, q: Term) = SimplePattern(fix(?)) find A map (_.subterm) filter (_.hasDescendant(q)) head
       def fixee(A: Term, q: Term) = fixer(A, q).subtrees(0)
       def ctx(A: Term, t: Term) = TypedLambdaCalculus.enclosure(A, t).get map (x => (x.leaf.literal, x)) toMap
-      
+
       val A = instantiate(APod(J, K).program, instantiate(program)._1)._2
       val ex = extrude(A) |-- display
+      f += Rich.displayRich(ex.terms)
+      //return
       // Slice  f  [ J₀, J₁ ] x [ K₀, K₁ ]
       val slicef = SlicePod(A :/ "f" subtrees 1, List(J0 x K0, J0 x K1, J1 x K0, J1 x K1) map (? x _)) |> instapod
+      f += slicef.obligations
       for (A <- Rewrite(slicef)(A)) {
         val ex = extrude(A) |-- display
+        f += Rich.displayRich(List(ex.terms))
+        //return
         // Stratify  🄰
-        val strat = StratifySlashPod(fixee(A, ex :/ "🄰"), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ")).program  |> instapod
+        val strat = StratifySlashPod(fixee(A, ex :/ "🄰"), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))  |> instapod
         for (A <- Rewrite(strat)(A)) {
           val ex = extrude(A) |-- display
+          f += Rich.displayRich(List(ex.terms))
           // Stratify  🄰
-          val strat = StratifySlashPod(fixee(A, ex :/ "🄰"), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ")).program  |> instapod
+          val strat = StratifySlashPod(fixee(A, ex :/ "🄰"), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))  |> instapod
           for (A <- Rewrite(strat)(A)) {
             val ex = extrude(A) |-- display
             // Stratify  🄰
-            val strat = StratifySlashPod(fixee(A, ex :/ "🄰"), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ")).program  |> instapod
+            val strat = StratifySlashPod(fixee(A, ex :/ "🄰"), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))  |> instapod
             for (A <- Rewrite(strat)(A)) {
               val ex = extrude(A) |-- display
               // Slice  🄰 ... q ↦ ?  [ K₀, K₁ ]
@@ -186,10 +205,9 @@ object Gap {
                         def stratduce(A: Term, `.` : Term, subelements: List[Term]) =
                           SimplePattern(min:@(* :- ?)) find `.` flatMap (x => `⟨ ⟩?`(x(*)) map (elements => 
                             StratifyReducePod(TermWithHole.puncture(fixee(A,`.`), x.subterm), min, elements, subelements, ctx(A, `.`)("ψ"))))
-                        val strata = stratduce(A, ex :/ "🄰", List("🄴", "🄵") map (ex :/ _))
-                        val stratb = stratduce(A, ex :/ "🄱", List("🄽", "🄾", "🅁") map (ex :/ _))
-                        val stratc = stratduce(A, ex :/ "🄲", List("🅃", "🅄", "🅆") map (ex :/ _))
-                        val strat = (strata ++ stratb ++ stratc) |>> instapod
+                        val strat = stratduce(A, ex :/ "🄰", List("🄴", "🄵") map (ex :/ _)) ++
+                                    stratduce(A, ex :/ "🄱", List("🄽", "🄾", "🅁") map (ex :/ _)) ++
+                                    stratduce(A, ex :/ "🄲", List("🅃", "🅄", "🅆") map (ex :/ _)) |>> instapod
                         for (A <- Rewrite(strat)(A)) {
                           val ex = extrude(A) |-- display
                           // Stratify  🄷, 🄸, 🄽  in  🄰
@@ -200,7 +218,14 @@ object Gap {
                             val strat = stratduce(A, ex :/ "🄰", List("🄸", "🄹", "🄻") map (ex :/ _)) |>> instapod
                             for (A <- Rewrite(strat)(A)) {
                               val ex = extrude(A) |-- display
-                              f += Trench.displayRich(new Trench[Term](List(ex.terms)))
+                              // Synth  fix(... 🄰 ...)
+                              import SlicePod.slices
+                              val synth = (SimplePattern(fix(* :- /::(`...`))) find fixer(A, ex :/ "🄸")) |>>
+                                           (x => SynthSlashPod(slices(x(*)), slices(x(*)))) |>> instapod
+                              for (A <- Rewrite(synth)(A)) {
+                                val ex = extrude(A) |-- display
+                                f += Trench.displayRich(new Trench[Term](List(ex.terms)))
+                              }
                             }
                           }
                         }

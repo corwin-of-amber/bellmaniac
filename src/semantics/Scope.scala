@@ -3,7 +3,6 @@ package semantics
 
 import syntax.{Tree, Identifier, AstSugar}
 import syntax.transform.TreeSubstitution
-import semantics.TypeTranslation.TypedIdentifier
 import semantics.TypeTranslation.Declaration
 
 

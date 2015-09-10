@@ -7,7 +7,7 @@ import semantics.FunctionType
 import semantics.TypedTerm
 import semantics.TypeTranslation
 import semantics.TypeTranslation.Environment
-import semantics.TypeTranslation.TypedIdentifier
+import semantics.TypedIdentifier
 import semantics.Reflection
 import semantics.TypePrimitives
 import semantics.TypeTranslation.TypingSugar._

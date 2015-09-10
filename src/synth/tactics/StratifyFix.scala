@@ -1,36 +1,17 @@
 package synth.tactics
 
-import syntax.Identifier
-import syntax.AstSugar._
-import semantics.Scope
-import semantics.FunctionType
-import semantics.TypedTerm
-import semantics.TypeTranslation
-import semantics.TypeTranslation.Environment
-import semantics.TypeTranslation.TypedIdentifier
-import semantics.Reflection
-import semantics.TypePrimitives
-import semantics.TypeTranslation.TypingSugar._
-import semantics.TypedLambdaCalculus
-import semantics.TypeInference
-import syntax.Strip
 import semantics.TypeTranslation.Declaration
+import semantics.pattern.`package`.Superposition
+import semantics.pattern.{Contextual, SimpleTypedPattern, MacroMap, SimplePattern}
+import syntax.AstSugar._
+import semantics._
+import semantics.TypeTranslation.TypingSugar._
+import synth.pods.ConsPod._
 import synth.proof.Prover
-import synth.pods.TotalOrderPod
-import synth.pods.Pod
-import semantics.TypedSubstitution
-import semantics.Prelude
-import synth.pods.NilPod
-import synth.pods.ConsPod
-import synth.pods.MinPod
-import synth.pods.NatPod
-import semantics.ProgressiveTypedSubstitution
-import semantics.Reflection.Consolidated
-import semantics.Binding
-import semantics.LambdaCalculus
+import synth.pods._
 import syntax.transform.Extrude
 import synth.proof.Assistant
-import semantics.Trench
+import report.console.Console
 
 
 
@@ -47,26 +28,7 @@ object StratifyFix {
   //def pair(x: Term, y: Term) = cons:@(x, cons:@(y, nil))
   //def triple(x: Term, y: Term, z: Term) = cons:@(x, cons:@(y, cons:@(z, nil)))
   //def tuple(x: Term, y: Term, z: Term, w: Term) = cons:@(x, cons:@(y, cons:@(z, cons:@(w, nil))))
-  
-  def tuple(x: Term, y: Term) = {
-    import NatPod.{_0,_1}
-    val ι = $TyTV("ι", N)
-    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1))
-  }
-  
-  def tuple(x: Term, y: Term, z: Term) = {
-    import NatPod.{_0,_1,_2}
-    val ι = $TyTV("ι", N)
-    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1), z |! (ι =:=  _2))
-  }
-  
-  def tuple(x: Term, y: Term, z: Term, w: Term) = {
-    import NatPod.{_0,_1,_2,_3}
-    val ι = $TyTV("ι", N)
-    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1), z |! (ι =:=  _2), w |! (ι =:=  _3))
-  }
-  
-  def pair(x: Term, y: Term) = tuple(x,y)
+
 
   
   class SpecPod(val J: Term) {
@@ -104,7 +66,7 @@ object StratifyFix {
           θ :: ((J x J) ∩ <) ->: R , i :: J , j :: J ,
   
           min:@
-            pair(ψ:@(i, j),
+            `⟨ ⟩`(ψ:@(i, j),
                 min:@ 
                 (k ↦
                   ( ((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i,k,j))) -: TV("item") )
@@ -151,7 +113,7 @@ object StratifyFix {
     }
     
     object SpecPod {
-      import examples.Paren.{<,J,f,succ,pred}
+      import examples.Paren.{<,J,f,_0,_1}
       import InputPod.{wv,wh}
       
       val θ = $TV("θ")
@@ -159,23 +121,22 @@ object StratifyFix {
       val j = $TV("j")
       val p = $TV("p")
       val q = $TV("q")
-      val _0J = TV("0.J")
+      //val _0J = TV("0.J")
       
       val program = TI("program")(
-          _0J :: J,
+        //  _0J :: J,
         fix(
           ((θ :: ((J x J) -> R)) ↦ (i ↦ (j ↦ (
-              ( (wh:@(_0J,j)) |! (i=:=_0J) ) /:
+              ( (wh:@(_0,j)) |! (i=:=TypedTerm(_0,J)) ) /:
               ((
-              min:@ tuple(
+              min:@ `⟨ ⟩`(
                   //min:@(p ↦ (min:@(q ↦ ((θ:@(p,q)) |! (succ(p,i) & succ(q,j)))))),
-                  θ:@(pred:@i,pred:@j) |! (succ(pred(i), i) & (succ(pred(j),j))),
-                  //θ:@(pred:@i |! <(pred(i), i),pred:@j |! <(pred(j),j)), // |! (succ(pred(i), i) & (succ(pred(j),j))),
+                  θ:@(i - _1, j - _1),
                   //min:@(p ↦ ((θ:@(p,j)) |! (<(p,i)))),
                   min:@(p ↦ ((θ:@(p,j)) + (wv:@(p,i)))),
                   //min:@(q ↦ ((θ:@(i,q)) |! (<(q,j))))
                   min:@(q ↦ ((θ:@(i,q)) + (wh:@(q,j))))
-                  )) |! (<(_0J, i))
+                  )) |! (<(TypedTerm(_0,J), i))
               )
           )))) -: f
         )
@@ -183,7 +144,7 @@ object StratifyFix {
     }
     
     class APod(val J: Term) {
-      import examples.Paren.{<,f,succ,pred}
+      import examples.Paren.{<,f,_1}
 
       import InputPod.{wv,wh}
       
@@ -197,11 +158,10 @@ object StratifyFix {
       val program = TI("program")(
         (ψ :: ((J x J) -> R)) ↦ fix(
           ((θ :: ((J x J) -> R)) ↦ (i ↦ (j ↦ (
-              min:@ tuple(
+              min:@ `⟨ ⟩`(
                   ψ:@(i,j),
                   //min:@(p ↦ (min:@(q ↦ ((θ:@(p,q)) |! (succ(p,i) & succ(q,j)))))),
-                  θ:@(pred:@i,pred:@j) |! (succ(pred(i), i) & (succ(pred(j),j))),
-                  //θ:@(pred:@i |! <(pred(i), i),pred:@j |! <(pred(j),j)), // |! (succ(pred(i), i) & (succ(pred(j),j))),
+                  θ:@(i - _1, j - _1),
                   //min:@(p ↦ ((θ:@(p,j)) |! (<(p,i)))),
                   min:@(p ↦ ((θ:@(p,j)) + (wv:@(p,i)))),
                   //min:@(q ↦ ((θ:@(i,q)) |! (<(q,j))))
@@ -219,7 +179,6 @@ object StratifyFix {
 
     import examples.Paren
     import examples.Paren._
-    import Shrink.{InputPod}
     import semantics.Binding.{inline,prebind}
             
     val prenv = Paren.env
@@ -272,7 +231,7 @@ object StratifyFix {
     
     val a = new Assistant
        
-    import NatPod._0
+    //import NatPod._0
         /*
     val assumptions = List(((A0.program :-/ "f") :@ (ψ, θ)) =:= θ,
                            (B_f :@ (ψ :: ((? x J1) -> ?)/* /::(θ :: ((J0 x J0) -> ?), ψ :: ((? x J1) -> ?))*/, ζ) ) =:= ζ) map a.compile
@@ -324,7 +283,7 @@ object StratifyFix {
     object GapObligations {
     val phase0  = θ ↦ quadrants(GA_f :@ (ψ,θ), ψ, ψ, ψ)
     val phase0i = θ  ↦ nw(θ)
-    val phase1  = ψ ↦ (θ ↦ (quadrants(ψ, GA_f :@ (ψ,θ), GA_f :@ (ψ,θ), GA_f :@ (ψ,θ))))
+    val phase1  = ψ ↦ (θ ↦ quadrants(ψ, GA_f :@ (ψ,θ), GA_f :@ (ψ,θ), GA_f :@ (ψ,θ)))
     
     val phase2  = θ ↦ quadrants(ψ, GA_f :@ (ψ,θ), ψ, ψ)
     val phase2i = θ ↦ north(θ)
@@ -339,33 +298,34 @@ object StratifyFix {
     
     import GapFix.InputPod.{wv,wh}
     import GA.{p,q}
+    import ConsPod.`⟨ ⟩`
     import Paren.<
     val phase2let = 
       ((θ :: ((J x J) -> R)) ↦ quadrants(ψ, i ↦ (j ↦ (
-              min:@ tuple(
-                  min:@tuple(
+              min:@ `⟨ ⟩`(
+                  min:@`⟨ ⟩`(
                     ψ:@(i,j),
-                    θ:@(pred:@i,pred:@j) |! J0(j) & (succ(pred(i), i) & (succ(pred(j),j))),
+                    θ:@(i - _1, (j - _1) :: J0),
                     min:@((q::J0) ↦ ((θ:@(i,q)) + (wh:@(q,j))))
                   ),
-                  θ:@(pred:@i,pred:@j) |! J1(j) & (succ(pred(i), i) & (succ(pred(j),j))),
+                  θ:@(i - _1, (j - _1) :: J1),
                   min:@(p ↦ ((θ:@(p,j)) + (wv:@(p,i)))),
                   min:@((q::J1) ↦ ((θ:@(i,q)) + (wh:@(q,j))))
               ))), ψ, ψ))
     
     val phase2_0 = θ ↦ quadrants(ψ,
       (i ↦ (j ↦ (
-                min:@tuple(
+                min:@`⟨ ⟩`(
                   ψ:@(i,j),
-                  θ:@(pred:@i,pred:@j) |! J0(j) & (succ(pred(i), i) & (succ(pred(j),j))),
+                  θ:@(i - _1, (j - _1) :: J0),
                   min:@((q::J0) ↦ ((θ:@(i,q)) + (wh:@(q,j))))
                 )
               ))), ψ, ψ)
     val phase2_1 = ψ ↦ (θ ↦ quadrants(ψ, 
        (i ↦ (j ↦ (
-              min:@ tuple(
+              min:@ `⟨ ⟩`(
                   ψ:@(i,j),
-                  θ:@(pred:@i,pred:@j) |! J1(j) & (succ(pred(i), i) & (succ(pred(j),j))),
+                  θ:@(i - _1, (j - _1) :: J1),
                   min:@(p ↦ ((θ:@(p,j)) + (wv:@(p,i)))),
                   min:@((q::J1) ↦ ((θ:@(i,q)) + (wh:@(q,j))))
               )
@@ -389,33 +349,30 @@ object StratifyFix {
         (phase6_2alt._2 :@ (phase6_2alt._1 :@ θ, θ)) =:= (phase6_1alt._2 :@ (ψ,θ)),  sw(phase6_0alt._2:@(ζ,θ)) =:= sw(ζ)
         )
         
-    import gspec._0J
-    val h1 = (i ↦ (j ↦ ((wh:@(_0J,j)) |! (i=:=_0J))))
+    //import gspec._0J
+    val h1 = (i ↦ (j ↦ ((wh:@(_0,j)) |! (i=:=TypedTerm(_0,J)))))
     val synthassume = List( (gspec_f :@ θ) =:= θ )
     val synthgoals = List( (GA_f:@(h1, θ)) =:= θ )
       //List( ((gspec_f :@ θ ) :@ (i,j)) =:= ((GA_f:@ (h1, (i ↦ (j ↦ (((wh:@(_0J,j)) |! (i=:=_0J)) /: ((θ:@(i,j)) |! (<(_0J,i)))))) )) :@ (i,j)) )
     }
     
     import GapFix.InputPod.wh
-    import gspec._0J
+    //import gspec._0J
     
-    val assumptions = /*GapObligations.synthassume ++ ParenObligations.synthassume ++*/ List(↓(NatPod._0) & ↓(NatPod._1) & ↓(NatPod._2) & ↓(NatPod._3) & ~(NatPod._0 =:= NatPod._1)
-        & ~(NatPod._0 =:= NatPod._2) & ~(NatPod._1 =:= NatPod._2)
-        & ~(NatPod._0 =:= NatPod._3) & ~(NatPod._1 =:= NatPod._3) & ~(NatPod._2 =:= NatPod._3),
-        //∀:(R, (x,y,z) => (~ <(x,y)) ->: (~ <(y,z)) ->: (~ <(x,z))),
-        ∀:(J, x => ~ Paren.<(x,_0J)), ↓(_0J),
-        //∀:( J, (x,y) => ↓(pred:@(x)) -> Paren.<(pred:@(x), x) ),
-        ∀:(J, (x,y) => Paren.<(x,y) -> ↓(wh:@(x,y))),
-        ∀:(J, (x,y,z) => (Paren.<(x,y)) ->: (Paren.<(y,z)) ->: (~ <((wh:@(x,y)) + (wh:@(y,z)), wh:@(x,z))) ),
-        ∀:(J, (x,y) => ~(↓(⊥ :@(x,y))))) map a.compile
+    val assumptions = /*GapObligations.synthassume ++ ParenObligations.synthassume ++*/ List(
+        ∀:(J, (x,y,z) => ↓(wh:@(x,y)) ->: ↓(wh:@(y,z)) ->: (↓(wh:@(x,z)) & (~ <((wh:@(x,y)) + (wh:@(y,z)), wh:@(x,z)))) ),
+        ∀:(J, (x,y) => ~ ↓(⊥ :@(x, y)))) map a.compile
+    //noinspection ScalaUnnecessaryParentheses
     val goals = (
-        ParenObligations.goals //++  // (requires ParenObligations.synthassume)
-        //ParenObligations.synthgoals
-        //GapObligations.goals //++  // (requires GapObligations.synthassume)
-        //GapObligations.synthgoals
+        ParenObligations.goals ++
+        //ParenObligations.synthgoals   // (requires ParenObligations.synthassume)
+        GapObligations.goals ++
+        GapObligations.sgoals // ++
+        //GapObligations.synthgoals  // (requires GapObligations.synthassume)
     ) map a.compile map a.intros
     
-    
+
+    /*
     def m(k: Term, e: Term) = min:@(k ↦ e)
     def m2(x: Term, y: Term) = min:@pair(x,y)
     def ij(r: Term) = (i ↦ (j ↦ r))
@@ -427,18 +384,19 @@ object StratifyFix {
                    west(   /::(west(ij(m2(ψ:@(i,j), e))), east(ψ))   ))
     val rhs = ij(m2(ψ:@(i,j), e))
     //val goals = List( lhs =:= rhs ) map a.compile map a.intros
-    
-    
+    */
+
+
     /*
     val assumptions = List() map a.compile
     val goals = List( (/::(ψ :: ((J0 x J0) -> R), (i ↦ (j ↦ r)) :: ((? x J1) -> R)):: ((? x J0) -> R)) =:= (ψ :: ((J0 x J0) -> R)) ) map a.compile map a.intros
     */
     {
-    val p = new Prover(List(/*NatPod,*/ toR, minJR, minNR, consR, nilNR))
+    val p = new Prover(List(NatPod, toR, minJR, minNR, nilNR, new IndexArithPod(J, Paren.<, succ), TuplePod))
     
     val extrude = Extrude(Set(I("/"), cons.root))
 
-    goals foreach (g => Rewrite.display(extrude(g)))
+    goals foreach (g => Console.display(extrude(g)))
     
     //goals foreach (Rewrite.display(_))
     

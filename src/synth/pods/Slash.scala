@@ -1,24 +1,41 @@
 package synth.pods
 
 import syntax.AstSugar._
+import semantics.TypeTranslation.TypingSugar._
 import semantics.Scope
 import semantics.Prelude
 import semantics.TypedTerm
 import semantics.TypedLambdaCalculus
 import syntax.Identifier
 import synth.pods.Pod.TacticalError
-import synth.pods.Pod.TacticalError
 
 
+
+class SlicePod(val f: Term, val subdomains: List[Term]) extends Pod {
+  import Prelude.?
+
+  val slices = subdomains map (_ -> ?)
+  override val program =
+    f =:= /::(slices map (f :: _))
+
+  override val obligations = {
+    val fabs = $TyTV("f", TypedTerm.typeOf_!(f))
+    fabs =:= /::(slices map (fabs :: _))
+  }
+
+}
 
 object SlicePod {
   import Prelude.?
   
-  def apply(f: Term, subdomains: List[Term])(implicit scope: Scope) = {
-    val slices = subdomains map (_ -> ?)
-    f =:= /::(slices map (f :: _) toList)
-  }
-  
+  def apply(f: Term, subdomains: List[Term]) = new SlicePod(f, subdomains)
+
+  def splitSkip(term: Term, sep: Identifier): List[Term] =
+    if (term =~ (":", 2)) splitSkip(term.subtrees(1), sep)
+    else if (term.root == sep) term.subtrees flatMap (splitSkip(_, sep))
+    else List(term)
+
+  def slices(term: Term) = splitSkip(term, I("/"))
 }
 
 
@@ -36,7 +53,8 @@ object SlashDistribPod {
 object StratifyPod {
   import Prelude.{ω,ℐ,?}
   import TypedTerm.{replaceDescendant,replaceDescendants}
-  
+  import SlicePod.splitSkip
+
   /*
    * TODO obligations
    * q, g monotonic
@@ -49,17 +67,12 @@ object StratifyPod {
       val θ = $TV("θ")
       val q = /::(quadrant +: (sideburns map (__ => ℐ :: (__ -> ?))))
       val g = replaceDescendant(box, (quadrant, ℐ))
-      val strata = List(replaceDescendants(box, (quadrants filter (_ ne quadrant) map ((_, ℐ))) :+ (quadrant, ω(q))),
-                        ω(g))
-      ω(box) =:= θ ↦ ((θ /: strata)((x,y) => y :@ x))
+      val strata = List(replaceDescendants(box, (quadrants filter (_ ne quadrant) map ((_, ℐ))) :+(quadrant, ω(q))),
+        ω(g))
+      ω(box) =:= θ ↦ ((θ /: strata)((x, y) => y :@ x))
     }
     else throw new Pod.TacticalError(s"'${quadrant toPretty}' is not a component of '${box toPretty}'")
   }
-  
-  def splitSkip(term: Term, sep: Identifier): List[Term] = 
-    if (term =~ (":", 2)) splitSkip(term.subtrees(1), sep)
-    else if (term.root == sep) term.subtrees flatMap (splitSkip(_, sep))
-    else List(term)
 }
 
 

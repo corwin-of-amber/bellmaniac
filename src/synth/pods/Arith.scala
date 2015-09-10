@@ -1,17 +1,17 @@
 package synth.pods
 
 import syntax.AstSugar._
-import semantics.Prelude
-import semantics.TypedTerm
+import semantics.{Scope, Prelude, TypedTerm}
 import semantics.TypeTranslation.TypingSugar._
 import semantics.TypeTranslation.Declaration
-import semantics.pattern.MacroMap
+import semantics.pattern.{SimpleTypedPattern, SimplePattern, MacroMap}
 
 
 trait Pod {
   val decl = new Declaration()
   val macros = MacroMap.empty
   val program = Prelude.program
+  val obligations = Prelude.program
 }
 
 object Pod {
@@ -34,7 +34,9 @@ object NatPod extends Pod {
   private val i = $TyTV("i", N)
   
   override val decl = new Declaration(_0, _1, z, nz, s, p) where List(
-      ↓(_0) & ↓(_1) & (TypedTerm(s :@ _0, N) =:= _1),
+      ↓(_0) & ↓(_1) & ↓(_2) & ↓(_3) &
+      ~(_0 =:= _1) & ~(_0 =:= _2) & ~(_1 =:= _2) & ~(_0 =:= _3) & ~(_1 =:= _3) & ~(_2 =:= _3),
+      (TypedTerm(s :@ _0, N) =:= _1),
       z <-> TypedTerm(i ↦ (i =:= _0), N -> B),
       nz <-> TypedTerm(i ↦ ~(z :@ i), N -> B),
       ∀:(N, i => (↓(s :@ i) -> ~(TypedTerm(s :@ i, N) =:= i) )),
@@ -68,4 +70,30 @@ class TotalOrderPod(domain: Term) extends Pod {
 
 object TotalOrderPod {
   def apply(domain: Term) = new TotalOrderPod(domain)
+}
+
+
+class IndexArithPod(J: Term, < : Term, succ: Term)(implicit scope: Scope) extends Pod {
+  import Prelude.↓
+
+  val _0 = TI(0)
+  val _1 = TI(1)
+
+  private val pred = $TyTV("-1", J -> J)
+  private val _0J = $TyTV("0.J", J)
+
+  private val X = TV("x")
+
+  val MINUSPAT = SimplePattern((X :- $TV("?")) - _1)
+  val ZEROPAT = SimpleTypedPattern(TypedTerm(_0, J))
+
+  override val macros = MacroMap(
+    I("-") -> { x => MINUSPAT(x) map (_(X)) map (x => (pred:@x) |! succ(pred(x),x)) },
+    _0 ~> { x => ZEROPAT(x) map (x => _0J)})
+
+  override val decl = new Declaration(_0J, pred) where List(
+    ↓(_0J),
+    ∀:( J, x => ~ <(x,_0J) ),
+    ∀:( J, (x,y,z) => succ(x,z) -> (<(x,z) & ~(<(x,y) & <(y,z))) )
+  )
 }

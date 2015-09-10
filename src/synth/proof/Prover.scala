@@ -19,9 +19,8 @@ import semantics.TypeTranslation.Declaration
 import semantics.FormulaTranslation
 import semantics.Prelude
 import synth.pods.Pod
-import semantics.TypeTranslation.TypedIdentifier
+import semantics.TypedIdentifier
 import semantics.TypedSubstitution
-import semantics.Reflection.Compound
 import semantics.Reflection.Compound
 import semantics.Trench
 
@@ -124,7 +123,7 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
       val terms1 = termlings map (_._2)
       
       val reflect = new Reflection(env1, typedecl ++ typedecls(locals))
-      reflect.currying ++= symbols filter (x => Reflection.isFuncType(env1.typeOf_!(x))) map 
+      reflect.currying ++= symbols filter (x => env1.typeOf(x) exists Reflection.isFuncType) map
                                           (symbol => (symbol, reflect.overload(symbol))) toMap
   
       for (variants <- reflect.currying.values)

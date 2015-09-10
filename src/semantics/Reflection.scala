@@ -2,7 +2,6 @@ package semantics
 
 import syntax.AstSugar
 import syntax.Identifier
-import TypeTranslation.TypedIdentifier
 import TypeTranslation.Environment
 import TypeTranslation.Declaration
 import Scope.TypingException

@@ -11,14 +11,7 @@ object TypeTranslation {
   
   import AstSugar._
   
-  case class TypedIdentifier(symbol: Identifier, val typ: Term) 
-    extends Identifier(symbol.literal, symbol.kind, symbol.ns) {
-    override def toString = s"${super.toString} :: $typ"
-    def toPretty = s"${super.toString} :: ${typ.toPretty}"
-    def untype = new Identifier(symbol.literal, symbol.kind, symbol.ns)
-  }
-  
-  case class Declaration(val symbols: List[TypedIdentifier], 
+  case class Declaration(val symbols: List[TypedIdentifier],
                          val precondition: List[Term],
                          val origin: Map[Identifier, Term]=Map.empty) {
     def this(symbols: Term*) =
@@ -383,7 +376,7 @@ object TypeTranslation {
 object TermTranslation {
   
   import AstSugar._
-  import TypeTranslation.{TypedIdentifier,Declaration}
+  import TypeTranslation.Declaration
   import TypeTranslation.Environment
   import TypeTranslation.TypingSugar._
   
@@ -539,7 +532,7 @@ object TermTranslation {
       def reapply(term: Term) = apply(term)
       if (term.isLeaf) {
         env typeOf term match {
-          case Some(typ) => (term, List())
+          case Some(typ) => (pushTypeDown(term), List())
           case _ => throw new Scope.TypingException(s"undeclared: '$term'")
         }
       }
@@ -630,7 +623,16 @@ object TermTranslation {
         TypedTerm.preserve(term, term.subtrees(1).subtrees(0))
       else
         term
-    
+
+    def pushTypeDown(term: Term) =
+      if (term.isLeaf)
+        (env.typeOf(term), env.typeOf(term.root)) match {
+          case (Some(typ), None) =>
+            TypedTerm(T(TypedIdentifier(term.root, typ)), typ)
+          case _ => term
+        }
+      else term
+
   }  
   
   /*

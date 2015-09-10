@@ -11,7 +11,7 @@ import com.mongodb.MongoClientOptions
 import com.mongodb.MongoTimeoutException
 import com.mongodb.DBObject
 import com.mongodb.BasicDBList
-import report.data.TapeString
+import report.data.{SerializationContainer, AsJson, TapeString}
 import syntax.Tree
 import com.mongodb.DB
 
@@ -32,7 +32,7 @@ class DevNull extends AppendLog {
   def +=(text: String) {}
 }
 
-class FileLog(val file: File) extends AppendLog {
+class FileLog(val file: File, val container: SerializationContainer=new SerializationContainer {}) extends AppendLog {
   val out = new FileWriter(file)
   val SEP = "\n\n"
   
@@ -49,6 +49,7 @@ class FileLog(val file: File) extends AppendLog {
   override def +=(any: Any) = any match {
     case json: DBObject => this += json
     case as: DisplayAsJson => this += as.displayAsJson
+    case as: AsJson => this += as.asJson(container)
     case _ => super.+=(any)
   }
 }
@@ -124,12 +125,12 @@ object ObjectList {
   def toJson[A](list: List[A]) = mkList(list map DisplayAsJson.toJson)
 }
 
-class ObjectVBox[A](val elements: List[A]) extends DisplayAsJson {
-  def displayAsJson = new BasicDBObject("vbox", ObjectList.toJson(elements))
+class ObjectVBox[A <: AnyRef](val elements: List[A]) extends AsJson {
+  def asJson(container: SerializationContainer) = new BasicDBObject("vbox", container.list(elements))
 }
 
-class ObjectTree[A](val tree: Tree[A]) extends DisplayAsJson {
-  def displayAsJson = new BasicDBObject("tree", ObjectTree.toJson(tree))
+class ObjectTree[A](val tree: Tree[A]) extends AsJson {
+  def asJson(container: SerializationContainer) = new BasicDBObject("tree", container.any(tree))
 }
 
 object ObjectTree {
@@ -138,9 +139,9 @@ object ObjectTree {
               .append("subtrees", ObjectList.mkList(tree.subtrees map toJson))
 }
 
-trait BulletDecorator extends DisplayAsJson {
+trait BulletDecorator extends AsJson {
   val ● : String = "•"
-  abstract override def displayAsJson = (super.displayAsJson match {
+  abstract override def asJson(container: SerializationContainer) = (super.asJson(container) match {
     case bobj: BasicDBObject => bobj
     case obj => new BasicDBObject("data", obj)
   }).append("bullet", ●)

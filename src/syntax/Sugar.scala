@@ -1,9 +1,9 @@
 
 package syntax
 
+import com.mongodb.{BasicDBList, DBObject}
 import report.data.TapeString
-import scala.collection.generic.CanBuildFrom
-import semantics.Prelude
+import semantics.{TypedTerm, Prelude}
 
 
 object AstSugar {
@@ -136,10 +136,8 @@ object Formula {
     override def format(term: AstSugar.Term) = {
       /**/ assume(term.subtrees.length == 2) /**/
       val List(fun, arg) = term.subtrees
-      if (fun =~ ("+", 0))
-        tape"${display(arg, if (isOp(arg, "+")) priority else 0, Assoc.Left)} +"
-      else if (fun =~ ("-", 0))
-        tape"${display(arg, if (isOp(arg, "-")) priority else 0, Assoc.Left)} -"
+      if (fun =~ ("+", 0) || fun =~ ("-", 0))
+        tape"${display(arg, if (isOp(arg, fun.leaf)) priority else 0, Assoc.Left)} ${fun.leaf}"
       else {
         val lst = splitOp(term, "cons")
         if (lst.length > 1 && lst.last =~ ("nil", 0))
@@ -166,7 +164,9 @@ object Formula {
       O(":", 1), O("::", 1), O("/", 1), O("|_", 1), O("|!", 1), O("∩", 1), O("x", 1)) ++ 
       Map("@" -> new AppOperator("", 1, Assoc.Left))
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
-  
+
+  class TermTag(val term: Term) extends AnyVal
+
   def display(symbol: Identifier): TapeString = 
     symbol.literal.toString //|-| symbol
   
@@ -181,7 +181,7 @@ object Formula {
         case Some(op) => 
           op.format(term)
         case None => 
-          if (term.isLeaf) display(term.root) |-| term
+          if (term.isLeaf) display(term.root) |-| new TermTag(term)
           else tape"${display(term.root)}(${term.subtrees map display mkTapeString ", "})"
       }
   
@@ -199,7 +199,23 @@ object Formula {
 
   def displayQuantifier(term: AstSugar.Term) =
     tape"${display(term.root)}${term.subtrees dropRight 1 map display mkTapeString " "} (${display(term.subtrees.last)})"
-  
+
+  // Perhaps this should not be here
+  def fromJson(json: DBObject): Term = {
+    def id(json: DBObject) = {
+      // TODO typed identifier, ns
+      new Identifier(json.get("literal"), json.get("kind").toString)
+    }
+    def term(any: AnyRef) = fromJson(any.asInstanceOf[DBObject])
+    import scala.collection.JavaConversions._
+    val root = id(json.get("root").asInstanceOf[DBObject])
+    val subs = json.get("subtrees").asInstanceOf[BasicDBList].toList map term
+    val tree = new Term(root, subs)
+    Some(json.get("type")) filter (_ != null) map term match {
+      case Some(typ) => TypedTerm(tree, typ)
+      case _ => tree
+    }
+  }
 }
 
 
@@ -229,5 +245,5 @@ object Strip {
   val boxedAbc = boxedAbcList orElse numeral
   val boxedAbcOverline = (boxedAbcList map (_ + "̅")) orElse numeral
   val boxedAbcUnderbar = (boxedAbcList map (_ + "̱")) orElse numeral
-  val boxedAbcThenUnderbar = (boxedAbcList ++ (boxedAbcList map (_ + "̱"))) orElse numeral
+  val boxedAbcThenUnderbar = (boxedAbcList ++ (boxedAbcList map (_ + "̲"))) orElse numeral
 }

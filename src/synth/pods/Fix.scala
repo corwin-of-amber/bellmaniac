@@ -6,9 +6,7 @@ import semantics.Prelude
 import semantics.Prelude._
 import semantics.TypedTerm
 import semantics.Scope
-import syntax.Scheme
-import semantics.TypedLambdaCalculus
-import semantics.TypedSubstitution
+import semantics.TypedScheme.TermWithHole
 
 
 
@@ -26,7 +24,7 @@ class StratifyFixPod(val h: Term, val f: Term, val g: Term) extends Pod {
   val θ = $TV("θ")
   val ζ = $TV("ζ")
     
-  val obligations = Prelude.program(
+  override val obligations = Prelude.program(
       (g:@(f:@θ, θ)) =:= (f:@θ),
       (f:@(g:@(ζ,θ))) =:= f:@ζ
     )
@@ -63,28 +61,6 @@ object StratifySlashPod {
 }
 
 
-object TypedScheme {
-  class Template(vars: List[Identifier], template: Term) extends Scheme.Template(vars, template) {
-    override def apply(args: Term*): Term = {
-      val subst = new TypedSubstitution(vars map (T(_)) zip args)
-      subst(template)
-    }
-  }
-}
-
-class TermWithHole(template: Term) extends TypedScheme.Template(List(TermWithHole.hole.leaf), template) {
-  import TermWithHole._
-  
-  def x̅ = TypedLambdaCalculus.enclosure(template, hole) get
-}
-
-object TermWithHole {
-  val hole = TI("□")
-  
-  def puncture(term: Term, subterm: Term)(implicit scope: Scope) =
-    new TermWithHole(TypedTerm.replaceDescendant(term, (subterm, hole)))
-}
-
 class StratifyReducePod(val e: TermWithHole, val reduce: Term, val elements: List[Term], val subelements: List[Term], val ψ: Term) extends Pod {
 
   import ConsPod.`⟨ ⟩`
@@ -102,4 +78,16 @@ class StratifyReducePod(val e: TermWithHole, val reduce: Term, val elements: Lis
 object StratifyReducePod {
   def apply(e: TermWithHole, reduce: Term, elements: List[Term], subelements: List[Term], ψ: Term) = 
     new StratifyReducePod(e, reduce, elements, subelements, ψ)
+}
+
+
+class SynthSlashPod(val h: List[Term], val f: List[Term]) extends Pod {
+
+  override val program =
+    fix(/::(h)) =:= /::(f map (fix(_)))
+
+}
+
+object SynthSlashPod {
+  def apply(h: List[Term], f: List[Term]) = new SynthSlashPod(h, f)
 }

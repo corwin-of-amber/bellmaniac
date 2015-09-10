@@ -17,15 +17,10 @@ import semantics.TypedLambdaCalculus
 import semantics.Reflection
 import semantics.pattern.ExactMatch
 import semantics.TypeTranslation.Declaration
-import synth.pods.StratifyPod
+import synth.pods._
 import syntax.transform.ExtrudedTerms
-import synth.pods.MinAssocPod
 import semantics.pattern.Matched
-import synth.pods.LetPod
-import synth.pods.StratifyLetPod
 import semantics.TypedTerm.typeOf_!
-import synth.pods.StratifyReducePod
-
 
 
 object Rewrite {
@@ -35,32 +30,6 @@ object Rewrite {
     val format = new NestedListTextFormat[Identifier]()()
     format.layOutAndAnnotate(term, (env.typeOf(_) map (_.toPretty)), (_.toPretty))
   }
-  
-  def display(xterm: Tree[Term]) {
-    val format = new NestedListTextFormat[String]()()
-    format.layOut(xterm map { x => TypedTerm.typeOf(x) match {
-      case Some(typ) => s"${annotateWithTypes(x) toPretty}      〔 ${typ toPretty} 〕"
-      case _ => x toPretty
-    }})
-  }
-  
-  def annotateWithTypes(term: Term, top: Boolean=true): Term = {
-    if (term =~ ("↦", 2)) {
-      val List(arg, body) = term.subtrees
-      val targ = if (top) arg else arg :: typeOf_!(arg)
-      T(term.root, List(targ, body) map (annotateWithTypes(_, top)))
-    }
-    else if (term =~ ("@", 2) && term.subtrees(0) =~ ("↦", 2))
-      T(term.root, List(annotateWithTypes(term.subtrees(0), false),
-          annotateWithTypes(term.subtrees(1), true)))
-    else {
-      val ttop = 
-        if (term =~ (":", 2)) top else false
-      T(term.root, term.subtrees map (annotateWithTypes(_, ttop)))
-    }
-  }
-  
-  def display(xterm: ExtrudedTerms) { display(xterm.terms) }
 
   import syntax.transform.Extrude
   import TypedLambdaCalculus.{pullOut,simplify}
@@ -90,6 +59,11 @@ object Rewrite {
       else throw new Exception(s"expected an equation of the form 'from = to', got '${equation toPretty}")
     }
   }
+
+  implicit class PodRewrite(x: Rewrite.type) {
+    def apply(pod: Pod) = Rewrite(pod.program.split(Prelude.program.root))
+    def apply(pods: Iterable[Pod]) = Rewrite(pods flatMap (_.program.split(Prelude.program.root)))
+  }
   
   
   
@@ -113,6 +87,12 @@ object Rewrite {
     println("-" * 60)
     TypeInference.infer(Binding.prebind(term), vassign)
   }
+
+  def instantiate(pod: Pod)(implicit scope: Scope)
+  : (Map[Identifier, Term], Term) = instantiate(pod.program)
+
+  def instantiate(pod: Pod, vassign: Map[Identifier, Term])(implicit scope: Scope)
+    : (Map[Identifier, Term], Term) = instantiate(pod.program, vassign)
     
   
   

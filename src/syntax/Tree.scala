@@ -1,8 +1,13 @@
 package syntax
 
+import com.mongodb.{BasicDBObject}
+import report.data.{Numerator, SerializationContainer, AsJson}
+
 import scala.util.hashing.Hashing
 
-class Tree[T] (val root: T, val subtrees: List[Tree[T]] = List()) {
+
+
+class Tree[T](val root: T, val subtrees: List[Tree[T]] = List()) extends AsJson {
   
   def isLeaf = subtrees.isEmpty
   def leaf = { assume(isLeaf); root }
@@ -74,9 +79,13 @@ class Tree[T] (val root: T, val subtrees: List[Tree[T]] = List()) {
       s"$root{$children}"
     }
   }
+
+  override def asJson(container: SerializationContainer) =
+    new BasicDBObject("$", "Tree") append ("root", container.any(root)) append
+      ("subtrees", container.list(subtrees))
 }
 
-class Identifier (val literal: Any, val kind: String = "?", val ns: AnyRef = null) {
+class Identifier (val literal: Any, val kind: String = "?", val ns: AnyRef = null) extends AsJson {
   override def toString() = literal.toString
   
   override def equals(other: Any) = other match {
@@ -91,4 +100,14 @@ class Identifier (val literal: Any, val kind: String = "?", val ns: AnyRef = nul
   override def hashCode = 0 
   // (literal, kind, ns).hashCode  
   //TODO: for some reason the commented version causes unification to run much slower??
+
+  override def asJson(container: SerializationContainer): BasicDBObject = {
+    val j = new BasicDBObject("$", "Identifier").append("literal", container.any(literal)).append("kind", kind)
+    if (ns != null)
+      container match {
+        case numerator: Numerator => j.append("ns", numerator --> ns)
+        case _ => j
+      }
+    else j
+  }
 }

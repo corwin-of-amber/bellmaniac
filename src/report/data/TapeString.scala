@@ -8,10 +8,9 @@ import com.mongodb.BasicDBList
 import collection.JavaConversions._
 
 
-class TapeString(val text: String, val markup: Map[(Int, Int), Any]=Map.empty) extends DisplayAsJson {
+class TapeString(val text: String, val markup: Map[(Int, Int), Any]=Map.empty) extends AsJson {
   import TapeString._
-  import DisplayAsJson.toJson
-  
+
   def +(that: TapeString) = TapeString(text + that.text, markup ++ shift(that.markup, text.length))
   def +:(that: TapeString) = that + this
   
@@ -19,9 +18,9 @@ class TapeString(val text: String, val markup: Map[(Int, Int), Any]=Map.empty) e
   
   override def toString = text
   
-  def displayAsJson: DBObject = {
+  def asJson(container: SerializationContainer): DBObject = {
     val markupList = new BasicDBList()
-    markupList.addAll(markup.toList sortBy (_._1._1) map (x => pair((pair(x._1), toJson(x._2)))))
+    markupList.addAll(markup.toList sortBy (_._1._1) map (x => pair((pair(x._1), container.any(x._2)))))
     new BasicDBObject("tape", new BasicDBObject("text", text).append("markup", markupList))
   }
   

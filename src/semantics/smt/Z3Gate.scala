@@ -8,8 +8,7 @@ import com.microsoft.z3.Sort
 import syntax.Identifier
 import syntax.AstSugar
 import com.microsoft.z3.FuncDecl
-import semantics.TypeTranslation.TypedIdentifier
-import semantics.TypeTranslation.TypedIdentifier
+import semantics.TypedIdentifier
 import com.microsoft.z3.BoolExpr
 import com.microsoft.z3.Z3Exception
 import scala.util.Either

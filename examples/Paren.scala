@@ -7,9 +7,9 @@ import semantics.Scope
 import semantics.TypeTranslation.Declaration
 import semantics.TypeTranslation.Environment
 import semantics.TypeTranslation.Declaration
-import semantics.TypeTranslation.TypedIdentifier
+import semantics.TypedIdentifier
 import synth.pods.ConsPod.`⟨ ⟩?`
-
+import synth.pods.Pod
 
 
 object Paren {
@@ -57,6 +57,7 @@ object Paren {
   def Q0 = TV("Q₀")
   
   def x = TV("x")
+  def _0 = TI(0)
   def _1 = TI(1)
   def succ = TV("+1")
   def pred = TV("-1")
@@ -305,11 +306,14 @@ object Paren {
     
     import syntax.transform.Extrude
     import semantics.pattern.SimplePattern 
-    import synth.tactics.Rewrite.{Rewrite,instantiate,display}
+    import synth.tactics.Rewrite.{Rewrite,instantiate}
     import synth.pods.{SlicePod,StratifyPod,StratifyReducePod,MinDistribPod,MinAssocPod}
     import semantics.TypedLambdaCalculus.{simplify,pullOut}
-    
-    
+    import report.console.Console.display
+
+    def instapod(it: Term)(implicit scope: Scope) = instantiate(it)._2
+    def instapod(it: Pod)(implicit scope: Scope) = instantiate(it)._2
+
     def rewriteA(implicit env: Environment, scope: Scope) {
       import Prelude.{?,ω}
       val (vassign, tA) = instantiate(APod(J).program)
@@ -317,7 +321,7 @@ object Paren {
       
       val extrude = Extrude(Set(I("/")))
       
-      display(A)
+      //display(A)
       
       val f = (A :/ "f").subtrees(1)
       val (_, slicef) = instantiate(SlicePod(f, List(J0 x J0, J0 x J1, J1 x J0, J1 x J1) map (? x _)))
@@ -353,9 +357,8 @@ object Paren {
       val B = tB
       
       val extrude = Extrude(Set(I("/")))
-      def instapod(it: Term) = instantiate(it)._2
-      
-      display(B)
+
+      //display(B)
       
       import syntax.Piping._
       
@@ -427,7 +430,7 @@ object Paren {
       val (vassign, tC) = instantiate(CPod(K0, K1, K2).program)
       val C = tC
       
-      display(C)
+      //display(C)
       
       println(s"C  ===  ${C toPretty}")
       

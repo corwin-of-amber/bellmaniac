@@ -2,7 +2,6 @@ package semantics
 
 import syntax.{Tree,Identifier,AstSugar}
 import Scope.TypingException
-import semantics.TypeTranslation.TypedIdentifier
 
 
 
