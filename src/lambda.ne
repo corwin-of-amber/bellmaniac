@@ -1,4 +1,12 @@
+###############################
+####### ROOT EXPRESSION #######
+###############################
+
 expression 	-> untypedExpression (_ colon _ type):? {% function(d) { if (d[1] === null) { return d[0]; } else { d[0].type = d[1][3]; return d[0]; } } %}
+
+###########################################
+####### LAMBDA CALCULUS EXPRESSIONS #######
+###########################################
 
 untypedExpression -> applicationExpression {% function(d) { return d[0];} %}
              | lambdaExpression {% function(d) {return d[0]; } %}
@@ -36,11 +44,13 @@ lambdaExpression -> lambda _ ( variable _ ):+ arrow _ expression  {%
 		return curry(d[2], d[5]);
 	} %}
 
-identifier      -> letter idrest {% function(d) {return d[0].concat(d[1]); } %}
-	| op {% function(d) {return d[0]; } %}
-
 variable -> identifier {% function(d) {return {$: "Identifier", kind: "variable", literal: d[0]}; } %}
+
 infixOperator -> backtick variable backtick {% function(d) {return d[1]; } %}
+
+################################
+####### TYPE EXPRESSIONS #######
+################################
 
 type -> type _ typeArrow _ rootType {% function(d) {return {$: "Tree", kind: "function", from: d[0], to: d[4]};} %}
 	| type _ typeOperator _ rootType {% function(d) {return {$: "Tree", kind: "operation", lhs: d[0], rhs: d[4], operator: d[2]}; } %}
@@ -53,22 +63,31 @@ rootType -> leftparen type rightparen {% function(d) {return d[2];} %}
 
 typeVariable -> letter {% function(d) {return {$: "Identifier", kind: "type", literal: d[0]}; } %}
 
-# SYMBOLS
+####################################
+####### TOKENS FOR TOKENIZER #######
+####################################
+
+identifier      -> letter idrest {% function(d) {return d[0].concat(d[1]); } %}
+	| op {% function(d) {return d[0]; } %}
+
+idrest -> letterOrDigit:* {% function(d) {return d[0].join(""); } %}
+		| letterOrDigit:* underscore op {% function(d) {return d[0].join("").concat("_").concat(d[2]);} %}
+
+letterOrDigit -> letter {% function(d) {return d[0]; } %} | digit {% function(d) {return d[0]; } %}
+
+## unicode ranges for letter regex taken from http://stackoverflow.com/questions/150033/regular-expression-to-match-non-english-characters
+letter -> [a-zA-Z$_\u00C0-\u1FFF\u2C00-\uD7FF] {% function(d) {return d[0]; } %}
+digit -> [0-9] {% function(d) {return d[0]; } %}
+
+op -> validStandaloneOpchars {% function(d) {return d[0]; } %}
+	| opchar opchar:+ {% function(d) { return d[0].join(""); } %}
+
+validStandaloneOpchars -> [!%&*+<>?^|~\\\-] {% function(d) {return d[0]; } %}
+opchar -> validStandaloneOpchars {% function(d) {return d[0]; } %} | [=#@\:] {% function(d) {return d[0]; } %}
 
 # _ represents optional whitespace; __ represents compulsory whitespace
 _ -> [\s]:*    {% function(d) {return null; } %}
 __ -> [\s]:+   {% function(d) {return null; } %}
-
-# excluding colon because we use it for type notation
-opchar -> [!%&#*+<=>?@^|~\\\-\/] {% function(d) {return d[0]; } %}
-op -> opchar:+ {% function(d) { return d[0].join(""); } %}
-
-## unicode ranges for letter regex taken from http://stackoverflow.com/questions/150033/regular-expression-to-match-non-english-characters
-letter -> [a-zA-Z\u0024\u005F\u00C0-\u1FFF\u2C00-\uD7FF] {% function(d) {return d[0]; } %}
-digit -> [0-9] {% function(d) {return d[0]; } %}
-letterOrDigit -> letter {% function(d) {return d[0]; } %} | digit {% function(d) {return d[0]; } %}
-idrest -> letterOrDigit:* {% function(d) {return d[0].join(""); } %}
-		| letterOrDigit:* underscore op {% function(d) {return d[0].join("").concat("_").concat(d[2]);} %}
 
 arrow -> "↦"
 leftparen -> "("
