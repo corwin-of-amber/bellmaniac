@@ -26,16 +26,7 @@ $(document).ready(function() {
 		[/\\omega/g, "ω"],
 		[/\|->/g,"↦"]];
 
-	$("#input").keyup(function(e) {
-
-		var text = $("#input").val();
-		for (var i = 0; i < replacements.length; i++) {
-			text = text.replace(replacements[i][0], replacements[i][1]);
-		}
-		$("#input").val(text);
-	});
-
-	$("#submit").click(function() {
+	var parseAndDisplay = function() {
 		var p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
 		try {
 			var parsed = p.feed($("#input").val());
@@ -43,7 +34,22 @@ $(document).ready(function() {
 		} catch (err) {
 			$("#results").text(err);
 		}
+	};
+
+	$("#input").keyup(function(e) {
+
+		var text = $("#input").val();
+		for (var i = 0; i < replacements.length; i++) {
+			text = text.replace(replacements[i][0], replacements[i][1]);
+		}
+		$("#input").val(text);
+
+		// if pressed enter
+		if (13 === e.keyCode) {
+			parseAndDisplay();
+		}
 	});
 
+	$("#submit").click(parseAndDisplay);
 
 });
