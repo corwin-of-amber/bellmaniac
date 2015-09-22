@@ -37,7 +37,7 @@ variable      -> letter idrest {% function(d) {return {$: "Identifier", kind: "v
 _ -> [\s]:+    {% function(d) {return null; } %}
 opchar -> [!%&#*+:<=>?@^|~\\\-\/] {% function(d) {return d[0]; } %}
 op -> opchar:* {% function(d) { return d[0].join(""); } %}
-## http://stackoverflow.com/questions/150033/regular-expression-to-match-non-english-characters
+## unicode ranges for letter regex taken from http://stackoverflow.com/questions/150033/regular-expression-to-match-non-english-characters
 letter -> [a-zA-Z\u00C0-\u1FFF\u2C00-\uD7FF] {% function(d) {return d[0]; } %}
 digit -> [0-9] {% function(d) {return d[0]; } %}
 letterOrDigit -> letter {% function(d) {return d[0]; } %} | digit {% function(d) {return d[0]; } %}
