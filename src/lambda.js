@@ -6,8 +6,11 @@ var grammar = {
     ParserRules: [
     {"name": "expression", "symbols": ["applicationExpression"], "postprocess":  function(d) {return d[0]; } },
     {"name": "expression", "symbols": ["lambdaExpression"], "postprocess":  function(d) {return d[0]; } },
-    {"name": "applicationExpression", "symbols": ["applicationOnNonLambdaExpression", "_", "lambdaOrRootExpression"], "postprocess":  function(d) {return {$: "Application", lhs: d[0], rhs: d[2]}; } },
-    {"name": "applicationExpression", "symbols": ["rootExpression"], "postprocess":  function(d) {return d[0]; } },
+    {"name": "applicationExpression", "symbols": ["applicationWithInfixExpression"], "postprocess":  function(d) { return d[0]; } },
+    {"name": "applicationExpression", "symbols": ["applicationWithoutInfixExpression"], "postprocess":  function(d) { return d[0]; } },
+    {"name": "applicationWithInfixExpression", "symbols": ["applicationOnNonLambdaExpression", "_", "infixOp", "_", "applicationExpression"], "postprocess":  function(d) {return {$: "Application", lhs: {$: "Application", lhs: d[2], rhs: d[0]}, rhs: d[4]}; } },
+    {"name": "applicationWithoutInfixExpression", "symbols": ["applicationOnNonLambdaExpression", "_", "lambdaOrRootExpression"], "postprocess":  function(d) {return {$: "Application", lhs: d[0], rhs: d[2]}; } },
+    {"name": "applicationWithoutInfixExpression", "symbols": ["rootExpression"], "postprocess":  function(d) {return d[0]; } },
     {"name": "applicationOnNonLambdaExpression", "symbols": ["applicationOnNonLambdaExpression", "_", "rootExpression"], "postprocess":  function(d) {return {$: "Application", lhs: d[0], rhs: d[2]}; } },
     {"name": "applicationOnNonLambdaExpression", "symbols": ["rootExpression"], "postprocess":  function(d) {return d[0]; } },
     {"name": "lambdaOrRootExpression", "symbols": ["lambdaExpression"], "postprocess":  function(d) {return d[0]; } },
@@ -26,24 +29,25 @@ var grammar = {
 		return curry(d[2], d[5]);
 	} },
     {"name": "variable", "symbols": ["letter", "idrest"], "postprocess":  function(d) {return {$: "Identifier", kind: "variable", literal: d[0].concat(d[1])}; } },
-    {"name": "variable", "symbols": ["op"], "postprocess":  function(d) {return d[0]; } },
+    {"name": "variable", "symbols": ["op"], "postprocess":  function(d) {return {$: "Identifier", kind: "variable", literal: d[0]}; } },
+    {"name": "infixOp", "symbols": ["backtick", "variable", "backtick"], "postprocess":  function(d) {return d[1]; } },
     {"name": "_", "symbols": [" ebnf$2"], "postprocess":  function(d) {return null; } },
     {"name": "opchar", "symbols": [/[!%&#*+:<=>?@^|~\\\-\/]/], "postprocess":  function(d) {return d[0]; } },
     {"name": "op", "symbols": [" ebnf$3"], "postprocess":  function(d) { return d[0].join(""); } },
-    {"name": "letter", "symbols": [/[a-zA-Z\u00C0-\u1FFF\u2C00-\uD7FF]/], "postprocess":  function(d) {return d[0]; } },
+    {"name": "letter", "symbols": [/[a-zA-Z\u0024\u005F\u00C0-\u1FFF\u2C00-\uD7FF]/], "postprocess":  function(d) {return d[0]; } },
     {"name": "digit", "symbols": [/[0-9]/], "postprocess":  function(d) {return d[0]; } },
     {"name": "letterOrDigit", "symbols": ["letter"], "postprocess":  function(d) {return d[0]; } },
     {"name": "letterOrDigit", "symbols": ["digit"], "postprocess":  function(d) {return d[0]; } },
     {"name": "idrest", "symbols": [" ebnf$4"], "postprocess":  function(d) {return d[0].join(""); } },
     {"name": "idrest", "symbols": [" ebnf$5", "underscore", "op"], "postprocess":  function(d) {return d[0].join("").concat("_").concat(d[2]);} },
-    {"name": "idrest", "symbols": [" ebnf$6", "underscore", " ebnf$7"], "postprocess":  function(d) {return d[0].join("").concat("_").concat(d[2].join(""));} },
     {"name": "arrow", "symbols": [{"literal":"↦"}]},
     {"name": "leftparen", "symbols": [{"literal":"("}]},
     {"name": "rightparen", "symbols": [{"literal":")"}]},
     {"name": "lambda", "symbols": [{"literal":"λ"}]},
     {"name": "underscore", "symbols": [{"literal":"_"}]},
-    {"name": " ebnf$1", "symbols": [" subexpression$8"]},
-    {"name": " ebnf$1", "symbols": [" subexpression$9", " ebnf$1"], "postprocess": function (d) {
+    {"name": "backtick", "symbols": [{"literal":"`"}]},
+    {"name": " ebnf$1", "symbols": [" subexpression$6"]},
+    {"name": " ebnf$1", "symbols": [" subexpression$7", " ebnf$1"], "postprocess": function (d) {
                     return [d[0]].concat(d[1]);
                 }},
     {"name": " ebnf$2", "symbols": [/[\s]/]},
@@ -62,16 +66,8 @@ var grammar = {
     {"name": " ebnf$5", "symbols": ["letterOrDigit", " ebnf$5"], "postprocess": function (d) {
                     return [d[0]].concat(d[1]);
                 }},
-    {"name": " ebnf$6", "symbols": []},
-    {"name": " ebnf$6", "symbols": ["letterOrDigit", " ebnf$6"], "postprocess": function (d) {
-                    return [d[0]].concat(d[1]);
-                }},
-    {"name": " ebnf$7", "symbols": []},
-    {"name": " ebnf$7", "symbols": ["letterOrDigit", " ebnf$7"], "postprocess": function (d) {
-                    return [d[0]].concat(d[1]);
-                }},
-    {"name": " subexpression$8", "symbols": ["variable", "_"]},
-    {"name": " subexpression$9", "symbols": ["variable", "_"]}
+    {"name": " subexpression$6", "symbols": ["variable", "_"]},
+    {"name": " subexpression$7", "symbols": ["variable", "_"]}
 ]
   , ParserStart: "expression"
 }
