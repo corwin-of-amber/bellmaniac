@@ -17,11 +17,14 @@ applicationExpression -> applicationWithInfixExpression {% function(d) { return 
 applicationWithInfixExpression -> applicationOnNonLambdaExpression __ infixOperator __ applicationExpression
 	{% function(d) {return {$: "Application", lhs: {$: "Application", lhs: d[2], rhs: d[0]}, rhs: d[4]}; } %}
 
-# for left associativity, parsing application as <A> <B> must have no application expressions in <B>
-# also no lambda expressions in <A> (since such a lambda expression would include B in its body)
+# to parse application as <A> <B>, we need to have:
+# - no unparenthesized lambdas in A (otherwise lambda body would include B)
+# - no unparenthesized applications in B (because left associativity)
+# - no unparenthesized variables / applications in A if B is a lambda (otherwise A could be treated as parameters of B)
 
-applicationWithoutInfixExpression -> applicationOnNonLambdaExpression __ lambdaOrRootExpression {% function(d) {return {$: "Application", lhs: d[0], rhs: d[2]}; } %}
-		 | rootExpression {% function(d) {return d[0]; } %}
+applicationWithoutInfixExpression -> applicationOnNonLambdaExpression __ rootExpression {% function(d) {return {$: "Application", lhs: d[0], rhs: d[2]}; } %}
+		| parenthesizedExpression __ lambdaExpression {% function(d) {return {$: "Application", lhs: d[0], rhs: d[2]}; } %}
+		| rootExpression {% function(d) {return d[0]; } %}
 
 applicationOnNonLambdaExpression -> applicationOnNonLambdaExpression __ rootExpression {% function(d) {return {$: "Application", lhs: d[0], rhs: d[2]}; } %}
 		 | rootExpression {% function(d) {return d[0]; } %}
@@ -29,10 +32,12 @@ applicationOnNonLambdaExpression -> applicationOnNonLambdaExpression __ rootExpr
 lambdaOrRootExpression -> lambdaExpression {% function(d) {return d[0]; } %}
 						| rootExpression {% function(d) {return d[0]; } %}
 
-rootExpression -> leftparen expression rightparen {% function(d) {return d[1];} %}
+rootExpression -> parenthesizedExpression {% function(d) {return d[0]; } %}
           | variable {% function(d) {return d[0]; } %}
 
-lambdaExpression -> lambda _ ( possiblyTypedVariable _ ):+ arrow _ expression  {%
+parenthesizedExpression -> leftparen expression rightparen {% function(d) {return d[1];} %}
+
+lambdaExpression -> ( possiblyTypedVariable _ ):+ arrow _ expression  {%
 	function(d) {
 		var curry = function(vars, lbody) {
 			if (vars.length === 1) {
@@ -41,11 +46,11 @@ lambdaExpression -> lambda _ ( possiblyTypedVariable _ ):+ arrow _ expression  {
 				return {$: "Abstraction", var: vars[0][0], lbody: curry(vars.slice(1), lbody)};
 			}
 		};
-		return curry(d[2], d[5]);
+		return curry(d[0], d[3]);
 	} %}
 
-possiblyTypedVariable -> leftparen possiblyTypedVariable rightparen {% function(d) {return d[1];} %}
-	| variable (_ colon _ type):? {% function(d) { if (d[1] === null) { return d[0]; } else { d[0].type = d[1][3]; return d[0]; } } %}
+possiblyTypedVariable -> variable {% function(d) {return d[0];} %}
+	| leftparen variable _ colon _ type rightparen {% function(d) { d[1].type = d[5]; return d[1]; } %}
 
 variable -> identifier {% function(d) {return {$: "Identifier", kind: "variable", literal: d[0]}; } %}
 
