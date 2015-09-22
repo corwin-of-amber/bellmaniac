@@ -1,0 +1,10 @@
+{
+  "name": "bellmania",
+  "version": "0.0.1",
+  "repository": "https://github.com/paularmstrong/node-templates.git",
+  "homepage": "https://github.com/corwin-of-amber/bellmaniac.git",
+  "dependencies": {
+    "nearley": "^1.6.2"
+  },
+  "main": "index"
+}
