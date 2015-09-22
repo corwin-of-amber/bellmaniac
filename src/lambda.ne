@@ -32,7 +32,7 @@ lambdaOrRootExpression -> lambdaExpression {% function(d) {return d[0]; } %}
 rootExpression -> leftparen expression rightparen {% function(d) {return d[1];} %}
           | variable {% function(d) {return d[0]; } %}
 
-lambdaExpression -> lambda _ ( variable _ ):+ arrow _ expression  {%
+lambdaExpression -> lambda _ ( possiblyTypedVariable _ ):+ arrow _ expression  {%
 	function(d) {
 		var curry = function(vars, lbody) {
 			if (vars.length === 1) {
@@ -43,6 +43,9 @@ lambdaExpression -> lambda _ ( variable _ ):+ arrow _ expression  {%
 		};
 		return curry(d[2], d[5]);
 	} %}
+
+possiblyTypedVariable -> leftparen possiblyTypedVariable rightparen {% function(d) {return d[1];} %}
+	| variable (_ colon _ type):? {% function(d) { if (d[1] === null) { return d[0]; } else { d[0].type = d[1][3]; return d[0]; } } %}
 
 variable -> identifier {% function(d) {return {$: "Identifier", kind: "variable", literal: d[0]}; } %}
 
@@ -58,7 +61,7 @@ type -> type _ typeArrow _ rootType {% function(d) {return {$: "Tree", kind: "fu
 
 typeOperator -> [*<>∩∪\\] {% function(d) {return d[0]; } %}
 
-rootType -> leftparen type rightparen {% function(d) {return d[2];} %}
+rootType -> leftparen type rightparen {% function(d) {return d[1];} %}
 	| typeVariable {% function(d) {return d[0]; } %}
 
 typeVariable -> letter {% function(d) {return {$: "Identifier", kind: "type", literal: d[0]}; } %}
