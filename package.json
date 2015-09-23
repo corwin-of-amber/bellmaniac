@@ -4,6 +4,8 @@
   "repository": "https://github.com/paularmstrong/node-templates.git",
   "homepage": "https://github.com/corwin-of-amber/bellmaniac.git",
   "dependencies": {
+    "chai": "^3.3.0",
+    "mocha": "^2.3.3",
     "nearley": "^1.6.2"
   },
   "main": "index"

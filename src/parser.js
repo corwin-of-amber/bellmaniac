@@ -31,7 +31,8 @@ $(document).ready(function() {
 		try {
 			var parsed = p.feed($("#input").val());
 			console.assert(parsed.results.length === 1, parsed.results);
-			$("#results").text(JSON.stringify(parsed.results[0], null, 4));
+			$("#results").text(JSON.stringify(parsed.results[0], null, 0));
+			$("#resultstabbed").text(JSON.stringify(parsed.results[0], null, 4));
 		} catch (err) {
 			$("#results").text(err);
 		}
