@@ -135,11 +135,18 @@ describe("Parser", function() {
           assert.deepEqual(parsed.results[0], expected, "Parse is correct");
     });
 
-
     it("a b c `infix` d e f", function() {
           var p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
           var parsed = p.feed("a b c `infix` d e f");
           var expected = {"$":"Application","lhs":{"$":"Application","lhs":{"$":"Identifier","kind":"variable","literal":"infix"},"rhs":{"$":"Application","lhs":{"$":"Application","lhs":{"$":"Identifier","kind":"variable","literal":"a"},"rhs":{"$":"Identifier","kind":"variable","literal":"b"}},"rhs":{"$":"Identifier","kind":"variable","literal":"c"}}},"rhs":{"$":"Application","lhs":{"$":"Application","lhs":{"$":"Identifier","kind":"variable","literal":"d"},"rhs":{"$":"Identifier","kind":"variable","literal":"e"}},"rhs":{"$":"Identifier","kind":"variable","literal":"f"}}};
+          assert.equal(parsed.results.length, 1, "Parse is unambiguous");
+          assert.deepEqual(parsed.results[0], expected, "Parse is correct");
+    });
+
+    it("a `infix1` b `infix2` c", function() {
+          var p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
+          var parsed = p.feed("a `infix1` b `infix2` c");
+          var expected = {"$":"Application","lhs":{"$":"Application","lhs":{"$":"Identifier","kind":"variable","literal":"infix1"},"rhs":{"$":"Identifier","kind":"variable","literal":"a"}},"rhs":{"$":"Application","lhs":{"$":"Application","lhs":{"$":"Identifier","kind":"variable","literal":"infix2"},"rhs":{"$":"Identifier","kind":"variable","literal":"b"}},"rhs":{"$":"Identifier","kind":"variable","literal":"c"}}};
           assert.equal(parsed.results.length, 1, "Parse is unambiguous");
           assert.deepEqual(parsed.results[0], expected, "Parse is correct");
     });
@@ -155,15 +162,17 @@ describe("Parser", function() {
           assert.equal(parsed.results.length, 0, "No parsings found");
     });
 
-
     it("`infix` y doesn't parse", function() {
           var p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
           assert.throw(function() {p.feed("`infix` y");}, Error, "nearley: No possible parsings (@0: \'`\').");
     });
 
+    it("x `infix1` `infix2` y doesn't parse", function() {
+          var p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
+          assert.throw(function() {p.feed("x `infix1` `infix2` y");}, Error, "nearley: No possible parsings (@11: \'`\').");
+    });
 
   });
-
 
   describe("Interaction of function applications and lambda abstractions", function() {
     it("x (y ↦ z)", function() {
@@ -229,10 +238,42 @@ describe("Parser", function() {
   });
 
   describe("Types", function() {
-    it("TODO", function() {
+    it("a:T", function() {
           var p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
-          var parsed = p.feed("a");
-          var expected = {"$":"Identifier","kind":"variable","literal":"a"};
+          var parsed = p.feed("a:T");
+          var expected = {"$":"Identifier","kind":"variable","literal":"a","type":{"$":"Identifier","kind":"type","literal":"T"}};
+          assert.equal(parsed.results.length, 1, "Parse is unambiguous");
+          assert.deepEqual(parsed.results[0], expected, "Parse is correct");
+    });
+
+    it("(a:T)", function() {
+          var p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
+          var parsed = p.feed("(a:T)");
+          var expected = {"$":"Identifier","kind":"variable","literal":"a","type":{"$":"Identifier","kind":"type","literal":"T"}};
+          assert.equal(parsed.results.length, 1, "Parse is unambiguous");
+          assert.deepEqual(parsed.results[0], expected, "Parse is correct");
+    });
+
+    it("(a):T", function() {
+          var p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
+          var parsed = p.feed("(a):T");
+          var expected = {"$":"Identifier","kind":"variable","literal":"a","type":{"$":"Identifier","kind":"type","literal":"T"}};
+          assert.equal(parsed.results.length, 1, "Parse is unambiguous");
+          assert.deepEqual(parsed.results[0], expected, "Parse is correct");
+    });
+
+    it("a:(T)", function() {
+          var p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
+          var parsed = p.feed("a:(T)");
+          var expected = {"$":"Identifier","kind":"variable","literal":"a","type":{"$":"Identifier","kind":"type","literal":"T"}};
+          assert.equal(parsed.results.length, 1, "Parse is unambiguous");
+          assert.deepEqual(parsed.results[0], expected, "Parse is correct");
+    });
+
+    it("a:(P -> Q)", function() {
+          var p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
+          var parsed = p.feed("a:(P -> Q)");
+          var expected = {"$":"Identifier","kind":"variable","literal":"a","type":{"$":"Identifier","kind":"type","literal":"T"}};
           assert.equal(parsed.results.length, 1, "Parse is unambiguous");
           assert.deepEqual(parsed.results[0], expected, "Parse is correct");
     });
