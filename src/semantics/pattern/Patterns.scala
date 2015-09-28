@@ -42,18 +42,21 @@ class SimplePattern(val pattern: Term) {
     else if (term =~ (":", 2) && !top) apply(pattern, term.subtrees(1))
     else if (term =~ ("::", 2) && !top) apply(pattern, term.subtrees(0))
     else if (pattern =~ ("?", 0) && filter(pattern, term)) Some(Map())
+    else if (pattern.root == `...`.root && filter(pattern, term)) (if (within(term, pattern.subtrees)) Some(Map()) else None)
     else if (pattern.root.literal == term.root.literal && filter(pattern, term)) {
-      if (pattern.subtrees == List(`...`)) 
-        Some(Map())
-      else if (pattern.subtrees.length == term.subtrees.length) {
-        val sub = pattern.subtrees zip term.subtrees map { case (x,y) => apply(x,y) }
-        val init: Option[Map[Identifier, Term]] = Some(Map())
-        (init /: sub){
-          case (Some(m1), Some(m2)) => Some(m1 ++ m2)
-          case _ => None
-        }
+      pattern.subtrees match {
+        case List(e) if e.root == `...`.root =>
+          if (within(term, e.subtrees)) Some(Map())
+          else None
+        case _ if (pattern.subtrees.length == term.subtrees.length) =>
+          val sub = pattern.subtrees zip term.subtrees map { case (x,y) => apply(x,y) }
+          val init: Option[Map[Identifier, Term]] = Some(Map())
+          (init /: sub){
+            case (Some(m1), Some(m2)) => Some(m1 ++ m2)
+            case _ => None
+          }
+        case _ => None
       }
-      else None
     }
     else None
   }
@@ -62,7 +65,10 @@ class SimplePattern(val pattern: Term) {
     /**/ assume(pattern =~ (":", 2)) /**/
     pattern.subtrees(0).leaf
   }
-  
+
+  def within(term: Term, subterms: Iterable[Term]) =
+    subterms forall (x => term.nodes exists (_ eq x))
+
   def filter(pattern: Term, term: Term) = true
 }
 

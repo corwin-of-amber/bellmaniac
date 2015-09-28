@@ -241,7 +241,10 @@ object TypedLambdaCalculus {
       enclosure(term.subtrees(1), subterm) map (term.subtrees(0) :: _)
     else term.subtrees map (enclosure(_, subterm)) find (_.isDefined) map (_.get)
   }
-    
+
+  def context(term: Term, subterm: Term): Map[Any, Term] =
+    enclosure(term, subterm) getOrElse List() map (x => (x.leaf.literal, x)) toMap
+
   def pullOut(term: Term, subterm: Term): Option[Term] = {
     if (term eq subterm) Some(term)
     else if (term =~ ("↦", 2)) 

@@ -1,6 +1,9 @@
 package ui
 
-import semantics.{Prelude, TypedTerm, Trench}
+import java.io.{InputStreamReader, BufferedReader, FileReader}
+
+import report.data.{Rich, DisplayContainer}
+import semantics.{TypeInference, Prelude, TypedTerm, Trench}
 
 import scala.io.Source
 import com.mongodb.DBObject
@@ -28,6 +31,12 @@ object CLI {
 
     val MINUSPAT = SimplePattern((T(X) :- $TV("?")) - (T(L) :- $TV("?")))
     override val macros = MacroMap(I("-") -> { x => MINUSPAT(x) map (_(X)) })
+  }
+
+  def invokeTypecheck(term: Term) = {
+    implicit val env = Gap.env
+    implicit val scope = env.scope
+    TypeInference.infer(term)
   }
 
   def invokeProver(goals: List[Term]): Unit = {
@@ -60,17 +69,43 @@ object CLI {
     Trench.display(results, "◦")
   }
 
+  def getLines(f: BufferedReader): Stream[String] = {
+    val line = f.readLine()
+    if (line == null) Stream.empty else line #:: getLines(f)
+  }
+
+  def splitBlocks(s: Stream[String]): Stream[String] = s match {
+    case Stream.Empty => Stream.empty
+    case _ => s.span(_ != "") match {
+      case (first, rest) =>
+        if (first.isEmpty) splitBlocks(rest)
+        else first.mkString("") #:: splitBlocks(rest)
+    }
+  }
+
+  def getBlocks(f: BufferedReader) = splitBlocks(getLines(f))
+
   def main(args: Array[String]) {
-    val f = Source.fromFile("/tmp/bell.json")
-    for (line <- f.getLines) {
+    import syntax.Piping._
+
+    val filename = if (args.length > 0) args(0) else "-"
+    val f = new BufferedReader(
+      if (filename == "-") new InputStreamReader(System.in) else new FileReader(filename))
+
+
+    implicit val cc = new DisplayContainer
+    val extrude = new Extrude(Set(I("/"), cons.root))
+
+    for (line <- splitBlocks(getBlocks(f))) {
       val json = JSON.parse(line).asInstanceOf[DBObject]
       if (json != null && json.get("$") == "Tree") {
         val term = Formula.fromJson(json)
-        println(s"Term: ${term.toPretty}")
+        //println(s"Term: ${term.toPretty}")
 
-        val extrude = new Extrude(Set(I("/"), cons.root))
-        display(extrude(term))
-        invokeProver(List(term))
+        //val ex = extrude(term) |-- display
+
+        println(Rich.display( extrude(invokeTypecheck(term)._2) ).asJson(cc))
+        //invokeProver(List(term))
       }
     }
   }

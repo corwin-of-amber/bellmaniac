@@ -56,7 +56,21 @@ class Domains {
   def declare(id: Identifier) { declare(id :<: ⊤) }
   
   def declare(id: Term) { declare(id.leaf) }
-  
+
+  /**
+   * Adds an artificial "⊥" sub-sort as the lowest descendant of every master.
+   * These makes a sub-lattice below each master, which is used by the type-checker.
+   */
+  def cork() = {
+    val floor = List(T(⊥))
+    val corks = masters flatMap { master =>
+        val ley = master.nodes filter (_.subtrees == floor)
+        val newbot = new Identifier(s"⊥.${master.root}", "set")
+        ley map (t => (t, T(t.root, List(T(newbot, t.subtrees)))))
+      }
+    hierarchy = hierarchy.replaceDescendants(corks)
+  }
+
   def contains(sort: Identifier) = findSortHie(sort).isDefined
   
   def masters = hierarchy.subtrees

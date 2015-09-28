@@ -125,7 +125,7 @@ object Gap {
 
     class Instantiated[RawPod <: Pod](val it: RawPod)(implicit scope: Scope) extends Pod {
       override val program = instantiate(it.program)._2
-      override val obligations = instantiate(it.obligations)._2
+      override val obligations = if (it.obligations == semantics.Prelude.program) program else instantiate(it.obligations)._2
     }
 
     val * = TI("*")
@@ -143,20 +143,20 @@ object Gap {
 
       val A = instantiate(APod(J, K).program, instantiate(program)._1)._2
       val ex = extrude(A) |-- display
-      f += Rich.displayRich(ex.terms)
+      f += Rich.display(ex.terms)
       //return
       // Slice  f  [ J₀, J₁ ] x [ K₀, K₁ ]
       val slicef = SlicePod(A :/ "f" subtrees 1, List(J0 x K0, J0 x K1, J1 x K0, J1 x K1) map (? x _)) |> instapod
       f += slicef.obligations
       for (A <- Rewrite(slicef)(A)) {
         val ex = extrude(A) |-- display
-        f += Rich.displayRich(List(ex.terms))
+        f += Rich.display(List(ex.terms))
         //return
         // Stratify  🄰
         val strat = StratifySlashPod(fixee(A, ex :/ "🄰"), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))  |> instapod
         for (A <- Rewrite(strat)(A)) {
           val ex = extrude(A) |-- display
-          f += Rich.displayRich(List(ex.terms))
+          f += Rich.display(List(ex.terms))
           // Stratify  🄰
           val strat = StratifySlashPod(fixee(A, ex :/ "🄰"), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))  |> instapod
           for (A <- Rewrite(strat)(A)) {
@@ -199,7 +199,7 @@ object Gap {
                                       (MinAssocPod(_)) filter (x => x.subtrees(0) != x.subtrees(1))) |>> instapod
                       for (A <- Rewrite(minassoc)(A)) {
                         val ex = extrude(A) |-- display
-                        // Stratify   🄴, 🄵     in  🄰
+                        // Stratify   🄴, 🄵      in  🄰
                         //            🄽, 🄾, 🅁  in  🄱
                         //            🅃, 🅄, 🅆  in  🄲
                         def stratduce(A: Term, `.` : Term, subelements: List[Term]) =

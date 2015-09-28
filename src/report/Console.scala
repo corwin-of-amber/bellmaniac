@@ -40,7 +40,7 @@ object Console {
     val format = new NestedListTextFormat[String]()()
     format.layOut(xterm map { x => TypedTerm.typeOf(x) match {
       case Some(typ) => s"${annotateWithTypes(x) toPretty}      〔 ${typ toPretty} 〕"
-      case _ => x toPretty
+      case _ => annotateWithTypes(x) toPretty
     }})
   }
 

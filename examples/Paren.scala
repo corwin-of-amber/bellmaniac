@@ -1,15 +1,15 @@
 
 package examples
 
+import examples.Gap.BreakDown.Instantiated
 import syntax.Tree
 import syntax.Identifier
-import semantics.Scope
+import semantics.{TypedLambdaCalculus, Scope, TypedIdentifier}
 import semantics.TypeTranslation.Declaration
 import semantics.TypeTranslation.Environment
 import semantics.TypeTranslation.Declaration
-import semantics.TypedIdentifier
 import synth.pods.ConsPod.`⟨ ⟩?`
-import synth.pods.Pod
+import synth.pods.{StratifySlashPod, StratifyFixPod, ConsPod, Pod}
 
 
 object Paren {
@@ -170,31 +170,26 @@ object Paren {
     }
     
     class APod(val J: Term) {
-      import Prelude.{ω,∩,min,?,cons,nil}
+      import Prelude.{fix,∩,min,?,cons,nil}
+      import ConsPod.`⟨ ⟩`
       
       val A = $TV("A")
-      
+      val (ψ, θ, i, j, k) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), TV("k"))
+
       val program = TI("program")(
-        A :- ω( 
-          TI("↦")(
-            θ :: ((J x J) ∩ <) ->: R , i , j ,
+        A :- (ψ ↦ fix(
+            (θ :: ((J x J) ∩ <) ->: R) ↦: i ↦: j ↦: (
     
-            min:@
-            (
-              cons:@(
-                (min:@ 
-                  (k ↦
+            min:@`⟨ ⟩`(
+              min:@(k ↦
                     ( ((θ:@(i, k)) + (θ:@(k, j)))/*((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j)))*/ -: TV("item") )
                   )
-                ),
-                cons:@(
-                  (θ:@(i, j)),
-                  nil
-                )
-              )
+              ,
+              ψ:@(i, j)
             )
             
-          ).foldRight -: f )
+          ) -: f )
+        )
       )
     }
     
@@ -297,10 +292,13 @@ object Paren {
       scope.sorts.declare(L5 :<: K2)
       scope.sorts.declare(N)
       scope.sorts.declare(R)
-      
+
+      scope.sorts.cork()
+
+
       implicit val env = new Environment(scope, Map())
       
-      rewriteB
+      rewriteA
     }
     
     
@@ -310,41 +308,37 @@ object Paren {
     import synth.pods.{SlicePod,StratifyPod,StratifyReducePod,MinDistribPod,MinAssocPod}
     import semantics.TypedLambdaCalculus.{simplify,pullOut}
     import report.console.Console.display
+    import syntax.Piping._
 
     def instapod(it: Term)(implicit scope: Scope) = instantiate(it)._2
-    def instapod(it: Pod)(implicit scope: Scope) = instantiate(it)._2
+    def instapod(it: Pod)(implicit scope: Scope) = new Instantiated(it)
 
     def rewriteA(implicit env: Environment, scope: Scope) {
-      import Prelude.{?,ω}
-      val (vassign, tA) = instantiate(APod(J).program)
+      import Prelude.{?,ω,nil}
+      val (_, tA) = instantiate(APod(J).program)
       val A = tA
       
       val extrude = Extrude(Set(I("/")))
-      
+      def ctx(A: Term, t: Term) = TypedLambdaCalculus.context(A, t)
+
       //display(A)
       
       val f = (A :/ "f").subtrees(1)
-      val (_, slicef) = instantiate(SlicePod(f, List(J0 x J0, J0 x J1, J1 x J0, J1 x J1) map (? x _)))
+      val (_, slicef) = instantiate(SlicePod(f, List(J0 x J0, J0 x J1, J1 x J1) map (? x _)))
       for (A <- Rewrite(slicef)(A)) {
         println(s"A  ===  ${A toPretty}")
-        val ex = extrude(A)
-        display(ex)
-        val (_, nullify) = instantiate(ex.labels(I("🄲")) =:= Prelude.nil)
-        for (A <- Rewrite(nullify)(A)) {
-          val ex = extrude(A)
-          display(ex)
-          for (tier <- SimplePattern(ω(* :- /::(`...`))) find A) {
-            val (_, strat) = instantiate(StratifyPod(tier(*), ex.labels(I("🄰"))))
-            for (A <- Rewrite(strat)(A)) {
-              val ex = extrude(A)
-              display(ex)
-              for (tier <- SimplePattern(ω(* :- /::(`...`))) find A if tier(*).hasDescendant(ex.labels(I("🄱")))) {
-                val (_, strat) = instantiate(StratifyPod(tier(*), ex.labels(I("🄱"))))
-                for (A <- Rewrite(strat)(A)) {
-                  val ex = extrude(A)
-                  display(ex)
-                }
-              }
+        val ex = extrude(A) |-- display
+        // Stratify  🄰
+        val strat = SimplePattern(fix(* :- `...`(ex :/ "🄰"))) find A map (x => StratifySlashPod(x(*), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))) map instapod
+        for (A <- Rewrite(strat)(A)) {
+          val ex = extrude(A) |-- display
+          // Stratify  🄰
+          val strat = SimplePattern(fix(* :- `...`(ex :/ "🄰"))) find A map (x => StratifySlashPod(x(*), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))) map instapod
+          for (A <- Rewrite(strat)(A)) {
+            val ex = extrude(A) |-- display
+            val A0 = instapod(new APod(J0).program)
+            for (target <- SimplePattern(fix(* :- ?)) find A0 flatMap (x => TypedLambdaCalculus.pullOut(A0, x(*)))) {
+              extrude(target) |-- display
             }
           }
         }

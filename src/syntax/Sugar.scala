@@ -2,7 +2,7 @@
 package syntax
 
 import com.mongodb.{BasicDBList, DBObject}
-import report.data.TapeString
+import report.data.{SerializationContainer, TapeString}
 import semantics.{TypedTerm, Prelude}
 
 
@@ -87,11 +87,11 @@ object AstSugar {
       new syntax.transform.TreeSubstitution(List(whatWith))(term)
        
     def << : Term =
-      if (term.subtrees.length == 1 && term.subtrees(0) == `...`) term
+      if (term.subtrees.length == 1 && term.subtrees(0).root == `...`.root) term
       else term.foldLeft
 
     def >> : Term =
-      if (term.subtrees.length == 1 && term.subtrees(0) == `...`) term
+      if (term.subtrees.length == 1 && term.subtrees(0).root == `...`.root) term
       else term.foldRight
   }
   
@@ -201,7 +201,7 @@ object Formula {
     tape"${display(term.root)}${term.subtrees dropRight 1 map display mkTapeString " "} (${display(term.subtrees.last)})"
 
   // Perhaps this should not be here
-  def fromJson(json: DBObject): Term = {
+  def fromJson(json: DBObject)(implicit container: SerializationContainer): Term = {
     def id(json: DBObject) = {
       // TODO typed identifier, ns
       new Identifier(json.get("literal"), json.get("kind").toString)
