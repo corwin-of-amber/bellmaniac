@@ -35,6 +35,6 @@
     return tree(genericIdentifier(op), [lhs, rhs]);
   };
   root.typeVariable = function(literal){
-    return tree(genericIdentifier(literal), []);
+    return tree(identifier(literal, "set"), []);
   };
 }).call(this);

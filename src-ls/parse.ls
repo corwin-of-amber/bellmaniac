@@ -1,14 +1,17 @@
 spawn = require \child_process .spawn
-
+_ = require \lodash
+LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*$/
 
 angular.module 'app', [\RecursionHelper, \ui.codemirror]
   ..controller "Ctrl" ($scope) !->
+
     $scope.code = "moo"
     $scope.editorOptions =
         mode:  "scheme",
         theme: "material"
     $scope.parsed = {}
     $scope.output = {}
+    $scope.data = []
 
     $scope.codemirrorLoaded = (editor) ->
         words =
@@ -74,8 +77,6 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
             if valid
                 CodeMirror.commands.autocomplete(editor)
 
-    $scope.data = []
-
     $scope.parseAndDisplay = !->
         p = new nearley.Parser grammar.ParserRules, grammar.ParserStart
         try
@@ -86,8 +87,9 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
             jar = spawn "java", <[-jar lib/bell.jar -]>
 
             jar.stdout.once \data, (data) !->
-                console.log(JSON.parse data);
+                # console.log(JSON.parse data);
                 $scope.output = JSON.parse data
+                $scope.data = [{value: JSON.parse data}]
                 $scope.$apply!
                 jar.kill \SIGINT
 

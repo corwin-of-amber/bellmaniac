@@ -17,6 +17,7 @@
 	<link rel="stylesheet" href="vendor/codemirror-5.7/theme/material.css">
 	<link rel="stylesheet" href="vendor/codemirror-5.7/addon/hint/show-hint.css">
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+	<link rel="stylesheet" href="src/index.css">
 
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 	<title>Bellmania</title>
@@ -34,29 +35,29 @@
 
 			<br>
 			<button class="btn btn-default" ng-click="parseAndDisplay()" id="submit">Parse!</button>
+			<hr>
 
 			<ul class="nav nav-tabs" role="tablist">
-				<li role="presentation" class="active"><a href="#parsed" aria-controls="parsed" role="tab" data-toggle="tab">Parsed</a></li>
-				<li role="presentation"><a href="#output" aria-controls="output" role="tab" data-toggle="tab">Output</a></li>
+				<li role="presentation" class="active"><a href="#parsed" aria-controls="parsed" role="tab" data-toggle="tab">Parsed AST</a></li>
+				<li role="presentation"><a href="#output" aria-controls="output" role="tab" data-toggle="tab">Raw Output</a></li>
+				<li role="presentation"><a href="#format" aria-controls="format" role="tab" data-toggle="tab">Formatted Output</a></li>
 			</ul>
+			<br>
 
 			<div class="tab-content">
 				<div role="tabpanel" class="tab-pane active" id="parsed">
-					<h3>Parsed</h3>
 					<pre>{{parsed | json:0}}</pre>
 					<pre>{{parsed | json:4}}</pre>
 				</div>
 				<div role="tabpanel" class="tab-pane" id="output">
-					<h3>Output</h3>
 					<pre>{{output | json:0}}</pre>
 					<pre>{{output | json:4}}</pre>
 				</div>
-			</div>
-
-
-
-			<div class="cell" ng-repeat="cell in data | orderBy:'index'">
-				<display o="cell.value"></display>
+				<div role="tabpanel" class="tab-pane" id="format">
+					<div class="cell" ng-repeat="cell in data | orderBy:'index'">
+						<display o="cell.value"></display>
+					</div>
+				</div>
 			</div>
 		</div>
 

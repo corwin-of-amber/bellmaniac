@@ -1,0 +1,49 @@
+.code {
+  font-family: Menlo;
+  font-size: 12px;
+  white-space: pre;
+}
+.identifier {
+  color: #222277;
+  cursor: default;
+}
+.identifier:hover {
+  background: rgba(0,0,0,0.1);
+}
+.tip {
+  color: #227;
+  position: relative;
+  cursor: default;
+}
+.mark:hover {
+  background: #227;
+  color: white;
+}
+.tip:hover:before {
+  content: attr(data-tip);
+  position: absolute;
+  top: -16px;
+  padding-left: 3ex;
+  padding-right: 1ex;
+  z-index: 9;
+  color: #227;
+  background: #FF9;
+  border: 1px solid black;
+}
+ul.c {
+  list-style: none;
+  margin-left: 0.5em;
+  margin-bottom: 0;
+  margin-top: 0;
+  padding-left: 1em;
+  text-indent: -1em;
+}
+ul.c ul.c { margin-left: 0; }
+ul.c li { white-space: nowrap; }
+ul.c li:before {
+  content: "• ";
+  font-family: Menlo, monospace;
+}
+ul.c[bullet="◦"] li:before {
+  content: "◦ ";
+}
