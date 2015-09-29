@@ -12,14 +12,14 @@ root.identifier = (literal, kind) ->
 	literal: literal,
 	kind: kind
 
-root.genericIdentifier = (literal) -> identifier(literal, "?")
+root.genericIdentifier = (literal) -> identifier(literal, \?)
 
-root.variable = (literal) -> tree(identifier(literal, "variable"), [])
+root.variable = (literal) -> tree(identifier(literal, \variable), [])
 
-root.abstraction = (par, body) -> tree(genericIdentifier("↦"), [par, body])
+root.abstraction = (par, body) -> tree(genericIdentifier(\↦), [par, body])
 
-root.application = (lhs, rhs) -> tree(genericIdentifier("@"), [lhs, rhs])
+root.application = (lhs, rhs) -> tree(genericIdentifier(\@), [lhs, rhs])
 
-root.typeOperation = (op, lhs, rhs) -> tree(genericIdentifier(op), [lhs, rhs])
+root.typeOperation = (op, lhs, rhs) -> tree(tree(op), [lhs, rhs])
 
-root.typeVariable = (literal) -> tree(genericIdentifier(literal), [])
+typeVariable = (literal) -> tree(identifier(literal, \set), [])

@@ -12,6 +12,11 @@ Then you can compile the grammar with nearley:
 nearleyc src/lambda.ne -o src/lambda.js
 ```
 
+Compile the LiveScript files:
+```
+lsc -co src src-ls
+```
+
 Open the app with
 ```
 node_modules/.bin/nw
