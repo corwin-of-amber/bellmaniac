@@ -141,6 +141,9 @@
     };
     $scope.parseAndDisplay = function(){
       var p, parsed, jar, err;
+      $scope.parsed = {};
+      $scope.output = {};
+      $scope.data = [];
       p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
       try {
         parsed = p.feed($scope.code);
@@ -156,7 +159,7 @@
           jar.kill('SIGINT');
         });
         jar.stderr.once('data', function(data){
-          console.log('Java error: ' + data);
+          console.error('Java error: ' + data);
           jar.kill('SIGINT');
         });
         jar.stdin.setEncoding('utf-8');
@@ -164,7 +167,7 @@
         jar.stdin.end();
       } catch (e$) {
         err = e$;
-        console.err('Parsing error: ' + err);
+        console.error('Parsing error: ' + err);
       }
     };
   });

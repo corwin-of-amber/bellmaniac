@@ -15,7 +15,7 @@ applicationExpression -> applicationWithInfixExpression {% id %}
 	| applicationWithoutInfixExpression{% id %}
 
 applicationWithInfixExpression -> applicationOnNonLambdaExpression __ infixOperator __ applicationExpression
-	{% function(d) {return {$: "Tree", lhs: {$: "Tree", lhs: d[2], rhs: d[0]}, rhs: d[4]}; } %}
+	{% function(d) {return application(application(d[2], d[0]), d[4]);} %}
 
 # to parse application as <A> <B>, we need to have:
 # - no unparenthesized lambdas in A (otherwise lambda body would include B)

@@ -30,12 +30,10 @@
 			<h3>Input</h3>
 
 			<textarea ui-codemirror="{ onLoad : codemirrorLoaded }" ui-codemirror-opts="editorOptions" ng-model="code" id="code"></textarea>
-
-			<pre>{{code}}</pre>
-
 			<br>
 			<button class="btn btn-default" ng-click="parseAndDisplay()" id="submit">Parse!</button>
 			<hr>
+			<h3>Output</h3>
 
 			<ul class="nav nav-tabs" role="tablist">
 				<li role="presentation" class="active"><a href="#parsed" aria-controls="parsed" role="tab" data-toggle="tab">Parsed AST</a></li>

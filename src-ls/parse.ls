@@ -78,6 +78,10 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 CodeMirror.commands.autocomplete(editor)
 
     $scope.parseAndDisplay = !->
+        $scope.parsed = {}
+        $scope.output = {}
+        $scope.data = []
+
         p = new nearley.Parser grammar.ParserRules, grammar.ParserStart
         try
             parsed = p.feed $scope.code
@@ -87,21 +91,20 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
             jar = spawn "java", <[-jar lib/bell.jar -]>
 
             jar.stdout.once \data, (data) !->
-                # console.log(JSON.parse data);
                 $scope.output = JSON.parse data
                 $scope.data = [{value: JSON.parse data}]
                 $scope.$apply!
                 jar.kill \SIGINT
 
             jar.stderr.once \data, (data) !->
-                console.log 'Java error: ' + data
+                console.error 'Java error: ' + data
                 jar.kill \SIGINT
 
             jar.stdin.setEncoding('utf-8')
             jar.stdin.write <| JSON.stringify(parsed.results[0]) + "\n"
             jar.stdin.end!
         catch err
-            console.err 'Parsing error: ' + err
+            console.error 'Parsing error: ' + err
 
 
   ..filter "collapse" ->
