@@ -324,9 +324,8 @@ object Paren {
       //display(A)
       
       val f = (A :/ "f").subtrees(1)
-      val (_, slicef) = instantiate(SlicePod(f, List(J0 x J0, J0 x J1, J1 x J1) map (? x _)))
+      val slicef = SlicePod(f, List(J0 x J0, J0 x J1, J1 x J1) map (? x _)) |> instapod
       for (A <- Rewrite(slicef)(A)) {
-        println(s"A  ===  ${A toPretty}")
         val ex = extrude(A) |-- display
         // Stratify  🄰
         val strat = SimplePattern(fix(* :- `...`(ex :/ "🄰"))) find A map (x => StratifySlashPod(x(*), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))) map instapod
@@ -336,15 +335,45 @@ object Paren {
           val strat = SimplePattern(fix(* :- `...`(ex :/ "🄰"))) find A map (x => StratifySlashPod(x(*), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))) map instapod
           for (A <- Rewrite(strat)(A)) {
             val ex = extrude(A) |-- display
-            val A0 = instapod(new APod(J0).program)
+            val A0 = new APod(J0).program
             for (target <- SimplePattern(fix(* :- ?)) find A0 flatMap (x => TypedLambdaCalculus.pullOut(A0, x(*)))) {
-              extrude(target) |-- display
+              val ψ = ctx(A, ex :/ "🄲")("ψ")
+              val (lhs, rhs) = (ex :/ "🄲", target :@ ψ)
+              invokeProver(List(), List(lhs =:= (rhs :: (env.typeOf_!(lhs)))) |>> instapod)
             }
           }
         }
       }
     }
-    
+
+    def invokeProver(assumptions: Iterable[Term], goals: Iterable[Term]): Unit = {
+      import synth.proof._
+      import synth.pods._
+      import semantics.Trench
+
+      implicit val env = Paren.env
+      implicit val scope = env.scope
+
+      val a = new Assistant
+
+      val toR = TotalOrderPod(R)
+      val nilNR = NilPod(N, R)
+      val minJR = MinPod(J, R, toR.<) //, opaque=true)
+      val minNR = MinPod(N, R, toR.<) //, opaque=true)
+
+      val p = new Prover(List(NatPod, toR, minJR, minNR, nilNR, new IndexArithPod(J, Paren.<, succ), TuplePod))
+
+      val t = new p.Transaction
+      val switch = t.commonSwitch(new p.CommonSubexpressionElimination(goals, new SimplePattern(min :@ ?)))
+
+      val results =
+        t.commit(assumptions map a.simplify map t.prop, goals map (switch(_)) map a.intros map a.simplify map t.goal)
+
+      println("=" * 80)
+      Trench.display(results, "◦")
+    }
+
+
     def rewriteB(implicit env: Environment, scope: Scope) {
       import Prelude.{?,ω,min,cons}
       val (vassign, tB) = instantiate(BPod(J0, J1).program)

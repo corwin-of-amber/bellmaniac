@@ -144,7 +144,7 @@ object TypeInference {
       implicit val join = resolve.join
       // - unify all the information you have (@@@ this is so messy)
       val u = new Unify
-      u digest (abstypes(vassign map { case (k,v) => (k, mark(raw(v))) }))
+      u digest (vassign map { case (k,v) => (k, mark(raw(v))) })
       u digest (expr.nodes collect { n => typeOf(n) match { case Some(typ) => (NV(n) -> mark(raw(typ))) }} toMap)
       u digest assign
       // - canonicalize result
@@ -155,6 +155,7 @@ object TypeInference {
 
     def infer0(expr: Tree[Identifier]): (Identifier, Map[Identifier, Tree[Identifier]]) = {
       val freshvar = new Identifier(ns.declare(expr), "variable", ns)
+      implicit val resolve = Resolve.NULL;
       if (expr.isLeaf) {
         (freshvar, Map(
           POLYMORPHIC get expr.root match {
@@ -164,7 +165,7 @@ object TypeInference {
       }
       else if (expr.root == "program") {
         val children = for (s <- expr.subtrees) yield infer0(s)._2
-        implicit val join = resolve.join;
+        //implicit val join = resolve.join;
         if (log.isLoggable(Level.INFO))
           for (c <- children) println(" ; " + c)
         val mgu = children reduce ((x, y) => Unify.mgu0(x,y))
@@ -176,7 +177,7 @@ object TypeInference {
         val (f, a) = (children get 0, children get 1)
         val t1 = a._1; val t2 = freshvar
         val beta = Map(f._1 -> TI("->")(T(t1), T(t2)))
-        implicit val meet = resolve.meet;
+        //implicit val meet = resolve.meet;
         val mgu = List(beta) ++ (children map (_._2)) reduce ((x, y) => Unify.mgu0(x,y))
         (t2, mgu)
       }
@@ -186,30 +187,34 @@ object TypeInference {
         val List(v, e) = children
         val t1 = v._1; val t2 = e._1
         val abs = Map(freshvar -> TI("->")(T(t1), T(t2)))
-        implicit val meet = resolve.meet;
+        //implicit val meet = resolve.meet;
         val mgu = List(abs) ++ (children map (_._2)) reduce ((x, y) => Unify.mgu0(x,y))
         (freshvar, mgu)
       }
       else if (expr.root == "::") {
         /**/ assume(expr.subtrees.length == 2) /**/
         val (va, tpe) = (infer0(expr.subtrees(0)), mark(TypePrimitives.shape(expr.subtrees(1))(scope)))
+        //implicit val meet = resolve.meet;
+        (freshvar, Unify.mgu0(Map(freshvar -> T(va._1), va._1 -> tpe), va._2))
         // TODO perhaps abstype() is no longer needed here?
+        /*
         val (atpe, acomponents) = abstype(tpe)
         val (btpe, bcomponents) = abstype(tpe) // allow a gap for fine-grained later to fill
         implicit val meet = resolve.meet;
         (freshvar, Unify.mgu0(va._2, Map(va._1 -> atpe, freshvar -> btpe) ++ acomponents ++ bcomponents))
+        */
       }
       else if (expr.root == ":") {
         /**/ assume(expr.subtrees.length == 2) /**/
         val (lbl, va) = (expr.subtrees(0), infer0(expr.subtrees(1)))
         if (!lbl.isLeaf) throw new Exception(s"invalid label '$lbl'")
-        implicit val meet = resolve.meet;
+        //implicit val meet = resolve.meet;
         (va._1, Unify.mgu0(va._2, Map(freshvar -> T(va._1), lbl.root -> T(va._1))))
       }
       else if (expr.root == "/") {
         /**/ assume(expr.subtrees.length == 2) /**/
         val (br1, br2) = (infer0(expr.subtrees(0)), infer0(expr.subtrees(1)))
-        implicit val join = resolve.join;
+        //implicit val join = resolve.join;
         (freshvar, Unify.mgu0(br1._2 + (freshvar -> T(br1._1)), br2._2 + (freshvar -> T(br2._1))))        
       }
       else if (expr.root == "|!") {
@@ -220,39 +225,39 @@ object TypeInference {
       else if (expr.root == "fix") {
         /**/ assume(expr.subtrees.length == 1) /**/
         val f = infer0(expr.subtrees(0))
-        implicit val join = resolve.join;
+        //implicit val join = resolve.join;
         (freshvar, Unify.mgu0(f._2, Map(f._1 -> TI("->")(T(freshvar), T(freshvar)))))
       }
       else if (expr.root == "ω") {
         /**/ assume(expr.subtrees.length == 1) /**/
         val f = infer0(expr.subtrees(0))
         val domainvar = new Identifier(ns.fresh, "variable", ns)
-        implicit val join = resolve.join;
+        //implicit val join = resolve.join;
         (freshvar, Unify.mgu0(f._2, Map(freshvar -> T(f._1), f._1 -> TI("->")(T(domainvar), T(domainvar)))))
       }
       else if (expr.root == "=") {
         val tp = $v
         val children = expr.subtrees map infer0 map { case (x,y) => y + (tp -> T(x)) }
-        implicit val join = resolve.join;
+        //implicit val join = resolve.join;
         val mgu = (Map(freshvar -> B) +: children) reduce ((x, y) => Unify.mgu0(x,y))
         (freshvar, mgu)
       }
       else if (expr.root == "∀") {
         val children = expr.subtrees map infer0
         /**/ assume(expr.subtrees.length >= 1) /**/
-        implicit val join = resolve.join
+        //implicit val join = resolve.join
         val mgu = (Map(freshvar -> B, children.last._1 -> B) +: (children map (_._2))) reduce ((x, y) => Unify.mgu0(x,y))
         (freshvar, mgu)
       }
       else if (expr.root == "<->" || expr.root == "~" || expr.root == "|" || expr.root == "&" || expr.root == "->") {
         val children = expr.subtrees map infer0 map { case (x,y) => y + (x -> B) }
-        implicit val join = resolve.join
+        //implicit val join = resolve.join
         val mgu = (Map(freshvar -> B) +: children) reduce ((x, y) => Unify.mgu0(x,y))
         (freshvar, mgu)
       }
       else if (expr.root == "↓") {
         val children = expr.subtrees map infer0 map (_._2)
-        implicit val join = resolve.join
+        //implicit val join = resolve.join
         val mgu = (Map(freshvar -> B) +: children) reduce ((x, y) => Unify.mgu0(x,y))
         (freshvar, mgu)
       }
@@ -547,11 +552,13 @@ object TypeInference {
   def infer(scope: Scope, term: Term, vassign: Map[Identifier, Tree[Identifier]]) = {
     val conservative = new ConservativeResolve(scope)
     val dual = new DualResolve(scope)
-    val coarse =  new CoarseGrained(conservative)
+    log.info("-- coarse --")
+    val coarse = new CoarseGrained(conservative)
     val (rootvar, assign) = coarse.infer(term, vassign)
     // val tassign = { for ((k,v) <- coarse.ns; tpe <- assign get coarse.NV(k)) yield (v, tpe) } .toMap
     // synth.tactics.Rewrite.display(annotate(term, tassign))(new TypeTranslation.Environment(scope, Map()))
     val tassign0 = (term.nodes collect { n => typeOf(n) match { case Some(typ) => (coarse.NV(n) -> typ) }} toMap)
+    log.info("-- fine --")
     val fine = new FineGrained(coarse.ns, assign ++ tassign0 ++ vassign)(scope, dual)
     val reassign = fine.improve(term)
     (reassign filter ((kv) => kv._1.ns ne coarse.ns), 

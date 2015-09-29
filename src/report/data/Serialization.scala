@@ -67,3 +67,6 @@ class DisplayContainer extends SerializationContainer with Numerator {
       mapped += (ns -> index) ; max = Math.max(max, index) ; ns
   }
 }
+
+
+class SerializationError(msg: String, val obj: AnyRef) extends Exception(msg)
