@@ -6,7 +6,16 @@
   "dependencies": {
     "chai": "^3.3.0",
     "mocha": "^2.3.3",
-    "nearley": "^1.6.2"
+    "nearley": "^1.6.2",
+    "nw": "^0.12.2",
+    "underscore": "*",
+    "coffee-script": "*",
+    "livescript": "*",
+    "glob": "^5.0.9",
+    "chokidar": "^1.0.5"
   },
-  "main": "index"
+  "main": "index.html",
+  "window": {
+    "toolbar": true
+  }
 }

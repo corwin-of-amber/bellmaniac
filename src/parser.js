@@ -1,3 +1,5 @@
+var spawn = require('child_process').spawn;
+
 $(document).ready(function() {
 
     var parseAndDisplay = function() {
@@ -5,10 +7,33 @@ $(document).ready(function() {
         try {
             var parsed = p.feed(cm.getValue());
             console.assert(parsed.results.length === 1, parsed.results);
-            $("#results").text(JSON.stringify(parsed.results[0], null, 0));
-            $("#resultstabbed").text(JSON.stringify(parsed.results[0], null, 4));
+
+            $("#parseduntabbed").text(JSON.stringify(parsed.results[0], null, 0));
+            $("#parsedtabbed").text(JSON.stringify(parsed.results[0], null, 4));
+
+            var jar = spawn("java", ["-jar", "bell.jar", '-']);
+
+            jar.stdout.once('data', function (data) {
+                $("#outputuntabbed").text(data);
+
+                var result = JSON.parse(data);
+                $("#outputtabbed").text(JSON.stringify(result, null, 4));
+
+                jar.kill('SIGINT');
+            });
+
+            jar.stderr.once('data', function (data) {
+              console.log('stderr: ' + data);
+
+              jar.kill('SIGINT');
+            });
+
+            jar.stdin.setEncoding('utf-8');
+            jar.stdin.write(JSON.stringify(parsed.results[0]) + "\n");
+            jar.stdin.end();
+
         } catch (err) {
-            $("#results").text(err);
+            console.log('parsed err: ', err);
         }
     };
 

@@ -29,10 +29,22 @@
 		<br>
 		<button class="btn btn-default" id="submit">Parse!</button>
 
-		<h3>Results</h3>
+		<ul class="nav nav-tabs" role="tablist">
+			<li role="presentation" class="active"><a href="#parsed" aria-controls="parsed" role="tab" data-toggle="tab">Parsed</a></li>
+			<li role="presentation"><a href="#output" aria-controls="output" role="tab" data-toggle="tab">Output</a></li>
+		</ul>
 
-		<pre id="results"></pre>
-		<pre id="resultstabbed"></pre>
-
+		<div class="tab-content">
+			<div role="tabpanel" class="tab-pane active" id="parsed">
+				<h3>Parsed</h3>
+				<pre id="parseduntabbed"></pre>
+				<pre id="parsedtabbed"></pre>
+			</div>
+			<div role="tabpanel" class="tab-pane" id="output">
+				<h3>Output</h3>
+				<pre id="outputuntabbed"></pre>
+				<pre id="outputtabbed"></pre>
+			</div>
+		</div>
 	</div>
 </html>

@@ -270,7 +270,7 @@ describe("Parser", function() {
           assert.deepEqual(parsed.results[0], expected, "Parse is correct");
     });
 
-    it("a:(P -> Q)", function() {
+    it("a:P->Q", function() {
           var p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
           var parsed = p.feed("a:(P -> Q)");
           var expected = {"$":"Identifier","kind":"variable","literal":"a","type":{"$":"Identifier","kind":"type","literal":"T"}};

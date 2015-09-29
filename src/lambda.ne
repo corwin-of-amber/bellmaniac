@@ -67,7 +67,7 @@ type -> typeWithOperations _ typeArrow _ type {% function(d) {return typeOperati
 typeWithOperations -> typeWithOperations __ typeOperator __ rootType {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
 	| rootType {% id %}
 
-typeOperator -> [*∩\\] {% id %}
+typeOperator -> [×∩\\] {% id %}
 
 rootType -> leftparen type rightparen {% function(d) {return d[1];} %}
 	| typeVariable {% id %}

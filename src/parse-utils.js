@@ -17,11 +17,11 @@ var variable = function(literal) {
 };
 
 var abstraction = function(par, body) {
-	return tree(identifier("↦"), [par, body]);
+	return tree(identifier("↦", "?"), [par, body]);
 };
 
 var application = function(lhs, rhs) {
-	return tree(identifier("@"), [lhs, rhs]);
+	return tree(identifier("@", "?"), [lhs, rhs]);
 };
 
 var typeOperation = function(op, lhs, rhs) {

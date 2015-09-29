@@ -1,6 +1,6 @@
 # Bellmania
 
-To use this parser, first make sure nearley is installed:
+First make sure all the relevant packages are installed:
 
 ```
 npm install
@@ -12,4 +12,9 @@ Then you can compile the grammar with nearley:
 nearleyc src/lambda.ne -o src/lambda.js
 ```
 
-Open index.html and start having fun!
+Open the app with
+```
+node_modules/.bin/nw
+```
+
+and then you can start typing expressions in the code editor and parsing them! Have fun!
