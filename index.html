@@ -1,14 +1,17 @@
 <html>
 <head>
 	<meta charset="UTF-8">
-	<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+	<script src="node_modules/jquery/dist/jquery.min.js"></script>
 	<script src="node_modules/nearley/lib/nearley.js"></script>
 	<script src="vendor/codemirror-5.7/lib/codemirror.js"></script>
 	<script src="vendor/codemirror-5.7/mode/scheme/scheme.js"></script>
 	<script src="vendor/codemirror-5.7/addon/hint/show-hint.js"></script>
+	<script src="node_modules/angular/angular.js"></script>
+	<script src="node_modules/angular-recursion/angular-recursion.js"></script>
+	<script src="node_modules/angular-ui-codemirror/src/ui-codemirror.js"></script>
 	<script src="src/parse-utils.js"></script>
 	<script src="src/lambda.js"></script>
-	<script src="src/parser.js"></script>
+	<script src="src/parse.js"></script>
 
 	<link rel="stylesheet" href="vendor/codemirror-5.7/lib/codemirror.css">
 	<link rel="stylesheet" href="vendor/codemirror-5.7/theme/material.css">
@@ -22,29 +25,63 @@
 <body>
 	<div class="container">
 
-		<h3>Input</h3>
+		<div ng-app="app" ng-controller="Ctrl">
+			<h3>Input</h3>
 
-		<textarea id="code">moo</textarea>
+			<textarea ui-codemirror="{ onLoad : codemirrorLoaded }" ui-codemirror-opts="editorOptions" ng-model="code" id="code"></textarea>
 
-		<br>
-		<button class="btn btn-default" id="submit">Parse!</button>
+			<pre>{{code}}</pre>
 
-		<ul class="nav nav-tabs" role="tablist">
-			<li role="presentation" class="active"><a href="#parsed" aria-controls="parsed" role="tab" data-toggle="tab">Parsed</a></li>
-			<li role="presentation"><a href="#output" aria-controls="output" role="tab" data-toggle="tab">Output</a></li>
-		</ul>
+			<br>
+			<button class="btn btn-default" ng-click="parseAndDisplay()" id="submit">Parse!</button>
 
-		<div class="tab-content">
-			<div role="tabpanel" class="tab-pane active" id="parsed">
-				<h3>Parsed</h3>
-				<pre id="parseduntabbed"></pre>
-				<pre id="parsedtabbed"></pre>
+			<ul class="nav nav-tabs" role="tablist">
+				<li role="presentation" class="active"><a href="#parsed" aria-controls="parsed" role="tab" data-toggle="tab">Parsed</a></li>
+				<li role="presentation"><a href="#output" aria-controls="output" role="tab" data-toggle="tab">Output</a></li>
+			</ul>
+
+			<div class="tab-content">
+				<div role="tabpanel" class="tab-pane active" id="parsed">
+					<h3>Parsed</h3>
+					<pre>{{parsed | json:0}}</pre>
+					<pre>{{parsed | json:4}}</pre>
+				</div>
+				<div role="tabpanel" class="tab-pane" id="output">
+					<h3>Output</h3>
+					<pre>{{output | json:0}}</pre>
+					<pre>{{output | json:4}}</pre>
+				</div>
 			</div>
-			<div role="tabpanel" class="tab-pane" id="output">
-				<h3>Output</h3>
-				<pre id="outputuntabbed"></pre>
-				<pre id="outputtabbed"></pre>
+
+
+
+			<div class="cell" ng-repeat="cell in data | orderBy:'index'">
+				<display o="cell.value"></display>
 			</div>
 		</div>
+
+		<template type="text/ng-template" id="display">
+			<compute ng-if="o.tape" let="parts = o | display">
+				<span class="code"
+				 ng-class="mark[1]"
+				 data-tip="{{mark[2]}}"
+				 ng-repeat="mark in parts track by $index">{{mark[0]}}</span>
+			</compute>
+			<div ng-if="o.vbox" ng-repeat="el in o.vbox">
+				<display o="el"></display>
+			</div>
+			<ul ng-if="o.list">
+				<li ng-repeat="el in o.list">
+					<display o="el"></display>
+				</li>
+			</ul>
+			<ul ng-if="o.tree" class="c" bullet="{{o.bullet}}">
+				<li>
+					<display o="o.tree.root"></display>
+					<display ng-repeat="s in o.tree.subtrees" o="{tree: s}"></display>
+				</li>
+			</ul>
+			<span class="code" ng-if="o | isString">{{o}}</span>
+		</template>
 	</div>
 </html>

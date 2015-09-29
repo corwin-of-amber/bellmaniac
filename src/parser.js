@@ -11,7 +11,7 @@ $(document).ready(function() {
             $("#parseduntabbed").text(JSON.stringify(parsed.results[0], null, 0));
             $("#parsedtabbed").text(JSON.stringify(parsed.results[0], null, 4));
 
-            var jar = spawn("java", ["-jar", "bell.jar", '-']);
+            var jar = spawn("java", ["-jar", "lib/bell.jar", '-']);
 
             jar.stdout.once('data', function (data) {
                 $("#outputuntabbed").text(data);
