@@ -120,9 +120,10 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
     def commit(assumptions: Iterable[Term], goals: Iterable[Compound]) = {
       val symbols = typedecl.keys ++ (pods flatMap (_.decl.symbols)) ++ termb.intermediates ++ locals
       val env1 = (env /: termlings) { case (env, (env1, _)) => env ++ env1 }
+      val env2 = (env1 /: (pods map (_.decl.shallow))) { case (e, d) => e + d }
       val terms1 = termlings map (_._2)
       
-      val reflect = new Reflection(env1, typedecl ++ typedecls(locals))
+      val reflect = new Reflection(env2, typedecl ++ typedecls(locals))
       reflect.currying ++= symbols filter (x => env1.typeOf(x) exists Reflection.isFuncType) map
                                           (symbol => (symbol, reflect.overload(symbol))) toMap
   

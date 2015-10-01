@@ -65,7 +65,7 @@ class Domains {
     val floor = List(T(⊥))
     val corks = masters flatMap { master =>
         val ley = master.nodes filter (_.subtrees == floor)
-        val newbot = new Identifier(s"⊥.${master.root}", "set")
+        val newbot = new Identifier(s"⊥.${master.root}", "set", ⊥)
         ley map (t => (t, T(t.root, List(T(newbot, t.subtrees)))))
       }
     hierarchy = hierarchy.replaceDescendants(corks)

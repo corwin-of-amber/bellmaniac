@@ -12,19 +12,21 @@ object TypeTranslation {
   import AstSugar._
   
   case class Declaration(val symbols: List[TypedIdentifier],
-                         val precondition: List[Term],
+                         val precondition: List[Term]=List.empty,
                          val origin: Map[Identifier, Term]=Map.empty) {
     def this(symbols: Term*) =
-      this(symbols map (_.leaf.asInstanceOf[TypedIdentifier]) toList, List())
+      this(symbols map (x => TypedIdentifier(x.leaf, TypedTerm.typeOf_!(x))) toList, List())
       
     def head = symbols.head
     def support = symbols.tail find (_.kind == "predicate") getOrElse 
       { throw new Scope.TypingException(s"no support found for '$head'") }
     
-    def where(fact: Term): Declaration = where(List(fact))
+    def where(facts: Term*): Declaration = where(facts toList)
     def where(facts: List[Term]) = Declaration(symbols, precondition ++ facts)
     
     def of(origin: Map[Identifier, Term]) = Declaration(symbols, precondition, origin)
+
+    def shallow = Declaration(symbols)
     
     def toPretty = s"Declaration(${symbols map (_.toPretty) mkString ", "}; " +
                    s"${precondition map (_.untype.toPretty) mkString ", "})"
@@ -37,7 +39,8 @@ object TypeTranslation {
     
     def ++(that: Map[_ <: Identifier, Declaration]) =  E(scope, decl ++ that)
     def +(that: (_ <: Identifier, Declaration)) =      E(scope, decl + that)
-    
+    def +(that: Declaration) =                         E(scope, decl + ($_ -> that))
+
     def apply(symbol: Identifier) : Declaration = decl get symbol getOrElse {
         for ((_,v) <- decl; s <- v.symbols) if (s == symbol) return v
         throw new NoSuchElementException(s"symbol $symbol")
@@ -164,11 +167,15 @@ object TypeTranslation {
   
   def subsorts(scope: Scope) = E(scope, {
     import TypingSugar._
-    val masterTypes = scope.sorts.masters
-    def pred(dom: Identifier) = TI("->")(T(dom), T(S("")))
-    for (master <- masterTypes; slave <- master.nodes if slave.root != Domains.⊥)
+    import Domains.⊥
+    def pred(dom: Identifier) = T(dom) -> TS("")
+    def top(master: Identifier, subsort: Identifier) = ∀:(T(master), x => T(subsort)(x))
+    def bot(master: Identifier, subsort: Identifier) = ∀:(T(master), x => ~T(subsort)(x))
+    for (master <- scope.sorts.masters; slave <- master.nodes if slave.root != ⊥)
       yield slave.root -> Declaration(List(TypedIdentifier(slave.root, pred(master.root))), 
-          if (slave eq master) List(∀:(T(master.root), x => T(master.root)(x))) else List()) 
+          if      (slave eq master)    List(top(master.root, slave.root))
+          else if (slave.root.ns eq ⊥) List(bot(master.root, slave.root))
+          else List())
   }.toMap)
   
   /**
@@ -309,9 +316,11 @@ object TypeTranslation {
   object TypingSugar {
     import syntax.Strip.greek
     
-    def TyTV(literal: String, typ: Term) = T(TypedIdentifier(V(literal), typ))
-    def $TyTV(literal: String, typ: Term) = T(TypedIdentifier($v(literal), typ))
-    
+    def TyTV(literal: Any, typ: Term) = T(TypedIdentifier(V(literal), typ))
+    def $TyTV(literal: Any, typ: Term) = T(TypedIdentifier($v(literal), typ))
+    def TyTI(literal: Any, kind: String, typ: Term) = T(TypedIdentifier(I(literal, kind), typ))
+    def $TyTI(literal: Any, kind: String, typ: Term) = T(TypedIdentifier($I(literal, kind), typ))
+
     def qvars(names: List[String], typ: Term) = {
       val ns = new Namespace
       for (name <- names) yield T(TypedIdentifier( new Identifier(name, "variable", ns), typ ))

@@ -33,7 +33,7 @@ object NatPod extends Pod {
   
   private val i = $TyTV("i", N)
   
-  override val decl = new Declaration(_0, _1, z, nz, s, p) where List(
+  override val decl = new Declaration(_0, _1, z, nz, s, p) where (
       ↓(_0) & ↓(_1) & ↓(_2) & ↓(_3) &
       ~(_0 =:= _1) & ~(_0 =:= _2) & ~(_1 =:= _2) & ~(_0 =:= _3) & ~(_1 =:= _3) & ~(_2 =:= _3),
       (TypedTerm(s :@ _0, N) =:= _1),
@@ -51,17 +51,9 @@ object RealPod {
 }
 
 
-class TotalOrderPod(domain: Term) extends Pod {
+class TotalOrderPod(D: Term, val < : Term) extends Pod {
   
-  import Prelude.B
-  
-  private val D = domain
-  
-  val < = $TyTV("<", D ->: D ->: B)
-  
-  val sym = List(<.root)
-  
-  override val decl = new Declaration(<) where List(
+  override val decl = new Declaration(<) where (
       ∀:(D, (i, j) => (< :@ i :@ j) -> ~(< :@ j :@ i)),                   // anti-symmetry
       ∀:(D, (i, j) => ~(< :@ i :@ j) ->: ~(< :@ j :@ i) ->: (i =:= j)),    // totality
       ∀:(D, (i, j, k) => ~(< :@ i :@ j) ->: ~(< :@ j :@ k) ->: ~(< :@ i :@ k))    // transitivity
@@ -69,31 +61,45 @@ class TotalOrderPod(domain: Term) extends Pod {
 }
 
 object TotalOrderPod {
-  def apply(domain: Term) = new TotalOrderPod(domain)
+  import Prelude.B
+
+  def apply(D: Term) = new TotalOrderPod(D, $TyTV("<", D ->: D ->: B))
+  def apply(D: Term, < : Term) = new TotalOrderPod(D, TypedTerm(<, D ->: D ->: B))
 }
 
 
-class IndexArithPod(J: Term, < : Term, succ: Term)(implicit scope: Scope) extends Pod {
-  import Prelude.↓
+class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: Scope) extends Pod {
+  import Prelude.{↓,B}
 
   val _0 = TI(0)
   val _1 = TI(1)
 
-  private val pred = $TyTV("-1", J -> J)
+  private val succJ = $TyTI("+1", "predicate", J ->: J ->: B)
+  private val predJ = $TyTI("-1", "function", J -> J)
   private val _0J = $TyTV("0.J", J)
 
   private val X = TV("x")
+  private val Y = TV("y")
 
   val MINUSPAT = SimplePattern((X :- $TV("?")) - _1)
+  val SUCCPAT = SimpleTypedPattern(succ:@(TypedTerm(X :- $TV("?"), J), TypedTerm(Y :- $TV("?"), J)))
   val ZEROPAT = SimpleTypedPattern(TypedTerm(_0, J))
 
   override val macros = MacroMap(
-    I("-") -> { x => MINUSPAT(x) map (_(X)) map (x => (pred:@x) |! succ(pred(x),x)) },
+    I("-") -> { x => MINUSPAT(x) map (_(X)) map (x => (predJ:@x) |! succJ(predJ(x),x)) },
+    succ ~> { x => SUCCPAT(x) map (m => succJ:@(m(X), m(Y))) },
     _0 ~> { x => ZEROPAT(x) map (x => _0J)})
 
-  override val decl = new Declaration(_0J, pred) where List(
+  override val decl = new Declaration(_0J, succJ, predJ) where (
     ↓(_0J),
     ∀:( J, x => ~ <(x,_0J) ),
-    ∀:( J, (x,y,z) => succ(x,z) -> (<(x,z) & ~(<(x,y) & <(y,z))) )
+    ∀:( J, (x,y,z) => succJ(x,z) -> (<(x,z) & ~(<(x,y) & <(y,z))) )
   )
+}
+
+
+object IndexArithPod {
+  val succ = TV("+1")
+
+  def apply(J: Term, < : Term)(implicit scope: Scope) = new IndexArithPod(J, <, succ)
 }

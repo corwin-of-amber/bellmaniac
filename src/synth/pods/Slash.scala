@@ -1,5 +1,6 @@
 package synth.pods
 
+import semantics.TypeTranslation.Declaration
 import syntax.AstSugar._
 import semantics.TypeTranslation.TypingSugar._
 import semantics.Scope
@@ -10,6 +11,25 @@ import syntax.Identifier
 import synth.pods.Pod.TacticalError
 
 
+/**
+ *        <
+ * J = J₀ ⨃ J₁
+ *
+ * Means that J can be partitioned into J₀, J₁ s.t. every element of J₀ is less than every element of J₁.
+ */
+class PartitionPod(val J: Term, val < : Term, val J0: Term, val J1: Term) extends Pod {
+  import Prelude.{compl, partition, allToAll}
+
+  override val decl = new Declaration where (
+    //partition(J)(J, J0, J1),
+    compl(J)(J0, J1),
+    allToAll(J)(J0, <, J1)
+  )
+}
+
+object PartitionPod {
+  def apply(J: Term, < : Term, J0: Term, J1: Term) = new PartitionPod(J, <, J0, J1)
+}
 
 class SlicePod(val f: Term, val subdomains: List[Term]) extends Pod {
   import Prelude.?

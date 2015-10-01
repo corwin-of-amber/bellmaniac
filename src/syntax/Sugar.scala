@@ -106,7 +106,8 @@ object AstSugar {
   class Uid {}
   def $_ = new Identifier("_", "placeholder", new Uid)
   def $v = new Identifier("?", "variable", new Uid)
-  def $v(name: String) = new Identifier(name, "variable", new Uid)
+  def $v(name: Any) = new Identifier(name, "variable", new Uid)
+  def $I(name: Any, kind: String="?") = new Identifier(name, kind, new Uid)
  
   def $TV = T($v)
   def $TV(name: String) = T($v(name))

@@ -202,18 +202,6 @@ object StratifyFix {
     import java.util.logging.Level
     //Reflection.log.setLevel(Level.FINER)
         
-    val toR = TotalOrderPod(R)
-    val nilNR = NilPod(N, R)
-    val nilJR = NilPod(J, R)
-    val consR = ConsPod(R)
-    val minJR = MinPod(J, R, toR.<) //, opaque=true)
-    val minNR = MinPod(N, R, toR.<) //, opaque=true)
-    import toR.<
-    val plustot = ∀:(R, (a,b) => ↓(a + b))
-    val plusmono = ∀:(R, (a,b,c,d) => ~(< :@(a, c)) ->: ~(< :@(b, d)) ->: ~(< :@(a + b, c + d)))
-    
-    import TypedLambdaCalculus.{pullOut,enclosure,simplify}
-    
     val ψ = $TV("ψ")
     val θ = $TV("θ")//, ((J x J)) -> R)
     val ζ = $TyTV("ζ", (J x J) -> R)
@@ -355,61 +343,48 @@ object StratifyFix {
     val synthgoals = List( (GA_f:@(h1, θ)) =:= θ )
       //List( ((gspec_f :@ θ ) :@ (i,j)) =:= ((GA_f:@ (h1, (i ↦ (j ↦ (((wh:@(_0J,j)) |! (i=:=_0J)) /: ((θ:@(i,j)) |! (<(_0J,i)))))) )) :@ (i,j)) )
     }
-    
+
+    val toR =   TotalOrderPod(R)
+    val toJ =   TotalOrderPod(J, Paren.<)
+    val partJ = PartitionPod(J, toJ.<, J0, J1)
+    val idxJ =  IndexArithPod(J, toJ.<)
+    val nilNR = NilPod(N, R)
+    val minJR = MinPod(J, R, toR.<) //, opaque=true)
+    val minNR = MinPod(N, R, toR.<) //, opaque=true)
+
+    import toR.<
     import GapFix.InputPod.wh
-    //import gspec._0J
-    
+
     val assumptions = /*GapObligations.synthassume ++ ParenObligations.synthassume ++*/ List(
         ∀:(J, (x,y,z) => ↓(wh:@(x,y)) ->: ↓(wh:@(y,z)) ->: (↓(wh:@(x,z)) & (~ <((wh:@(x,y)) + (wh:@(y,z)), wh:@(x,z)))) ),
         ∀:(J, (x,y) => ~ ↓(⊥ :@(x, y)))) map a.compile
-    //noinspection ScalaUnnecessaryParentheses
+
     val goals = (
         ParenObligations.goals ++
-        //ParenObligations.synthgoals   // (requires ParenObligations.synthassume)
+        //ParenObligations.synthgoals ++  // (requires ParenObligations.synthassume)
         GapObligations.goals ++
-        GapObligations.sgoals // ++
-        //GapObligations.synthgoals  // (requires GapObligations.synthassume)
-    ) map a.compile map a.intros
-    
+        GapObligations.sgoals ++
+        //GapObligations.synthgoals ++  // (requires GapObligations.synthassume)
+        List()
+    ) map a.compile
 
-    /*
-    def m(k: Term, e: Term) = min:@(k ↦ e)
-    def m2(x: Term, y: Term) = min:@pair(x,y)
-    def ij(r: Term) = (i ↦ (j ↦ r))
-    val e = m(k::J, (θ:@(i,k)) + (θ:@(k,j)))
-
-    import syntax.Piping._
-    
-    val lhs = /::( east(   ij(m2( /::(west( ij(m2(ψ:@(i,j), e))), east(ψ) ) :@ (i,j), e ))   ),
-                   west(   /::(west(ij(m2(ψ:@(i,j), e))), east(ψ))   ))
-    val rhs = ij(m2(ψ:@(i,j), e))
-    //val goals = List( lhs =:= rhs ) map a.compile map a.intros
-    */
-
-
-    /*
-    val assumptions = List() map a.compile
-    val goals = List( (/::(ψ :: ((J0 x J0) -> R), (i ↦ (j ↦ r)) :: ((? x J1) -> R)):: ((? x J0) -> R)) =:= (ψ :: ((J0 x J0) -> R)) ) map a.compile map a.intros
-    */
     {
-    val p = new Prover(List(NatPod, toR, minJR, minNR, nilNR, new IndexArithPod(J, Paren.<, succ), TuplePod))
+    val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, minJR, minNR, nilNR))
     
     val extrude = Extrude(Set(I("/"), cons.root))
 
-    goals foreach (g => Console.display(extrude(g)))
-    
-    //goals foreach (Rewrite.display(_))
+    //goals foreach (g => Console.display(extrude(g)))
     
     val results =
-    for (g <- goals) yield {
-      val goals = List(g)
-    //{
-      import semantics.pattern.SimplePattern
-      val t = new p.Transaction
-      val switch = t.commonSwitch(new p.CommonSubexpressionElimination(goals, new SimplePattern(min :@ ?)))
-      
-      t.commit(assumptions map a.simplify map t.prop, goals map (switch(_)) map a.simplify map t.goal)
-    }
+      for (goals <- goals map (List(_))) yield {
+      //{
+        val igoals = goals map a.intros
+        import semantics.pattern.SimplePattern
+        val t = new p.Transaction
+        val switch = t.commonSwitch(new p.CommonSubexpressionElimination(igoals, new SimplePattern(min :@ ?)))
+
+        t.commit(assumptions map a.simplify map t.prop, igoals map (switch(_)) map a.simplify map t.goal)
+      }
     
     println("=" * 80)
     Trench.display(results reduce (_ ++ _), "◦")

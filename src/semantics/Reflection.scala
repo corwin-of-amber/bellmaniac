@@ -161,14 +161,15 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     }
     else if (term =~ ("<->", 2)) {
       val List(lhs, rhs) = sub
-      val typ = env.typeOf_!(lhs)
-      if (typ =~ ("->", 2)) {
-        val va = T(TypedIdentifier(new Identifier(greek(lhs.subtrees.length), "variable", new Uid), typ.subtrees(0)))
-        val ret = TypePrimitives.curry(env.typeOf_!(rhs))(env.scope)._2
-        bind(va)
-        ∀(va)(consolidate1(TypedTerm(lhs :@ va, typ.subtrees(1)) <-> TypedTerm(rhs :@ va, ret)))
+      env.typeOf(lhs) match {
+        case Some(typ) if (typ =~ ("->", 2)) =>
+          val va = T(TypedIdentifier(new Identifier(greek(lhs.subtrees.length), "variable", new Uid), typ.subtrees(0)))
+          val ret = TypePrimitives.curry(env.typeOf_!(rhs))(env.scope)._2
+          bind(va)
+          ∀(va)(consolidate1(TypedTerm(lhs :@ va, typ.subtrees(1)) <-> TypedTerm(rhs :@ va, ret)))
+        case _ =>
+          (lhs <-> rhs)
       }
-      else (lhs <-> rhs)
     }
     else if (term =~ ("↦", 2)) {
       bind(term.subtrees(0))

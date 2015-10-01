@@ -37,6 +37,8 @@ object Paren {
   scope.sorts.declare(K2.root :<: J1.root)
   scope.sorts.declare(K3.root :<: J1.root)
 
+  scope.sorts.cork()
+
   def A = TV("A")
   def `A'` = TV("A'")
   def f = TV("f")
@@ -126,15 +128,10 @@ object Paren {
     import semantics.TypeTranslation
     import semantics.TypeTranslation.TypingSugar._
 
-    val ley = scope.sorts.findSortHie(J.root).get.nodes filter (_.subtrees == List(T(⊥))) toList
-    val newbot = new Identifier("⊥.J", "set")
-    val h = scope.sorts.hierarchy.replaceDescendants(ley map (t => (t, T(t.root, List(T(newbot, t.subtrees))))))
-    scope.sorts.hierarchy = h
-
-    TypeTranslation.subsorts(scope) ++ TypeTranslation.decl(scope, Map(< ~> (J ->: J ->: B), succ ~> (J ->: J ->: B), pred ~> (J -> J))) where 
-         ( transitive(J)(<), antisymm(J)(<),
-           ∀:( J, (x,y,z) => succ(x,z) -> (<(x,z) & ~(<(x,y) & <(y,z))) ),
-           compl(J)(J0, J1), allToAll(J)(J0, <, J1), ∀:( J, x => ~T(newbot)(x) )
+    TypeTranslation.subsorts(scope) /*++ TypeTranslation.decl(scope, Map(/*< ~> (J ->: J ->: B), succ ~> (J ->: J ->: B)*/)) */ where
+         ( //transitive(J)(<), antisymm(J)(<),
+           //∀:( J, (x,y,z) => succ(x,z) -> (<(x,z) & ~(<(x,y) & <(y,z))) )
+         //  compl(J)(J0, J1), allToAll(J)(J0, <, J1) /*, ∀:( J, x => ~T(newbot)(x) ) */
            /*partition(J)(J0, K0, K1), partition(J)(J1, K2, K3),
            allToAll(J)(K0, <, K1), allToAll(J)(K2, <, K3),
            ∀:( J, x => K12(x) <-> (K1(x) | K2(x)) ),
@@ -357,11 +354,14 @@ object Paren {
       val a = new Assistant
 
       val toR = TotalOrderPod(R)
+      val toJ = TotalOrderPod(J, <)
+      val idxJ = new IndexArithPod(J, toJ.<, succ)
+      val partJ = PartitionPod(J, <, J0, J1)
       val nilNR = NilPod(N, R)
       val minJR = MinPod(J, R, toR.<) //, opaque=true)
       val minNR = MinPod(N, R, toR.<) //, opaque=true)
 
-      val p = new Prover(List(NatPod, toR, minJR, minNR, nilNR, new IndexArithPod(J, Paren.<, succ), TuplePod))
+      val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, minJR, minNR, nilNR))
 
       val t = new p.Transaction
       val switch = t.commonSwitch(new p.CommonSubexpressionElimination(goals, new SimplePattern(min :@ ?)))
