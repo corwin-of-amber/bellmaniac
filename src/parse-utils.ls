@@ -2,7 +2,7 @@ root = exports ? this
 
 root.scope = []
 root.id = (d) -> d && d[0]
-root.keywords = ["set"]
+root.keywords = ["set", "fix", "/"]
 
 ## combinators
 
@@ -54,3 +54,5 @@ root.abstraction = (par, body) -> par && body && tree(genericIdentifier(\↦), [
 root.application = (lhs, rhs) -> lhs && rhs && tree(genericIdentifier(\@), [lhs, rhs])
 
 root.typeOperation = (op, lhs, rhs) -> op && lhs && rhs && tree(tree(op), [lhs, rhs])
+
+root.slashExpression = (lhs, rhs) -> lhs && rhs && tree(genericIdentifier(\/), [lhs, rhs])

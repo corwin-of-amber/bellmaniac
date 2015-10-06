@@ -15,11 +15,17 @@ setDeclaration -> identifier ":set" {% function(d) { return declareSet(d[0]); } 
 ####### LAMBDA CALCULUS EXPRESSIONS #######
 ###########################################
 
-untypedExpression -> applicationExpression {% function(d) { return d[0];} %}
+untypedExpression -> applicationExpression {% id %}
              | lambdaExpression {% id %}
 
-applicationExpression -> applicationWithInfixExpression {% id %}
-	| applicationWithoutInfixExpression{% id %}
+applicationExpression -> slashExpressionOrApplicationWithInfixExpression {% id %}
+	| applicationWithoutInfixExpression {% id %}
+
+slashExpressionOrApplicationWithInfixExpression -> slashExpression {% id %}
+	| applicationWithInfixExpression {% id %}
+
+slashExpression -> applicationOnNonLambdaExpression _ forwardslash _ applicationExpression
+	{% function(d) {return slashExpression(d[0], d[4]);} %}
 
 applicationWithInfixExpression -> applicationOnNonLambdaExpression __ infixOperator __ applicationExpression
 	{% function(d) {return application(application(d[2], d[0]), d[4]);} %}
@@ -56,7 +62,7 @@ lambdaExpression -> ( possiblyTypedVariable _ ):+ arrow _ expression  {%
 		return curry(d[0], d[3]);
 	} %}
 
-possiblyTypedVariable -> variable {% function(d) {return d[0];} %}
+possiblyTypedVariable -> variable {% id %}
 	| leftparen variable _ colon _ type rightparen {% function(d) { d[1].type = d[5]; return d[5] && d[1]; } %}
 
 variable -> identifier {% function(d) {return variable(d[0]); } %}
@@ -93,17 +99,19 @@ identifier      -> letter idrest {% function(d) {return d[0].concat(d[1]); } %}
 idrest -> letterOrDigit:* {% function(d) {return d[0].join(""); } %}
 		| letterOrDigit:* underscore op {% function(d) {return d[0].join("").concat("_").concat(d[2]);} %}
 
-letterOrDigit -> letter {% function(d) {return d[0]; } %} | digit {% function(d) {return d[0]; } %}
+letterOrDigit -> letter {% id %}
+	| digit {% id %}
 
 ## unicode ranges for letter regex taken from http://stackoverflow.com/questions/150033/regular-expression-to-match-non-english-characters
-letter -> [a-zA-Z$_\u00C0-\u1FFF\u2C00-\uD7FF] {% function(d) {return d[0]; } %}
-digit -> [0-9] {% function(d) {return d[0]; } %}
+letter -> [a-zA-Z$_\u00C0-\u1FFF\u2C00-\uD7FF] {% id %}
+digit -> [0-9] {% id %}
 
-op -> validStandaloneOpchars {% function(d) {return d[0]; } %}
+op -> validStandaloneOpchars {% id %}
 	| opchar opchar:+ {% function(d) { return [d[0]].concat(d[1]).join(""); } %}
 
-validStandaloneOpchars -> [!%&*+<>?^|~\\\-] {% function(d) {return d[0]; } %}
-opchar -> validStandaloneOpchars {% function(d) {return d[0]; } %} | [=#@\:] {% function(d) {return d[0]; } %}
+validStandaloneOpchars -> [!%&*+<>?^|~\\\-] {% id %}
+opchar -> validStandaloneOpchars {% id %}
+	| [=#@\:] {% id %}
 
 # _ represents optional whitespace; __ represents compulsory whitespace
 _ -> [\s]:*    {% function(d) {return null; } %}
@@ -113,6 +121,7 @@ arrow -> "↦"
 leftparen -> "("
 rightparen -> ")"
 underscore -> "_"
+forwardslash -> "/"
 backtick -> "`"
 colon -> ":"
 typeArrow -> "->" {% id %}

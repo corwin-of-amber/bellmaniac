@@ -164,7 +164,6 @@
       try {
         jar = spawn("java", ['-jar', 'lib/bell.jar', '-']);
         jar.stdout.on('data', function(data){
-          console.log(data);
           $scope.output.push(JSON.parse(data));
           $scope.data.push({
             value: JSON.parse(data)

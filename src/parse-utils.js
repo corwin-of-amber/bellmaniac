@@ -6,7 +6,7 @@
   root.id = function(d){
     return d && d[0];
   };
-  root.keywords = ["set"];
+  root.keywords = ["set", "fix", "/"];
   root.tree = function(root, subtrees){
     return {
       $: 'Tree',
@@ -60,5 +60,8 @@
   };
   root.typeOperation = function(op, lhs, rhs){
     return op && lhs && rhs && tree(tree(op), [lhs, rhs]);
+  };
+  root.slashExpression = function(lhs, rhs){
+    return lhs && rhs && tree(genericIdentifier('/'), [lhs, rhs]);
   };
 }).call(this);

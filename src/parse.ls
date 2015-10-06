@@ -97,7 +97,6 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
         try
             jar = spawn "java", <[-jar lib/bell.jar -]>
             jar.stdout.on \data, (data) !->
-                console.log data
                 $scope.output.push JSON.parse data
                 $scope.data.push {value: JSON.parse data}
                 $scope.$apply!
