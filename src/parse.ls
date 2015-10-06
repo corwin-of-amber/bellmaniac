@@ -98,55 +98,41 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
             jar = spawn "java", <[-jar lib/bell.jar -]>
             jar.stdout.on \data, (data) !->
                 console.log data
-                $scope.output = JSON.parse data
-                $scope.data = [{value: JSON.parse data}]
+                $scope.output.push JSON.parse data
+                $scope.data.push {value: JSON.parse data}
                 $scope.$apply!
 
             jar.stderr.on \data, (data) !->
                 console.error 'Java error: ' + data
 
-            $scope.parsed = _.map blocks, ((block) ->
+            # reset global list of sets to empty
+            window.scope = []
+            $scope.parsed = _.chain(blocks)
+            .map((block) ->
+                # parse block with nearley, filter only truthy results, assert parse unambiguous
                 p = new nearley.Parser grammar.ParserRules, grammar.ParserStart
                 parsed = p.feed block
-                console.assert parsed.results.length == 1, parsed.results
-                parsed.results[0]
-            )
+                results = _.filter parsed.results, (r) -> r
+                console.assert results.length == 1, results
+                results[0]
+            ).filter((block) ->
+                # only take the expressions that aren't set declarations
+                # set declarations are implicitly pushed to window.scope
+                block.root.kind != \set
+            # ).map((block) ->
+            #     # wrap each expression in another layer that includes scope
+            #     check: block,
+            #     scope: window.scope
+            ).value!
 
             jar.stdin.setEncoding('utf-8')
             for parsedBlock in $scope.parsed
-                console.log <| "writing " + JSON.stringify(parsedBlock)
                 jar.stdin.write <| JSON.stringify(parsedBlock)
                 jar.stdin.write "\n\n"
             jar.stdin.end!
         catch err
+            console.log err
             $scope.parsed = err
-
-
-
-        # try
-        #     p = new nearley.Parser grammar.ParserRules, grammar.ParserStart
-        #     parsed = p.feed $scope.code
-        #     console.assert parsed.results.length == 1, parsed.results
-        #     $scope.parsed = parsed.results[0]
-
-        #     jar = spawn "java", <[-jar lib/bell.jar -]>
-        #     jar.stdout.on \data, (data) !->
-        #         console.log data
-        #         $scope.output = JSON.parse data
-        #         $scope.data = [{value: JSON.parse data}]
-        #         $scope.$apply!
-
-        #     jar.stderr.on \data, (data) !->
-        #         console.error 'Java error: ' + data
-
-
-        #     jar.stdin.setEncoding('utf-8')
-        #     console.log JSON.stringify(parsed.results[0])
-        #     jar.stdin.write <| JSON.stringify(parsed.results[0]) + "\n"
-        #     jar.stdin.end!
-        # catch err
-        #     console.error 'Parsing error: ' + err
-
 
   ..filter "collapse" ->
     lead = -> it.match /^\s*/ .0.length

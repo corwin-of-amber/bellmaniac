@@ -1,6 +1,10 @@
 root = exports ? this
 
-root.id = (d) -> d[0]
+root.scope = []
+root.id = (d) -> d && d[0]
+root.keywords = ["set"]
+
+## combinators
 
 root.tree = (root, subtrees) ->
 	$: \Tree,
@@ -14,12 +18,39 @@ root.identifier = (literal, kind) ->
 
 root.genericIdentifier = (literal) -> identifier(literal, \?)
 
-root.variable = (literal) -> tree(identifier(literal, \variable), [])
+## variables and type-variables: convert to null if literals are reserved keywords
 
-root.abstraction = (par, body) -> tree(genericIdentifier(\↦), [par, body])
+root.declareSet = (literal) ->
+	if root.keywords.indexOf(literal) == -1
+		newSet = tree(identifier(literal, \set), [])
+		root.scope.push newSet
+		newSet
+	else
+		# console.error <| "Literal " + literal + " is reserved."
+		null
 
-root.application = (lhs, rhs) -> tree(genericIdentifier(\@), [lhs, rhs])
+root.typeVariable = (literal) ->
+	if root.keywords.indexOf(literal) == -1 && root.scope.filter((set) ->
+		set.root.literal == literal
+	).length > 0
+		tree(identifier(literal, \set))
+	else
+		# console.error <| "Literal " + literal + " is reserved or has not yet been declared as a set."
+		null
 
-root.typeOperation = (op, lhs, rhs) -> tree(tree(op), [lhs, rhs])
+root.variable = (literal) ->
+	if root.keywords.indexOf(literal) == -1 && root.scope.filter((set) ->
+		set.root.literal == literal
+	).length == 0
+		tree(identifier(literal, \variable), [])
+	else
+		# console.error <| "Literal " + literal + " is reserved or has been declared as a set."
+		null
 
-root.typeVariable = (literal) -> tree(identifier(literal, \?), [])
+## recursive calls; trickle up nulls if any subtree is null
+
+root.abstraction = (par, body) -> par && body && tree(genericIdentifier(\↦), [par, body])
+
+root.application = (lhs, rhs) -> lhs && rhs && tree(genericIdentifier(\@), [lhs, rhs])
+
+root.typeOperation = (op, lhs, rhs) -> op && lhs && rhs && tree(tree(op), [lhs, rhs])

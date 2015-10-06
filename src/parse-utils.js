@@ -2,9 +2,11 @@
 (function(){
   var root;
   root = typeof exports != 'undefined' && exports !== null ? exports : this;
+  root.scope = [];
   root.id = function(d){
-    return d[0];
+    return d && d[0];
   };
+  root.keywords = ["set"];
   root.tree = function(root, subtrees){
     return {
       $: 'Tree',
@@ -22,19 +24,41 @@
   root.genericIdentifier = function(literal){
     return identifier(literal, '?');
   };
-  root.variable = function(literal){
-    return tree(identifier(literal, 'variable'), []);
-  };
-  root.abstraction = function(par, body){
-    return tree(genericIdentifier('↦'), [par, body]);
-  };
-  root.application = function(lhs, rhs){
-    return tree(genericIdentifier('@'), [lhs, rhs]);
-  };
-  root.typeOperation = function(op, lhs, rhs){
-    return tree(tree(op), [lhs, rhs]);
+  root.declareSet = function(literal){
+    var newSet;
+    if (root.keywords.indexOf(literal) === -1) {
+      newSet = tree(identifier(literal, 'set'), []);
+      root.scope.push(newSet);
+      return newSet;
+    } else {
+      return null;
+    }
   };
   root.typeVariable = function(literal){
-    return tree(identifier(literal, '?'), []);
+    if (root.keywords.indexOf(literal) === -1 && root.scope.filter(function(set){
+      return set.root.literal === literal;
+    }).length > 0) {
+      return tree(identifier(literal, 'set'));
+    } else {
+      return null;
+    }
+  };
+  root.variable = function(literal){
+    if (root.keywords.indexOf(literal) === -1 && root.scope.filter(function(set){
+      return set.root.literal === literal;
+    }).length === 0) {
+      return tree(identifier(literal, 'variable'), []);
+    } else {
+      return null;
+    }
+  };
+  root.abstraction = function(par, body){
+    return par && body && tree(genericIdentifier('↦'), [par, body]);
+  };
+  root.application = function(lhs, rhs){
+    return lhs && rhs && tree(genericIdentifier('@'), [lhs, rhs]);
+  };
+  root.typeOperation = function(op, lhs, rhs){
+    return op && lhs && rhs && tree(tree(op), [lhs, rhs]);
   };
 }).call(this);

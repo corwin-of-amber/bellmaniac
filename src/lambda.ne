@@ -2,7 +2,14 @@
 ####### ROOT EXPRESSION #######
 ###############################
 
-expression 	-> untypedExpression (_ colon _ type):? {% function(d) { if (d[1] === null) { return d[0]; } else { d[0].type = d[1][3]; return d[0]; } } %}
+expression 	-> setDeclaration {% function(d) { console.log("SETDECLARATION"); return d[0]} %}
+	| untypedExpression (_ colon _ type):? {% function(d) { if (d[1] === null) { return d[0]; } else { d[0].type = d[1][3]; return d[1][3] && d[0]; } } %}
+
+###############################
+####### SET DECLARATION #######
+###############################
+
+setDeclaration -> identifier ":set" {% function(d) { return declareSet(d[0]); } %}
 
 ###########################################
 ####### LAMBDA CALCULUS EXPRESSIONS #######
@@ -50,7 +57,7 @@ lambdaExpression -> ( possiblyTypedVariable _ ):+ arrow _ expression  {%
 	} %}
 
 possiblyTypedVariable -> variable {% function(d) {return d[0];} %}
-	| leftparen variable _ colon _ type rightparen {% function(d) { d[1].type = d[5]; return d[1]; } %}
+	| leftparen variable _ colon _ type rightparen {% function(d) { d[1].type = d[5]; return d[5] && d[1]; } %}
 
 variable -> identifier {% function(d) {return variable(d[0]); } %}
 

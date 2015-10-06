@@ -165,32 +165,38 @@
         jar = spawn("java", ['-jar', 'lib/bell.jar', '-']);
         jar.stdout.on('data', function(data){
           console.log(data);
-          $scope.output = JSON.parse(data);
-          $scope.data = [{
+          $scope.output.push(JSON.parse(data));
+          $scope.data.push({
             value: JSON.parse(data)
-          }];
+          });
           $scope.$apply();
         });
         jar.stderr.on('data', function(data){
           console.error('Java error: ' + data);
         });
-        $scope.parsed = _.map(blocks, function(block){
-          var p, parsed;
+        window.scope = [];
+        $scope.parsed = _.chain(blocks).map(function(block){
+          var p, parsed, results;
           p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
           parsed = p.feed(block);
-          console.assert(parsed.results.length === 1, parsed.results);
-          return parsed.results[0];
-        });
+          results = _.filter(parsed.results, function(r){
+            return r;
+          });
+          console.assert(results.length === 1, results);
+          return results[0];
+        }).filter(function(block){
+          return block.root.kind !== 'set';
+        }).value();
         jar.stdin.setEncoding('utf-8');
         for (i$ = 0, len$ = (ref$ = $scope.parsed).length; i$ < len$; ++i$) {
           parsedBlock = ref$[i$];
-          console.log("writing " + JSON.stringify(parsedBlock));
           jar.stdin.write(JSON.stringify(parsedBlock));
           jar.stdin.write("\n\n");
         }
         jar.stdin.end();
       } catch (e$) {
         err = e$;
+        console.log(err);
         $scope.parsed = err;
       }
     };
