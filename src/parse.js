@@ -139,35 +139,59 @@
         }
       });
     };
+    $scope.splitTextToBlocks = function(input){
+      var lines, blocks, i$, len$, i;
+      lines = input.split("\n");
+      blocks = [];
+      for (i$ = 0, len$ = lines.length; i$ < len$; ++i$) {
+        i = lines[i$];
+        if (i.length > 0) {
+          if (i[0] === "\t" && blocks.length > 0) {
+            blocks[blocks.length - 1] = blocks[blocks.length - 1].concat(" " + i.slice(1));
+          } else {
+            blocks.push(i);
+          }
+        }
+      }
+      return blocks;
+    };
     $scope.parseAndDisplay = function(){
-      var p, parsed, jar, err;
-      $scope.parsed = {};
-      $scope.output = {};
+      var blocks, jar, i$, ref$, len$, parsedBlock, err;
+      $scope.parsed = [];
+      $scope.output = [];
       $scope.data = [];
-      p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
+      blocks = $scope.splitTextToBlocks($scope.code);
       try {
-        parsed = p.feed($scope.code);
-        console.assert(parsed.results.length === 1, parsed.results);
-        $scope.parsed = parsed.results[0];
         jar = spawn("java", ['-jar', 'lib/bell.jar', '-']);
-        jar.stdout.once('data', function(data){
+        jar.stdout.on('data', function(data){
+          console.log(data);
           $scope.output = JSON.parse(data);
           $scope.data = [{
             value: JSON.parse(data)
           }];
           $scope.$apply();
-          jar.kill('SIGINT');
         });
-        jar.stderr.once('data', function(data){
+        jar.stderr.on('data', function(data){
           console.error('Java error: ' + data);
-          jar.kill('SIGINT');
+        });
+        $scope.parsed = _.map(blocks, function(block){
+          var p, parsed;
+          p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
+          parsed = p.feed(block);
+          console.assert(parsed.results.length === 1, parsed.results);
+          return parsed.results[0];
         });
         jar.stdin.setEncoding('utf-8');
-        jar.stdin.write(JSON.stringify(parsed.results[0]) + "\n");
+        for (i$ = 0, len$ = (ref$ = $scope.parsed).length; i$ < len$; ++i$) {
+          parsedBlock = ref$[i$];
+          console.log("writing " + JSON.stringify(parsedBlock));
+          jar.stdin.write(JSON.stringify(parsedBlock));
+          jar.stdin.write("\n\n");
+        }
         jar.stdin.end();
       } catch (e$) {
         err = e$;
-        console.error('Parsing error: ' + err);
+        $scope.parsed = err;
       }
     };
   });

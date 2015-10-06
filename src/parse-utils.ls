@@ -22,4 +22,4 @@ root.application = (lhs, rhs) -> tree(genericIdentifier(\@), [lhs, rhs])
 
 root.typeOperation = (op, lhs, rhs) -> tree(tree(op), [lhs, rhs])
 
-typeVariable = (literal) -> tree(identifier(literal, \set), [])
+root.typeVariable = (literal) -> tree(identifier(literal, \?), [])
