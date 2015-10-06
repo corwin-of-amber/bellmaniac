@@ -41,7 +41,7 @@ class StratifySlashPod(val h: Term, val quadrant: Term, val ψ: Term)(implicit s
   
   val quadrants = splitSkip(h, I("/"))
   
-  val f = replaceDescendants(h, (quadrants filter (_ ne quadrant) map ((_, $TV ↦ ψ))))
+  val f = replaceDescendants(h, quadrants filter (_ ne quadrant) map ((_, $TV ↦ ψ)))
   val g = ψ ↦ replaceDescendant(h, (quadrant, $TV ↦ ψ))
 
   val gψ = replaceDescendant(h, (quadrant, $TV ↦ ψ))

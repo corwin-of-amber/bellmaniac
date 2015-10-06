@@ -13,7 +13,10 @@ object AstSugar {
   def I(a: Any) = new Identifier(a)
   def S(a: Any) = new Identifier(a, "set")
   def V(a: Any) = new Identifier(a, "variable")
-  def T(a: Identifier, b: List[Tree[Identifier]]=List()) = new Tree(a, b)
+  object T {
+    def apply(a: Identifier, b: List[Tree[Identifier]]=List()) = new Tree(a, b)
+    def unapply(t: Term) = Some(t.root, t.subtrees)
+  }
   def TI(a: Any, b: List[Tree[Identifier]]=List()) = T(I(a), b)
   def TS(a: Any, b: List[Tree[Identifier]]=List()) = T(S(a), b)
   def TV(a: Any, b: List[Tree[Identifier]]=List()) = T(V(a), b)
@@ -103,6 +106,8 @@ object AstSugar {
   
   val `...` = TI("...")
 
+  // - unique identifiers
+
   class Uid {}
   def $_ = new Identifier("_", "placeholder", new Uid)
   def $v = new Identifier("?", "variable", new Uid)
@@ -111,6 +116,13 @@ object AstSugar {
  
   def $TV = T($v)
   def $TV(name: String) = T($v(name))
+
+  // - pattern matching for terms
+
+  object -> extends Tree(new Identifier("->", "connective")) {
+    def unapply(t: Term) = t match { case T(->.root, List(x,y)) => Some(x,y) case _ => None }
+  }
+
 }
 
 

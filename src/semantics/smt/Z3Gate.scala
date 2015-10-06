@@ -8,7 +8,7 @@ import com.microsoft.z3.Sort
 import syntax.Identifier
 import syntax.AstSugar
 import com.microsoft.z3.FuncDecl
-import semantics.TypedIdentifier
+import semantics.{Mnemonics, TypedIdentifier}
 import com.microsoft.z3.BoolExpr
 import com.microsoft.z3.Z3Exception
 import scala.util.Either
@@ -25,7 +25,7 @@ class Z3Gate {
   val declarations = new HashMap[Identifier, Either[FuncDecl,Expr]]
   val sorts = new HashMap[Identifier, Sort]
   
-  val mnemonics = new HashMap[Identifier, String]
+  val mnemonics = new Mnemonics
   
   /* some built-in declarations */
   sorts += (//S("R") -> ctx.getRealSort,
@@ -90,44 +90,17 @@ class Z3Gate {
    * identifiers get distinct mnemonics (even if they have the same
    * literal).
    */
-  def mne(id: Identifier) = mnemonics get id match {
-    case Some(x) => x
-    case _ =>
-      val lit = normalizeLiteral(id)
-      val newMne = (lit #:: (nat map (lit + _))) find (x => ! mnemonics.exists (_._2 == x))
-      mnemonics += id -> newMne.get
-      newMne.get
-  }
-  
-  def normalizeLiteral(id: Identifier) = normalize(id.literal.toString)
-  
-  def normalize(s: String) =
-    if (s == "<") "lt"
-    else if (s == "+") "plus"
-    else {
-      val esc = s.replace("'", "_").replace(".", "_").replace("|", "!").replace("@", "apply")
-      if (Character.isJavaIdentifierStart(esc.charAt(0))) esc else "_" + esc;
-    }
-
-  /**
-   * just the stream of naturals (taken from Scala docs)
-   */
-  def nat = { 
-    def loop(v: Int): Stream[Int] = v #:: loop(v + 1)
-    loop(0)
-  }
+  def mne(id: Identifier) = mnemonics get id
 
   // ---------------
   // Assertions part
   // ---------------
 
-  import AstSugar.TreeBuild
-  
   implicit class App(private val d: Either[FuncDecl, Expr])  {
     def apply(args: Expr*) = d match {
       case Left(f) => f(args:_*)
       case Right(e) =>
-        if (args.length > 0) throw new SmtException(s"non-function $e used with ${args.length} arguments")
+        if (args.nonEmpty) throw new SmtException(s"non-function $e used with ${args.length} arguments")
         else e
     }
   }

@@ -82,3 +82,8 @@ class Tree[T](val root: T, val subtrees: List[Tree[T]] = List()) extends AsJson 
     new BasicDBObject("$", "Tree") append ("root", container.any(root)) append
       ("subtrees", container.list(subtrees))
 }
+
+
+object Tree {
+  def unapply[T](t: Tree[T]) = Some(t.root, t.subtrees)
+}

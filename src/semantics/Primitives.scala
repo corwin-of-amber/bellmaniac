@@ -184,9 +184,9 @@ object LambdaCalculus {
     
   // returns args and body
   def uncurry(fun: Term): (List[Term], Term) = {
-    if (fun =~ ("↦", 2)) {
+    if (fun =~ ("↦", 2))
       uncurry(fun.subtrees(1)) match { case (args, body) => (fun.subtrees(0) :: args, body) }
-    }
+    else if (fun =~ (":", 2)) uncurry(fun.subtrees(1))
     else (List(), fun)
   }
   
@@ -196,11 +196,18 @@ object LambdaCalculus {
       case Some((f, args)) => Some((f, args :+ t.subtrees(1)))
       case _ => Some((t.subtrees(0), t.subtrees drop 1))
     }
+    else if (t =~ (":", 2)) isApp(t.subtrees(1))
     else None
 
   // destructs application terms with a specific head    
   def isAppOf(t: Term, f: Term): Option[List[Term]] =
-    isApp(t) collect { case (f0, args) if f0 == f => args }  
+    isApp(t) collect { case (f0, args) if f0 == f => args }
+
+  // destructs abstraction terms
+  def isAbs(t: Term): Option[(List[Term], Term)] =
+    if (t =~ ("↦", 2)) Some(uncurry(t))
+    else if (t =~ (":", 2)) isAbs(t.subtrees(1))
+    else None
 }
 
 object TypedLambdaCalculus {
@@ -268,10 +275,14 @@ object `package` {
    * Adds the "untype" method to Term.
    */
   implicit class UntypedTerm(private val term: Term) extends AnyVal {
-    def untype = term.map({
+    def untype = term map {
       case x: TypedIdentifier => x.untype
       case e => e
-    })
+    }
+    def typedLeaf = term.leaf match {
+      case tid: TypedIdentifier => tid
+      case u => TypedIdentifier(u, TypedTerm.typeOf_!(term))
+    }
   }
 
   /*
@@ -345,7 +356,12 @@ object TypedTerm {
     case (typed: TypedTerm, _) => TypedTerm(newterm, typed.typ)
     case _ => newterm
   }
-  
+
+  def raw(t: Term)(implicit scope: Scope): Term = typeOf(t) match {
+    case Some(typ) => TypedTerm(T(t.root, t.subtrees map raw), TypePrimitives.shape(typ))
+    case _ => T(t.root, t.subtrees map raw)
+  }
+
 }
 
 

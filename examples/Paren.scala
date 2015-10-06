@@ -2,6 +2,7 @@
 package examples
 
 import examples.Gap.BreakDown.Instantiated
+import semantics.TypedScheme.TermWithHole
 import syntax.Tree
 import syntax.Identifier
 import semantics.{TypedLambdaCalculus, Scope, TypedIdentifier}
@@ -165,11 +166,12 @@ object Paren {
         Q0     :: (J x J) ->: B
       )
     }
-    
+
+    import ConsPod.`⟨ ⟩`
+
     class APod(val J: Term) {
-      import Prelude.{fix,∩,min,?,cons,nil}
-      import ConsPod.`⟨ ⟩`
-      
+      import Prelude.{fix,min,?}
+
       val A = $TV("A")
       val (ψ, θ, i, j, k) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), TV("k"))
 
@@ -179,9 +181,8 @@ object Paren {
     
             min:@`⟨ ⟩`(
               min:@(k ↦
-                    ( ((θ:@(i, k)) + (θ:@(k, j)))/*((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j)))*/ -: TV("item") )
-                  )
-              ,
+                    ( ((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j)))/*((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j)))*/ -: TV("item") )
+              ),
               ψ:@(i, j)
             )
             
@@ -199,34 +200,26 @@ object Paren {
       
       val B = $TV("B")
       val P = $TV("▜")
-      
+
+      val (ψ, θ, i, j, k) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), TV("k"))
+
       val program = TI("program")(
-        B :- ω( /::(
-          ℐ :: (? x J0 x J0) -> ?,
+        B :- (ψ ↦ fix(
           (TI("↦")(
-            θ :: ((J x J) ∩ P ∩ <) ->: R , i , j ,
+            θ :: (J0 x J1) ->: R , i , j ,
     
-            min:@
-            (
-              cons:@(
-                (min:@ 
-                  (k ↦
-                    ( ((θ:@(i, k)) + (θ:@(k, j)))/*((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j)))*/ -: TV("item") )
-                  )
-                ),
-                cons:@(
-                  (θ:@(i, j)),
-                  nil
-                )
-              )
+            min:@`⟨ ⟩`(
+              min:@(k ↦
+                ( ((θ:@(i, k)) + (θ:@(k, j)))/*((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j)))*/ -: TV("item") )
+              ),
+              ψ:@(i, j)
             )
-            
-          ).foldRight -: f) :: (? x J0 x J1) -> ?,
-          ℐ :: (? x J1 x J1) -> ?
+
+          ).foldRight -: f) :: (? x J0 x J1) -> ?
       ) ) )
       
-      def decl = new Declaration(P) where List(
-          (P <-> (i ↦ (j ↦ ((J0(i) & J0(j)) | (J0(i) & J1(j)) | (J1(i) & J0(j))))))
+      def decl = new Declaration(P) where (
+          P <-> (i ↦ (j ↦ ((J0(i) & J0(j)) | (J0(i) & J1(j)) | (J1(i) & J0(j)))))
         )
     }
     
@@ -310,13 +303,16 @@ object Paren {
     def instapod(it: Term)(implicit scope: Scope) = instantiate(it)._2
     def instapod(it: Pod)(implicit scope: Scope) = new Instantiated(it)
 
+    def fixer(A: Term, q: Term) = SimplePattern(fix(?)) find A map (_.subterm) filter (_.hasDescendant(q)) head
+    def fixee(A: Term, q: Term) = fixer(A, q).subtrees(0)
+    def ctx(A: Term, t: Term) = TypedLambdaCalculus.context(A, t)
+
     def rewriteA(implicit env: Environment, scope: Scope) {
-      import Prelude.{?,ω,nil}
+      import Prelude.?
       val (_, tA) = instantiate(APod(J).program)
       val A = tA
       
       val extrude = Extrude(Set(I("/")))
-      def ctx(A: Term, t: Term) = TypedLambdaCalculus.context(A, t)
 
       //display(A)
       
@@ -336,43 +332,16 @@ object Paren {
             for (target <- SimplePattern(fix(* :- ?)) find A0 flatMap (x => TypedLambdaCalculus.pullOut(A0, x(*)))) {
               val ψ = ctx(A, ex :/ "🄲")("ψ")
               val (lhs, rhs) = (ex :/ "🄲", target :@ ψ)
-              invokeProver(List(), List(lhs =:= (rhs :: (env.typeOf_!(lhs)))) |>> instapod)
+              env.typeOf(lhs) match {
+                case Some(x -> y) =>
+                  invokeProver(List(), List(lhs =:= (rhs :: (? -> y))) |>> instapod)
+                case _ =>
+              }
             }
           }
         }
       }
     }
-
-    def invokeProver(assumptions: Iterable[Term], goals: Iterable[Term]): Unit = {
-      import synth.proof._
-      import synth.pods._
-      import semantics.Trench
-
-      implicit val env = Paren.env
-      implicit val scope = env.scope
-
-      val a = new Assistant
-
-      val toR = TotalOrderPod(R)
-      val toJ = TotalOrderPod(J, <)
-      val idxJ = new IndexArithPod(J, toJ.<, succ)
-      val partJ = PartitionPod(J, <, J0, J1)
-      val nilNR = NilPod(N, R)
-      val minJR = MinPod(J, R, toR.<) //, opaque=true)
-      val minNR = MinPod(N, R, toR.<) //, opaque=true)
-
-      val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, minJR, minNR, nilNR))
-
-      val t = new p.Transaction
-      val switch = t.commonSwitch(new p.CommonSubexpressionElimination(goals, new SimplePattern(min :@ ?)))
-
-      val results =
-        t.commit(assumptions map a.simplify map t.prop, goals map (switch(_)) map a.intros map a.simplify map t.goal)
-
-      println("=" * 80)
-      Trench.display(results, "◦")
-    }
-
 
     def rewriteB(implicit env: Environment, scope: Scope) {
       import Prelude.{?,ω,min,cons}
@@ -388,6 +357,64 @@ object Paren {
       val ex = extrude(B) |-- display
       
       val f = (B :/ "f").subtrees(1)
+      // Slice  f  ? x [ K₀, K₁ ] x [ K₂, K₃ ]
+      val slicef = SlicePod(f, List(K0 x K2, K0 x K3, K1 x K2, K1 x K3) map (? x _)) |> instapod
+      for (B <- Rewrite(slicef)(B)) {
+        val ex = extrude(B) |-- display
+        // Stratify  🄲 :: ? -> (K₁ x K₂) -> ?
+        val strat = SimplePattern(fix(* :- `...`(ex :/ "🄲"))) find B map (x => StratifySlashPod(x(*), ex :/ "🄲", ctx(B, ex :/ "🄲")("ψ"))) map instapod
+        for (B <- Rewrite(strat)(B)) {
+          val ex = extrude(B) |-- display
+          // Stratify  🄰 :: ? -> (K₀ x K₂) -> ?
+          val strat = SimplePattern(fix(* :- `...`(ex :/ "🄰"))) find B map (x => StratifySlashPod(x(*), ex :/ "🄰", ctx(B, ex :/ "🄰")("ψ"))) map instapod
+          for (B <- Rewrite(strat)(B)) {
+            val ex = extrude(B) |-- display
+            // Stratify  🄱
+            val strat = SimplePattern(fix(* :- `...`(ex :/ "🄱"))) find B map (x => StratifySlashPod(x(*), ex :/ "🄱", ctx(B, ex :/ "🄱")("ψ"))) map instapod
+            for (B <- Rewrite(strat)(B)) {
+              val ex = extrude(B) |-- display
+              // Slice  🄰 ... ( k ↦ ? )  [ K₀, K₁, K₂, K₃ ]
+              //        🄱 ... ( k ↦ ? )  [ K₁, K₂, K₃ ]
+              //        🄲 ... ( k ↦ ? )  [ K₀, K₁, K₂ ]
+              val slicekf = (SimplePattern(k ↦ ?) find (ex :/ "🄰") map
+                              (x => SlicePod(x.subterm, List(K0, K1, K2, K3)))) ++
+                            (SimplePattern(k ↦ ?) find (ex :/ "🄱") map
+                              (x => SlicePod(x.subterm, List(K1, K2, K3)))) ++
+                            (SimplePattern(k ↦ ?) find (ex :/ "🄲") map
+                              (x => SlicePod(x.subterm, List(K0, K1, K2)))) |>> instapod
+              for (B <- Rewrite(slicekf)(B)) {
+                // MinDistrib
+                val mindistkfs = SimplePattern(min :@ (* :- /::(`...`))) find B map
+                  (x => MinDistribPod(x(*).split)) map instapod
+                for (B <- Rewrite(mindistkfs)(B)) {
+                  val extrude = Extrude(Set(I("/"), cons.root))
+                  // MinAssoc
+                  val minassockfs = SimplePattern(min :@ (* :- ?)) find B flatMap (_(*) |> `⟨ ⟩?`) map
+                                    (MinAssocPod(_)) filter (x => x.subtrees(0) != x.subtrees(1)) map instapod
+                  for (B <- Rewrite(minassockfs)(B)) {
+                    val ex = extrude(B) |-- display
+                    def stratduce(A: Term, `.` : Term, subelements: List[Term]) =
+                      SimplePattern(min:@(* :- ?)) find `.` flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
+                        StratifyReducePod(TermWithHole.puncture(fixee(A,`.`), x.subterm), min, elements, subelements, ctx(A, `.`)("ψ"))))
+                    val strat = stratduce(B, ex :/ "🄰", List("🄴", "🄷", "🄸") map (ex :/ _)) ++
+                                stratduce(B, ex :/ "🄱", List("🄹", "🄻", "🄼") map (ex :/ _)) ++
+                                stratduce(B, ex :/ "🄲", List("🄽", "🄿", "🅀") map (ex :/ _)) |>> instapod
+                    for (B <- Rewrite(strat)(B)) {
+                      val ex = extrude(B) |-- display
+                      val strat = stratduce(B, ex :/ "🄰", List("🄷", "🄸") map (ex :/ _)) |>> instapod
+                      for (B <- Rewrite(strat)(B)) {
+                        val ex = extrude(B) |-- display
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      /*
       // Slice  f  ? x [ K₀, K₁ ] x [ K₂, K₃ ]
       val slicef = SlicePod(f, List(K0 x K2, K0 x K3, K1 x K2, K1 x K3) map (? x _)) |> instapod
       for (B <- Rewrite(slicef)(B)) {
@@ -443,40 +470,40 @@ object Paren {
             }
           }
         }
-      }
+      }*/
     }
   
   
     def rewriteC(implicit env: Environment, scope: Scope) {
-      import semantics.Prelude.{cons,?,min}
-      
+      import semantics.Prelude.{cons, ?, min}
+
       val (vassign, tC) = instantiate(CPod(K0, K1, K2).program)
       val C = tC
-      
+
       //display(C)
-      
+
       println(s"C  ===  ${C toPretty}")
-      
+
       val extrude = Extrude(Set(I("/"), cons.root))
-      
+
       // Slice  ( k ↦ ? )  [ L2, L3 ]
       for (kf <- SimplePattern(k ↦ ?) find C) {
-        val (vassign1, slicekf) = instantiate(SlicePod(kf.subterm, List(L2, L3)))//, vassign)
-        for ((k,v) <- vassign1)
+        val (vassign1, slicekf) = instantiate(SlicePod(kf.subterm, List(L2, L3))) //, vassign)
+        for ((k, v) <- vassign1)
           println(s"$k   $v")
         //val env1 = TypeTranslation.decl(scope, vassign1)
         //proveEquality(slicekf.subtrees(0), slicekf.subtrees(1), vassign1)(env1)//Map())
-        
+
         for (C <- Rewrite(slicekf)(C)) {
           println(s"C  ===  ${C toPretty}")
           // MinDistrib  ( min  /(...) )
           for (smallkfs <- SimplePattern(min :@ (* :- /::(`...`))) find C) {
-            val (_, mindistkfs) = instantiate(MinDistribPod(smallkfs(*).split))//, vassign)
+            val (_, mindistkfs) = instantiate(MinDistribPod(smallkfs(*).split)) //, vassign)
             for (C <- Rewrite(mindistkfs)(C)) {
               println(s"C  ===  ${C toPretty}")
               // Slice  ( i ↦ ? )  [ L0, L1 ] x [ L4, L5 ]
               for (if_ <- SimplePattern(i ↦ ?) find C) {
-                val (_, sliceif) = instantiate(SlicePod(if_.subterm, List(L0 x L4, L0 x L5, L1 x L4, L1 x L5)))//, vassign)
+                val (_, sliceif) = instantiate(SlicePod(if_.subterm, List(L0 x L4, L0 x L5, L1 x L4, L1 x L5))) //, vassign)
                 for (C <- Rewrite(sliceif)(C)) {
                   println(s"C  ===  ")
                   display(extrude(C))
@@ -491,11 +518,40 @@ object Paren {
           }
         }
       }
-      
-      
     }
-      
-  
+
+
+    def invokeProver(assumptions: Iterable[Term], goals: Iterable[Term]): Unit = {
+      import synth.proof._
+      import synth.pods._
+      import semantics.Trench
+
+      implicit val env = Paren.env
+      implicit val scope = env.scope
+
+      val a = new Assistant
+
+      val toR = TotalOrderPod(R)
+      val toJ = TotalOrderPod(J, <)
+      val idxJ = new IndexArithPod(J, toJ.<, succ)
+      val partJ = PartitionPod(J, <, J0, J1)
+      val nilNR = NilPod(N, R)
+      val minJR = MinPod(J, R, toR.<) //, opaque=true)
+      val minNR = MinPod(N, R, toR.<) //, opaque=true)
+
+      val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, minJR, minNR, nilNR))
+
+      val t = new p.Transaction
+      val switch = t.commonSwitch(new p.CommonSubexpressionElimination(goals, new SimplePattern(min :@ ?)))
+
+      val results =
+        t.commit(assumptions map a.simplify map t.prop, goals map (switch(_)) map a.intros map a.simplify map t.goal)
+
+      println("=" * 80)
+      Trench.display(results, "◦")
+    }
+
+
   }
 
 

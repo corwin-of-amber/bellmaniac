@@ -90,7 +90,9 @@ class Assistant(implicit env: Environment) {
       simplify(TypedTerm.preserve( term, TypedTerm.preserveBoth(sub(0), x) :@ sub(1) )))))
     else if (term =~ ("|!", 2)) {
       val cond = unguard(term.subtrees(1))
-      if (sub(0) =~ ("|!", 2)) {
+      if (cond == Prelude.TRUE)
+        TypedTerm.preserveBoth(term, sub(0))
+      else if (sub(0) =~ ("|!", 2)) {
         val mcond = mergeConds(sub(0).subtrees(1), cond)
         if (mcond == sub(0).subtrees(1)) sub(0)
         else TypedTerm.preserveBoth(term, TypedTerm.preserve(sub(0), sub(0).subtrees(0) |! mcond))
