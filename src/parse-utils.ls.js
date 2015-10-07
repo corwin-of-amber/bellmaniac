@@ -68,6 +68,7 @@
     return lhs && rhs && tree(operator('/'), [lhs, rhs]);
   };
   root.fixedExpression = function(subj){
+    console.log("FIXING " + JSON.stringify(subj));
     return subj && tree(operator('fix'), [subj]);
   };
 }).call(this);

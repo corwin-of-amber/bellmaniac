@@ -52,7 +52,7 @@ applicationOnNonLambdaExpression -> applicationOnNonLambdaExpression __ rootExpr
 lambdaOrRootExpression -> lambdaExpression {% id %}
 						| rootExpression {% id %}
 
-fixedExpression -> fix __ rootExpression {% function(d) { return fixedExpression(d[2]); } %}
+fixedExpression -> fix __ expression {% function(d) { return fixedExpression(d[2]); } %}
 
 rootExpression -> parenthesizedExpression {% id %}
           | variable {% id %}

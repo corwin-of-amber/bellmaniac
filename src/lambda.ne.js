@@ -32,7 +32,7 @@ var grammar = {
     {"name": "applicationOnNonLambdaExpression", "symbols": ["fixedExpression"], "postprocess":  id },
     {"name": "lambdaOrRootExpression", "symbols": ["lambdaExpression"], "postprocess":  id },
     {"name": "lambdaOrRootExpression", "symbols": ["rootExpression"], "postprocess":  id },
-    {"name": "fixedExpression", "symbols": ["fix", "__", "rootExpression"], "postprocess":  function(d) { return fixedExpression(d[2]); } },
+    {"name": "fixedExpression", "symbols": ["fix", "__", "expression"], "postprocess":  function(d) { return fixedExpression(d[2]); } },
     {"name": "rootExpression", "symbols": ["parenthesizedExpression"], "postprocess":  id },
     {"name": "rootExpression", "symbols": ["variable"], "postprocess":  id },
     {"name": "parenthesizedExpression", "symbols": ["leftparen", "expression", "rightparen"], "postprocess":  function(d) {return d[1];} },

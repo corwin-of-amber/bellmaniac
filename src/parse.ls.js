@@ -207,6 +207,7 @@
           var p, parsed, results;
           p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
           parsed = p.feed(block);
+          console.log(parsed.results);
           results = _.filter(parsed.results, function(r){
             return r;
           });

@@ -135,6 +135,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 # parse block with nearley, filter only non-false results, assert parse unambiguous
                 p = new nearley.Parser grammar.ParserRules, grammar.ParserStart
                 parsed = p.feed block
+                console.log parsed.results
                 results = _.filter parsed.results, (r) -> r
                 console.assert results.length == 1, results
                 results[0]
