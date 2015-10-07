@@ -95,8 +95,6 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
 
     $scope.codemirrorLoaded = (editor) ->
 
-
-
         CodeMirror.registerHelper "hint", "anyword", hintReplace
 
         CodeMirror.commands.autocomplete = (cm) ->
@@ -121,10 +119,12 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
         blocks = []
         for i in lines
             if i.length > 0
+                console.log i
                 if i[0] == "\t" && blocks.length > 0
                     blocks[blocks.length - 1] = blocks[blocks.length - 1].concat(" " + i.slice(1))
                 else
                     blocks.push(i)
+        console.log blocks
         blocks
 
     $scope.parseAndDisplay = !->
@@ -134,10 +134,22 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
 
         blocks = $scope.splitTextToBlocks($scope.code)
         try
+            buffer = []
             jar = spawn "java", <[-jar lib/bell.jar -]>
+            jar.stdout.setEncoding('utf-8')
             jar.stdout.on \data, (data) !->
-                $scope.output.push JSON.parse data
-                $scope.data.push {value: JSON.parse data}
+                buffer.push(data)
+
+            jar.stdout.on \end, !->
+                outputFromJar = []
+                ctr = 0
+                for i in [1 to buffer.length]
+                    try
+                        output = JSON.parse buffer.slice(ctr, i).join("")
+                        $scope.output.push output
+                        $scope.data.push {value: output}
+                        ctr = i
+                    catch err
                 $scope.$apply!
 
             jar.stderr.on \data, (data) !->

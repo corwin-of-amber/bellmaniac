@@ -24,17 +24,11 @@ setDeclaration -> identifier ":set" {% function(d) { return declareSet(d[0]); } 
 untypedExpression -> applicationExpression {% id %}
     | lambdaExpression {% id %}
 
-applicationExpression -> slashExpressionOrApplicationWithInfixExpression {% id %}
+applicationExpression -> applicationWithInfixExpression {% id %}
 	| applicationWithoutInfixExpression {% id %}
 
-slashExpressionOrApplicationWithInfixExpression -> slashExpression {% id %}
-	| applicationWithInfixExpression {% id %}
-
-slashExpression -> applicationOnNonLambdaExpression _ forwardslash _ applicationExpression
-	{% function(d) {return slashExpression(d[0], d[4]);} %}
-
-applicationWithInfixExpression -> applicationOnNonLambdaExpression __ infixOperator __ applicationExpression
-	{% function(d) {return application(application(d[2], d[0]), d[4]);} %}
+applicationWithInfixExpression -> applicationOnNonLambdaExpression _ notatedInfixOperator _ applicationExpression {% function(d) {return application(application(d[2], d[0]), d[4]);} %}
+	| applicationOnNonLambdaExpression _ defaultInfixOperator _ applicationExpression {% function(d) {return tree(d[2], [d[0], d[4]]); } %}
 
 # to parse application as <A> <B>, we need to have:
 # - no unparenthesized lambdas in A (otherwise lambda body would include B)
@@ -92,7 +86,10 @@ possiblyTypedLambdaParameter -> variable {% id %}
 
 variable -> identifier {% function(d) {return variable(d[0]); } %}
 
-infixOperator -> backtick variable backtick {% function(d) {return d[1]; } %}
+notatedInfixOperator -> backtick variable backtick {% function(d) {return d[1]; } %}
+	| [+*\-] {% function(d) {return tree(operator(d[0]),[]); } %}
+
+defaultInfixOperator -> "/" {% function(d) {return operator(d[0]); } %}
 
 ################################
 ####### TYPE EXPRESSIONS #######

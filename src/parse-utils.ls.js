@@ -6,7 +6,7 @@
   root.id = function(d){
     return d && d[0];
   };
-  root.keywords = ["set", "fix", "/", "+", "×", "∩"];
+  root.keywords = ["set", "fix", "/", "+", "×", "∩", "-", "*"];
   root.tree = function(root, subtrees){
     return {
       $: 'Tree',
@@ -66,8 +66,8 @@
   root.typeOperation = function(op, lhs, rhs){
     return op && lhs && rhs && tree(operator(op), [lhs, rhs]);
   };
-  root.slashExpression = function(lhs, rhs){
-    return lhs && rhs && tree(operator('/'), [lhs, rhs]);
+  root.specialInfixOperation = function(op, lhs, rhs){
+    return op && lhs && rhs && tree(operator(op), [lhs, rhs]);
   };
   root.fixedExpression = function(subj){
     return subj && tree(operator('fix'), [subj]);

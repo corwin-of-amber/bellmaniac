@@ -185,6 +185,7 @@
       for (i$ = 0, len$ = lines.length; i$ < len$; ++i$) {
         i = lines[i$];
         if (i.length > 0) {
+          console.log(i);
           if (i[0] === "\t" && blocks.length > 0) {
             blocks[blocks.length - 1] = blocks[blocks.length - 1].concat(" " + i.slice(1));
           } else {
@@ -192,22 +193,47 @@
           }
         }
       }
+      console.log(blocks);
       return blocks;
     };
     $scope.parseAndDisplay = function(){
-      var blocks, jar, i$, ref$, len$, parsedBlock, err;
+      var blocks, buffer, jar, i$, ref$, len$, parsedBlock, err;
       $scope.parsed = [];
       $scope.output = [];
       $scope.data = [];
       blocks = $scope.splitTextToBlocks($scope.code);
       try {
+        buffer = [];
         jar = spawn("java", ['-jar', 'lib/bell.jar', '-']);
+        jar.stdout.setEncoding('utf-8');
         jar.stdout.on('data', function(data){
-          $scope.output.push(JSON.parse(data));
-          $scope.data.push({
-            value: JSON.parse(data)
-          });
+          buffer.push(data);
+        });
+        jar.stdout.on('end', function(){
+          var outputFromJar, ctr, i$, ref$, len$, i, output, err;
+          outputFromJar = [];
+          ctr = 0;
+          for (i$ = 0, len$ = (ref$ = (fn$())).length; i$ < len$; ++i$) {
+            i = ref$[i$];
+            try {
+              output = JSON.parse(buffer.slice(ctr, i).join(""));
+              $scope.output.push(output);
+              $scope.data.push({
+                value: output
+              });
+              ctr = i;
+            } catch (e$) {
+              err = e$;
+            }
+          }
           $scope.$apply();
+          function fn$(){
+            var i$, to$, results$ = [];
+            for (i$ = 1, to$ = buffer.length; i$ <= to$; ++i$) {
+              results$.push(i$);
+            }
+            return results$;
+          }
         });
         jar.stderr.on('data', function(data){
           console.error('Java error: ' + data);

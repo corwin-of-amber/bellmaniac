@@ -1,3 +1,8 @@
+.CodeMirror {
+  font-family: Menlo;
+  font-size: 12px;
+}
+
 .code {
   font-family: Menlo;
   font-size: 12px;
