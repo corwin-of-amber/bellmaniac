@@ -38,12 +38,14 @@
     }
   };
   root.typeVariable = function(literal){
-    if (root.keywords.indexOf(literal) === -1 && root.scope.filter(function(set){
+    if (root.keywords.indexOf(literal) > -1) {
+      return false;
+    } else if (root.scope.filter(function(set){
       return set.root.literal === literal;
     }).length > 0) {
-      return tree(identifier(literal, 'set'));
+      return tree(identifier(literal, 'set'), []);
     } else {
-      return false;
+      return tree(genericIdentifier(literal), []);
     }
   };
   root.variable = function(literal){
@@ -69,5 +71,8 @@
   };
   root.fixedExpression = function(subj){
     return subj && tree(operator('fix'), [subj]);
+  };
+  root.cons = function(car, cdr){
+    return application(application(variable('cons'), car), cdr);
   };
 }).call(this);

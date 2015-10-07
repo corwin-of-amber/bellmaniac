@@ -43,7 +43,10 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
         * text: "×", displayText: "\\times"
         * text: "∩", displayText: "\\cap"
 
-    autoWords = [{text: "↦", displayText: "|->"}]
+    autoWords =
+        * text: "↦", displayText: "|->"
+        * text: "\u27E8", displayText: "\\<"
+        * text: "\u27E9", displayText: "\\>"
 
     for i in [0 to 9]
         charCode = "208" + i
@@ -78,7 +81,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
         to: CodeMirror.Pos(cur.line, curPos.end)
 
     autoReplace = (editor) ->
-        curPos = findCurWord(editor, /[_|]/)
+        curPos = findCurWord(editor, /[_|\\]/)
         curWord = curPos.word
         cur = editor.getCursor()
 

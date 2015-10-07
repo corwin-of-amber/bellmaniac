@@ -97,10 +97,18 @@
         displayText: "\\cap"
       }
     ];
-    autoWords = [{
-      text: "↦",
-      displayText: "|->"
-    }];
+    autoWords = [
+      {
+        text: "↦",
+        displayText: "|->"
+      }, {
+        text: "\u27E8",
+        displayText: "\\<"
+      }, {
+        text: "\u27E9",
+        displayText: "\\>"
+      }
+    ];
     for (i$ = 0, len$ = (ref$ = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).length; i$ < len$; ++i$) {
       i = ref$[i$];
       charCode = "208" + i;
@@ -142,7 +150,7 @@
     };
     autoReplace = function(editor){
       var curPos, curWord, cur, filteredWords;
-      curPos = findCurWord(editor, /[_|]/);
+      curPos = findCurWord(editor, /[_|\\]/);
       curWord = curPos.word;
       cur = editor.getCursor();
       filteredWords = autoWords.filter(function(w){

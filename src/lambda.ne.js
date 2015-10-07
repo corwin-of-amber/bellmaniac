@@ -35,9 +35,20 @@ var grammar = {
     {"name": "fixedOrRootExpression", "symbols": ["rootExpression"], "postprocess":  id },
     {"name": "fixedExpression", "symbols": ["fix", "__", "rootExpression"], "postprocess":  function(d) { return fixedExpression(d[2]); } },
     {"name": "rootExpression", "symbols": ["parenthesizedExpression"], "postprocess":  id },
+    {"name": "rootExpression", "symbols": ["listExpression"], "postprocess":  id },
     {"name": "rootExpression", "symbols": ["variable"], "postprocess":  id },
+    {"name": "listExpression", "symbols": ["leftbracket", "_", "expression", " ebnf$3", "_", "rightbracket"], "postprocess":  function(d) {
+	var consHelper = function (vars) {
+		if (vars.length === 0) {
+			return variable("nil");
+		} else {
+			return cons(vars[0][3], consHelper(vars.slice(1)));
+		}
+	}
+	return cons(d[2], consHelper(d[3]));
+} },
     {"name": "parenthesizedExpression", "symbols": ["leftparen", "expression", "rightparen"], "postprocess":  function(d) {return d[1];} },
-    {"name": "lambdaExpression", "symbols": [" ebnf$3", "arrow", "_", "expression"], "postprocess": 
+    {"name": "lambdaExpression", "symbols": [" ebnf$4", "arrow", "_", "expression"], "postprocess": 
 	function(d) {
 		var curry = function(vars, lbody) {
 			if (vars.length === 1) {
@@ -64,63 +75,71 @@ var grammar = {
     {"name": "typeVariable", "symbols": ["identifier"], "postprocess":  function(d) {return typeVariable(d[0]); } },
     {"name": "identifier", "symbols": ["letter", "idrest"], "postprocess":  function(d) {return d[0].concat(d[1]); } },
     {"name": "identifier", "symbols": ["op"], "postprocess":  id },
-    {"name": "idrest", "symbols": [" ebnf$4"], "postprocess":  function(d) {return d[0].join(""); } },
-    {"name": "idrest", "symbols": [" ebnf$5", "underscore", "op"], "postprocess":  function(d) {return d[0].join("").concat("_").concat(d[2]);} },
+    {"name": "idrest", "symbols": [" ebnf$5"], "postprocess":  function(d) {return d[0].join(""); } },
+    {"name": "idrest", "symbols": [" ebnf$6", "underscore", "op"], "postprocess":  function(d) {return d[0].join("").concat("_").concat(d[2]);} },
     {"name": "letterOrDigit", "symbols": ["letter"], "postprocess":  id },
     {"name": "letterOrDigit", "symbols": ["digit"], "postprocess":  id },
     {"name": "letter", "symbols": [/[a-zA-Z$_\u00C0-\u1FFF\u2080-\u2089\u2C00-\uD7FF]/], "postprocess":  id },
     {"name": "digit", "symbols": [/[0-9]/], "postprocess":  id },
     {"name": "op", "symbols": ["validStandaloneOpchars"], "postprocess":  id },
-    {"name": "op", "symbols": ["opchar", " ebnf$6"], "postprocess":  function(d) { return [d[0]].concat(d[1]).join(""); } },
+    {"name": "op", "symbols": ["opchar", " ebnf$7"], "postprocess":  function(d) { return [d[0]].concat(d[1]).join(""); } },
     {"name": "validStandaloneOpchars", "symbols": [/[!%&*+<>?^|~\\\-]/], "postprocess":  id },
     {"name": "opchar", "symbols": ["validStandaloneOpchars"], "postprocess":  id },
     {"name": "opchar", "symbols": [/[=#@\:]/], "postprocess":  id },
-    {"name": "_", "symbols": [" ebnf$7"], "postprocess":  function(d) {return null; } },
-    {"name": "__", "symbols": [" ebnf$8"], "postprocess":  function(d) {return null; } },
+    {"name": "_", "symbols": [" ebnf$8"], "postprocess":  function(d) {return null; } },
+    {"name": "__", "symbols": [" ebnf$9"], "postprocess":  function(d) {return null; } },
     {"name": "arrow", "symbols": [{"literal":"↦"}]},
     {"name": "leftparen", "symbols": [{"literal":"("}]},
     {"name": "rightparen", "symbols": [{"literal":")"}]},
+    {"name": "leftbracket", "symbols": [{"literal":"⟨"}]},
+    {"name": "rightbracket", "symbols": [{"literal":"⟩"}]},
     {"name": "underscore", "symbols": [{"literal":"_"}]},
     {"name": "forwardslash", "symbols": [{"literal":"/"}]},
     {"name": "backtick", "symbols": [{"literal":"`"}]},
     {"name": "colon", "symbols": [{"literal":":"}]},
-    {"name": " string$9", "symbols": [{"literal":"-"}, {"literal":">"}], "postprocess": function joiner(d) {
+    {"name": "comma", "symbols": [{"literal":","}]},
+    {"name": " string$10", "symbols": [{"literal":"-"}, {"literal":">"}], "postprocess": function joiner(d) {
         return d.join('');
     }},
-    {"name": "typeArrow", "symbols": [" string$9"], "postprocess":  id },
-    {"name": " string$10", "symbols": [{"literal":"f"}, {"literal":"i"}, {"literal":"x"}], "postprocess": function joiner(d) {
+    {"name": "typeArrow", "symbols": [" string$10"], "postprocess":  id },
+    {"name": " string$11", "symbols": [{"literal":"f"}, {"literal":"i"}, {"literal":"x"}], "postprocess": function joiner(d) {
         return d.join('');
     }},
-    {"name": "fix", "symbols": [" string$10"]},
-    {"name": " ebnf$1", "symbols": [" subexpression$11"], "postprocess": id},
+    {"name": "fix", "symbols": [" string$11"]},
+    {"name": " ebnf$1", "symbols": [" subexpression$12"], "postprocess": id},
     {"name": " ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": " ebnf$3", "symbols": [" subexpression$12"]},
+    {"name": " ebnf$3", "symbols": []},
     {"name": " ebnf$3", "symbols": [" subexpression$13", " ebnf$3"], "postprocess": function (d) {
                     return [d[0]].concat(d[1]);
                 }},
-    {"name": " ebnf$4", "symbols": []},
-    {"name": " ebnf$4", "symbols": ["letterOrDigit", " ebnf$4"], "postprocess": function (d) {
+    {"name": " ebnf$4", "symbols": [" subexpression$14"]},
+    {"name": " ebnf$4", "symbols": [" subexpression$15", " ebnf$4"], "postprocess": function (d) {
                     return [d[0]].concat(d[1]);
                 }},
     {"name": " ebnf$5", "symbols": []},
     {"name": " ebnf$5", "symbols": ["letterOrDigit", " ebnf$5"], "postprocess": function (d) {
                     return [d[0]].concat(d[1]);
                 }},
-    {"name": " ebnf$6", "symbols": ["opchar"]},
-    {"name": " ebnf$6", "symbols": ["opchar", " ebnf$6"], "postprocess": function (d) {
+    {"name": " ebnf$6", "symbols": []},
+    {"name": " ebnf$6", "symbols": ["letterOrDigit", " ebnf$6"], "postprocess": function (d) {
                     return [d[0]].concat(d[1]);
                 }},
-    {"name": " ebnf$7", "symbols": []},
-    {"name": " ebnf$7", "symbols": [/[\s]/, " ebnf$7"], "postprocess": function (d) {
+    {"name": " ebnf$7", "symbols": ["opchar"]},
+    {"name": " ebnf$7", "symbols": ["opchar", " ebnf$7"], "postprocess": function (d) {
                     return [d[0]].concat(d[1]);
                 }},
-    {"name": " ebnf$8", "symbols": [/[\s]/]},
+    {"name": " ebnf$8", "symbols": []},
     {"name": " ebnf$8", "symbols": [/[\s]/, " ebnf$8"], "postprocess": function (d) {
                     return [d[0]].concat(d[1]);
                 }},
-    {"name": " subexpression$11", "symbols": ["_", "colon", "_", "type"]},
-    {"name": " subexpression$12", "symbols": ["possiblyTypedLambdaParameter", "__"]},
-    {"name": " subexpression$13", "symbols": ["possiblyTypedLambdaParameter", "__"]}
+    {"name": " ebnf$9", "symbols": [/[\s]/]},
+    {"name": " ebnf$9", "symbols": [/[\s]/, " ebnf$9"], "postprocess": function (d) {
+                    return [d[0]].concat(d[1]);
+                }},
+    {"name": " subexpression$12", "symbols": ["_", "colon", "_", "type"]},
+    {"name": " subexpression$13", "symbols": ["_", "comma", "_", "expression"]},
+    {"name": " subexpression$14", "symbols": ["possiblyTypedLambdaParameter", "__"]},
+    {"name": " subexpression$15", "symbols": ["possiblyTypedLambdaParameter", "__"]}
 ]
   , ParserStart: "expression"
 }

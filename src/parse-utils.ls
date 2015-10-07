@@ -20,7 +20,7 @@ root.operator = (literal) -> identifier(literal, \operator)
 
 root.genericIdentifier = (literal) -> identifier(literal, \?)
 
-## variables and type-variables: convert to null if literals are reserved keywords
+## variables and type-variables: convert to false if literals are reserved keywords
 
 root.declareSet = (literal) ->
 	if root.keywords.indexOf(literal) == -1
@@ -32,13 +32,16 @@ root.declareSet = (literal) ->
 		false
 
 root.typeVariable = (literal) ->
-	if root.keywords.indexOf(literal) == -1 && root.scope.filter((set) ->
+	if root.keywords.indexOf(literal) > -1
+		# console.error <| "Literal " + literal + " is reserved."
+		false
+	else if root.scope.filter((set) ->
 		set.root.literal == literal
 	).length > 0
-		tree(identifier(literal, \set))
+		tree(identifier(literal, \set), [])
 	else
-		# console.error <| "Literal " + literal + " is reserved or has not yet been declared as a set."
-		false
+		# console.error <| "Literal " + literal + " has not yet been declared as a set."
+		tree(genericIdentifier(literal), [])
 
 root.variable = (literal) ->
 	if root.keywords.indexOf(literal) == -1 && root.scope.filter((set) ->
@@ -60,3 +63,5 @@ root.typeOperation = (op, lhs, rhs) -> op && lhs && rhs && tree(operator(op), [l
 root.slashExpression = (lhs, rhs) -> lhs && rhs && tree(operator(\/), [lhs, rhs])
 
 root.fixedExpression = (subj) -> subj && tree(operator(\fix), [subj])
+
+root.cons = (car, cdr) -> application(application(variable(\cons), car), cdr)

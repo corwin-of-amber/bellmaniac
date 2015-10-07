@@ -22,7 +22,7 @@ setDeclaration -> identifier ":set" {% function(d) { return declareSet(d[0]); } 
 ###########################################
 
 untypedExpression -> applicationExpression {% id %}
-             | lambdaExpression {% id %}
+    | lambdaExpression {% id %}
 
 applicationExpression -> slashExpressionOrApplicationWithInfixExpression {% id %}
 	| applicationWithoutInfixExpression {% id %}
@@ -42,22 +42,34 @@ applicationWithInfixExpression -> applicationOnNonLambdaExpression __ infixOpera
 # - no unparenthesized variables / applications in A if B is a lambda (otherwise A could be treated as parameters of B)
 
 applicationWithoutInfixExpression -> applicationOnNonLambdaExpression __ rootExpression {% function(d) {return application(d[0], d[2]); } %}
-		| parenthesizedExpression __ lambdaExpression {% function(d) {return application(d[0], d[2]); } %}
-		| fixedOrRootExpression {% id %}
+	| parenthesizedExpression __ lambdaExpression {% function(d) {return application(d[0], d[2]); } %}
+	| fixedOrRootExpression {% id %}
 
 applicationOnNonLambdaExpression -> applicationOnNonLambdaExpression __ rootExpression {% function(d) {return application(d[0], d[2]); } %}
-		| fixedOrRootExpression {% id %}
+	| fixedOrRootExpression {% id %}
 
 lambdaOrRootExpression -> lambdaExpression {% id %}
-						| rootExpression {% id %}
+	| rootExpression {% id %}
 
 fixedOrRootExpression -> fixedExpression {% id %}
-		| rootExpression {% id %}
+	| rootExpression {% id %}
 
 fixedExpression -> fix __ rootExpression {% function(d) { return fixedExpression(d[2]); } %}
 
 rootExpression -> parenthesizedExpression {% id %}
-          | variable {% id %}
+ 	| listExpression {% id %}
+    | variable {% id %}
+
+listExpression -> leftbracket _ expression (_ comma _ expression):* _ rightbracket {% function(d) {
+	var consHelper = function (vars) {
+		if (vars.length === 0) {
+			return variable("nil");
+		} else {
+			return cons(vars[0][3], consHelper(vars.slice(1)));
+		}
+	}
+	return cons(d[2], consHelper(d[3]));
+} %}
 
 parenthesizedExpression -> leftparen expression rightparen {% function(d) {return d[1];} %}
 
@@ -86,8 +98,6 @@ infixOperator -> backtick variable backtick {% function(d) {return d[1]; } %}
 ####### TYPE EXPRESSIONS #######
 ################################
 
-## todo: update type grammar
-
 type -> typeWithOperations _ typeArrow _ type {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
 	| typeWithOperations {% id %}
 
@@ -106,11 +116,11 @@ typeVariable -> identifier {% function(d) {return typeVariable(d[0]); } %}
 ####### TOKENS FOR TOKENIZER #######
 ####################################
 
-identifier      -> letter idrest {% function(d) {return d[0].concat(d[1]); } %}
+identifier -> letter idrest {% function(d) {return d[0].concat(d[1]); } %}
 	| op {% id %}
 
 idrest -> letterOrDigit:* {% function(d) {return d[0].join(""); } %}
-		| letterOrDigit:* underscore op {% function(d) {return d[0].join("").concat("_").concat(d[2]);} %}
+	| letterOrDigit:* underscore op {% function(d) {return d[0].join("").concat("_").concat(d[2]);} %}
 
 letterOrDigit -> letter {% id %}
 	| digit {% id %}
@@ -133,9 +143,12 @@ __ -> [\s]:+   {% function(d) {return null; } %}
 arrow -> "↦"
 leftparen -> "("
 rightparen -> ")"
+leftbracket -> "⟨"
+rightbracket -> "⟩"
 underscore -> "_"
 forwardslash -> "/"
 backtick -> "`"
 colon -> ":"
+comma -> ","
 typeArrow -> "->" {% id %}
 fix -> "fix"
