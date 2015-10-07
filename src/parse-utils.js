@@ -6,7 +6,7 @@
   root.id = function(d){
     return d && d[0];
   };
-  root.keywords = ["set", "fix", "/"];
+  root.keywords = ["set", "fix", "/", "+", "×", "∩"];
   root.tree = function(root, subtrees){
     return {
       $: 'Tree',
@@ -21,6 +21,9 @@
       kind: kind
     };
   };
+  root.operator = function(literal){
+    return identifier(literal, 'operator');
+  };
   root.genericIdentifier = function(literal){
     return identifier(literal, '?');
   };
@@ -31,7 +34,7 @@
       root.scope.push(newSet);
       return newSet;
     } else {
-      return null;
+      return false;
     }
   };
   root.typeVariable = function(literal){
@@ -40,7 +43,7 @@
     }).length > 0) {
       return tree(identifier(literal, 'set'));
     } else {
-      return null;
+      return false;
     }
   };
   root.variable = function(literal){
@@ -49,7 +52,7 @@
     }).length === 0) {
       return tree(identifier(literal, 'variable'), []);
     } else {
-      return null;
+      return false;
     }
   };
   root.abstraction = function(par, body){
@@ -59,9 +62,12 @@
     return lhs && rhs && tree(genericIdentifier('@'), [lhs, rhs]);
   };
   root.typeOperation = function(op, lhs, rhs){
-    return op && lhs && rhs && tree(tree(op), [lhs, rhs]);
+    return op && lhs && rhs && tree(operator(op), [lhs, rhs]);
   };
   root.slashExpression = function(lhs, rhs){
-    return lhs && rhs && tree(genericIdentifier('/'), [lhs, rhs]);
+    return lhs && rhs && tree(operator('/'), [lhs, rhs]);
+  };
+  root.fixedExpression = function(subj){
+    return subj && tree(operator('fix'), [subj]);
   };
 }).call(this);

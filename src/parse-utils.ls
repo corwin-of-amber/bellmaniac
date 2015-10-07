@@ -2,7 +2,7 @@ root = exports ? this
 
 root.scope = []
 root.id = (d) -> d && d[0]
-root.keywords = ["set", "fix", "/"]
+root.keywords = ["set", "fix", "/", "+", "×", "∩"]
 
 ## combinators
 
@@ -16,6 +16,8 @@ root.identifier = (literal, kind) ->
 	literal: literal,
 	kind: kind
 
+root.operator = (literal) -> identifier(literal, \operator)
+
 root.genericIdentifier = (literal) -> identifier(literal, \?)
 
 ## variables and type-variables: convert to null if literals are reserved keywords
@@ -27,7 +29,7 @@ root.declareSet = (literal) ->
 		newSet
 	else
 		# console.error <| "Literal " + literal + " is reserved."
-		null
+		false
 
 root.typeVariable = (literal) ->
 	if root.keywords.indexOf(literal) == -1 && root.scope.filter((set) ->
@@ -36,7 +38,7 @@ root.typeVariable = (literal) ->
 		tree(identifier(literal, \set))
 	else
 		# console.error <| "Literal " + literal + " is reserved or has not yet been declared as a set."
-		null
+		false
 
 root.variable = (literal) ->
 	if root.keywords.indexOf(literal) == -1 && root.scope.filter((set) ->
@@ -45,7 +47,7 @@ root.variable = (literal) ->
 		tree(identifier(literal, \variable), [])
 	else
 		# console.error <| "Literal " + literal + " is reserved or has been declared as a set."
-		null
+		false
 
 ## recursive calls; trickle up nulls if any subtree is null
 
@@ -53,6 +55,8 @@ root.abstraction = (par, body) -> par && body && tree(genericIdentifier(\↦), [
 
 root.application = (lhs, rhs) -> lhs && rhs && tree(genericIdentifier(\@), [lhs, rhs])
 
-root.typeOperation = (op, lhs, rhs) -> op && lhs && rhs && tree(tree(op), [lhs, rhs])
+root.typeOperation = (op, lhs, rhs) -> op && lhs && rhs && tree(operator(op), [lhs, rhs])
 
-root.slashExpression = (lhs, rhs) -> lhs && rhs && tree(genericIdentifier(\/), [lhs, rhs])
+root.slashExpression = (lhs, rhs) -> lhs && rhs && tree(operator(\/), [lhs, rhs])
+
+root.fixedExpression = (subj) -> subj && tree(operator(\fix), [subj])

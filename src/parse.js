@@ -195,7 +195,7 @@
         jar.stdin.end();
       } catch (e$) {
         err = e$;
-        console.log(err);
+        console.error(err);
         $scope.parsed = err;
       }
     };

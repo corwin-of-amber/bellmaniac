@@ -108,7 +108,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
             window.scope = []
             $scope.parsed = _.chain(blocks)
             .map((block) ->
-                # parse block with nearley, filter only truthy results, assert parse unambiguous
+                # parse block with nearley, filter only non-false results, assert parse unambiguous
                 p = new nearley.Parser grammar.ParserRules, grammar.ParserStart
                 parsed = p.feed block
                 results = _.filter parsed.results, (r) -> r
@@ -130,7 +130,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 jar.stdin.write "\n\n"
             jar.stdin.end!
         catch err
-            console.log err
+            console.error err
             $scope.parsed = err
 
   ..filter "collapse" ->

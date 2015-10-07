@@ -3,7 +3,13 @@
 ###############################
 
 expression 	-> setDeclaration {% function(d) { console.log("SETDECLARATION"); return d[0]} %}
-	| untypedExpression (_ colon _ type):? {% function(d) { if (d[1] === null) { return d[0]; } else { d[0].type = d[1][3]; return d[1][3] && d[0]; } } %}
+	| untypedExpression (_ colon _ type):? {% function(d) {
+		if (d[1] === null) {
+			return d[0];
+		} else {
+			d[0].type = d[1][3];
+			return d[0].type && d[0];
+		} } %}
 
 ###############################
 ####### SET DECLARATION #######
@@ -41,16 +47,19 @@ applicationWithoutInfixExpression -> applicationOnNonLambdaExpression __ rootExp
 
 applicationOnNonLambdaExpression -> applicationOnNonLambdaExpression __ rootExpression {% function(d) {return application(d[0], d[2]); } %}
 		 | rootExpression {% id %}
+		 | fixedExpression {% id %}
 
 lambdaOrRootExpression -> lambdaExpression {% id %}
 						| rootExpression {% id %}
+
+fixedExpression -> fix __ expression {% function(d) { return fixedExpression(d[2]); } %}
 
 rootExpression -> parenthesizedExpression {% id %}
           | variable {% id %}
 
 parenthesizedExpression -> leftparen expression rightparen {% function(d) {return d[1];} %}
 
-lambdaExpression -> ( possiblyTypedVariable _ ):+ arrow _ expression  {%
+lambdaExpression -> ( possiblyTypedLambdaParameter _ ):+ arrow _ expression  {%
 	function(d) {
 		var curry = function(vars, lbody) {
 			if (vars.length === 1) {
@@ -62,8 +71,11 @@ lambdaExpression -> ( possiblyTypedVariable _ ):+ arrow _ expression  {%
 		return curry(d[0], d[3]);
 	} %}
 
-possiblyTypedVariable -> variable {% id %}
-	| leftparen variable _ colon _ type rightparen {% function(d) { d[1].type = d[5]; return d[5] && d[1]; } %}
+possiblyTypedLambdaParameter -> variable {% id %}
+	| leftparen variable _ colon _ type rightparen {% function(d) {
+		d[1].type = d[5];
+		console.log("here");
+		return d[5] && d[1]; } %}
 
 variable -> identifier {% function(d) {return variable(d[0]); } %}
 
@@ -79,7 +91,7 @@ type -> typeWithOperations _ typeArrow _ type {% function(d) {return typeOperati
 	| typeWithOperations {% id %}
 
 ## assume type operators (\, * and ∩) are left associative
-typeWithOperations -> typeWithOperations __ typeOperator __ rootType {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
+typeWithOperations -> typeWithOperations _ typeOperator _ rootType {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
 	| rootType {% id %}
 
 typeOperator -> [×∩] {% id %}
@@ -125,3 +137,4 @@ forwardslash -> "/"
 backtick -> "`"
 colon -> ":"
 typeArrow -> "->" {% id %}
+fix -> "fix"
