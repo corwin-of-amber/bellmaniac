@@ -4,7 +4,7 @@
 function id(x) {return x[0]; }
 var grammar = {
     ParserRules: [
-    {"name": "expression", "symbols": ["setDeclaration"], "postprocess":  function(d) { console.log("SETDECLARATION"); return d[0]} },
+    {"name": "expression", "symbols": ["setDeclaration"], "postprocess":  id },
     {"name": "expression", "symbols": ["untypedExpression", " ebnf$1"], "postprocess":  function(d) {
 		if (d[1] === null) {
 			return d[0];
@@ -26,13 +26,14 @@ var grammar = {
     {"name": "applicationWithInfixExpression", "symbols": ["applicationOnNonLambdaExpression", "__", "infixOperator", "__", "applicationExpression"], "postprocess":  function(d) {return application(application(d[2], d[0]), d[4]);} },
     {"name": "applicationWithoutInfixExpression", "symbols": ["applicationOnNonLambdaExpression", "__", "rootExpression"], "postprocess":  function(d) {return application(d[0], d[2]); } },
     {"name": "applicationWithoutInfixExpression", "symbols": ["parenthesizedExpression", "__", "lambdaExpression"], "postprocess":  function(d) {return application(d[0], d[2]); } },
-    {"name": "applicationWithoutInfixExpression", "symbols": ["rootExpression"], "postprocess":  id },
+    {"name": "applicationWithoutInfixExpression", "symbols": ["fixedOrRootExpression"], "postprocess":  id },
     {"name": "applicationOnNonLambdaExpression", "symbols": ["applicationOnNonLambdaExpression", "__", "rootExpression"], "postprocess":  function(d) {return application(d[0], d[2]); } },
-    {"name": "applicationOnNonLambdaExpression", "symbols": ["rootExpression"], "postprocess":  id },
-    {"name": "applicationOnNonLambdaExpression", "symbols": ["fixedExpression"], "postprocess":  id },
+    {"name": "applicationOnNonLambdaExpression", "symbols": ["fixedOrRootExpression"], "postprocess":  id },
     {"name": "lambdaOrRootExpression", "symbols": ["lambdaExpression"], "postprocess":  id },
     {"name": "lambdaOrRootExpression", "symbols": ["rootExpression"], "postprocess":  id },
-    {"name": "fixedExpression", "symbols": ["fix", "__", "expression"], "postprocess":  function(d) { return fixedExpression(d[2]); } },
+    {"name": "fixedOrRootExpression", "symbols": ["fixedExpression"], "postprocess":  id },
+    {"name": "fixedOrRootExpression", "symbols": ["rootExpression"], "postprocess":  id },
+    {"name": "fixedExpression", "symbols": ["fix", "__", "rootExpression"], "postprocess":  function(d) { return fixedExpression(d[2]); } },
     {"name": "rootExpression", "symbols": ["parenthesizedExpression"], "postprocess":  id },
     {"name": "rootExpression", "symbols": ["variable"], "postprocess":  id },
     {"name": "parenthesizedExpression", "symbols": ["leftparen", "expression", "rightparen"], "postprocess":  function(d) {return d[1];} },
@@ -50,7 +51,6 @@ var grammar = {
     {"name": "possiblyTypedLambdaParameter", "symbols": ["variable"], "postprocess":  id },
     {"name": "possiblyTypedLambdaParameter", "symbols": ["leftparen", "variable", "_", "colon", "_", "type", "rightparen"], "postprocess":  function(d) {
 		d[1].type = d[5];
-		console.log("here");
 		return d[5] && d[1]; } },
     {"name": "variable", "symbols": ["identifier"], "postprocess":  function(d) {return variable(d[0]); } },
     {"name": "infixOperator", "symbols": ["backtick", "variable", "backtick"], "postprocess":  function(d) {return d[1]; } },
@@ -119,8 +119,8 @@ var grammar = {
                     return [d[0]].concat(d[1]);
                 }},
     {"name": " subexpression$11", "symbols": ["_", "colon", "_", "type"]},
-    {"name": " subexpression$12", "symbols": ["possiblyTypedLambdaParameter", "_"]},
-    {"name": " subexpression$13", "symbols": ["possiblyTypedLambdaParameter", "_"]}
+    {"name": " subexpression$12", "symbols": ["possiblyTypedLambdaParameter", "__"]},
+    {"name": " subexpression$13", "symbols": ["possiblyTypedLambdaParameter", "__"]}
 ]
   , ParserStart: "expression"
 }

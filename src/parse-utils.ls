@@ -59,6 +59,4 @@ root.typeOperation = (op, lhs, rhs) -> op && lhs && rhs && tree(operator(op), [l
 
 root.slashExpression = (lhs, rhs) -> lhs && rhs && tree(operator(\/), [lhs, rhs])
 
-root.fixedExpression = (subj) ->
-	console.log <| "FIXING " + JSON.stringify(subj)
-	subj && tree(operator(\fix), [subj])
+root.fixedExpression = (subj) -> subj && tree(operator(\fix), [subj])

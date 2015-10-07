@@ -2,7 +2,7 @@
 ####### ROOT EXPRESSION #######
 ###############################
 
-expression 	-> setDeclaration {% function(d) { console.log("SETDECLARATION"); return d[0]} %}
+expression 	-> setDeclaration {% id %}
 	| untypedExpression (_ colon _ type):? {% function(d) {
 		if (d[1] === null) {
 			return d[0];
@@ -43,23 +43,25 @@ applicationWithInfixExpression -> applicationOnNonLambdaExpression __ infixOpera
 
 applicationWithoutInfixExpression -> applicationOnNonLambdaExpression __ rootExpression {% function(d) {return application(d[0], d[2]); } %}
 		| parenthesizedExpression __ lambdaExpression {% function(d) {return application(d[0], d[2]); } %}
-		| rootExpression {% id %}
+		| fixedOrRootExpression {% id %}
 
 applicationOnNonLambdaExpression -> applicationOnNonLambdaExpression __ rootExpression {% function(d) {return application(d[0], d[2]); } %}
-		 | rootExpression {% id %}
-		 | fixedExpression {% id %}
+		| fixedOrRootExpression {% id %}
 
 lambdaOrRootExpression -> lambdaExpression {% id %}
 						| rootExpression {% id %}
 
-fixedExpression -> fix __ expression {% function(d) { return fixedExpression(d[2]); } %}
+fixedOrRootExpression -> fixedExpression {% id %}
+		| rootExpression {% id %}
+
+fixedExpression -> fix __ rootExpression {% function(d) { return fixedExpression(d[2]); } %}
 
 rootExpression -> parenthesizedExpression {% id %}
           | variable {% id %}
 
 parenthesizedExpression -> leftparen expression rightparen {% function(d) {return d[1];} %}
 
-lambdaExpression -> ( possiblyTypedLambdaParameter _ ):+ arrow _ expression  {%
+lambdaExpression -> ( possiblyTypedLambdaParameter __ ):+ arrow _ expression  {%
 	function(d) {
 		var curry = function(vars, lbody) {
 			if (vars.length === 1) {
@@ -74,7 +76,6 @@ lambdaExpression -> ( possiblyTypedLambdaParameter _ ):+ arrow _ expression  {%
 possiblyTypedLambdaParameter -> variable {% id %}
 	| leftparen variable _ colon _ type rightparen {% function(d) {
 		d[1].type = d[5];
-		console.log("here");
 		return d[5] && d[1]; } %}
 
 variable -> identifier {% function(d) {return variable(d[0]); } %}

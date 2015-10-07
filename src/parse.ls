@@ -1,6 +1,7 @@
 spawn = require \child_process .spawn
 _ = require \lodash
 LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*$/
+assert = require \assert
 
 angular.module 'app', [\RecursionHelper, \ui.codemirror]
   ..controller "Ctrl" ($scope) !->
@@ -135,9 +136,9 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 # parse block with nearley, filter only non-false results, assert parse unambiguous
                 p = new nearley.Parser grammar.ParserRules, grammar.ParserStart
                 parsed = p.feed block
-                console.log parsed.results
+                console.debug parsed.results
                 results = _.filter parsed.results, (r) -> r
-                console.assert results.length == 1, results
+                assert results.length == 1, JSON.stringify(results) + " is not a unique parse."
                 results[0]
             ).filter((block) ->
                 # only take the expressions that aren't set declarations
