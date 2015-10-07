@@ -41,7 +41,7 @@ root.typeVariable = (literal) ->
 		tree(identifier(literal, \set), [])
 	else
 		# console.error <| "Literal " + literal + " has not yet been declared as a set."
-		tree(genericIdentifier(literal), [])
+		tree(identifier(literal, \variable), [])
 
 root.variable = (literal) ->
 	if root.keywords.indexOf(literal) == -1 && root.scope.filter((set) ->
@@ -60,7 +60,7 @@ root.application = (lhs, rhs) -> lhs && rhs && tree(genericIdentifier(\@), [lhs,
 
 root.typeOperation = (op, lhs, rhs) -> op && lhs && rhs && tree(operator(op), [lhs, rhs])
 
-root.specialInfixOperation = (op, lhs, rhs) -> op && lhs && rhs && tree(operator(op), [lhs, rhs])
+root.slashExpression = (lhs, rhs) -> lhs && rhs && tree(operator(\/), [lhs, rhs])
 
 root.fixedExpression = (subj) -> subj && tree(operator(\fix), [subj])
 

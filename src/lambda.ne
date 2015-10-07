@@ -35,12 +35,12 @@ applicationWithInfixExpression -> applicationOnNonLambdaExpression _ notatedInfi
 # - no unparenthesized applications in B (because left associativity)
 # - no unparenthesized variables / applications in A if B is a lambda (otherwise A could be treated as parameters of B)
 
-applicationWithoutInfixExpression -> applicationOnNonLambdaExpression __ rootExpression {% function(d) {return application(d[0], d[2]); } %}
+applicationWithoutInfixExpression -> applicationOnNonLambdaExpression __ fixedOrRootExpression {% function(d) {return application(d[0], d[2]); } %}
 	| parenthesizedExpression __ lambdaExpression {% function(d) {return application(d[0], d[2]); } %}
 	| fixedOrRootExpression {% id %}
 
-applicationOnNonLambdaExpression -> applicationOnNonLambdaExpression __ rootExpression {% function(d) {return application(d[0], d[2]); } %}
-	| fixedOrRootExpression {% id %}
+applicationOnNonLambdaExpression -> applicationOnNonLambdaExpression __ fixedOrRootExpression {% function(d) {return application(d[0], d[2]); } %}
+	| rootExpression {% id %}
 
 lambdaOrRootExpression -> lambdaExpression {% id %}
 	| rootExpression {% id %}
@@ -48,7 +48,7 @@ lambdaOrRootExpression -> lambdaExpression {% id %}
 fixedOrRootExpression -> fixedExpression {% id %}
 	| rootExpression {% id %}
 
-fixedExpression -> fix __ rootExpression {% function(d) { return fixedExpression(d[2]); } %}
+fixedExpression -> fix __ lambdaOrRootExpression {% function(d) { return fixedExpression(d[2]); } %}
 
 rootExpression -> parenthesizedExpression {% id %}
  	| listExpression {% id %}
@@ -102,7 +102,7 @@ type -> typeWithOperations _ typeArrow _ type {% function(d) {return typeOperati
 typeWithOperations -> typeWithOperations _ typeOperator _ rootType {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
 	| rootType {% id %}
 
-typeOperator -> [×∩] {% id %}
+typeOperator -> "×" {% function(d) { return "x" } %} | "∩" {% id %}
 
 rootType -> leftparen type rightparen {% function(d) {return d[1];} %}
 	| typeVariable {% id %}
@@ -123,7 +123,7 @@ letterOrDigit -> letter {% id %}
 	| digit {% id %}
 
 ## unicode ranges for letter regex taken from http://stackoverflow.com/questions/150033/regular-expression-to-match-non-english-characters
-letter -> [a-zA-Z$_\u00C0-\u1FFF\u2080-\u2089\u2C00-\uD7FF] {% id %}
+letter -> [a-zA-Z$_\u00C0-\u00D6\u00D8-\u1FFF\u2080-\u2089\u2C00-\uD7FF] {% id %}
 digit -> [0-9] {% id %}
 
 op -> validStandaloneOpchars {% id %}

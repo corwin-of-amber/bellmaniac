@@ -6,7 +6,7 @@ assert = require \assert
 angular.module 'app', [\RecursionHelper, \ui.codemirror]
   ..controller "Ctrl" ($scope) !->
 
-    $scope.code = "a b"
+    $scope.code = localStorage.getItem('codeMirrorContents') || "a b"
     $scope.editorOptions =
         mode:  "scheme",
         theme: "material"
@@ -101,6 +101,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
             cm.showHint hint: CodeMirror.hint.anyword, completeSingle: false
 
         editor.on 'keyup', (editor, e) !->
+            localStorage.setItem('codeMirrorContents', editor.getValue())
             keycode = e.keyCode
             valid =
                 (keycode > 47 && keycode < 58)   || # number keys

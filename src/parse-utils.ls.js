@@ -45,7 +45,7 @@
     }).length > 0) {
       return tree(identifier(literal, 'set'), []);
     } else {
-      return tree(genericIdentifier(literal), []);
+      return tree(identifier(literal, 'variable'), []);
     }
   };
   root.variable = function(literal){
@@ -66,8 +66,8 @@
   root.typeOperation = function(op, lhs, rhs){
     return op && lhs && rhs && tree(operator(op), [lhs, rhs]);
   };
-  root.specialInfixOperation = function(op, lhs, rhs){
-    return op && lhs && rhs && tree(operator(op), [lhs, rhs]);
+  root.slashExpression = function(lhs, rhs){
+    return lhs && rhs && tree(operator('/'), [lhs, rhs]);
   };
   root.fixedExpression = function(subj){
     return subj && tree(operator('fix'), [subj]);

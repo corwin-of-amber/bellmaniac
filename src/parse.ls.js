@@ -8,7 +8,7 @@
   x$ = angular.module('app', ['RecursionHelper', 'ui.codemirror']);
   x$.controller("Ctrl", function($scope){
     var hintWords, autoWords, i$, ref$, len$, i, charCode, findCurWord, hintReplace, autoReplace;
-    $scope.code = "a b";
+    $scope.code = localStorage.getItem('codeMirrorContents') || "a b";
     $scope.editorOptions = {
       mode: "scheme",
       theme: "material"
@@ -170,6 +170,7 @@
       };
       return editor.on('keyup', function(editor, e){
         var keycode, valid;
+        localStorage.setItem('codeMirrorContents', editor.getValue());
         keycode = e.keyCode;
         valid = (keycode > 47 && keycode < 58) || (keycode === 32 || keycode === 13) || (keycode > 64 && keycode < 91) || (keycode > 95 && keycode < 112) || (keycode > 185 && keycode < 193) || (keycode > 218 && keycode < 223);
         if (valid) {
