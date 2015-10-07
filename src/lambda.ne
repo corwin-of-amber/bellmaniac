@@ -52,7 +52,7 @@ applicationOnNonLambdaExpression -> applicationOnNonLambdaExpression __ rootExpr
 lambdaOrRootExpression -> lambdaExpression {% id %}
 						| rootExpression {% id %}
 
-fixedExpression -> fix __ expression {% function(d) { return fixedExpression(d[2]); } %}
+fixedExpression -> fix __ rootExpression {% function(d) { return fixedExpression(d[2]); } %}
 
 rootExpression -> parenthesizedExpression {% id %}
           | variable {% id %}
@@ -115,7 +115,7 @@ letterOrDigit -> letter {% id %}
 	| digit {% id %}
 
 ## unicode ranges for letter regex taken from http://stackoverflow.com/questions/150033/regular-expression-to-match-non-english-characters
-letter -> [a-zA-Z$_\u00C0-\u1FFF\u2C00-\uD7FF] {% id %}
+letter -> [a-zA-Z$_\u00C0-\u1FFF\u2080-\u2089\u2C00-\uD7FF] {% id %}
 digit -> [0-9] {% id %}
 
 op -> validStandaloneOpchars {% id %}

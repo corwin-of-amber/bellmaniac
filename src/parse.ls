@@ -5,7 +5,7 @@ LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*$/
 angular.module 'app', [\RecursionHelper, \ui.codemirror]
   ..controller "Ctrl" ($scope) !->
 
-    $scope.code = "moo"
+    $scope.code = "a b"
     $scope.editorOptions =
         mode:  "scheme",
         theme: "material"
@@ -39,12 +39,20 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
             * text: "χ", displayText: "\\chi"
             * text: "ψ", displayText: "\\psi"
             * text: "ω", displayText: "\\omega"
-            * text: "↦", displayText: "|->"
             * text: "×", displayText: "\\times"
             * text: "∩", displayText: "\\cap"
 
+        autowords = [{text: "↦", displayText: "|->"}]
+
+        for i in [0 to 9]
+            charCode = "208" + i
+            autowords.push {
+                text: String.fromCharCode(parseInt(charCode, 16)),
+                displayText: "_" + i
+            }
+
         CodeMirror.registerHelper "hint", "anyword", (editor, options) ->
-            delimiters = /[\\|]/
+            delimiters = /\\/
             whitespace = /\s/
             cur = editor.getCursor(); curLine = editor.getLine(cur.line)
             start = cur.ch; end = start
@@ -61,6 +69,21 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
             from: CodeMirror.Pos(cur.line, start),
             to: CodeMirror.Pos(cur.line, end)
 
+        autoReplace = (editor) ->
+            delimiters = /[_|]/
+            whitespace = /\s/
+            cur = editor.getCursor(); curLine = editor.getLine(cur.line)
+            start = cur.ch; end = start
+            while (start >= 1 && !delimiters.test(curLine.charAt(start)) && !whitespace.test(curLine.charAt(start-1)))
+                start -= 1
+            curWord = if start != end then curLine.slice(start, end) else ""
+
+            filteredWords = autowords.filter (w) ->
+                curWord == w.displayText
+
+            if filteredWords.length > 0
+                editor.replaceRange(filteredWords[0].text, CodeMirror.Pos(cur.line, start), CodeMirror.Pos(cur.line, end))
+
         CodeMirror.commands.autocomplete = (cm) ->
             cm.showHint hint: CodeMirror.hint.anyword, completeSingle: false
 
@@ -75,6 +98,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 (keycode > 218 && keycode < 223)    # [\]' (in order)
 
             if valid
+                autoReplace(editor)
                 CodeMirror.commands.autocomplete(editor)
 
     $scope.splitTextToBlocks = (input) ->

@@ -15,7 +15,7 @@
     $scope.output = {};
     $scope.data = [];
     $scope.codemirrorLoaded = function(editor){
-      var words;
+      var words, autowords, i$, ref$, len$, i, charCode, autoReplace;
       words = [
         {
           text: "α",
@@ -90,9 +90,6 @@
           text: "ω",
           displayText: "\\omega"
         }, {
-          text: "↦",
-          displayText: "|->"
-        }, {
           text: "×",
           displayText: "\\times"
         }, {
@@ -100,9 +97,21 @@
           displayText: "\\cap"
         }
       ];
+      autowords = [{
+        text: "↦",
+        displayText: "|->"
+      }];
+      for (i$ = 0, len$ = (ref$ = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).length; i$ < len$; ++i$) {
+        i = ref$[i$];
+        charCode = "208" + i;
+        autowords.push({
+          text: String.fromCharCode(parseInt(charCode, 16)),
+          displayText: "_" + i
+        });
+      }
       CodeMirror.registerHelper("hint", "anyword", function(editor, options){
         var delimiters, whitespace, cur, curLine, start, end, curWord, filteredWords;
-        delimiters = /[\\|]/;
+        delimiters = /\\/;
         whitespace = /\s/;
         cur = editor.getCursor();
         curLine = editor.getLine(cur.line);
@@ -124,6 +133,25 @@
           to: CodeMirror.Pos(cur.line, end)
         };
       });
+      autoReplace = function(editor){
+        var delimiters, whitespace, cur, curLine, start, end, curWord, filteredWords;
+        delimiters = /[_|]/;
+        whitespace = /\s/;
+        cur = editor.getCursor();
+        curLine = editor.getLine(cur.line);
+        start = cur.ch;
+        end = start;
+        while (start >= 1 && !delimiters.test(curLine.charAt(start)) && !whitespace.test(curLine.charAt(start - 1))) {
+          start -= 1;
+        }
+        curWord = start !== end ? curLine.slice(start, end) : "";
+        filteredWords = autowords.filter(function(w){
+          return curWord === w.displayText;
+        });
+        if (filteredWords.length > 0) {
+          return editor.replaceRange(filteredWords[0].text, CodeMirror.Pos(cur.line, start), CodeMirror.Pos(cur.line, end));
+        }
+      };
       CodeMirror.commands.autocomplete = function(cm){
         return cm.showHint({
           hint: CodeMirror.hint.anyword,
@@ -135,6 +163,7 @@
         keycode = e.keyCode;
         valid = (keycode > 47 && keycode < 58) || (keycode === 32 || keycode === 13) || (keycode > 64 && keycode < 91) || (keycode > 95 && keycode < 112) || (keycode > 185 && keycode < 193) || (keycode > 218 && keycode < 223);
         if (valid) {
+          autoReplace(editor);
           CodeMirror.commands.autocomplete(editor);
         }
       });
