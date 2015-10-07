@@ -14,76 +14,87 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
     $scope.output = {}
     $scope.data = []
 
+    # hinting and autoreplace functionality
+    hintWords =
+        * text: "α", displayText: "\\alpha"
+        * text: "β", displayText: "\\beta"
+        * text: "γ", displayText: "\\gamma"
+        * text: "δ", displayText: "\\delta"
+        * text: "ε", displayText: "\\epsilon"
+        * text: "ζ", displayText: "\\zeta"
+        * text: "η", displayText: "\\eta"
+        * text: "θ", displayText: "\\theta"
+        * text: "ι", displayText: "\\iota"
+        * text: "κ", displayText: "\\kappa"
+        * text: "λ", displayText: "\\lambda"
+        * text: "μ", displayText: "\\mu"
+        * text: "ν", displayText: "\\nu"
+        * text: "ξ", displayText: "\\xi"
+        * text: "ο", displayText: "\\omicron"
+        * text: "π", displayText: "\\pi"
+        * text: "ρ", displayText: "\\rho"
+        * text: "σ", displayText: "\\sigma"
+        * text: "τ", displayText: "\\tau"
+        * text: "υ", displayText: "\\upsilon"
+        * text: "φ", displayText: "\\phi"
+        * text: "χ", displayText: "\\chi"
+        * text: "ψ", displayText: "\\psi"
+        * text: "ω", displayText: "\\omega"
+        * text: "×", displayText: "\\times"
+        * text: "∩", displayText: "\\cap"
+
+    autoWords = [{text: "↦", displayText: "|->"}]
+
+    for i in [0 to 9]
+        charCode = "208" + i
+        autoWords.push {
+            text: String.fromCharCode(parseInt(charCode, 16)),
+            displayText: "_" + i
+        }
+
+    findCurWord = (editor, delimiters) ->
+        whitespace = /\s/
+        cur = editor.getCursor()
+        curLine = editor.getLine(cur.line)
+
+        start = cur.ch; end = start
+        while (start >= 1 && !delimiters.test(curLine.charAt(start)) && !whitespace.test(curLine.charAt(start-1)))
+            start -= 1
+        curWord = if start != end then curLine.slice(start, end) else ""
+        word: curWord,
+        start: start,
+        end: end
+
+    hintReplace = (editor) ->
+        curPos = findCurWord(editor, /\\/)
+        curWord = curPos.word
+        cur = editor.getCursor()
+
+        filteredWords = hintWords.filter (w) ->
+            curWord.length > 0 && w.displayText.indexOf(curWord) == 0
+
+        list: filteredWords,
+        from: CodeMirror.Pos(cur.line, curPos.start),
+        to: CodeMirror.Pos(cur.line, curPos.end)
+
+    autoReplace = (editor) ->
+        curPos = findCurWord(editor, /[_|]/)
+        curWord = curPos.word
+        cur = editor.getCursor()
+
+        filteredWords = autoWords.filter (w) ->
+            curWord == w.displayText
+
+        if filteredWords.length > 0
+            editor.replaceRange(filteredWords[0].text,
+                CodeMirror.Pos(cur.line, curPos.start),
+                CodeMirror.Pos(cur.line, curPos.end))
+
     $scope.codemirrorLoaded = (editor) ->
-        words =
-            * text: "α", displayText: "\\alpha"
-            * text: "β", displayText: "\\beta"
-            * text: "γ", displayText: "\\gamma"
-            * text: "δ", displayText: "\\delta"
-            * text: "ε", displayText: "\\epsilon"
-            * text: "ζ", displayText: "\\zeta"
-            * text: "η", displayText: "\\eta"
-            * text: "θ", displayText: "\\theta"
-            * text: "ι", displayText: "\\iota"
-            * text: "κ", displayText: "\\kappa"
-            * text: "λ", displayText: "\\lambda"
-            * text: "μ", displayText: "\\mu"
-            * text: "ν", displayText: "\\nu"
-            * text: "ξ", displayText: "\\xi"
-            * text: "ο", displayText: "\\omicron"
-            * text: "π", displayText: "\\pi"
-            * text: "ρ", displayText: "\\rho"
-            * text: "σ", displayText: "\\sigma"
-            * text: "τ", displayText: "\\tau"
-            * text: "υ", displayText: "\\upsilon"
-            * text: "φ", displayText: "\\phi"
-            * text: "χ", displayText: "\\chi"
-            * text: "ψ", displayText: "\\psi"
-            * text: "ω", displayText: "\\omega"
-            * text: "×", displayText: "\\times"
-            * text: "∩", displayText: "\\cap"
 
-        autowords = [{text: "↦", displayText: "|->"}]
 
-        for i in [0 to 9]
-            charCode = "208" + i
-            autowords.push {
-                text: String.fromCharCode(parseInt(charCode, 16)),
-                displayText: "_" + i
-            }
 
-        CodeMirror.registerHelper "hint", "anyword", (editor, options) ->
-            delimiters = /\\/
-            whitespace = /\s/
-            cur = editor.getCursor(); curLine = editor.getLine(cur.line)
-            start = cur.ch; end = start
-            while (end < curLine.length && !whitespace.test(curLine.charAt(end)))
-                end += 1
-            while (start >= 1 && !delimiters.test(curLine.charAt(start)) && !whitespace.test(curLine.charAt(start-1)))
-                start -= 1
-            curWord = if start != end then curLine.slice(start, end) else ""
-
-            filteredWords = words.filter (w) ->
-                curWord.length > 0 && w.displayText.indexOf(curWord) == 0
-
-            list: filteredWords,
-            from: CodeMirror.Pos(cur.line, start),
-            to: CodeMirror.Pos(cur.line, end)
-
-        autoReplace = (editor) ->
-            delimiters = /[_|]/
-            whitespace = /\s/
-            cur = editor.getCursor(); curLine = editor.getLine(cur.line)
-            start = cur.ch; end = start
-            while (start >= 1 && !delimiters.test(curLine.charAt(start)) && !whitespace.test(curLine.charAt(start-1)))
-                start -= 1
-            curWord = if start != end then curLine.slice(start, end) else ""
-
-            filteredWords = autowords.filter (w) ->
-                curWord == w.displayText
-
-            if filteredWords.length > 0
-                editor.replaceRange(filteredWords[0].text, CodeMirror.Pos(cur.line, start), CodeMirror.Pos(cur.line, end))
+        CodeMirror.registerHelper "hint", "anyword", hintReplace
 
         CodeMirror.commands.autocomplete = (cm) ->
             cm.showHint hint: CodeMirror.hint.anyword, completeSingle: false

@@ -7,6 +7,7 @@
   assert = require('assert');
   x$ = angular.module('app', ['RecursionHelper', 'ui.codemirror']);
   x$.controller("Ctrl", function($scope){
+    var hintWords, autoWords, i$, ref$, len$, i, charCode, findCurWord, hintReplace, autoReplace;
     $scope.code = "a b";
     $scope.editorOptions = {
       mode: "scheme",
@@ -15,144 +16,144 @@
     $scope.parsed = {};
     $scope.output = {};
     $scope.data = [];
-    $scope.codemirrorLoaded = function(editor){
-      var words, autowords, i$, ref$, len$, i, charCode, autoReplace;
-      words = [
-        {
-          text: "α",
-          displayText: "\\alpha"
-        }, {
-          text: "β",
-          displayText: "\\beta"
-        }, {
-          text: "γ",
-          displayText: "\\gamma"
-        }, {
-          text: "δ",
-          displayText: "\\delta"
-        }, {
-          text: "ε",
-          displayText: "\\epsilon"
-        }, {
-          text: "ζ",
-          displayText: "\\zeta"
-        }, {
-          text: "η",
-          displayText: "\\eta"
-        }, {
-          text: "θ",
-          displayText: "\\theta"
-        }, {
-          text: "ι",
-          displayText: "\\iota"
-        }, {
-          text: "κ",
-          displayText: "\\kappa"
-        }, {
-          text: "λ",
-          displayText: "\\lambda"
-        }, {
-          text: "μ",
-          displayText: "\\mu"
-        }, {
-          text: "ν",
-          displayText: "\\nu"
-        }, {
-          text: "ξ",
-          displayText: "\\xi"
-        }, {
-          text: "ο",
-          displayText: "\\omicron"
-        }, {
-          text: "π",
-          displayText: "\\pi"
-        }, {
-          text: "ρ",
-          displayText: "\\rho"
-        }, {
-          text: "σ",
-          displayText: "\\sigma"
-        }, {
-          text: "τ",
-          displayText: "\\tau"
-        }, {
-          text: "υ",
-          displayText: "\\upsilon"
-        }, {
-          text: "φ",
-          displayText: "\\phi"
-        }, {
-          text: "χ",
-          displayText: "\\chi"
-        }, {
-          text: "ψ",
-          displayText: "\\psi"
-        }, {
-          text: "ω",
-          displayText: "\\omega"
-        }, {
-          text: "×",
-          displayText: "\\times"
-        }, {
-          text: "∩",
-          displayText: "\\cap"
-        }
-      ];
-      autowords = [{
-        text: "↦",
-        displayText: "|->"
-      }];
-      for (i$ = 0, len$ = (ref$ = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).length; i$ < len$; ++i$) {
-        i = ref$[i$];
-        charCode = "208" + i;
-        autowords.push({
-          text: String.fromCharCode(parseInt(charCode, 16)),
-          displayText: "_" + i
-        });
+    hintWords = [
+      {
+        text: "α",
+        displayText: "\\alpha"
+      }, {
+        text: "β",
+        displayText: "\\beta"
+      }, {
+        text: "γ",
+        displayText: "\\gamma"
+      }, {
+        text: "δ",
+        displayText: "\\delta"
+      }, {
+        text: "ε",
+        displayText: "\\epsilon"
+      }, {
+        text: "ζ",
+        displayText: "\\zeta"
+      }, {
+        text: "η",
+        displayText: "\\eta"
+      }, {
+        text: "θ",
+        displayText: "\\theta"
+      }, {
+        text: "ι",
+        displayText: "\\iota"
+      }, {
+        text: "κ",
+        displayText: "\\kappa"
+      }, {
+        text: "λ",
+        displayText: "\\lambda"
+      }, {
+        text: "μ",
+        displayText: "\\mu"
+      }, {
+        text: "ν",
+        displayText: "\\nu"
+      }, {
+        text: "ξ",
+        displayText: "\\xi"
+      }, {
+        text: "ο",
+        displayText: "\\omicron"
+      }, {
+        text: "π",
+        displayText: "\\pi"
+      }, {
+        text: "ρ",
+        displayText: "\\rho"
+      }, {
+        text: "σ",
+        displayText: "\\sigma"
+      }, {
+        text: "τ",
+        displayText: "\\tau"
+      }, {
+        text: "υ",
+        displayText: "\\upsilon"
+      }, {
+        text: "φ",
+        displayText: "\\phi"
+      }, {
+        text: "χ",
+        displayText: "\\chi"
+      }, {
+        text: "ψ",
+        displayText: "\\psi"
+      }, {
+        text: "ω",
+        displayText: "\\omega"
+      }, {
+        text: "×",
+        displayText: "\\times"
+      }, {
+        text: "∩",
+        displayText: "\\cap"
       }
-      CodeMirror.registerHelper("hint", "anyword", function(editor, options){
-        var delimiters, whitespace, cur, curLine, start, end, curWord, filteredWords;
-        delimiters = /\\/;
-        whitespace = /\s/;
-        cur = editor.getCursor();
-        curLine = editor.getLine(cur.line);
-        start = cur.ch;
-        end = start;
-        while (end < curLine.length && !whitespace.test(curLine.charAt(end))) {
-          end += 1;
-        }
-        while (start >= 1 && !delimiters.test(curLine.charAt(start)) && !whitespace.test(curLine.charAt(start - 1))) {
-          start -= 1;
-        }
-        curWord = start !== end ? curLine.slice(start, end) : "";
-        filteredWords = words.filter(function(w){
-          return curWord.length > 0 && w.displayText.indexOf(curWord) === 0;
-        });
-        return {
-          list: filteredWords,
-          from: CodeMirror.Pos(cur.line, start),
-          to: CodeMirror.Pos(cur.line, end)
-        };
+    ];
+    autoWords = [{
+      text: "↦",
+      displayText: "|->"
+    }];
+    for (i$ = 0, len$ = (ref$ = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).length; i$ < len$; ++i$) {
+      i = ref$[i$];
+      charCode = "208" + i;
+      autoWords.push({
+        text: String.fromCharCode(parseInt(charCode, 16)),
+        displayText: "_" + i
       });
-      autoReplace = function(editor){
-        var delimiters, whitespace, cur, curLine, start, end, curWord, filteredWords;
-        delimiters = /[_|]/;
-        whitespace = /\s/;
-        cur = editor.getCursor();
-        curLine = editor.getLine(cur.line);
-        start = cur.ch;
-        end = start;
-        while (start >= 1 && !delimiters.test(curLine.charAt(start)) && !whitespace.test(curLine.charAt(start - 1))) {
-          start -= 1;
-        }
-        curWord = start !== end ? curLine.slice(start, end) : "";
-        filteredWords = autowords.filter(function(w){
-          return curWord === w.displayText;
-        });
-        if (filteredWords.length > 0) {
-          return editor.replaceRange(filteredWords[0].text, CodeMirror.Pos(cur.line, start), CodeMirror.Pos(cur.line, end));
-        }
+    }
+    findCurWord = function(editor, delimiters){
+      var whitespace, cur, curLine, start, end, curWord;
+      whitespace = /\s/;
+      cur = editor.getCursor();
+      curLine = editor.getLine(cur.line);
+      start = cur.ch;
+      end = start;
+      while (start >= 1 && !delimiters.test(curLine.charAt(start)) && !whitespace.test(curLine.charAt(start - 1))) {
+        start -= 1;
+      }
+      curWord = start !== end ? curLine.slice(start, end) : "";
+      return {
+        word: curWord,
+        start: start,
+        end: end
       };
+    };
+    hintReplace = function(editor){
+      var curPos, curWord, cur, filteredWords;
+      curPos = findCurWord(editor, /\\/);
+      curWord = curPos.word;
+      cur = editor.getCursor();
+      filteredWords = hintWords.filter(function(w){
+        return curWord.length > 0 && w.displayText.indexOf(curWord) === 0;
+      });
+      return {
+        list: filteredWords,
+        from: CodeMirror.Pos(cur.line, curPos.start),
+        to: CodeMirror.Pos(cur.line, curPos.end)
+      };
+    };
+    autoReplace = function(editor){
+      var curPos, curWord, cur, filteredWords;
+      curPos = findCurWord(editor, /[_|]/);
+      curWord = curPos.word;
+      cur = editor.getCursor();
+      filteredWords = autoWords.filter(function(w){
+        return curWord === w.displayText;
+      });
+      if (filteredWords.length > 0) {
+        return editor.replaceRange(filteredWords[0].text, CodeMirror.Pos(cur.line, curPos.start), CodeMirror.Pos(cur.line, curPos.end));
+      }
+    };
+    $scope.codemirrorLoaded = function(editor){
+      CodeMirror.registerHelper("hint", "anyword", hintReplace);
       CodeMirror.commands.autocomplete = function(cm){
         return cm.showHint({
           hint: CodeMirror.hint.anyword,
