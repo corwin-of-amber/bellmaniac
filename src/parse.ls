@@ -171,10 +171,10 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 # only take the expressions that aren't set declarations
                 # set declarations are implicitly pushed to window.scope
                 block.root.kind != \set
-            # ).map((block) ->
-            #     # wrap each expression in another layer that includes scope
-            #     check: block,
-            #     scope: window.scope
+            ).map((block) ->
+                # wrap each expression in another layer that includes scope
+                check: block
+                # scope: window.scope
             ).value!
 
             jar.stdin.setEncoding('utf-8')

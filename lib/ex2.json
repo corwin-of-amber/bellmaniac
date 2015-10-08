@@ -1,5 +1,0 @@
-{"$": "Tree", "root": {"$": "Identifier", "literal": "x", "kind": "variable"}, "subtrees": []}
-
-{"$": "Tree", "root": {"$": "Identifier", "literal": "y", "kind": "variable"}, "subtrees": []}
-
-{"$": "Tree", "root": {"$": "Identifier", "literal": "z", "kind": "variable"}, "subtrees": []}

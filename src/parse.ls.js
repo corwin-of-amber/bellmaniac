@@ -252,6 +252,10 @@
           return results[0];
         }).filter(function(block){
           return block.root.kind !== 'set';
+        }).map(function(block){
+          return {
+            check: block
+          };
         }).value();
         jar.stdin.setEncoding('utf-8');
         for (i$ = 0, len$ = (ref$ = $scope.parsed).length; i$ < len$; ++i$) {
