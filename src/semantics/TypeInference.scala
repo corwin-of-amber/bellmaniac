@@ -497,7 +497,7 @@ object TypeInference {
         val approx = for (c <- cross) yield TI("->", List(c, term.subtrees(1)))
         approx ++ (approx flatMap (alternatives _))
       }
-      else if (term.root == "->" && term.subtrees.length == 2 && term.subtrees(0).root == "x") {
+      else if (term.root == "->" && term.subtrees.length == 2 && term.subtrees(0).root == "×") {
         val args = term.subtrees(0).subtrees
         var curry = TI("->", List(args(0), TI("->", List(args(1), term.subtrees(1)))))
         List(curry) ++ alternatives(curry)
@@ -508,7 +508,7 @@ object TypeInference {
     override def isUnitary(term: Tree[Identifier]) = !isTupleType(term)
     
     def isTupleType(term: Tree[Identifier]): Boolean =
-      term.root == "x" || (term.root == "∩" && (term.subtrees exists (isTupleType _)))
+      term.root == "×" || (term.root == "∩" && (term.subtrees exists (isTupleType _)))
   }
   
  

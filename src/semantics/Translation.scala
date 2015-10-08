@@ -237,7 +237,7 @@ object TypeTranslation {
         emit(scope, l, InOut.IN) ::: emit(scope, r, InOut.OUT)
       }
     }
-    else if (term.root == "x") {
+    else if (term.root == "×") {
       if (dir == InOut.IN) term.subtrees flatMap (emit(scope, _, dir))
       else throw new Scope.TypingException(s"tuple type '$term' not permitted here")
     }
@@ -289,7 +289,7 @@ object TypeTranslation {
               args.trimEnd(1)
             }
             if ((popped map (_._1) sum) > arity) throw new Scope.TypingException(s"overlapping checks in '$micro'")
-            args += ((arity, TI("∩")(TI("x")(popped.toList map (_._2)).foldLeft, pred)))
+            args += ((arity, TI("∩")(TI("×")(popped.toList map (_._2))<<, pred)))
         }
     }
     if (ret.isEmpty) throw new Scope.TypingException(s"return missing: $micro")
@@ -730,54 +730,6 @@ class FormulaTranslation(val termb: TermTranslation.TermBreak) {
     case _ => termb(phi)
   }
     
-}
-
-
-
-class Mnemonics {
-
-  val mnemonics = new collection.mutable.HashMap[Identifier, String]
-
-  /**
-   * Gets a string mnemonic for this identifier; makes sure distinct
-   * identifiers get distinct mnemonics (even if they have the same
-   * literal).
-   */
-  def get(id: Identifier) = mnemonics get id match {
-    case Some(x) => x
-    case _ =>
-      val lit = normalize(id)
-      val newMne = (lit #:: (nat map (lit + _))) find (x => ! mnemonics.exists (_._2 == x)) get ;
-      mnemonics += id -> newMne
-      newMne
-  }
-
-  def release(ids: Iterable[Identifier]) = mnemonics --= ids
-  def --=(ids: Iterable[Identifier]) = mnemonics --= ids
-
-  def normalize(id: Identifier): String = normalize(id.literal.toString)
-
-  def normalize(s: String) = {
-    val esc = s map { c =>
-      if (isIdentifierPart(c)) c
-      else ESC getOrElse (c, "_")
-    } mkString ;
-    if (esc.length > 0 && isIdentifierStart(esc.charAt(0))) esc
-    else "_" + esc
-  }
-
-  def isIdentifierPart(c: Character) = Character.isJavaIdentifierPart(c)
-  def isIdentifierStart(c: Character) = Character.isJavaIdentifierStart(c)
-
-  val ESC = Map('<' -> "lt", '+' -> "plus", '@' -> "apply", 'ψ' -> "psi", 'θ' -> "theta", '₀' -> "0")
-
-  /**
-   * just the stream of naturals (taken from Scala docs)
-   */
-  def nat = {
-    def loop(v: Int): Stream[Int] = v #:: loop(v + 1)
-    loop(0)
-  }
 }
 
 

@@ -1,1 +1,8 @@
-/bin/
+/bin
+/out
+/jarbin
+/.idea
+.*.swp
+.DS_Store
+.cache*
+*.jar

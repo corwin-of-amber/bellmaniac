@@ -3,12 +3,15 @@ package semantics.smt
 
 import java.util.regex.Pattern
 import scala.collection.mutable.HashMap
+
 import com.microsoft.z3.Expr
 import com.microsoft.z3.Sort
+
 import syntax.Identifier
 import syntax.AstSugar
+import syntax.transform.Mnemonics
 import com.microsoft.z3.FuncDecl
-import semantics.{Mnemonics, TypedIdentifier}
+import semantics.TypedIdentifier
 import com.microsoft.z3.BoolExpr
 import com.microsoft.z3.Z3Exception
 import scala.util.Either

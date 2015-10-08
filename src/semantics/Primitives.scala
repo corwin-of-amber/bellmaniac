@@ -42,7 +42,7 @@ object TypePrimitives {
   def shape(typ: Term)(implicit scope: Scope): Term = {
     val subs = typ.subtrees.toStream map shape
     if (typ =~ ("∩", 2)) subs(0)
-    else if (typ =~ ("->", 2) && subs(0).root == "x")
+    else if (typ =~ ("->", 2) && subs(0).root == "×")
       shape((subs(0).subtrees :\ typ.subtrees(1))(_ -> _))
     else if (typ.isLeaf && scope.sorts.contains(typ.root)) 
       T(scope.sorts.getMasterOf(typ.root))

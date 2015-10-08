@@ -40,6 +40,17 @@ class Identifier (val literal: Any, val kind: String = "?", val ns: AnyRef = nul
   }
 }
 
+object Identifier {
+  import Nullable._
+  def fromJson(json: DBObject)(implicit container: SerializationContainer): Identifier = {
+    // TODO typed identifier, ns
+    new Identifier(
+      literal = json.get("literal") orElse { throw new SerializationError("'literal' missing", json); },
+      kind = json.get("kind") andThen (_.toString, "?")
+    )
+  }
+}
+
 
 /**
  * Helper functions for formatting formulas as text and for serialization.
@@ -92,7 +103,7 @@ object Formula {
   def M(ops: InfixOperator*) = ops map (x => (x.literal, x)) toMap
 
   val INFIX = M(O("->", 1, Assoc.Right), O("<->", 1), O("&", 1), O("|", 1), O("<", 1), O("=", 1), O("↦", 1, Assoc.Right),
-    O(":", 1), O("::", 1), O("/", 1), O("|_", 1), O("|!", 1), O("∩", 1), O("x", 1)) ++
+    O(":", 1), O("::", 1), O("/", 1), O("|_", 1), O("|!", 1), O("∩", 1), O("×", 1)) ++
     Map("@" -> new AppOperator("", 1, Assoc.Left))
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
 
@@ -131,27 +142,24 @@ object Formula {
   def displayQuantifier(term: AstSugar.Term) =
     tape"${display(term.root)}${term.subtrees dropRight 1 map display mkTapeString " "} (${display(term.subtrees.last)})"
 
-  implicit class OrElse[A](val o: A) extends AnyVal {
-    def orElse(ow: => A) = if (o == null) ow else o
-    def andThen[B](op: A => B, ow: => B): B = if (o == null) ow else op(o)
-    def opt = andThen(Some(_), None)
-  }
+  import Nullable._
 
   // Perhaps this should not be here
   def fromJson(json: DBObject)(implicit container: SerializationContainer): Term = {
-    def id(json: DBObject) = {
-      // TODO typed identifier, ns
-      new Identifier(
-        literal = json.get("literal") orElse { throw new SerializationError("'literal' missing", json); },
-        kind = json.get("kind") andThen (_.toString, "?")
-      )
-    }
     def term(any: AnyRef) = fromJson(any.asInstanceOf[DBObject])
     import scala.collection.JavaConversions._
-    val root = id(json.get("root") andThen (_.asInstanceOf[DBObject], { throw new SerializationError("'root' missing", json) }))
+    val root = Identifier.fromJson(json.get("root") andThen (_.asInstanceOf[DBObject], { throw new SerializationError("'root' missing", json) }))
     val subs = json.get("subtrees") andThen (_.asInstanceOf[BasicDBList].toList map term, List())
     val tree = new Term(root, subs)
     json.get("type") andThen (typ => TypedTerm(tree, term(typ)), tree)
   }
 }
 
+
+object Nullable {
+  implicit class OrElse[A](val o: A) extends AnyVal {
+    def orElse(ow: => A) = if (o == null) ow else o
+    def andThen[B](op: A => B, ow: => B): B = if (o == null) ow else op(o)
+    def opt = andThen(Some(_), None)
+  }
+}

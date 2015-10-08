@@ -58,7 +58,7 @@ object AstSugar {
     def |(that: Term) = TI("|")(term, that)
     def <->(that: Term) = TI("<->")(term, that)
     def unary_~ = TI("~")(term)
-    def x(that: Term) = TI("x")(term, that)
+    def x(that: Term) = TI("×")(term, that)
     def ∩(that: Term) = TI("∩")(term, that)
     def +(that: Term) = TI("+"):@(term, that)
     def -(that: Term) = TI("-"):@(term, that)

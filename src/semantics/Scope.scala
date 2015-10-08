@@ -188,5 +188,18 @@ object Scope {
     override def getMessage = if (formula == null) super.getMessage 
       else s"$msg\n\tin: ${formula.toPretty}"
   }
+
+  import com.mongodb.{DBObject, BasicDBList}
+  import report.data.SerializationContainer
+  import scala.collection.JavaConversions._
+
+  def fromJson(json: DBObject)(implicit container: SerializationContainer) = json match {
+    case list: BasicDBList =>
+      val ids = list collect { case x: DBObject => Identifier.fromJson(x) }
+      val scope = new Scope
+      ids foreach scope.sorts.declare
+      scope.sorts.cork()
+      scope
+  }
 }
 
