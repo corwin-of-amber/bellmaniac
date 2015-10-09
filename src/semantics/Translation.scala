@@ -734,13 +734,13 @@ class FormulaTranslation(val termb: TermTranslation.TermBreak) {
 
 
 
-class TranslationError(msg: String) extends Exception(msg) {
+class TraceableException(msg: String) extends Exception(msg) {
 
   import syntax.AstSugar._
 
   var where: List[Term] = List.empty
 
-  def at(term: Term): TranslationError = {
+  def at(term: Term): TraceableException = {
     this.where = this.where :+ term
     this
   }
@@ -748,9 +748,13 @@ class TranslationError(msg: String) extends Exception(msg) {
   override def getMessage = (super.getMessage /: this.where)((msg,term) => s"${msg}\n\tin: ${term toPretty}")
 }
 
-object TranslationError {
+object TraceableException {
   import syntax.AstSugar._
   def trace[A](term: Term)(op: => A) =
     try op
     catch { case e: TranslationError => throw e at term}
 }
+
+
+class TranslationError(msg: String) extends TraceableException(msg)
+

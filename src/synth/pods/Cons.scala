@@ -122,13 +122,19 @@ object TuplePod extends Pod {
   def tuple(x: Term, y: Term, z: Term) = {
     import NatPod.{_0,_1,_2}
     val ι = $TyTV("ι", N)
-    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1), z |! (ι =:=  _2))
+    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1), z |! (ι =:= _2))
   }
 
   def tuple(x: Term, y: Term, z: Term, w: Term) = {
     import NatPod.{_0,_1,_2,_3}
     val ι = $TyTV("ι", N)
-    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1), z |! (ι =:=  _2), w |! (ι =:=  _3))
+    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1), z |! (ι =:= _2), w |! (ι =:= _3))
+  }
+
+  def tuple(x: Term, y: Term, z: Term, w: Term, v: Term) = {
+    import NatPod.{_0,_1,_2,_3,_4}
+    val ι = $TyTV("ι", N)
+    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1), z |! (ι =:= _2), w |! (ι =:= _3), v |! (ι =:= _4))
   }
 
   def tuple(xs: List[Term]): Term = xs match {
@@ -136,6 +142,7 @@ object TuplePod extends Pod {
     case List(x,y) => tuple(x,y)
     case List(x,y,z) => tuple(x,y,z)
     case List(x,y,z,w) => tuple(x,y,z,w)
-    case _ => ??? /* not enough Nats? */
+    case List(x,y,z,w,v) => tuple(x,y,z,w,v)
+    case _ => throw new Exception(s"list too long: ${xs map (_.toPretty)}") /* not enough Nats? */
   }
 }

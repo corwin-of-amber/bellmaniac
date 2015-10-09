@@ -44,13 +44,16 @@ object MinPod {
   def apply(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implicit env: Environment) = new MinPod(domain, range, <, opaque)
 }
 
-object MinDistribPod {
+class MinDistribPod(fs: List[Term]) extends Pod {
   import Prelude.{min,cons,nil}
   import ConsPod.`⟨ ⟩`
   
-  def apply(fs: List[Term]) = {
+  override val program =
     (min :@ (/::(fs))) =:= (min :@ `⟨ ⟩`(fs map (min :@ _)))
-  }
+}
+
+object MinDistribPod {
+  def apply(fs: List[Term]) = new MinDistribPod(fs)
 }
 
 object MinAssocPod {

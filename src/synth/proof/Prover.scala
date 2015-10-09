@@ -118,6 +118,7 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
     }
     
     def commit(assumptions: Iterable[Term], goals: Iterable[Compound]) = {
+      val (lassumptions, lgoals) = (assumptions.toList, goals.toList) // prevent laziness
       val symbols = typedecl.keys ++ (pods flatMap (_.decl.symbols)) ++ termb.intermediates ++ locals
       val env1 = (env /: termlings) { case (env, (env1, _)) => env ++ env1 }
       val env2 = (env1 /: (pods map (_.decl.shallow))) { case (e, d) => e + d }
@@ -132,7 +133,7 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
                                       
       println("· " * 25)
   
-      reflect.solve(terms1.toList flatten, assumptions.toList ++ (pods flatMap (_.decl.precondition)), goals.toList)
+      reflect.solve(terms1.toList flatten, lassumptions ++ (pods flatMap (_.decl.precondition)), lgoals)
     }
     
     def be(term: Term) = {

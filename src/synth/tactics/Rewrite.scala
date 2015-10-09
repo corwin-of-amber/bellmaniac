@@ -83,7 +83,8 @@ object Rewrite {
   
   def instantiate(term: Term, vassign: Map[Identifier, Term]=Map())(implicit scope: Scope) = {
     println("-" * 60)
-    println(" <> " + term.toPretty)
+    for (conj <- term.conjuncts)
+      println(" <> " + conj.toPretty)
     println("-" * 60)
     TypeInference.infer(Binding.prebind(term), vassign)
   }

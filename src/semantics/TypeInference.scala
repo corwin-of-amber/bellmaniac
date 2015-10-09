@@ -144,11 +144,13 @@ object TypeInference {
       implicit val join = resolve.join
       // - unify all the information you have (@@@ this is so messy)
       val u = new Unify
-      u digest (vassign map { case (k,v) => (k, mark(raw(v))) })
-      u digest (expr.nodes collect { n => typeOf(n) match { case Some(typ) => (NV(n) -> mark(raw(typ))) }} toMap)
-      u digest assign
-      // - canonicalize result
-      (rootvar, u.canonicalize filter (_._1.ns match { case _:AbsTypeUid=>false case _=>true }))
+      try {
+        u digest (vassign map { case (k,v) => (k, mark(raw(v))) })
+        u digest (expr.nodes collect { n => typeOf(n) match { case Some(typ) => (NV(n) -> mark(raw(typ))) }} toMap)
+        u digest assign
+        // - canonicalize result
+        (rootvar, u.canonicalize filter (_._1.ns match { case _:AbsTypeUid=>false case _=>true }))
+      } catch { case e: TraceableException => throw e at expr}
     }
     
     import Prelude.B

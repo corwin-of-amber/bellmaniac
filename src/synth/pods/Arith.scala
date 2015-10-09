@@ -26,6 +26,7 @@ object NatPod extends Pod {
   val _1 = TyTV("1", N)
   val _2 = TyTV("2", N)
   val _3 = TyTV("3", N)
+  val _4 = TyTV("4", N)
   val z =  TyTV("z", N -> B)
   val nz = TyTV("~z", N -> B)
   val s =  TyTV("s", N -> N)
@@ -34,13 +35,14 @@ object NatPod extends Pod {
   private val i = $TyTV("i", N)
   
   override val decl = new Declaration(_0, _1, z, nz, s, p) where (
-      ↓(_0) & ↓(_1) & ↓(_2) & ↓(_3) &
+      ↓(_0) & ↓(_1) & ↓(_2) & ↓(_3) & ↓(_4) &
       ~(_0 =:= _1) & ~(_0 =:= _2) & ~(_1 =:= _2) & ~(_0 =:= _3) & ~(_1 =:= _3) & ~(_2 =:= _3),
-      (TypedTerm(s :@ _0, N) =:= _1),
+      ~(_0 =:= _4) & ~(_1 =:= _4) & ~(_2 =:= _4) & ~(_3 =:= _4),
+      TypedTerm(s :@ _0, N) =:= _1,
       z <-> TypedTerm(i ↦ (i =:= _0), N -> B),
       nz <-> TypedTerm(i ↦ ~(z :@ i), N -> B),
-      ∀:(N, i => (↓(s :@ i) -> ~(TypedTerm(s :@ i, N) =:= i) )),
-      ∀:(N, i => (↓(s :@ i) -> (TypedTerm(p :@ (s :@ i), N) =:= i) ))
+      ∀:(N, i => ↓(s :@ i) -> ~(TypedTerm(s :@ i, N) =:= i) ),
+      ∀:(N, i => ↓(s :@ i) -> (TypedTerm(p :@ (s :@ i), N) =:= i) )
     )
 }
 
@@ -54,8 +56,8 @@ object RealPod {
 class TotalOrderPod(D: Term, val < : Term) extends Pod {
   
   override val decl = new Declaration(<) where (
-      ∀:(D, (i, j) => (< :@ i :@ j) -> ~(< :@ j :@ i)),                   // anti-symmetry
-      ∀:(D, (i, j) => ~(< :@ i :@ j) ->: ~(< :@ j :@ i) ->: (i =:= j)),    // totality
+      ∀:(D, (i, j) => (< :@ i :@ j) -> ~(< :@ j :@ i)),                           // anti-symmetry
+      ∀:(D, (i, j) => ~(< :@ i :@ j) ->: ~(< :@ j :@ i) ->: (i =:= j)),           // totality
       ∀:(D, (i, j, k) => ~(< :@ i :@ j) ->: ~(< :@ j :@ k) ->: ~(< :@ i :@ k))    // transitivity
     )      
 }

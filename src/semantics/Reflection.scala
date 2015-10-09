@@ -398,7 +398,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     val fo_goals_pn = fo_goals map (_._2) reduce (_ ++ _)
           
     val statusMap = (fo_goals_pn.toList map (new Id(_))) zip status toMap
-    val results = fo_goals_pn map_/ (s => TI(statusMap(s).toPretty + " " + finish))
+    val results = fo_goals_pn map_/ (s => TI(statusMap(s).toPretty)(TI(finish + "ms")))
     
     Trench.display(results, "◦")
     report.NotebookLog.out += Trench.displayRich(results, "◦")

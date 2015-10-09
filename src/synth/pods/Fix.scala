@@ -49,8 +49,16 @@ class StratifySlashPod(val h: Term, val quadrant: Term, val ψ: Term)(implicit s
   //override val program = StratifyFixPod(h, f, g).program
   override val program = 
       fix(h) =:= (TI("let") :- ((ψ ↦ fix (gψ)):@fix(f)))
-  
-  def splitSkip(term: Term, sep: Identifier): List[Term] = 
+
+  val θ = $TV("θ")
+  val ζ = $TV("ζ")
+
+  override val obligations = &&(
+      (g:@(f:@θ, θ)) =:= (h:@θ),
+      (f:@(g:@(ζ,θ))) =:= (f:@ζ)
+    )
+
+  def splitSkip(term: Term, sep: Identifier): List[Term] =
     if (term =~ (":", 2)) splitSkip(term.subtrees(1), sep)
     else if (term.root == sep) term.subtrees flatMap (splitSkip(_, sep))
     else List(term)
@@ -69,10 +77,20 @@ class StratifyReducePod(val e: TermWithHole, val reduce: Term, val elements: Lis
   
   val h = e(reduce:@`⟨ ⟩`(elements))
   val f = e(reduce:@`⟨ ⟩`(subelements))
+  val g = ψ ↦ e(reduce:@`⟨ ⟩`((ψ:@(x̅ drop 1)) +: (elements filter (x => !subelements.exists(_ eq x)))))
+
   val gψ = e(reduce:@`⟨ ⟩`((ψ:@(x̅ drop 1)) +: (elements filter (x => !subelements.exists(_ eq x)))))
 
   override val program = 
       fix(h) =:= (TI("let") :- ((ψ ↦ fix (gψ)):@fix(f)))
+
+  val θ = $TV("θ")
+  val ζ = $TV("ζ")
+
+  override val obligations = &&(
+    (g:@(f:@θ, θ)) =:= (h:@θ),
+    (f:@(g:@(ζ,θ))) =:= (f:@ζ)
+  )
 }
 
 object StratifyReducePod {

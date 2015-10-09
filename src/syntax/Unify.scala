@@ -2,7 +2,7 @@ package syntax
 
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.ListMap
-import semantics.Namespace
+import semantics.{TraceableException, Namespace}
 import java.util.logging.Logger
 import java.util.logging.Level
 
@@ -52,7 +52,8 @@ class Unify(implicit resolve: Resolve = Resolve.NULL) {
     catch {
       case e: Unify.CannotUnify =>
         /* try some alternatives before giving up */
-        if (!attemptAlternatives(x, y, keys)) throw e
+        import AstSugar.{TI,TreeBuild}
+        if (!attemptAlternatives(x, y, keys)) throw e at (TI("~")(x, y))
     }
   }
   
@@ -165,7 +166,7 @@ object Unify {
   
   var uniq: Int = 0;
   
-  class CannotUnify(e: String) extends Exception(e) { }
+  class CannotUnify(e: String) extends TraceableException(e) { }
   
   def mgu(x: Tree[Identifier], y: Tree[Identifier])(implicit resolve: Resolve) = {
     val uni = new Unify

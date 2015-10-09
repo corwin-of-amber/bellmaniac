@@ -204,7 +204,7 @@ object StratifyFix {
         
     val ψ = $TV("ψ")
     val θ = $TV("θ")//, ((J x J)) -> R)
-    val ζ = $TyTV("ζ", (J x J) -> R)
+    val ζ = $TV("ζ")//, (J x J) -> R)
     val ⊥ = $TyTV("⊥", (J x J) -> R)
     val i = $TV("i")
     val j = $TV("j")

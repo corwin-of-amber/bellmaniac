@@ -2,6 +2,7 @@ package syntax
 
 import com.mongodb.{BasicDBList, DBObject, BasicDBObject}
 import report.data._
+import Nullable._
 import semantics.TypedTerm
 
 
@@ -41,7 +42,6 @@ class Identifier (val literal: Any, val kind: String = "?", val ns: AnyRef = nul
 }
 
 object Identifier {
-  import Nullable._
   def fromJson(json: DBObject)(implicit container: SerializationContainer): Identifier = {
     // TODO typed identifier, ns
     new Identifier(
@@ -142,8 +142,6 @@ object Formula {
   def displayQuantifier(term: AstSugar.Term) =
     tape"${display(term.root)}${term.subtrees dropRight 1 map display mkTapeString " "} (${display(term.subtrees.last)})"
 
-  import Nullable._
-
   // Perhaps this should not be here
   def fromJson(json: DBObject)(implicit container: SerializationContainer): Term = {
     def term(any: AnyRef) = fromJson(any.asInstanceOf[DBObject])
@@ -155,11 +153,3 @@ object Formula {
   }
 }
 
-
-object Nullable {
-  implicit class OrElse[A](val o: A) extends AnyVal {
-    def orElse(ow: => A) = if (o == null) ow else o
-    def andThen[B](op: A => B, ow: => B): B = if (o == null) ow else op(o)
-    def opt = andThen(Some(_), None)
-  }
-}

@@ -66,7 +66,9 @@ object AstSugar {
     
     def :@(that: Term*) = @:(term)(that:_*).foldLeft
     def :@(these: List[Term]) = @:(term)(these:_*).foldLeft
-    
+
+    def conjuncts = term split I("&")
+
     def ~>[A](that: A) = term.leaf -> that
     
     def =~(root: Any, arity: Int) =
@@ -142,6 +144,15 @@ object Piping {
     def |>>[Y](f: X => Y) = x map f
   }
 
+}
+
+
+object Nullable {
+  implicit class OrElse[A](val o: A) extends AnyVal {
+    def orElse(ow: => A) = if (o == null) ow else o
+    def andThen[B](op: A => B, ow: => B): B = if (o == null) ow else op(o)
+    def opt = andThen(Some(_), None)
+  }
 }
 
 

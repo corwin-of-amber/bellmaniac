@@ -186,7 +186,7 @@ object Paren {
               ψ:@(i, j)
             )
             
-          ) -: f )
+          ) -: f :: (? ->: ((? x ?) ∩ <) ->: ?) )
         )
       )
     }
@@ -205,17 +205,18 @@ object Paren {
 
       val program = TI("program")(
         B :- (ψ ↦ fix(
-          (TI("↦")(
-            θ :: (J0 x J1) ->: R , i , j ,
-    
-            min:@`⟨ ⟩`(
-              min:@(k ↦
-                ( ((θ:@(i, k)) + (θ:@(k, j)))/*((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j)))*/ -: TV("item") )
-              ),
-              ψ:@(i, j)
-            )
-
-          ).foldRight -: f) :: (? x J0 x J1) -> ?
+          /::(
+            $TV ↦ ψ :: ? ->: (J0 x J0) ->: ?,
+            (θ :: ((J x J) ∩ <) ->: R) ↦: i ↦: j ↦: (
+              min:@`⟨ ⟩`(
+                min:@(k ↦
+                  ( ((θ:@(i, k)) + (θ:@(k, j)))/*((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j)))*/ -: TV("item") )
+                ),
+                ψ:@(i, j)
+              )
+            ) -: f :: ? ->: (J0 x J1) ->: ?,
+            $TV ↦ ψ :: ? ->: (J1 x J1) ->: ?
+          )
       ) ) )
       
       def decl = new Declaration(P) where (
@@ -288,7 +289,7 @@ object Paren {
 
       implicit val env = new Environment(scope, Map())
       
-      rewriteA
+      rewriteB
     }
     
     
@@ -318,26 +319,32 @@ object Paren {
       
       val f = (A :/ "f").subtrees(1)
       val slicef = SlicePod(f, List(J0 x J0, J0 x J1, J1 x J1) map (? x _)) |> instapod
+      //invokeProver(List(), slicef.obligations.conjuncts)
       for (A <- Rewrite(slicef)(A)) {
         val ex = extrude(A) |-- display
         // Stratify  🄰
         val strat = SimplePattern(fix(* :- `...`(ex :/ "🄰"))) find A map (x => StratifySlashPod(x(*), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))) map instapod
+        //invokeProver(List(), strat flatMap (_.obligations.conjuncts))
         for (A <- Rewrite(strat)(A)) {
           val ex = extrude(A) |-- display
-          // Stratify  🄰
-          val strat = SimplePattern(fix(* :- `...`(ex :/ "🄰"))) find A map (x => StratifySlashPod(x(*), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))) map instapod
+          // Stratify  🄱
+          val strat = SimplePattern(fix(* :- `...`(ex :/ "🄱"))) find A map (x => StratifySlashPod(x(*), ex :/ "🄱", ctx(A, ex :/ "🄱")("ψ"))) map instapod
+          //invokeProver(List(), strat flatMap (_.obligations.conjuncts))
           for (A <- Rewrite(strat)(A)) {
             val ex = extrude(A) |-- display
-            val A0 = new APod(J0).program
-            for (target <- SimplePattern(fix(* :- ?)) find A0 flatMap (x => TypedLambdaCalculus.pullOut(A0, x(*)))) {
-              val ψ = ctx(A, ex :/ "🄲")("ψ")
-              val (lhs, rhs) = (ex :/ "🄲", target :@ ψ)
+            def equivQuadrant(lhs: Term, rhs: Term) {
               env.typeOf(lhs) match {
                 case Some(x -> y) =>
                   invokeProver(List(), List(lhs =:= (rhs :: (? -> y))) |>> instapod)
                 case _ =>
               }
             }
+            val A0 = new APod(J0).program
+            for (target <- SimplePattern(fix(* :- ?)) find A0 flatMap (x => TypedLambdaCalculus.pullOut(A0, x(*))))
+              equivQuadrant(fixee(A, ex :/ "🄲"), target :@ ctx(A, ex :/ "🄲")("ψ"))
+            val A1 = new APod(J1).program
+            for (target <- SimplePattern(fix(* :- ?)) find A1 flatMap (x => TypedLambdaCalculus.pullOut(A1, x(*))))
+              equivQuadrant(fixee(A, ex :/ "🄱"), target :@ ctx(A, ex :/ "🄱")("ψ"))
           }
         }
       }
@@ -359,18 +366,22 @@ object Paren {
       val f = (B :/ "f").subtrees(1)
       // Slice  f  ? x [ K₀, K₁ ] x [ K₂, K₃ ]
       val slicef = SlicePod(f, List(K0 x K2, K0 x K3, K1 x K2, K1 x K3) map (? x _)) |> instapod
+      //invokeProver(List(), slicef.obligations.conjuncts)
       for (B <- Rewrite(slicef)(B)) {
         val ex = extrude(B) |-- display
-        // Stratify  🄲 :: ? -> (K₁ x K₂) -> ?
-        val strat = SimplePattern(fix(* :- `...`(ex :/ "🄲"))) find B map (x => StratifySlashPod(x(*), ex :/ "🄲", ctx(B, ex :/ "🄲")("ψ"))) map instapod
+        // Stratify  🄱 :: ? -> (K₁ x K₂) -> ?
+        val strat = SimplePattern(fix(* :- `...`(ex :/ "🄳"))) find B map (x => StratifySlashPod(x(*), ex :/ "🄳", ctx(B, ex :/ "🄳")("ψ"))) map instapod
+        invokeProver(List(), strat flatMap (_.obligations.conjuncts))
         for (B <- Rewrite(strat)(B)) {
           val ex = extrude(B) |-- display
-          // Stratify  🄰 :: ? -> (K₀ x K₂) -> ?
-          val strat = SimplePattern(fix(* :- `...`(ex :/ "🄰"))) find B map (x => StratifySlashPod(x(*), ex :/ "🄰", ctx(B, ex :/ "🄰")("ψ"))) map instapod
+          // Stratify  🄲 :: ? -> (K₀ x K₂) -> ?
+          val strat = SimplePattern(fix(* :- `...`(ex :/ "🄲"))) find B map (x => StratifySlashPod(x(*), ex :/ "🄲", ctx(B, ex :/ "🄲")("ψ"))) map instapod
+          invokeProver(List(), strat flatMap (_.obligations.conjuncts))
           for (B <- Rewrite(strat)(B)) {
             val ex = extrude(B) |-- display
-            // Stratify  🄱
-            val strat = SimplePattern(fix(* :- `...`(ex :/ "🄱"))) find B map (x => StratifySlashPod(x(*), ex :/ "🄱", ctx(B, ex :/ "🄱")("ψ"))) map instapod
+            // Stratify  🄴 :: ? -> (K₁ x K₃) -> ?
+            val strat = SimplePattern(fix(* :- `...`(ex :/ "🄴"))) find B map (x => StratifySlashPod(x(*), ex :/ "🄴", ctx(B, ex :/ "🄴")("ψ"))) map instapod
+            invokeProver(List(), strat flatMap (_.obligations.conjuncts))
             for (B <- Rewrite(strat)(B)) {
               val ex = extrude(B) |-- display
               // Slice  🄰 ... ( k ↦ ? )  [ K₀, K₁, K₂, K₃ ]
@@ -396,12 +407,18 @@ object Paren {
                     def stratduce(A: Term, `.` : Term, subelements: List[Term]) =
                       SimplePattern(min:@(* :- ?)) find `.` flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
                         StratifyReducePod(TermWithHole.puncture(fixee(A,`.`), x.subterm), min, elements, subelements, ctx(A, `.`)("ψ"))))
-                    val strat = stratduce(B, ex :/ "🄰", List("🄴", "🄷", "🄸") map (ex :/ _)) ++
-                                stratduce(B, ex :/ "🄱", List("🄹", "🄻", "🄼") map (ex :/ _)) ++
-                                stratduce(B, ex :/ "🄲", List("🄽", "🄿", "🅀") map (ex :/ _)) |>> instapod
+                    val strat = stratduce(B, ex :/ "🄰", List(/*"🄴", "🄷"*/"🄶", "🄹") map (ex :/ _)) ++
+                                stratduce(B, ex :/ "🄱", List("🄼", "🄾") map (ex :/ _)) ++
+                                stratduce(B, ex :/ "🄲", List("🅁", "🅃") map (ex :/ _)) |>> instapod
+                    strat.head.obligations.conjuncts foreach { x =>
+                      extrude(x) |-- display
+                      for (n <- x.nodes) if (n.root == "θ" || n.root == "ψ") println(s" --  ${n toPretty} : ${env.typeOf_!(n) toPretty}")
+                    }
+                    invokeProver(List(), strat flatMap (_.obligations.conjuncts))
                     for (B <- Rewrite(strat)(B)) {
                       val ex = extrude(B) |-- display
-                      val strat = stratduce(B, ex :/ "🄰", List("🄷", "🄸") map (ex :/ _)) |>> instapod
+                      val strat = stratduce(B, ex :/ "🄰", List("🄸", "🄺") map (ex :/ _)) |>> instapod
+                      invokeProver(List(), strat flatMap (_.obligations.conjuncts))
                       for (B <- Rewrite(strat)(B)) {
                         val ex = extrude(B) |-- display
                       }
@@ -535,12 +552,31 @@ object Paren {
       val toJ = TotalOrderPod(J, <)
       val idxJ = new IndexArithPod(J, toJ.<, succ)
       val partJ = PartitionPod(J, <, J0, J1)
+      val partJ0 = PartitionPod(J0, <, K0, K1)
+      val partJ1 = PartitionPod(J1, <, K2, K3)
       val nilNR = NilPod(N, R)
       val minJR = MinPod(J, R, toR.<) //, opaque=true)
       val minNR = MinPod(N, R, toR.<) //, opaque=true)
 
-      val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, minJR, minNR, nilNR))
+      val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, minJR, minNR, nilNR))
 
+      val commits =
+        for (goals <- goals map (List(_))) yield {
+        //for (goals <- List(goals)) yield {
+          val igoals = goals map a.intros
+          import semantics.pattern.SimplePattern
+          val t = new p.Transaction
+          val switch = t.commonSwitch(new p.CommonSubexpressionElimination(igoals, new SimplePattern(min :@ ?)))
+
+          t.commit(assumptions map a.simplify map t.prop, igoals map (switch(_)) map a.simplify map t.goal)
+        }
+
+      val results = commits reduce (_ ++ _)
+
+      println("=" * 80)
+      Trench.display(results, "◦")
+
+      /*
       val t = new p.Transaction
       val switch = t.commonSwitch(new p.CommonSubexpressionElimination(goals, new SimplePattern(min :@ ?)))
 
@@ -548,7 +584,9 @@ object Paren {
         t.commit(assumptions map a.simplify map t.prop, goals map (switch(_)) map a.intros map a.simplify map t.goal)
 
       println("=" * 80)
-      Trench.display(results, "◦")
+      Trench.display(results, "◦")*/
+
+      if (!(results.toList forall (_.root == "valid"))) System.exit(1)
     }
 
 

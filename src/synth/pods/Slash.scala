@@ -17,18 +17,20 @@ import synth.pods.Pod.TacticalError
  *
  * Means that J can be partitioned into J₀, J₁ s.t. every element of J₀ is less than every element of J₁.
  */
-class PartitionPod(val J: Term, val < : Term, val J0: Term, val J1: Term) extends Pod {
+class PartitionPod(val J: Term, val < : Term, val J0: Term, val J1: Term)(implicit scope: Scope) extends Pod {
   import Prelude.{compl, partition, allToAll}
 
+  val U = T(scope.sorts.getMasterOf(J.leaf))
+
   override val decl = new Declaration where (
-    //partition(J)(J, J0, J1),
-    compl(J)(J0, J1),
-    allToAll(J)(J0, <, J1)
+    partition(U)(J, J0, J1),
+    //compl(U)(J0, J1),
+    allToAll(U)(J0, <, J1)
   )
 }
 
 object PartitionPod {
-  def apply(J: Term, < : Term, J0: Term, J1: Term) = new PartitionPod(J, <, J0, J1)
+  def apply(J: Term, < : Term, J0: Term, J1: Term)(implicit scope: Scope) = new PartitionPod(J, <, J0, J1)
 }
 
 class SlicePod(val f: Term, val subdomains: List[Term]) extends Pod {
