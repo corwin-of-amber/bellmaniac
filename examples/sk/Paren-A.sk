@@ -1,0 +1,44 @@
+#include "scalar.sk"
+#include "scope.sk"
+
+
+|scalar| h(int n, fun psi, fun theta, int i, int j) {
+    |scalar| f(int k) {
+        return apply(plus, apply(plus, only((i < k), theta(i, k)), only((k < j), theta(k, j))), w(i, k, j));
+    }
+    return min_acc(psi(i, j), n, f);
+}
+|scalar| f_i(int n, fun psi, fun theta, int i, int j) {
+    |scalar| f0(int k) {
+        return apply(plus, apply(plus, only(((P(i) && P(k)) && (i < k)), theta(i, k)), only(((P(k) && P(j)) && (k < j)), theta(k, j))), w(i, k, j));
+    }
+    return min_acc(psi(i, j), n, f0);
+}
+
+bit X(int a, int b) {
+    return (J0(a) && J0(b));
+}
+
+
+/* -- harness -- */
+
+int psi_val(int a, int b);
+bit psi_supp(int a, int b);
+|scalar| psi(int a, int b) {
+    return when(psi_supp(a, b), psi_val(a, b));
+}
+
+int theta_val(int a, int b);
+bit theta_supp(int a, int b);
+|scalar| theta(int a, int b) {
+    return when(theta_supp(a, b), theta_val(a, b));
+}
+
+int w_val(int a, int b, int c);
+bit w_supp(int a, int b, int c);
+|scalar| w(int a, int b, int c) {
+    return when(w_supp(a, b, c), w_val(a, b, c));
+}
+
+#include "harness.sk"
+
