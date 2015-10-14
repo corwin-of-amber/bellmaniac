@@ -1,5 +1,7 @@
 package report.console
 
+import java.io.ByteArrayOutputStream
+
 import semantics.TypedTerm
 import semantics.TypedTerm._
 import syntax.AstSugar._
@@ -61,5 +63,13 @@ object Console {
   }
 
   def display(xterm: ExtrudedTerms) { display(xterm.terms) }
+
+  def asString(op: => Unit) = {
+    val ss = new ByteArrayOutputStream
+    scala.Console.withOut(ss)(op)
+    new String(ss.toByteArray(), "utf-8")
+  }
+
+  def sdisplay(xterm: ExtrudedTerms) = asString { display(xterm) }
 
 }

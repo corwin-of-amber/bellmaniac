@@ -45,7 +45,11 @@ class FileLog(val file: File, val container: SerializationContainer=new Serializ
     out.write(SEP)
     out.flush
   }
-  
+
+  def +=(m: Map[String,AnyRef]) {
+    this += container.map(m)
+  }
+
   override def +=(any: Any) = any match {
     case json: DBObject => this += json
     case as: DisplayAsJson => this += as.displayAsJson

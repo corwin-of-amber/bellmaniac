@@ -388,128 +388,7 @@ object TermTranslation {
   import TypeTranslation.Declaration
   import TypeTranslation.Environment
   import TypeTranslation.TypingSugar._
-  
-  /*
-  object combine {
-    
-    def app(func: Declaration, arg: Declaration) = {
-      val freshns = new Uid
-      val result = new Identifier("@", "function", freshns)
-      val support = new Identifier("|@|", "predicate", freshns)
-      def behead(typ: Term) =
-        if (typ.root == "->" && typ.subtrees.length == 2) typ.subtrees(1)
-        else throw new Scope.TypingException(s"not a function type: '$typ'")
-      val result_type = behead(func.head.typ)
-      val support_type = behead(func.support.typ)
-      def vartypes_(typ: Term): List[Term] = 
-        if (typ.root == "->" && typ.subtrees.length == 2) typ.subtrees(0) :: vartypes_(typ.subtrees(1))
-        else List()
-      val vartypes = vartypes_(result_type)
-      val vars = for ((t,i) <- vartypes.zipWithIndex) yield 
-        T(TypedIdentifier(new Identifier(s"$$$i", "variable", freshns), t))
-      Declaration(List(TypedIdentifier(result, result_type),
-                       TypedIdentifier(support, support_type)),
-          List(
-            ∀(vars)(
-                (T(result)(vars) =:= T(func.head, T(arg.head) :: vars)) &
-                (T(support, vars) <->
-                  (T(arg.support) &
-                   T(func.support, T(arg.head) :: vars)))
-            )
-          ))
-    }
-    
-    def retype(scope: Scope, value: Declaration, typ: Term) = {
-      val redecl = TypeTranslation.shrink(value, TypeTranslation.emit(scope, typ))
-      (redecl.head, redecl)
-    }
-    
-    def slash(scope: Scope, fore: Declaration, back: Declaration) = {
-      val ns = new Uid
-      val result = new Identifier("/", "function", ns)
-      val support = new Identifier("|/|", "predicate", ns)
-      val (varids, _, _) = TypeTranslation.contract(result, TypeTranslation.emit(scope, fore.head.typ))
-      val vars = varids map (T(_))
-      Declaration(List(TypedIdentifier(result, fore.head.typ),
-                       TypedIdentifier(support, fore.support.typ)),
-         List(
-            ∀(vars)(
-                (T(fore.support)(vars) -> (T(result)(vars) =:= T(fore.head)(vars))) &
-                (~T(fore.support)(vars) -> (T(result)(vars) =:= T(back.head)(vars))) &
-                (T(support)(vars) <-> (T(fore.support)(vars) | T(back.support)(vars)))
-            )
-         ))
-    }
-    
-    /*
-    def abs(va: Declaration, decl: Declaration): Declaration = {
-      val ns = new Uid
-      val result = new Identifier(s"${va.head.literal}↦${decl.head.literal}", "function", ns)
-      val support = new Identifier(s"|${va.head.literal}↦${decl.head.literal}|", "predicate", ns)
-      def gener(phi: Term): Term =
-        if (phi.root == va.head) T(result)(T(va.head))(phi.subtrees map gener)
-        else if (phi.root == va.support) T(support)(T(va.head))(phi.subtrees map gener)
-        else T(phi.root)(phi.subtrees map gener)
-      Declaration(List(TypedIdentifier(result, va.head.typ -> decl.head.typ),
-                       TypedIdentifier(support, va.head.typ -> decl.support.typ)),
-          for (phi <- decl.precondition) yield ∀(T(va.head))(phi))
-    }
 
-    def abs(va: Declaration, env: Environment): Environment =
-      new Environment(env.scope, env.decl map { case (k,v) => 
-        (k, if (v eq va) v else abs(va, v)) })*/
-    
-  }
-  
-  def term(env: Environment, term: Term, annot: Map[Id[Term], Term] = Map()): (Identifier, Environment) = {
-    val (id, termEnv) = term1(env, term, annot)
-    (id, env ++ termEnv)
-  }
-
-  def term1(env: Environment, term: Term, annot: Map[Id[Term], Term] = Map()): (Identifier, Environment) = {
-    (term0(env, term, annot), annot get term) match {
-      case ((va, va_env), Some(typ)) => 
-        val (aid, a) = combine.retype(env.scope, va_env(va), typ)
-        (aid, va_env + (aid -> a))
-      case (v0, _) => v0
-    }
-  }
-  
-  def term0(env: Environment, term: Term, annot: Map[Id[Term], Term]): (Identifier, Environment) = {
-    val r = term.root
-    val arity = term.subtrees.length
-    def rechild(x: Term) = term1(env, x, annot)
-    def recurse = term.subtrees map rechild
-    if (term.isLeaf) env.decl get term.root match {
-      case Some(decl) => (r, new Environment(env.scope, Map(r -> decl)))//env)
-      case _ => throw new Exception(s"undeclared identifier '$term'")
-    }
-    else if (r == "@" && arity == 2) {
-      val List((f, f_env), (arg, arg_env)) = recurse
-      val a = combine.app(f_env(f), arg_env(arg))
-      (a.head, f_env ++ arg_env + (a.head -> a))
-    }
-    else if (r == "::" && arity == 2) {
-      val ((va, va_env), typ) = (rechild(term.subtrees(0)), term.subtrees(1))
-      val (aid, a) = combine.retype(env.scope, va_env(va), typ)
-      (aid, va_env + (aid -> a))
-    }
-    else if (r == ":" && arity == 2) {
-      rechild(term.subtrees(1))
-    }
-    else if (r == "/" && arity == 2) {
-      val List((fore, fore_env), (back, back_env)) = recurse
-      val sl = combine.slash(env.scope, fore_env(fore), back_env(back))
-      (sl.head, fore_env ++ back_env + (sl.head -> sl))
-    }/*
-    else if (r == "↦" && arity == 2) {
-      val List((va, va_env), (body, body_env)) = recurse
-      val abs = combine.abs(va_env(va), body_env)
-      (abs.head, abs)
-    }*/
-    else throw new Exception(s"Cannot translate term '${term.toPretty}'")
-  }
-  */
   /**
    * Eventually all of the term translation mechanism will go through this.
    */
@@ -621,11 +500,11 @@ object TermTranslation {
     def dependencies(eqs: List[Term]) = {
       def syms(rhs: Term) = rhs.leaves map (_.root) /*filter syma.contains*/ toList
       val cab = eqs map (eq => (eq.subtrees(0).root, syms(eq.subtrees(1))))
-      ( for ((l,rs) <- cab; r <- rs) yield (r,l) ) groupBy (_._1) mapValues (_.map (_._2)) toMap
+      ( for ((l,rs) <- cab; r <- rs) yield (r,l) ) groupBy (_._1) mapValues (_.map (_._2))
     }
     
     def reach1[X](origins: Set[X], adj: Map[X, List[X]]) =
-      (Stream.iterate(origins)((_ flatMap (adj.getOrElse(_, List())))) drop 1 takeWhile (x => !(x.isEmpty))).flatten toSet
+      (Stream.iterate(origins)(_ flatMap (adj.getOrElse(_, List()))) drop 1 takeWhile (_.nonEmpty)).flatten toSet
     
     def eta(term: Term) =
       if (term =~ ("↦", 2) && term.subtrees(1) =~ ("@", 2) && term.subtrees(1).subtrees(1) == term.subtrees(0))

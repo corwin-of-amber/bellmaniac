@@ -27,6 +27,9 @@ trait SerializationContainer {
     l.addAll(elements map anyRef)
     l
   }
+  def map[A <: AnyRef](elements: Map[String,A]) = {
+    (new BasicDBObject /: elements) { case (d, (k,v)) => d.append(k, anyRef(v)) }
+  }
 }
 
 

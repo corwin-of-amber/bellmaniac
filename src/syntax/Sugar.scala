@@ -158,6 +158,7 @@ object Nullable {
 
 object Strip {
   val numeral: PartialFunction[Int, String] = { case x: Int => "$"+x }
+  val lower = "abcdefghijklmnopqrstuvwxyz".toList orElse numeral
   val greek = "αβγδεζηθικλμνξοπρστυφχψω".toList orElse numeral
   val boxedAbcList = List("🄰","🄱","🄲","🄳","🄴","🄵","🄶","🄷","🄸","🄹","🄺","🄻","🄼","🄽","🄾","🄿","🅀","🅁","🅂","🅃","🅄","🅅","🅆","🅇","🅈","🅉")
   val boxedAbc = boxedAbcList orElse numeral

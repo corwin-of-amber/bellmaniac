@@ -42,7 +42,8 @@ class Mnemonics {
   def isIdentifierPart(c: Character) = Character.isJavaIdentifierPart(c)
   def isIdentifierStart(c: Character) = Character.isJavaIdentifierStart(c)
 
-  val ESC = Map('<' -> "lt", '+' -> "plus", '@' -> "apply", 'ψ' -> "psi", 'θ' -> "theta", '₀' -> "0")
+  val ESC = Map('<' -> "lt", '+' -> "plus", '@' -> "apply", 'ψ' -> "psi", 'θ' -> "theta",
+                '₀' -> "0", '₁' -> "1", '₂' -> "2")
 
   /**
    * just the stream of naturals (taken from Scala docs)

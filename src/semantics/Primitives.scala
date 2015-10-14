@@ -208,6 +208,12 @@ object LambdaCalculus {
     if (t =~ ("↦", 2)) Some(uncurry(t))
     else if (t =~ (":", 2)) isAbs(t.subtrees(1))
     else None
+
+  def freevars(t: Term): Set[Term] =
+    if (t.isLeaf) Set(t)
+    else if (t =~ ("↦", 2)) freevars(t.subtrees(1)) - t.subtrees(0)
+    else if (t =~ (":", 2)) freevars(t.subtrees(1))
+    else t.subtrees flatMap freevars toSet
 }
 
 object TypedLambdaCalculus {

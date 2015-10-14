@@ -4,7 +4,12 @@ import syntax.AstSugar._
 import semantics._
 
 
-
+/**
+ * Makes guard conditions explicit (hence the name) by creating guard expressions 'a |! b'
+ * when appropriate, according to types of sub-terms.
+ *
+ * @param scope
+ */
 class Explicate(implicit scope: Scope) {
 
   import TypedTerm.{preserve, typeOf_!}
@@ -23,10 +28,10 @@ class Explicate(implicit scope: Scope) {
   def collate(t: Term)(implicit assumptions: List[Term]): Map[Id[Term], List[Term]] = isApp(t) match {
     case Some((f, args)) =>
       val precond = nontriv(TypeTranslation.checks(scope, typeOf_!(f), args))
-      accumulate(args flatMap collate toMap, t, precond)
+      accumulate((f +: args) flatMap (x => collate(x)(assumptions ++ precond)) toMap, t, precond)
     case _ => isAbs(t) match {
       case Some((vars, body)) =>
-        val precond = vars filter isScalar flatMap (v => TypeTranslation.checks(scope, v.typedLeaf, List()))
+        val precond = nontriv(vars filter isScalar flatMap (v => TypeTranslation.checks(scope, v.typedLeaf, List())))
         accumulate(collate(body)(assumptions ++ precond), body, precond)
       case _ =>
         t.subtrees flatMap collate toMap
