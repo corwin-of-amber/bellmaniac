@@ -325,16 +325,24 @@ object Paren {
     class Interpreter(implicit scope: Scope, env: Environment) {
       import Interpreter._
 
-      val extrude = Extrude(Set(I("/")))
+      val extrude = Extrude(Set(I("/"), cons.root))
 
-      def evalTerm(expr: Term)(implicit s: State): Term = if (expr.isLeaf) {
-        val label = expr.root.literal
-        try s.ex :/ label catch { case x: Exception => try s.A :/ label subtrees 1 catch { case x: Exception => expr } }
-      } else LambdaCalculus.isApp(expr) match {
-        case Some((L("fixer"), List(t))) => fixer(s.A, evalTerm(t))
-        case Some((L("fixee"), List(t))) => fixee(s.A, evalTerm(t))
-        case Some((L("ctx"), List(t, T(symbol, Nil)))) => ctx(s.A, evalTerm(t))(symbol.literal)
-        case _ => expr
+      def evalTerm(expr: Term)(implicit s: State): Term = {
+        if (expr.isLeaf) {
+          val label = expr.root.literal
+          try s.ex :/ label catch { case x: Exception => try s.program :/ label subtrees 1 catch { case x: Exception => expr } }
+        } else LambdaCalculus.isApp(expr) match {
+          case Some((L("fixer"), List(~(t)))) => fixer(s.program, t)
+          case Some((L("fixee"), List(~(t)))) => fixee(s.program, t)
+          case Some((L("ctx"), List(~(t), T(symbol, Nil)))) => ctx(s.program, t)(symbol.literal)
+          case Some((L("find"), List(~(t), pat))) => (new SimplePattern(pat) find t head).subterm
+
+          /* This part is Paren-specific */
+          case Some((L("A"), List(~(j)))) => APod(j).program |> instapod
+          case Some((L("B"), List(~(j0), ~(j1)))) => BPod(j0, j1).program |> instapod
+
+          case _ => expr
+        }
       }
 
       def evalList(expr: Term)(implicit s: State): List[Term] = ConsPod.`⟨ ⟩?`(expr) match {
@@ -360,12 +368,21 @@ object Paren {
                 List(StratifySlashPod(h, quadrant, ψ))
               case Some((L("Synth"), List(~(h), ~(subterm), ~(synthed), ~(ψ)))) =>
                 List(SynthPod(h, subterm, synthed, ψ))
+              case Some((L("Distrib"), List(L("min")))) =>
+                SimplePattern(min :@ (* :- /::(`...`))) find s.program map
+                    (x => MinDistribPod(x(*).split))
+              case Some((L("Assoc"), List(L("min")))) =>
+                SimplePattern(min :@ (* :- ?)) find s.program flatMap (_(*) |> `⟨ ⟩?`) map
+                    (MinAssocPod(_)) filterNot (_.isTrivial)
+              case Some((L("StratifyReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ)))) =>
+                SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
+                  StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
               case Some((cmd, _)) => throw new TranslationError(s"unknown command '${cmd}'") at command
               case _ =>
                 throw new TranslationError("not a valid command syntax") at command
             }
           }
-        Rewrite(pods(command) |>> instapod)(s.A) match {
+        Rewrite(pods(command) |>> instapod)(s.program) match {
           case Some(rw) => State(rw, extrude(rw))
           case _ => throw new TranslationError("rewrite failed?") at command
         }
@@ -373,6 +390,12 @@ object Paren {
 
       import scala.collection.JavaConversions._
       import syntax.Nullable._
+
+      def initial(json: DBObject)(implicit sc: SerializationContainer): State = json.get("check") andThen ({ check =>
+        implicit val empty = State.empty
+        val A = evalTerm( Formula.fromJson(check.asInstanceOf[DBObject]) )
+        State(A, extrude(A) |-- display)
+      }, { throw new TranslationError("not a valid start element") })
 
       def transform(s: State, json: DBObject)(implicit sc: SerializationContainer): State = json match {
         case l: BasicDBList =>  (s /: (l map (_.asInstanceOf[DBObject])))(transform)
@@ -384,24 +407,22 @@ object Paren {
     }
 
     object Interpreter {
-      case class State(A: Term, ex: ExtrudedTerms)
+      case class State(program: Term, ex: ExtrudedTerms)
+      object State { val empty = State(program, new ExtrudedTerms(new Tree(program), Map.empty)) }
 
       object L { def unapply(t: Term) = if (t.isLeaf) Some(t.root.literal) else None }
     }
 
     def followRecipe(implicit env: Environment, scope: Scope) {
-      val A = APod(J).program |> instapod
-
       implicit val sc = new DisplayContainer
 
       import Interpreter.State
       val interp = new Interpreter()
 
       val recipef = new BufferedReader(new FileReader("/tmp/synopsis.json")) //"examples/intermediates/Paren-A.synopsis.json"))
-      (State(A, interp.extrude(A) |-- display) /: CLI.getBlocks(recipef)) { (s, block) =>
-        val json = JSON.parse(block)
-        interp.transform(s, json.asInstanceOf[DBObject])
-      }
+      val head #:: blocks = sc.flatten(CLI.getBlocks(recipef) map JSON.parse map (_.asInstanceOf[DBObject]))
+
+      (interp.initial(head) /: blocks) { (s, json) => interp.transform(s, json) }
     }
 
     def rewriteA(implicit env: Environment, scope: Scope) {
@@ -518,7 +539,7 @@ object Paren {
                   val extrude = Extrude(Set(I("/"), cons.root))
                   // MinAssoc
                   val minassockfs = SimplePattern(min :@ (* :- ?)) find B flatMap (_(*) |> `⟨ ⟩?`) map
-                                    (MinAssocPod(_)) filter (x => x.subtrees(0) != x.subtrees(1)) map instapod
+                                    (MinAssocPod(_)) filterNot (_.isTrivial) map instapod
                   for (B <- Rewrite(minassockfs)(B)) {
                     val ex = extrude(B) |-- display
                     def stratduce(A: Term, `.` : Term, subelements: List[Term]) =
@@ -613,7 +634,7 @@ object Paren {
                   val ex = extrude(C) |-- display
                   // MinAssoc
                   val minassockfs = SimplePattern(min :@ (* :- ?)) find C flatMap (_(*) |> `⟨ ⟩?`) map
-                      (MinAssocPod(_)) filter (x => x.subtrees(0) != x.subtrees(1)) map instapod
+                      (MinAssocPod(_)) filterNot (_.isTrivial) map instapod
                   for (C <- Rewrite(minassockfs)(C)) {
                     val ex = extrude(C) |-- display
 

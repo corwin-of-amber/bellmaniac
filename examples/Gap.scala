@@ -196,7 +196,7 @@ object Gap {
                     for (A <- Rewrite(mindist)(A)) {
                       // MinAssoc
                       val minassoc = (SimplePattern(min :@ (* :- ?)) find A flatMap (_(*) |> `⟨ ⟩?`) map
-                                      (MinAssocPod(_)) filter (x => x.subtrees(0) != x.subtrees(1))) |>> instapod
+                                      (MinAssocPod(_)) filterNot (_.isTrivial)) |>> instapod
                       for (A <- Rewrite(minassoc)(A)) {
                         val ex = extrude(A) |-- display
                         // Stratify   🄴, 🄵      in  🄰

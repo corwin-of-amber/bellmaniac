@@ -30,6 +30,10 @@ trait SerializationContainer {
   def map[A <: AnyRef](elements: Map[String,A]) = {
     (new BasicDBObject /: elements) { case (d, (k,v)) => d.append(k, anyRef(v)) }
   }
+  def flatten(jsons: Stream[DBObject]) = jsons flatMap {
+    case l: BasicDBList => l map (_.asInstanceOf[DBObject])
+    case item => Some(item)
+  }
 }
 
 

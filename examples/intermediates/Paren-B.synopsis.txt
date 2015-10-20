@@ -1,0 +1,22 @@
+J₀ : set
+J₁ : set
+K₀ : set
+K₁ : set
+K₂ : set
+K₃ : set
+
+B (`J₀) (`J₁)
+
+Slice f ⟨`?×K₀×K₂, `?×K₀×K₃, `?×K₁×K₂, `?×K₁×K₃⟩
+StratifySlash (fixee 🄳) 🄳 (ctx 🄳 ψ)
+StratifySlash (fixee 🄲) 🄲 (ctx 🄲 ψ)
+StratifySlash (fixee 🄴) 🄴 (ctx 🄴 ψ)
+⟨Slice (find 🄰 (k ↦ ?)) ⟨`K₀, `K₁, `K₂, `K₃⟩,
+ Slice (find 🄱 (k ↦ ?)) ⟨`K₁, `K₂, `K₃⟩,
+ Slice (find 🄲 (k ↦ ?)) ⟨`K₀, `K₁, `K₂⟩⟩
+Distrib min
+Assoc min
+⟨StratifyReduce min (fixee 🄰) ⟨🄶, 🄹⟩ (ctx 🄰 ψ),
+ StratifyReduce min (fixee 🄱) ⟨🄼, 🄾⟩ (ctx 🄱 ψ),
+ StratifyReduce min (fixee 🄲) ⟨🅁, 🅃⟩ (ctx 🄲 ψ)⟩
+StratifyReduce min (fixee 🄰) ⟨🄸, 🄺⟩ (ctx 🄰 ψ)

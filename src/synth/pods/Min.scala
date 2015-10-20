@@ -44,7 +44,7 @@ object MinPod {
   def apply(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implicit env: Environment) = new MinPod(domain, range, <, opaque)
 }
 
-class MinDistribPod(fs: List[Term]) extends Pod {
+class MinDistribPod(val fs: List[Term]) extends Pod {
   import Prelude.{min,cons,nil}
   import ConsPod.`⟨ ⟩`
   
@@ -56,23 +56,28 @@ object MinDistribPod {
   def apply(fs: List[Term]) = new MinDistribPod(fs)
 }
 
-object MinAssocPod {
+class MinAssocPod(val fs: List[Term]) extends Pod {
   import Prelude.{min,cons,nil}
   import ConsPod.{`⟨ ⟩`, `⟨ ⟩?`}
   import semantics.LambdaCalculus.isAppOf
   
-  def apply(fs: List[Term]) = {
-    def flatten(t: Term): List[Term] = isAppOf(t, min) match {
-      case Some(List(arg)) => `⟨ ⟩?`(arg) match {
-        case Some(elements) => elements flatMap flatten
-        case _ => List(t)
-      }
+  def flatten(t: Term): List[Term] = isAppOf(t, min) match {
+    case Some(List(arg)) => `⟨ ⟩?`(arg) match {
+      case Some(elements) => elements flatMap flatten
       case _ => List(t)
     }
-    (min :@ `⟨ ⟩`(fs)) =:= (min :@ `⟨ ⟩`(fs flatMap flatten))
+    case _ => List(t)
   }
+
+  override val program =
+    (min :@ `⟨ ⟩`(fs)) =:= (min :@ `⟨ ⟩`(fs flatMap flatten))
+
+  val isTrivial = program.subtrees(0) == program.subtrees(1)
 }
 
+object MinAssocPod {
+  def apply(fs: List[Term]) = new MinAssocPod(fs)
+}
 
 object SlashToReducePod {
   
