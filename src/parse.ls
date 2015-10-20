@@ -9,6 +9,9 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
     $scope.code = localStorage.getItem('codeMirrorContents') || "a b"
     $scope.editorOptions =
         mode:  "scheme",
+        matchBrackets: 
+          bracketRegex: /[(){}[\]⟨⟩]/
+          bracketMatching: {"(": ")>", ")": "(<", "[": "]>", "]": "[<", "{": "}>", "}": "{<", "⟨": "⟩>", "⟩": "⟨<"}
         theme: "material"
     $scope.parsed = {}
     $scope.output = {}
@@ -62,19 +65,40 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
         autoWords.push do
             text: "\ud83c" + String.fromCharCode(charCode)
             displayText: "[#letter]"
+        autoWords.push do
+            text: "\ud83c" + String.fromCharCode(charCode) + "\u0332" # underbar
+            displayText: "[#{letter}_]"
 
     findCurWord = (editor, delimiters) ->
         whitespace = /\s/
         cur = editor.getCursor()
         curLine = editor.getLine(cur.line)
 
-        start = cur.ch; end = start
-        while (start >= 1 && !delimiters.test(curLine.charAt(start)) && !whitespace.test(curLine.charAt(start-1)))
+        [start, end] = [cur.ch - 1, cur.ch]
+        while (start >= 0 && !delimiters.test(curLine.charAt(start)) && !whitespace.test(curLine.charAt(start-1)))
             start -= 1
         curWord = if start != end then curLine.slice(start, end) else ""
         word: curWord,
         start: start,
         end: end
+        
+    findSuffixWord = (editor, words) ->
+        cur = editor.getCursor()
+        curLine = editor.getLine(cur.line)
+        
+        matches = []
+        [start, end, i] = [cur.ch - 1, cur.ch, 1]
+        while start >= 0 && words.length > 0
+            c = curLine.charAt(start)
+            words = words.filter (.displayText[*-i] == c)
+            matches ++= words.filter (.displayText.length == i) .map ->
+              word: it
+              start: start
+              end: end
+            start -= 1
+            i += 1
+            
+        matches
 
     hintReplace = (editor) ->
         curPos = findCurWord(editor, /\\/)
@@ -89,18 +113,16 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
         to: CodeMirror.Pos(cur.line, curPos.end)
 
     autoReplace = (editor) ->
-        curPos = findCurWord(editor, /[_|\\]/)
-        curWord = curPos.word
         cur = editor.getCursor()
 
-        filteredWords = autoWords.filter (w) ->
-            curWord == w.displayText
-
+        filteredWords = findSuffixWord(editor, autoWords)
+        
         if filteredWords.length > 0
-            editor.replaceRange(filteredWords[0].text,
-                CodeMirror.Pos(cur.line, curPos.start),
-                CodeMirror.Pos(cur.line, curPos.end))
-
+            curPos = filteredWords[0]
+            editor.replaceRange(curPos.word.text,
+              CodeMirror.Pos(cur.line, curPos.start),
+              CodeMirror.Pos(cur.line, curPos.end))
+                  
     $scope.codemirrorLoaded = (editor) ->
 
         CodeMirror.registerHelper "hint", "anyword", hintReplace
@@ -123,17 +145,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 CodeMirror.commands.autocomplete(editor)
 
     $scope.splitTextToBlocks = (input) ->
-        lines = input.split "\n"
-        blocks = []
-        for i in lines
-            if i.length > 0
-                console.log i
-                if i[0] == "\t" && blocks.length > 0
-                    blocks[blocks.length - 1] = blocks[blocks.length - 1].concat(" " + i.slice(1))
-                else
-                    blocks.push(i)
-        console.log blocks
-        blocks
+        blocks = input.split /\n+(?!\s)/ .filter (== /\S/)        
 
     $scope.parseAndDisplay = !->
         $scope.parsed = []
@@ -184,6 +196,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 # scope: window.scope
             ).value!
 
+            fs.writeFileSync "/tmp/synopsis.txt" $scope.code
             fs.writeFileSync "/tmp/synopsis.json" JSON.stringify $scope.parsed
             
             jar.stdin.setEncoding('utf-8')

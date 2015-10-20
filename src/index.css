@@ -2,6 +2,10 @@
   font-family: Menlo;
   font-size: 12px;
 }
+.CodeMirror-matchingbracket {
+  -webkit-box-shadow: inset 0px 0px 2px 1px rgba(255,255,255,0.3);
+  text-shadow: 0 0 2px white;
+}
 
 .code {
   font-family: Menlo;

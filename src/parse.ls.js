@@ -7,10 +7,23 @@
   assert = require('assert');
   x$ = angular.module('app', ['RecursionHelper', 'ui.codemirror']);
   x$.controller("Ctrl", function($scope){
-    var hintWords, autoWords, i$, ref$, len$, i, charCode, letter, findCurWord, hintReplace, autoReplace;
+    var hintWords, autoWords, i$, ref$, len$, i, charCode, letter, findCurWord, findSuffixWord, hintReplace, autoReplace;
     $scope.code = localStorage.getItem('codeMirrorContents') || "a b";
     $scope.editorOptions = {
       mode: "scheme",
+      matchBrackets: {
+        bracketRegex: /[(){}[\]⟨⟩]/,
+        bracketMatching: {
+          "(": ")>",
+          ")": "(<",
+          "[": "]>",
+          "]": "[<",
+          "{": "}>",
+          "}": "{<",
+          "⟨": "⟩>",
+          "⟩": "⟨<"
+        }
+      },
       theme: "material"
     };
     $scope.parsed = {};
@@ -127,15 +140,18 @@
         text: "\ud83c" + String.fromCharCode(charCode),
         displayText: "[" + letter + "]"
       });
+      autoWords.push({
+        text: "\ud83c" + String.fromCharCode(charCode) + "\u0332",
+        displayText: "[" + letter + "_]"
+      });
     }
     findCurWord = function(editor, delimiters){
-      var whitespace, cur, curLine, start, end, curWord;
+      var whitespace, cur, curLine, ref$, start, end, curWord;
       whitespace = /\s/;
       cur = editor.getCursor();
       curLine = editor.getLine(cur.line);
-      start = cur.ch;
-      end = start;
-      while (start >= 1 && !delimiters.test(curLine.charAt(start)) && !whitespace.test(curLine.charAt(start - 1))) {
+      ref$ = [cur.ch - 1, cur.ch], start = ref$[0], end = ref$[1];
+      while (start >= 0 && !delimiters.test(curLine.charAt(start)) && !whitespace.test(curLine.charAt(start - 1))) {
         start -= 1;
       }
       curWord = start !== end ? curLine.slice(start, end) : "";
@@ -144,6 +160,35 @@
         start: start,
         end: end
       };
+    };
+    findSuffixWord = function(editor, words){
+      var cur, curLine, matches, ref$, start, end, i, c;
+      cur = editor.getCursor();
+      curLine = editor.getLine(cur.line);
+      matches = [];
+      ref$ = [cur.ch - 1, cur.ch, 1], start = ref$[0], end = ref$[1], i = ref$[2];
+      while (start >= 0 && words.length > 0) {
+        c = curLine.charAt(start);
+        words = words.filter(fn$);
+        matches = matches.concat(words.filter(fn1$).map(fn2$));
+        start -= 1;
+        i += 1;
+      }
+      return matches;
+      function fn$(it){
+        var ref$;
+        return (ref$ = it.displayText)[ref$.length - i] === c;
+      }
+      function fn1$(it){
+        return it.displayText.length === i;
+      }
+      function fn2$(it){
+        return {
+          word: it,
+          start: start,
+          end: end
+        };
+      }
     };
     hintReplace = function(editor){
       var curPos, curWord, cur, filteredWords;
@@ -160,15 +205,12 @@
       };
     };
     autoReplace = function(editor){
-      var curPos, curWord, cur, filteredWords;
-      curPos = findCurWord(editor, /[_|\\]/);
-      curWord = curPos.word;
+      var cur, filteredWords, curPos;
       cur = editor.getCursor();
-      filteredWords = autoWords.filter(function(w){
-        return curWord === w.displayText;
-      });
+      filteredWords = findSuffixWord(editor, autoWords);
       if (filteredWords.length > 0) {
-        return editor.replaceRange(filteredWords[0].text, CodeMirror.Pos(cur.line, curPos.start), CodeMirror.Pos(cur.line, curPos.end));
+        curPos = filteredWords[0];
+        return editor.replaceRange(curPos.word.text, CodeMirror.Pos(cur.line, curPos.start), CodeMirror.Pos(cur.line, curPos.end));
       }
     };
     $scope.codemirrorLoaded = function(editor){
@@ -191,22 +233,10 @@
       });
     };
     $scope.splitTextToBlocks = function(input){
-      var lines, blocks, i$, len$, i;
-      lines = input.split("\n");
-      blocks = [];
-      for (i$ = 0, len$ = lines.length; i$ < len$; ++i$) {
-        i = lines[i$];
-        if (i.length > 0) {
-          console.log(i);
-          if (i[0] === "\t" && blocks.length > 0) {
-            blocks[blocks.length - 1] = blocks[blocks.length - 1].concat(" " + i.slice(1));
-          } else {
-            blocks.push(i);
-          }
-        }
-      }
-      console.log(blocks);
-      return blocks;
+      var blocks;
+      return blocks = input.split(/\n+(?!\s)/).filter((function(it){
+        return /\S/.exec(it);
+      }));
     };
     $scope.parseAndDisplay = function(){
       var blocks, buffer, jar, i$, ref$, len$, parsedBlock, err;
@@ -268,6 +298,7 @@
             check: block
           };
         }).value();
+        fs.writeFileSync("/tmp/synopsis.txt", $scope.code);
         fs.writeFileSync("/tmp/synopsis.json", JSON.stringify($scope.parsed));
         jar.stdin.setEncoding('utf-8');
         for (i$ = 0, len$ = (ref$ = $scope.parsed).length; i$ < len$; ++i$) {
