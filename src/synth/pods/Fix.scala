@@ -1,7 +1,6 @@
 package synth.pods
 
 import syntax.AstSugar._
-import syntax.Identifier
 import semantics.Prelude
 import semantics.Prelude._
 import semantics.TypedTerm
@@ -37,9 +36,9 @@ object StratifyFixPod {
 
 class StratifySlashPod(val h: Term, val quadrant: Term, val ψ: Term)(implicit scope: Scope) extends Pod {
   
-  import TypedTerm.{replaceDescendant,replaceDescendants}
+  import TypedTerm.{split,replaceDescendant,replaceDescendants}
   
-  val quadrants = splitSkip(h, I("/"))
+  val quadrants = split(h, I("/"))
   
   val f = replaceDescendants(h, quadrants filter (_ ne quadrant) map ((_, $TV ↦ ψ)))
   val g = ψ ↦ replaceDescendant(h, (quadrant, $TV ↦ ψ))
@@ -58,10 +57,6 @@ class StratifySlashPod(val h: Term, val quadrant: Term, val ψ: Term)(implicit s
       (f:@(g:@(ζ,θ))) =:= (f:@ζ)
     )
 
-  def splitSkip(term: Term, sep: Identifier): List[Term] =
-    if (term =~ (":", 2)) splitSkip(term.subtrees(1), sep)
-    else if (term.root == sep) term.subtrees flatMap (splitSkip(_, sep))
-    else List(term)
 }
 
 object StratifySlashPod {
@@ -96,6 +91,64 @@ class StratifyReducePod(val e: TermWithHole, val reduce: Term, val elements: Lis
 object StratifyReducePod {
   def apply(e: TermWithHole, reduce: Term, elements: List[Term], subelements: List[Term], ψ: Term) = 
     new StratifyReducePod(e, reduce, elements, subelements, ψ)
+}
+
+
+class LetSlashPod(val h: Term, val quadrant: Term, val ψ: Term)(implicit scope: Scope) extends Pod {
+
+  import TypedTerm.{split,replaceDescendant,replaceDescendants}
+
+  val quadrants = split(h, I("/"))
+
+  val f = replaceDescendants(h, quadrants filter (_ ne quadrant) map ((_, ψ)))
+  val g = ψ ↦ replaceDescendant(h, (quadrant, ψ))
+
+  val gψ = replaceDescendant(h, (quadrant, ψ))
+
+  override val program =
+    h =:= (TI("let") :- (g:@f))
+
+}
+
+object LetSlashPod {
+  def apply(h: Term, quadrant: Term, ψ: Term)(implicit scope: Scope) = new LetSlashPod(h, quadrant, ψ)
+}
+
+
+class LetReducePod(val e: TermWithHole, val reduce: Term, val elements: List[Term], val subelements: List[Term], val ψ: Term) extends Pod {
+
+  import ConsPod.`⟨ ⟩`
+
+  val x̅ = e.x̅
+
+  val h = e(reduce:@`⟨ ⟩`(elements))
+  val f = e(reduce:@`⟨ ⟩`(subelements))
+  val g = ψ ↦ e(reduce:@`⟨ ⟩`((ψ:@x̅) +: (elements filter (x => !subelements.exists(_ eq x)))))
+
+  val gψ = e(reduce:@`⟨ ⟩`((ψ:@x̅) +: (elements filter (x => !subelements.exists(_ eq x)))))
+
+  override val program =
+    h =:= (TI("let") :- (g:@f))
+
+}
+
+object LetReducePod {
+  def apply(e: TermWithHole, reduce: Term, elements: List[Term], subelements: List[Term], ψ: Term) =
+    new LetReducePod(e, reduce, elements, subelements, ψ)
+}
+
+
+class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val ψ: Term)(implicit scope: Scope) extends Pod {
+
+  val new_h = TypedTerm.replaceDescendant(h, (subterm, synthed))
+
+  override val program =
+    fix(h) =:= (new_h :@ ψ)
+
+}
+
+object SynthPod {
+  def apply(h: Term, subterm: Term, synthed: Term, ψ: Term)(implicit scope: Scope) = new SynthPod(h, subterm, synthed, ψ)
 }
 
 

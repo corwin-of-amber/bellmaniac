@@ -84,7 +84,7 @@ object TypePrimitives {
     def dir(mc: MicroCode) = mc match { case In(_) => InOut.IN case Out(_) => InOut.OUT }
     if (decls forall (_.isEmpty)) List()
     else if (decls.tail forall (_ == decls.head)) decls.head
-    else if (decls.exists (l => !l.isEmpty && isCheck(l.head)))
+    else if (decls.exists (l => l.nonEmpty && isCheck(l.head)))
       (decls flatMap (_ takeWhile isCheck)) ++ intersection(decls map (_ dropWhile isCheck))
     else {
       val heads = decls map (_.head)
@@ -110,15 +110,20 @@ object TypePrimitives {
     def isLeaf(mc: MicroCode) = (mc match { case In(t) => Some(t) case Out(t) => Some(t) case _ => None }) exists (_.isLeaf)
     def dir(mc: MicroCode) = mc match { case In(_) => InOut.IN case Out(_) => InOut.OUT }
     def common(l: List[List[MicroCode]]) = l.head filter (x => l.tail forall (_ contains x))
+    def govern(l: List[List[MicroCode]]) = l map
+      { _ collectFirst { case Check(T(s,Nil), 1) if scope.sorts.contains(s) => s } getOrElse Domains.⊤ } reduce scope.sorts.join match {
+      case Domains.⊤ => None case s => Some(Check(T(s), 1)) }
+    def join(l: List[List[MicroCode]]) = govern(l).toList union common(l)
+
     if (decls forall (_.isEmpty)) List()
     else if (decls.tail forall (_ == decls.head)) decls.head
-    else if (decls.exists (l => !l.isEmpty && isCheck(l.head)))
-      common(decls map (_ takeWhile isCheck)) ++ union(decls map (_ dropWhile isCheck))
+    else if (decls.exists (l => l.nonEmpty && isCheck(l.head)))
+      join(decls map (_ takeWhile isCheck)) ++ union(decls map (_ dropWhile isCheck))
     else {
       val heads = decls map (_.head)
       if (heads forall (_==heads.head)) heads.head :: union(decls map (_ drop 1))
       else if (heads forall isLeaf) throw new Scope.TypingException(s"incompatible type instructions: $heads")
-      else if (heads forall (dir(_) == InOut.IN)) In(intersection(scope, heads map { case In(t) => t })) :: union(decls map (_ drop 1))
+      else if (heads forall (dir(_) == InOut.IN)) In(union(scope, heads map { case In(t) => t })) :: union(decls map (_ drop 1))
       else  ???  /* high-order arguments? */
     }
   }  
@@ -285,6 +290,7 @@ object `package` {
       case x: TypedIdentifier => x.untype
       case e => e
     }
+    def untypeShallow = new Term(term.root, term.subtrees)
     def typedLeaf = term.leaf match {
       case tid: TypedIdentifier => tid
       case u => TypedIdentifier(u, TypedTerm.typeOf_!(term))
@@ -350,7 +356,13 @@ object TypedTerm {
       case Some(sw) => preserveBoth(term, sw._2)
       case _ => preserve(term, new Tree(term.root, term.subtrees map (replaceDescendants(_, switch))))
     }
-  
+
+  // This is actually just like "Tree.split" but it skips ":" nodes.
+  def split(term: Term, sep: Identifier): List[Term] =
+    if (term =~ (":", 2)) split(term.subtrees(1), sep)
+    else if (term.root == sep) term.subtrees flatMap (split(_, sep))
+    else List(term)
+
   def preserve(term: Term, newterm: Term) = typeOf(term) match {
     case Some(typ) => TypedTerm(newterm, typ)
     case _ => newterm

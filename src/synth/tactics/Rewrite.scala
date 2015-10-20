@@ -45,7 +45,7 @@ object Rewrite {
       implicit val scope = env.scope
       val matches = 
         for ((from, to) <- ematch; subterm <- within; m <- from find subterm)
-          yield ((m, Binding.prebind(to)))
+          yield (m, Binding.prebind(to))
       Some(TypeInference.infer(TypedTerm.replaceDescendants(term, matches))._2)
     }
   }

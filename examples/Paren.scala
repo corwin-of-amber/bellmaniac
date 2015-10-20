@@ -1,19 +1,23 @@
 
 package examples
 
-import com.mongodb.BasicDBObject
+import java.io.{BufferedReader, FileReader}
+
+import com.mongodb.{BasicDBList, DBObject, BasicDBObject}
+import com.mongodb.util.JSON
 import examples.Gap.BreakDown.Instantiated
 import report.FileLog
-import report.data.{Rich, DisplayContainer}
+import report.data.{SerializationContainer, Rich, DisplayContainer}
 import semantics.TypedScheme.TermWithHole
-import syntax.Tree
-import syntax.Identifier
-import semantics.{TypedTerm, TypedLambdaCalculus, Scope, TypedIdentifier}
+import syntax.{Formula, Tree, Identifier}
+import semantics._
 import semantics.TypeTranslation.Declaration
 import semantics.TypeTranslation.Environment
 import semantics.TypeTranslation.Declaration
+import syntax.transform.ExtrudedTerms
 import synth.pods.ConsPod.`⟨ ⟩?`
-import synth.pods.{StratifySlashPod, StratifyFixPod, ConsPod, Pod}
+import synth.pods._
+import ui.CLI
 
 
 object Paren {
@@ -221,10 +225,10 @@ object Paren {
             $TV ↦ ψ :: ? ->: (J1 x J1) ->: ?
           )
       ) ) )
-      
+      /*
       def decl = new Declaration(P) where (
           P <-> (i ↦ (j ↦ ((J0(i) & J0(j)) | (J0(i) & J1(j)) | (J1(i) & J0(j)))))
-        )
+        )*/
     }
     
     object BPod {
@@ -236,20 +240,27 @@ object Paren {
       
       val C = $TV("C")
       val P = $TV("▚")
-      val (θ, i, j, k) = ($TV("θ"), $TV("i"), $TV("j"), $TV("k"))
-      val (item, compute) = ($TV("item"), $TV("compute"))
-      
-      val program =
-        TV("program")(
-            P :: ((J x J) -> B),
-            w :: ((J x J x J) -> R),
-            C :- ((θ ↦ (i ↦ (j ↦ (min :@ (k ↦ ( item :- ((θ :@ (i, k)) + (θ :@ (k, j)) + (w :@ (i, k, j)))))))))
-             :: ((((J x J) ∩ P) -> R) ->: J0 ->: J2 ->: R))
-        )
-        
+      val (ψ, θ, i, j, k) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), TV("k"))
+
+      val program = Prelude.program(
+          ψ ↦ /::(
+            ψ :: (J0 x J1) ->: ?,
+            i ↦: j ↦: (
+              min:@`⟨ ⟩`(
+                min:@((k :: J1) ↦
+                    ( ((ψ:@(i, k)) + (ψ:@(k, j)) + (w:@(i, k, j))) )
+                    ),
+                ψ:@(i, j)
+              )
+            ) :: (J0 x J2) ->: R,
+            ψ :: (J1 x J2) ->: ?
+          )
+      )
+
+      /*
       val decl = new Declaration(P) where List(
           (P <-> (i ↦ (j ↦ ((J0(i) & J1(j)) | (J1(i) & J2(j))))))
-        )
+        )*/
     }
     
     object CPod {
@@ -292,7 +303,7 @@ object Paren {
 
       implicit val env = new Environment(scope, Map())
       
-      rewriteB
+      followRecipe
     }
     
     
@@ -311,6 +322,88 @@ object Paren {
     def fixee(A: Term, q: Term) = fixer(A, q).subtrees(0)
     def ctx(A: Term, t: Term) = TypedLambdaCalculus.context(A, t)
 
+    class Interpreter(implicit scope: Scope, env: Environment) {
+      import Interpreter._
+
+      val extrude = Extrude(Set(I("/")))
+
+      def evalTerm(expr: Term)(implicit s: State): Term = if (expr.isLeaf) {
+        val label = expr.root.literal
+        try s.ex :/ label catch { case x: Exception => try s.A :/ label subtrees 1 catch { case x: Exception => expr } }
+      } else LambdaCalculus.isApp(expr) match {
+        case Some((L("fixer"), List(t))) => fixer(s.A, evalTerm(t))
+        case Some((L("fixee"), List(t))) => fixee(s.A, evalTerm(t))
+        case Some((L("ctx"), List(t, T(symbol, Nil)))) => ctx(s.A, evalTerm(t))(symbol.literal)
+        case _ => expr
+      }
+
+      def evalList(expr: Term)(implicit s: State): List[Term] = ConsPod.`⟨ ⟩?`(expr) match {
+        case Some(l) => l map evalTerm
+        case _ => ConsPod.`⟨ ⟩?`(evalTerm(expr)) match {
+          case Some(l) => l
+          case _ => throw new TranslationError("expected a list") at expr
+        }
+      }
+
+      object ~ { def unapply(expr: Term)(implicit s: State) = Some(evalTerm(expr)) }
+      object ~~ { def unapply(expr: Term)(implicit s: State) = Some(evalList(expr)) }
+
+      def transform(s: State, command: Term) = {
+        implicit val st = s
+        def pods(command: Term): Iterable[Pod] =
+          ConsPod.`⟨ ⟩?`(command) match {
+            case Some(commands) => commands flatMap pods
+            case _ => LambdaCalculus.isApp(command) match {
+              case Some((L("Slice"), List(~(f), ~~(domains)))) =>
+                List(SlicePod(f, domains))
+              case Some((L("StratifySlash"), List(~(h), ~(quadrant), ~(ψ)))) =>
+                List(StratifySlashPod(h, quadrant, ψ))
+              case Some((L("Synth"), List(~(h), ~(subterm), ~(synthed), ~(ψ)))) =>
+                List(SynthPod(h, subterm, synthed, ψ))
+              case Some((cmd, _)) => throw new TranslationError(s"unknown command '${cmd}'") at command
+              case _ =>
+                throw new TranslationError("not a valid command syntax") at command
+            }
+          }
+        Rewrite(pods(command) |>> instapod)(s.A) match {
+          case Some(rw) => State(rw, extrude(rw))
+          case _ => throw new TranslationError("rewrite failed?") at command
+        }
+      }
+
+      import scala.collection.JavaConversions._
+      import syntax.Nullable._
+
+      def transform(s: State, json: DBObject)(implicit sc: SerializationContainer): State = json match {
+        case l: BasicDBList =>  (s /: (l map (_.asInstanceOf[DBObject])))(transform)
+        case _ => json.get("check") andThen ({ check =>
+          transform(s, Formula.fromJson(check.asInstanceOf[DBObject])) |-- (s => display(s.ex))
+        }, s)
+      }
+
+    }
+
+    object Interpreter {
+      case class State(A: Term, ex: ExtrudedTerms)
+
+      object L { def unapply(t: Term) = if (t.isLeaf) Some(t.root.literal) else None }
+    }
+
+    def followRecipe(implicit env: Environment, scope: Scope) {
+      val A = APod(J).program |> instapod
+
+      implicit val sc = new DisplayContainer
+
+      import Interpreter.State
+      val interp = new Interpreter()
+
+      val recipef = new BufferedReader(new FileReader("/tmp/synopsis.json")) //"examples/intermediates/Paren-A.synopsis.json"))
+      (State(A, interp.extrude(A) |-- display) /: CLI.getBlocks(recipef)) { (s, block) =>
+        val json = JSON.parse(block)
+        interp.transform(s, json.asInstanceOf[DBObject])
+      }
+    }
+
     def rewriteA(implicit env: Environment, scope: Scope) {
       import Prelude.?
       val (_, tA) = instantiate(APod(J).program)
@@ -323,19 +416,21 @@ object Paren {
       val ex = extrude(A) |-- display
       outf += Map("program" -> "A[J]", "style" -> "loop", "text" -> sdisplay(ex), "term" -> A)
 
+      val cert = false
+
       val f = (A :/ "f").subtrees(1)
       val slicef = SlicePod(f, List(J0 x J0, J0 x J1, J1 x J1) map (? x _)) |> instapod
-      //invokeProver(List(), slicef.obligations.conjuncts)
+      if (cert) invokeProver(List(), slicef.obligations.conjuncts)
       for (A <- Rewrite(slicef)(A)) {
         val ex = extrude(A) |-- display
         // Stratify  🄰
         val strat = SimplePattern(fix(* :- `...`(ex :/ "🄰"))) find A map (x => StratifySlashPod(x(*), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))) map instapod
-        //invokeProver(List(), strat flatMap (_.obligations.conjuncts))
+        if (cert) invokeProver(List(), strat flatMap (_.obligations.conjuncts))
         for (A <- Rewrite(strat)(A)) {
           val ex = extrude(A) |-- display
           // Stratify  🄱
           val strat = SimplePattern(fix(* :- `...`(ex :/ "🄱"))) find A map (x => StratifySlashPod(x(*), ex :/ "🄱", ctx(A, ex :/ "🄱")("ψ"))) map instapod
-          //invokeProver(List(), strat flatMap (_.obligations.conjuncts))
+          if (cert) invokeProver(List(), strat flatMap (_.obligations.conjuncts))
           for (A <- Rewrite(strat)(A)) {
             val ex = extrude(A) |-- display
             def equivQuadrant(lhs: Term, rhs: Term) {
@@ -345,17 +440,18 @@ object Paren {
                 case _ =>
               }
             }
-            /*
-            val A0 = new APod(J0).program
-            for (target <- SimplePattern(fix(* :- ?)) find A0 flatMap (x => TypedLambdaCalculus.pullOut(A0, x(*))))
-              equivQuadrant(fixee(A, ex :/ "🄲"), target :@ ctx(A, ex :/ "🄲")("ψ"))
-            val A1 = new APod(J1).program
-            for (target <- SimplePattern(fix(* :- ?)) find A1 flatMap (x => TypedLambdaCalculus.pullOut(A1, x(*))))
-              equivQuadrant(fixee(A, ex :/ "🄱"), target :@ ctx(A, ex :/ "🄱")("ψ"))
-            */
-            val newA = TypedTerm.preserve(fixee(A, ex :/ "🄰"), TV("B[J0,J1]"))
-            val newB = TypedTerm.replaceDescendant(fixee(A, ex :/ "🄱"), (ex :/ "🄱", TV("A[J1]")))
-            val newC = TypedTerm.replaceDescendant(fixee(A, ex :/ "🄲"), (ex :/ "🄲", TV("A[J0]")))
+            if (cert) {
+              val A0 = new APod(J0).program
+              for (target <- SimplePattern(fix(* :- ?)) find A0 flatMap (x => TypedLambdaCalculus.pullOut(A0, x(*))))
+                equivQuadrant(fixee(A, ex :/ "🄲"), target :@ ctx(A, ex :/ "🄲")("ψ"))
+              val A1 = new APod(J1).program
+              for (target <- SimplePattern(fix(* :- ?)) find A1 flatMap (x => TypedLambdaCalculus.pullOut(A1, x(*))))
+                equivQuadrant(fixee(A, ex :/ "🄱"), target :@ ctx(A, ex :/ "🄱")("ψ"))
+            }
+            // Synths!
+            val newA = TypedTerm.preserve(fixee(A, ex :/ "🄰"), TV("B[J₀,J₁]"))
+            val newB = TypedTerm.replaceDescendant(fixee(A, ex :/ "🄱"), (ex :/ "🄱", TV("A[J₁]")))
+            val newC = TypedTerm.replaceDescendant(fixee(A, ex :/ "🄲"), (ex :/ "🄲", TV("A[J₀]")))
             val synths = List( fixer(A, ex :/ "🄰") =:= (newA :@ ctx(A, ex :/ "🄰")("ψ")),
                                fixer(A, ex :/ "🄱") =:= (newB :@ ctx(A, ex :/ "🄱")("ψ")),
                                fixer(A, ex :/ "🄲") =:= (newC :@ ctx(A, ex :/ "🄲")("ψ")) )
@@ -380,7 +476,7 @@ object Paren {
       import syntax.Piping._
       
       val ex = extrude(B) |-- display
-      outf += Map("program" -> "B[J0,J1]", "style" -> "loop", "text" -> sdisplay(ex), "term" -> B)
+      outf += Map("program" -> "B[J₀,J₁]", "style" -> "loop", "text" -> sdisplay(ex), "term" -> B)
 
       val cert = false
 
@@ -390,7 +486,7 @@ object Paren {
       if (cert) invokeProver(List(), slicef.obligations.conjuncts)
       for (B <- Rewrite(slicef)(B)) {
         val ex = extrude(B) |-- display
-        // Stratify  🄱 :: ? -> (K₁ x K₂) -> ?
+        // Stratify  🄳 :: ? -> (K₁ x K₂) -> ?
         val strat = SimplePattern(fix(* :- `...`(ex :/ "🄳"))) find B map (x => StratifySlashPod(x(*), ex :/ "🄳", ctx(B, ex :/ "🄳")("ψ"))) map instapod
         if (cert) invokeProver(List(), strat flatMap (_.obligations.conjuncts))
         for (B <- Rewrite(strat)(B)) {
@@ -448,18 +544,18 @@ object Paren {
                           val newTerm = TypedTerm.replaceDescendant(fixee(B, subterm), (subterm, synthed))
                           fixer(B, subterm) =:= (newTerm :@ ctx(B, subterm)("ψ"))
                         }
-                        val synths = List(emulateSynth(ex :/ "🄸", TV("B[K0,K3]")),
-                                          emulateSynth(ex :/ "🄼", TV("C[K0,K2,K3]")),
-                                          emulateSynth(ex :/ "🄿", TV("C[K0,K1,K3]")),
-                                          emulateSynth(ex :/ "🅂", TV("B[K1,K3]")),
-                                          emulateSynth(ex :/ "🅆", TV("C[K1,K2,K3]")),
-                                          emulateSynth(ex :/ "🅉", TV("B[K0,K2]")),
-                                          emulateSynth(ex :/ "🄳̲", TV("C[K0,K1,K2]")),
-                                          emulateSynth(ex :/ "🄶̲", TV("B[K1,K2]"))
+                        val synths = List(emulateSynth(ex :/ "🄸", TV("B[K₀,K₃]")),
+                                          emulateSynth(ex :/ "🄼", TV("C[K₀,K₂,K₃]")),
+                                          emulateSynth(ex :/ "🄿", TV("C[K₀,K₁,K₃]")),
+                                          emulateSynth(ex :/ "🅂", TV("B[K₁,K₃]")),
+                                          emulateSynth(ex :/ "🅆", TV("C[K₁,K₂,K₃]")),
+                                          emulateSynth(ex :/ "🅉", TV("B[K₀,K₂]")),
+                                          emulateSynth(ex :/ "🄳̲", TV("C[K₀,K₁,K₂]")),
+                                          emulateSynth(ex :/ "🄶̲", TV("B[K₁,K₂]"))
                         )
                         for (B <- Rewrite(synths)(B)) {
                           val ex = extrude(B) |-- display
-                          outf += Map("program" -> "B[J0,J1]", "style" -> "rec", "text" -> sdisplay(ex), "term" -> B)
+                          outf += Map("program" -> "B[J₀,J₁]", "style" -> "rec", "text" -> sdisplay(ex), "term" -> B)
                         }
                       }
                     }
@@ -470,64 +566,6 @@ object Paren {
           }
         }
       }
-
-      /*
-      // Slice  f  ? x [ K₀, K₁ ] x [ K₂, K₃ ]
-      val slicef = SlicePod(f, List(K0 x K2, K0 x K3, K1 x K2, K1 x K3) map (? x _)) |> instapod
-      for (B <- Rewrite(slicef)(B)) {
-        val ex = extrude(B) |-- display
-        // Stratify  🄳 :: ? -> (K₁ x K₂) -> ?   [ K₁ x K₁, K₂ x K₂ ]
-        val strat = SimplePattern(ω(* :- /::(`...`))) find B map
-                    (tier => StratifyPod(tier(*), ex :/ "🄳", List(K1 x K1, K2 x K2) map (? x _))) map instapod
-        for (B <- Rewrite(strat)(B)) {
-          val ex = extrude(B) |-- display
-          // Stratify  🄲 :: ? -> (K₀ x K₂) -> ?   [ K₀ x K₀, K₀ x K₁, K₁ x K₂, K₂ x K₂ ]
-          val strat = SimplePattern(ω(* :- /::(`...`))) find B filter (_(*).hasDescendant(ex :/ "🄲")) map
-                      (tier => StratifyPod(tier(*), ex :/ "🄲", List(K0 x K0, K0 x K1, K1 x K2, K2 x K2) map (? x _))) map instapod
-          for (B <- Rewrite(strat)(B)) {
-            val ex = extrude(B) |-- display
-            // Stratify  🄴 :: ? -> (K₁ x K₃) -> ?   [ K₁ x K₁, K₁ x K₂, K₂ x K₃, K₃ x K₃ ]
-            val strat = SimplePattern(ω(* :- /::(`...`))) find B filter (_(*).hasDescendant(ex :/ "🄴")) map
-                        (tier => StratifyPod(tier(*), ex :/ "🄴", List(K1 x K1, K1 x K2, K2 x K3, K3 x K3) map (? x _))) map instapod
-            for (B <- Rewrite(strat)(B) map simplify) {
-              val ex = extrude(B) |-- display
-              // Slice  🄱 ... ( k ↦ ? )  [ K₁, K₂, K₃ ]
-              //        🄲 ... ( k ↦ ? )  [ K₀, K₁, K₂ ]
-              val slicekf = (SimplePattern(k ↦ ?) find (ex :/ "🄱") map 
-                             (x => SlicePod(x.subterm, List(K1, K2, K3)))) ++
-                            (SimplePattern(k ↦ ?) find (ex :/ "🄲") map 
-                             (x => SlicePod(x.subterm, List(K0, K1, K2)))) |>> instapod
-              for (B <- Rewrite(slicekf)(B)) {
-                // MinDistrib
-                val mindistkfs = SimplePattern(min :@ (* :- /::(`...`))) find B map 
-                                 (x => MinDistribPod(x(*).split)) map instapod
-                for (B <- Rewrite(mindistkfs)(B)) {
-                  val extrude = Extrude(Set(I("/"), cons.root))
-                  // MinAssoc
-                  val minassockfs = SimplePattern(min :@ (* :- ?)) find B flatMap (_(*) |> `⟨ ⟩?`) map
-                                    (MinAssocPod(_)) filter (x => x.subtrees(0) != x.subtrees(1)) map instapod
-                  for (B <- Rewrite(minassockfs)(B)) {
-                    val ex = extrude(B) |-- display
-                    // Stratify  🄸,🄺 from 🄱
-                    //           🄽,🄿 from 🄲
-                    /*
-                    val letout = List(StratifyReducePod(ex :/ "🄱" subtrees 0, ex :/ "🄸"),
-                                      StratifyReducePod(ex :/ "🄲" subtrees 0, ex :/ "🄽")) |>> instapod
-                                      */
-                    /*
-                    val strat = List(StratifyReducePod(ex :/ "🄱" subtrees 0, List(ex :/ "🄸", ex :/ "🄺")),
-                                     StratifyReducePod(ex :/ "🄲" subtrees 0, List(ex :/ "🄽", ex :/ "🄿"))) map instapod
-                    for (B <- Rewrite(strat)(B)) {
-                      val ex = extrude(B) |-- display
-                    }
-                    */
-                  }
-                }
-              }
-            }
-          }
-        }
-      }*/
     }
   
   
@@ -537,39 +575,81 @@ object Paren {
       val (vassign, tC) = instantiate(CPod(K0, K1, K2).program)
       val C = tC
 
-      //display(C)
-
-      println(s"C  ===  ${C toPretty}")
+      val outf = new FileLog(new java.io.File("Paren-C.json"), new DisplayContainer)
+      val logf = new FileLog(new java.io.File("/tmp/bell.json"), new DisplayContainer)
 
       val extrude = Extrude(Set(I("/"), cons.root))
 
-      // Slice  ( k ↦ ? )  [ L2, L3 ]
-      for (kf <- SimplePattern(k ↦ ?) find C) {
-        val (vassign1, slicekf) = instantiate(SlicePod(kf.subterm, List(L2, L3))) //, vassign)
-        for ((k, v) <- vassign1)
-          println(s"$k   $v")
-        //val env1 = TypeTranslation.decl(scope, vassign1)
-        //proveEquality(slicekf.subtrees(0), slicekf.subtrees(1), vassign1)(env1)//Map())
+      val ex = extrude(C) |-- display
+      outf += Map("program" -> "C[K₀,K₁,K₂]", "style" -> "loop", "text" -> sdisplay(ex), "term" -> C)
 
-        for (C <- Rewrite(slicekf)(C)) {
-          println(s"C  ===  ${C toPretty}")
-          // MinDistrib  ( min  /(...) )
-          for (smallkfs <- SimplePattern(min :@ (* :- /::(`...`))) find C) {
-            val (_, mindistkfs) = instantiate(MinDistribPod(smallkfs(*).split)) //, vassign)
-            for (C <- Rewrite(mindistkfs)(C)) {
-              println(s"C  ===  ${C toPretty}")
-              // Slice  ( i ↦ ? )  [ L0, L1 ] x [ L4, L5 ]
-              for (if_ <- SimplePattern(i ↦ ?) find C) {
-                val (_, sliceif) = instantiate(SlicePod(if_.subterm, List(L0 x L4, L0 x L5, L1 x L4, L1 x L5))) //, vassign)
-                for (C <- Rewrite(sliceif)(C)) {
-                  println(s"C  ===  ")
-                  display(extrude(C))
-                  for (kf <- SimplePattern(min :@ (k ↦ ?)) find C; x <- pullOut(C, kf.subterm)) {
-                    println(s"${x toPretty} :: ${env typeOf_! x toPretty}")
-                    //display(x)
+      def slasher(A: Term, f: Term) =
+        (SimplePattern(/::(`...`(f))) find A head) |> (_.subterm)
+
+      // Slice  ( i ↦ ? )  [ L0, L1 ] x [ L4, L5 ]
+      val sliceijf = SimplePattern(i ↦ ?) find C map (x => SlicePod(x.subterm, List(L0 x L4, L0 x L5, L1 x L4, L1 x L5))) map instapod
+      for (C <- Rewrite(sliceijf)(C)) {
+        val ex = extrude(C) |-- display
+        // Let  🄰
+        val let = LetSlashPod(slasher(C, ex :/ "🄰"), ex :/ "🄰", ctx(C, ex :/ "🄰")("ψ")) |> instapod
+        for (C <- Rewrite(let)(C)) {
+          val ex = extrude(C) |-- display
+          // Let  🄰
+          val let = LetSlashPod(slasher(C, ex :/ "🄰"), ex :/ "🄰", ctx(C, ex :/ "🄰")("ψ")) |> instapod
+          for (C <- Rewrite(let)(C)) {
+            val ex = extrude(C) |-- display
+            // Let  🄰
+            val let = LetSlashPod(slasher(C, ex :/ "🄰"), ex :/ "🄰", ctx(C, ex :/ "🄰")("ψ")) |> instapod
+            for (C <- Rewrite(let)(C)) {
+              val ex = extrude(C) |-- display
+              // Slice  ( k ↦ ? )  [ L2, L3 ]
+              val slicekf = SimplePattern(k ↦ ?) find C map (x => SlicePod(x.subterm, List(L2, L3))) map instapod
+              for (C <- Rewrite(slicekf)(C)) {
+                val ex = extrude(C) |-- display |-- (logf += Rich.display(_))
+                // MinDistrib  ( min  /(...) )
+                val mindistkfs = SimplePattern(min :@ (* :- /::(`...`))) find C map
+                    (x => MinDistribPod(x(*).split)) map instapod
+                for (C <- Rewrite(mindistkfs)(C)) {
+                  val ex = extrude(C) |-- display
+                  // MinAssoc
+                  val minassockfs = SimplePattern(min :@ (* :- ?)) find C flatMap (_(*) |> `⟨ ⟩?`) map
+                      (MinAssocPod(_)) filter (x => x.subtrees(0) != x.subtrees(1)) map instapod
+                  for (C <- Rewrite(minassockfs)(C)) {
+                    val ex = extrude(C) |-- display
+
+                    def letduce(A: Term, `.` : Term, subelements: List[Term]) =
+                      SimplePattern(min:@(* :- ?)) find `.` flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
+                        LetReducePod(TermWithHole.puncture(slasher(A, `.`), x.subterm), min, elements, subelements, ctx(A, `.`)("ψ"))))
+
+                    val let = letduce(C, ex :/ "🄰", List("🄴", "🄶") map (ex :/ _)) ++
+                              letduce(C, ex :/ "🄱", List("🄷", "🄹") map (ex :/ _)) ++
+                              letduce(C, ex :/ "🄲", List("🄺", "🄼") map (ex :/ _)) ++
+                              letduce(C, ex :/ "🄳", List("🄽", "🄿") map (ex :/ _)) map instapod
+                    for (C <- Rewrite(let)(C)) {
+                      val ex = extrude(C) |-- display |-- (logf += Rich.display(_))
+                      // This is such a hack @@@
+                      def emulateSynth(subterm: Term, synthed: Term) = {
+                        import TypedTerm.typeOf_!
+                        val ψ = ctx(C, subterm)("ψ")
+                        val newTerm = TypedTerm(synthed, typeOf_!(ψ) -> typeOf_!(subterm))
+                        subterm =:= (newTerm :@ ψ)
+                      }
+                      val synths = List( emulateSynth(ex :/ "🄰", TV("C[L₁,L₃,L₅]")),
+                                         emulateSynth(ex :/ "🄱", TV("C[L₁,L₂,L₅]")),
+                                         emulateSynth(ex :/ "🄲", TV("C[L₁,L₃,L₄]")),
+                                         emulateSynth(ex :/ "🄳", TV("C[L₁,L₂,L₄]")),
+                                         emulateSynth(ex :/ "🄴", TV("C[L₀,L₃,L₅]")),
+                                         emulateSynth(ex :/ "🄵", TV("C[L₀,L₂,L₅]")),
+                                         emulateSynth(ex :/ "🄶", TV("C[L₀,L₃,L₄]")),
+                                         emulateSynth(ex :/ "🄷", TV("C[L₀,L₂,L₄]"))
+                      )
+                      for (C <- Rewrite(synths)(C)) {
+                        val ex = extrude(C) |-- display
+                        outf += Map("program" -> "C[K₀,K₁,K₂]", "style" -> "rec", "text" -> sdisplay(ex), "term" -> C)
+                      }
+                    }
                   }
                 }
-                //display(tC :/ "C")
               }
             }
           }

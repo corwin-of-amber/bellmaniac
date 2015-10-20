@@ -70,7 +70,7 @@ object Formula {
     def format(term: AstSugar.Term) = {
       /**/ assume(term.subtrees.length == 2) /**/
       val op = if (literal == null) display(term.root) else literal
-      tape"${display(term.subtrees(0), priority, Assoc.Left)} $op ${display(term.subtrees(1), priority, Assoc.Right)}"
+      tape"${display(term.subtrees(0), priority, Assoc.Left)} ${op |-| new TermTag(term)} ${display(term.subtrees(1), priority, Assoc.Right)}"
     }
   }
 
@@ -115,7 +115,7 @@ object Formula {
   def display(term: AstSugar.Term): TapeString =
     if (QUANTIFIERS contains term.root.toString)
       displayQuantifier(term.unfold)
-    else if (term =~ (":", 2) && term.subtrees(0) =~ ("let", 0))// && term.subtrees(1) =~ ("@", 2) && term.subtrees(1).subtrees(0) =~ ("↦", 2))
+    else if (term =~ (":", 2) && term.subtrees(0) =~ ("let", 0) && term.subtrees(1) =~ ("@", 2) && term.subtrees(1).subtrees(0) =~ ("↦", 2))
       tape"let ${display(term.subtrees(1).subtrees(0).subtrees(0))} := ${display(term.subtrees(1).subtrees(1))} in ${display(term.subtrees(1).subtrees(0).subtrees(1))}"
     else
       (if (term.subtrees.length == 2) INFIX get term.root.toString else None)

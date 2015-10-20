@@ -631,7 +631,7 @@ object TraceableException {
   import syntax.AstSugar._
   def trace[A](term: Term)(op: => A) =
     try op
-    catch { case e: TranslationError => throw e at term}
+    catch { case e: TraceableException => throw e at term}
 }
 
 

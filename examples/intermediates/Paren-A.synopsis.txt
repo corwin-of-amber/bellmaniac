@@ -1,0 +1,10 @@
+J  : set
+J₀ : set
+J₁ : set
+
+Slice f ⟨`?×J₀×J₀, `?×J₀×J₁, `?×J₁×J₁⟩
+StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
+StratifySlash (fixee 🄱) 🄱 (ctx 🄱 ψ)
+⟨Synth (fixee 🄰) (fixee 🄰) "B[J₀,J₁]" (ctx 🄰 ψ), 
+ Synth (fixee 🄱) 🄱 "A[J₁]" (ctx 🄱 ψ),
+ Synth (fixee 🄲) 🄲 "A[J₀]" (ctx 🄲 ψ)⟩

@@ -18,13 +18,12 @@ import synth.pods.Pod.TacticalError
  * Means that J can be partitioned into J₀, J₁ s.t. every element of J₀ is less than every element of J₁.
  */
 class PartitionPod(val J: Term, val < : Term, val J0: Term, val J1: Term)(implicit scope: Scope) extends Pod {
-  import Prelude.{compl, partition, allToAll}
+  import Prelude.{partition, allToAll}
 
   val U = T(scope.sorts.getMasterOf(J.leaf))
 
   override val decl = new Declaration where (
     partition(U)(J, J0, J1),
-    //compl(U)(J0, J1),
     allToAll(U)(J0, <, J1)
   )
 }
@@ -48,8 +47,7 @@ class SlicePod(val f: Term, val subdomains: List[Term]) extends Pod {
 }
 
 object SlicePod {
-  import Prelude.?
-  
+
   def apply(f: Term, subdomains: List[Term]) = new SlicePod(f, subdomains)
 
   def splitSkip(term: Term, sep: Identifier): List[Term] =
@@ -58,6 +56,29 @@ object SlicePod {
     else List(term)
 
   def slices(term: Term) = splitSkip(term, I("/"))
+}
+
+
+class PadPod(f: Term, padding: List[Term]) extends Pod {
+
+  import TypedTerm.typeOf_!
+
+  override val program =
+    f =:= (/::(f :: padding) :: typeOf_!(f))
+
+  override val obligations = {
+    val fabs = $TyTV("f", typeOf_!(f))
+    fabs =:= (/::(fabs :: padding) :: typeOf_!(f))
+  }
+}
+
+object PadPod {
+  def apply(f: Term, padding: List[Term]) = new PadPod(f, padding)
+  def apply(f: Term, padding: Term, subdomains: List[Term]) = {
+    import Prelude.?
+    val slices = subdomains map (_ -> ?)
+    new PadPod(f, slices map (padding :: _))
+  }
 }
 
 
