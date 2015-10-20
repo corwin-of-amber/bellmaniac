@@ -10,12 +10,14 @@ expression 	-> setDeclaration {% id %}
 			d[0].type = d[1][3];
 			return d[0].type && d[0];
 		} } %}
+    | backtick _ type {% take(2) %}
 
 ###############################
 ####### SET DECLARATION #######
 ###############################
 
-setDeclaration -> identifier ":set" {% function(d) { return declareSet(d[0]); } %}
+setDeclaration -> identifier _ colon _ "set" {% 
+  function(d, loc, reject) { return declareSet(d[0]) || reject; } %}
 
 ###########################################
 ####### LAMBDA CALCULUS EXPRESSIONS #######
@@ -84,7 +86,7 @@ possiblyTypedLambdaParameter -> variable {% id %}
 		d[1].type = d[5];
 		return d[5] && d[1]; } %}
 
-variable -> identifier {% function(d) {return variable(d[0]); } %}
+variable -> identifier {% function(d, loc, reject) {return variable(d[0]) || reject; } %}
 
 notatedInfixOperator -> backtick variable backtick {% function(d) {return d[1]; } %}
 	| [+*\-] {% function(d) {return tree(operator(d[0]),[]); } %}
@@ -107,7 +109,7 @@ typeOperator -> [×∩] {% id %}
 rootType -> leftparen type rightparen {% function(d) {return d[1];} %}
 	| typeVariable {% id %}
 
-typeVariable -> identifier {% function(d) {return typeVariable(d[0]); } %}
+typeVariable -> identifier {% function(d, loc, reject) {return typeVariable(d[0]) || reject; } %}
 
 ####################################
 ####### TOKENS FOR TOKENIZER #######
@@ -115,6 +117,7 @@ typeVariable -> identifier {% function(d) {return typeVariable(d[0]); } %}
 
 identifier -> letter idrest {% function(d) {return d[0].concat(d[1]); } %}
 	| op {% id %}
+    | escaped {% id %}
 
 idrest -> letterOrDigit:* {% function(d) {return d[0].join(""); } %}
 	| letterOrDigit:* underscore op {% function(d) {return d[0].join("").concat("_").concat(d[2]);} %}
@@ -126,12 +129,16 @@ letterOrDigit -> letter {% id %}
 letter -> [a-zA-Z$_\u00C0-\u00D6\u00D8-\u1FFF\u2080-\u2089\u2C00-\uD7FF] {% id %}
 digit -> [0-9] {% id %}
 
+letter -> [\uD83C\uDD30-\uDD49] {% id %}    # boxed letters
+
 op -> validStandaloneOpchars {% id %}
 	| opchar opchar:+ {% function(d) { return [d[0]].concat(d[1]).join(""); } %}
 
 validStandaloneOpchars -> [!%&*+<>?^|~\\\-] {% id %}
 opchar -> validStandaloneOpchars {% id %}
 	| [=#@\:] {% id %}
+
+escaped -> ["] [^"]:* ["] {% function(d) { return d[1].join(""); } %}
 
 # _ represents optional whitespace; __ represents compulsory whitespace
 _ -> [\s]:*    {% function(d) {return null; } %}

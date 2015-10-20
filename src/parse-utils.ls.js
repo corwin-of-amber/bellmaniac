@@ -6,6 +6,11 @@
   root.id = function(d){
     return d && d[0];
   };
+  root.take = function(index){
+    return function(d){
+      return d && d[index];
+    };
+  };
   root.keywords = ["set", "fix", "/", "+", "×", "∩", "-", "*"];
   root.tree = function(root, subtrees){
     return {
@@ -45,7 +50,7 @@
     }).length > 0) {
       return tree(identifier(literal, 'set'), []);
     } else {
-      return tree(identifier(literal, 'variable'), []);
+      return tree(identifier(literal, 'type variable'), []);
     }
   };
   root.variable = function(literal){

@@ -2,6 +2,7 @@ root = exports ? this
 
 root.scope = []
 root.id = (d) -> d && d[0]
+root.take = (index) -> (d) -> d && d[index]
 root.keywords = ["set", "fix", "/", "+", "×", "∩", "-", "*"]
 
 ## combinators
@@ -41,7 +42,7 @@ root.typeVariable = (literal) ->
 		tree(identifier(literal, \set), [])
 	else
 		# console.error <| "Literal " + literal + " has not yet been declared as a set."
-		tree(identifier(literal, \variable), [])
+		tree(identifier(literal, 'type variable'), [])
 
 root.variable = (literal) ->
 	if root.keywords.indexOf(literal) == -1 && root.scope.filter((set) ->

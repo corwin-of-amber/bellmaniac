@@ -7,7 +7,7 @@
   assert = require('assert');
   x$ = angular.module('app', ['RecursionHelper', 'ui.codemirror']);
   x$.controller("Ctrl", function($scope){
-    var hintWords, autoWords, i$, ref$, len$, i, charCode, findCurWord, hintReplace, autoReplace;
+    var hintWords, autoWords, i$, ref$, len$, i, charCode, letter, findCurWord, hintReplace, autoReplace;
     $scope.code = localStorage.getItem('codeMirrorContents') || "a b";
     $scope.editorOptions = {
       mode: "scheme",
@@ -107,14 +107,25 @@
       }, {
         text: "\u27E9",
         displayText: "\\>"
+      }, {
+        text: "×",
+        displayText: "\\*"
       }
     ];
     for (i$ = 0, len$ = (ref$ = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).length; i$ < len$; ++i$) {
       i = ref$[i$];
-      charCode = "208" + i;
+      charCode = 0x2080 + i;
       autoWords.push({
-        text: String.fromCharCode(parseInt(charCode, 16)),
+        text: String.fromCharCode(charCode),
         displayText: "_" + i
+      });
+    }
+    for (i$ = 0, len$ = (ref$ = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]).length; i$ < len$; ++i$) {
+      letter = ref$[i$];
+      charCode = 0xdd30 + letter.charCodeAt(0) - 0x41;
+      autoWords.push({
+        text: "\ud83c" + String.fromCharCode(charCode),
+        displayText: "[" + letter + "]"
       });
     }
     findCurWord = function(editor, delimiters){
@@ -168,11 +179,11 @@
           completeSingle: false
         });
       };
-      return editor.on('keyup', function(editor, e){
-        var keycode, valid;
+      return editor.on('change', function(editor, changeObj){
+        var text, valid;
         localStorage.setItem('codeMirrorContents', editor.getValue());
-        keycode = e.keyCode;
-        valid = (keycode > 47 && keycode < 58) || (keycode === 32 || keycode === 13) || (keycode > 64 && keycode < 91) || (keycode > 95 && keycode < 112) || (keycode > 185 && keycode < 193) || (keycode > 218 && keycode < 223);
+        text = changeObj.text[0];
+        valid = text != null && text.length === 1 && ((text >= "a" && text <= "z") || (text >= "A" && text <= "Z") || (text >= "0" && text <= "9") || (text === ';' || text === '=' || text === ',' || text === '-' || text === '.' || text === '/' || text === '`' || text === '[' || text === '\\' || text === ']' || text === '\'' || text === '<' || text === '>' || text === '*'));
         if (valid) {
           autoReplace(editor);
           CodeMirror.commands.autocomplete(editor);
@@ -257,6 +268,7 @@
             check: block
           };
         }).value();
+        fs.writeFileSync("/tmp/synopsis.json", JSON.stringify($scope.parsed));
         jar.stdin.setEncoding('utf-8');
         for (i$ = 0, len$ = (ref$ = $scope.parsed).length; i$ < len$; ++i$) {
           parsedBlock = ref$[i$];

@@ -47,13 +47,21 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
         * text: "↦", displayText: "|->"
         * text: "\u27E8", displayText: "\\<"
         * text: "\u27E9", displayText: "\\>"
+        * text: "×", displayText: "\\*"
 
+    # subscript digits
     for i in [0 to 9]
-        charCode = "208" + i
-        autoWords.push {
-            text: String.fromCharCode(parseInt(charCode, 16)),
-            displayText: "_" + i
-        }
+        charCode = 0x2080 + i
+        autoWords.push do
+            text: String.fromCharCode(charCode),
+            displayText: "_#i"
+        
+    # boxed letters
+    for letter in ['A' to 'Z']
+        charCode = 0xdd30 + letter.charCodeAt(0) - 0x41
+        autoWords.push do
+            text: "\ud83c" + String.fromCharCode(charCode)
+            displayText: "[#letter]"
 
     findCurWord = (editor, delimiters) ->
         whitespace = /\s/
@@ -100,16 +108,15 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
         CodeMirror.commands.autocomplete = (cm) ->
             cm.showHint hint: CodeMirror.hint.anyword, completeSingle: false
 
-        editor.on 'keyup', (editor, e) !->
+        editor.on 'change', (editor, changeObj) !->
             localStorage.setItem('codeMirrorContents', editor.getValue())
-            keycode = e.keyCode
-            valid =
-                (keycode > 47 && keycode < 58)   || # number keys
-                (keycode == 32 || keycode == 13)   || # spacebar & return key(s) (if you want to allow carriage returns)
-                (keycode > 64 && keycode < 91)   || # letter keys
-                (keycode > 95 && keycode < 112)  || # numpad keys
-                (keycode > 185 && keycode < 193) || # ;=,-./` (in order)
-                (keycode > 218 && keycode < 223)    # [\]' (in order)
+            text = changeObj.text[0]  # pretty hackey
+            valid = text? && text.length == 1 && (
+                (text >= "a" && text <= "z") ||
+                (text >= "A" && text <= "Z") ||
+                (text >= "0" && text <= "9") ||
+                (text in <[ ; = , - . / ` [ \ ] ' < > * ]>)
+                )
 
             if valid
                 autoReplace(editor)
@@ -177,6 +184,8 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 # scope: window.scope
             ).value!
 
+            fs.writeFileSync "/tmp/synopsis.json" JSON.stringify $scope.parsed
+            
             jar.stdin.setEncoding('utf-8')
             for parsedBlock in $scope.parsed
                 jar.stdin.write <| JSON.stringify(parsedBlock)
