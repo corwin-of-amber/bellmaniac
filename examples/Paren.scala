@@ -322,6 +322,8 @@ object Paren {
     def fixee(A: Term, q: Term) = fixer(A, q).subtrees(0)
     def ctx(A: Term, t: Term) = TypedLambdaCalculus.context(A, t)
 
+    def slasher(A: Term, q: Term) = (SimplePattern(/::(`...`(q))) find A head) |> (_.subterm)
+
     class Interpreter(implicit scope: Scope, env: Environment) {
       import Interpreter._
 
@@ -335,11 +337,14 @@ object Paren {
           case Some((L("fixer"), List(~(t)))) => fixer(s.program, t)
           case Some((L("fixee"), List(~(t)))) => fixee(s.program, t)
           case Some((L("ctx"), List(~(t), T(symbol, Nil)))) => ctx(s.program, t)(symbol.literal)
+          case Some((L("slasher"), List(~(t)))) => slasher(s.program, t)
+          case Some((L("find"), List(pat))) => (new SimplePattern(pat) find s.program head).subterm
           case Some((L("find"), List(~(t), pat))) => (new SimplePattern(pat) find t head).subterm
 
           /* This part is Paren-specific */
           case Some((L("A"), List(~(j)))) => APod(j).program |> instapod
           case Some((L("B"), List(~(j0), ~(j1)))) => BPod(j0, j1).program |> instapod
+          case Some((L("C"), List(~(j0), ~(j1), ~(j2)))) => CPod(j0, j1, j2).program |> instapod
 
           case _ => expr
         }
@@ -351,6 +356,20 @@ object Paren {
           case Some(l) => l
           case _ => throw new TranslationError("expected a list") at expr
         }
+      }
+
+      def resolvePatterns(command: Term)(implicit s: State) = {
+        command.nodes map (c => (c, LambdaCalculus.isAppOf(c, TI("findAll")))) find (_._2.isDefined) match {
+          case Some((at, Some(List(pat)))) => println(x) ; SimplePattern(pat) find s.program map { mo =>
+            command.replaceDescendant(at, mo.subterm)
+          }
+          case _ => Stream(command)
+        }
+      }
+
+      def encaps(t: Term) = LambdaCalculus.isApp(t) match {
+        case Some((f,args)) => $TV(s"${f toPretty}[${args map (_.toPretty) mkString ","}]")
+        case _ => $TV(t.toPretty)
       }
 
       object ~ { def unapply(expr: Term)(implicit s: State) = Some(evalTerm(expr)) }
@@ -366,23 +385,33 @@ object Paren {
                 List(SlicePod(f, domains))
               case Some((L("StratifySlash"), List(~(h), ~(quadrant), ~(ψ)))) =>
                 List(StratifySlashPod(h, quadrant, ψ))
-              case Some((L("Synth"), List(~(h), ~(subterm), ~(synthed), ~(ψ)))) =>
-                List(SynthPod(h, subterm, synthed, ψ))
+              case Some((L("StratifyReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ)))) =>
+                SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
+                  StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
+              case Some((L("Synth"), List(~(h), ~(subterm), synthed, ~(ψ)))) =>
+                List(SynthPod(h, subterm, encaps(synthed), ψ))
+              case Some((L("LetSlash"), List(~(h), ~(quadrant), ~(ψ)))) =>
+                List(LetSlashPod(h, quadrant, ψ))
+              case Some((L("LetReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ)))) =>
+                SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
+                  LetReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
+              case Some((L("Synth"), List(~(h), synthed, ~(ψ)))) =>
+                List(LetSynthPod(h, encaps(synthed), ψ))
               case Some((L("Distrib"), List(L("min")))) =>
                 SimplePattern(min :@ (* :- /::(`...`))) find s.program map
                     (x => MinDistribPod(x(*).split))
               case Some((L("Assoc"), List(L("min")))) =>
                 SimplePattern(min :@ (* :- ?)) find s.program flatMap (_(*) |> `⟨ ⟩?`) map
                     (MinAssocPod(_)) filterNot (_.isTrivial)
-              case Some((L("StratifyReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ)))) =>
-                SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
-                  StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
-              case Some((cmd, _)) => throw new TranslationError(s"unknown command '${cmd}'") at command
+              case Some((cmd, l)) => throw new TranslationError(s"unknown command '${cmd}' (with ${l.length} arguments)") at command
               case _ =>
                 throw new TranslationError("not a valid command syntax") at command
             }
           }
-        Rewrite(pods(command) |>> instapod)(s.program) match {
+
+        val derivatives = resolvePatterns(command) flatMap pods
+
+        Rewrite(derivatives |>> instapod)(s.program) match {
           case Some(rw) => State(rw, extrude(rw))
           case _ => throw new TranslationError("rewrite failed?") at command
         }

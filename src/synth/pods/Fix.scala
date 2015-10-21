@@ -152,6 +152,22 @@ object SynthPod {
 }
 
 
+class LetSynthPod(val h: Term, val synthed: Term, val ψ: Term)(implicit scope: Scope) extends Pod {
+
+  import TypedTerm.typeOf_!
+
+  val new_h = TypedTerm(synthed, typeOf_!(ψ) -> typeOf_!(h))
+
+  override val program =
+    h =:= (new_h :@ ψ)
+
+}
+
+object LetSynthPod {
+  def apply(h: Term, synthed: Term, ψ: Term)(implicit scope: Scope) = new LetSynthPod(h, synthed, ψ)
+}
+
+
 class SynthSlashPod(val h: List[Term], val f: List[Term]) extends Pod {
 
   override val program =

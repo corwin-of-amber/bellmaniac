@@ -111,6 +111,8 @@ object CLI {
           println("""{"error": "failed to parse JSON element"}""")
         }
 
+        println("\n")
+
         /*&& json.get("$") == "Tree") {
 
           //println(s"Term: ${term.toPretty}")

@@ -5,7 +5,7 @@ K₁ : set
 K₂ : set
 K₃ : set
 
-B (`J₀) (`J₁)
+B `J₀ `J₁
 
 Slice f ⟨`?×K₀×K₂, `?×K₀×K₃, `?×K₁×K₂, `?×K₁×K₃⟩
 StratifySlash (fixee 🄳) 🄳 (ctx 🄳 ψ)
@@ -20,3 +20,12 @@ Assoc min
  StratifyReduce min (fixee 🄱) ⟨🄼, 🄾⟩ (ctx 🄱 ψ),
  StratifyReduce min (fixee 🄲) ⟨🅁, 🅃⟩ (ctx 🄲 ψ)⟩
 StratifyReduce min (fixee 🄰) ⟨🄸, 🄺⟩ (ctx 🄰 ψ)
+
+⟨Synth (fixee 🄸) 🄸 (B `K₀ `K₃) (ctx 🄸 ψ), 
+ Synth (fixee 🄼) 🄼 (C `K₀ `K₂ `K₃) (ctx 🄼 ψ), 
+ Synth (fixee 🄿) 🄿 (C `K₀ `K₁ `K₃) (ctx 🄿 ψ),
+ Synth (fixee 🅂) 🅂 (B `K₁ `K₃) (ctx 🅂 ψ),
+ Synth (fixee 🅆) 🅆 (C `K₁ `K₂ `K₃) (ctx 🅆 ψ),
+ Synth (fixee 🅉) 🅉 (B `K₀ `K₂) (ctx 🅉 ψ),
+ Synth (fixee 🄳̲) 🄳̲ (C `K₀ `K₁ `K₂) (ctx 🄳̲ ψ),
+ Synth (fixee 🄶̲) 🄶̲ (B `K₁ `K₂) (ctx 🄶̲ ψ)⟩

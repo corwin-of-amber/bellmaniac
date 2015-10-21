@@ -1,0 +1,32 @@
+K₀ : set
+K₁ : set
+K₂ : set
+L₀ : set
+L₁ : set
+L₂ : set
+L₃ : set
+L₄ : set
+L₅ : set
+
+C `K₀ `K₁ `K₂
+
+Slice (find (i ↦ ?)) ⟨`L₀×L₄, `L₀×L₅, `L₁×L₄, `L₁×L₅⟩
+LetSlash (slasher 🄰) 🄰 (ctx 🄰 ψ)
+LetSlash (slasher 🄰) 🄰 (ctx 🄰 ψ)
+LetSlash (slasher 🄰) 🄰 (ctx 🄰 ψ)
+Slice (findAll (k ↦ ?)) ⟨`L₂, `L₃⟩
+Distrib min
+Assoc min
+⟨LetReduce min (slasher 🄴) ⟨🄴,🄶⟩ (ctx 🄴 ψ),
+ LetReduce min (slasher 🄷) ⟨🄷,🄹⟩ (ctx 🄷 ψ),
+ LetReduce min (slasher 🄺) ⟨🄺,🄼⟩ (ctx 🄺 ψ),
+ LetReduce min (slasher 🄽) ⟨🄽,🄿⟩ (ctx 🄽 ψ)⟩
+
+⟨Synth 🄰 (C `L₁ `L₃ `L₅) (ctx 🄰 ψ),
+ Synth 🄱 (C `L₁ `L₂ `L₅) (ctx 🄱 ψ),
+ Synth 🄲 (C `L₁ `L₃ `L₄) (ctx 🄱 ψ),
+ Synth 🄳 (C `L₁ `L₂ `L₄) (ctx 🄱 ψ),
+ Synth 🄴 (C `L₀ `L₂ `L₅) (ctx 🄱 ψ),
+ Synth 🄵 (C `L₀ `L₂ `L₅) (ctx 🄱 ψ),
+ Synth 🄶 (C `L₀ `L₂ `L₄) (ctx 🄱 ψ),
+ Synth 🄷 (C `L₀ `L₂ `L₄) (ctx 🄱 ψ) ⟩
