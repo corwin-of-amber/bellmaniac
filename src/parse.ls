@@ -9,7 +9,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
     $scope.code = localStorage.getItem('codeMirrorContents') || "a b"
     $scope.editorOptions =
         mode:  "scheme",
-        matchBrackets: 
+        matchBrackets:
           bracketRegex: /[(){}[\]⟨⟩]/
           bracketMatching: {"(": ")>", ")": "(<", "[": "]>", "]": "[<", "{": "}>", "}": "{<", "⟨": "⟩>", "⟩": "⟨<"}
         theme: "material"
@@ -81,11 +81,11 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
         word: curWord,
         start: start,
         end: end
-        
+
     findSuffixWord = (editor, words) ->
         cur = editor.getCursor()
         curLine = editor.getLine(cur.line)
-        
+
         matches = []
         [start, end, i] = [cur.ch - 1, cur.ch, 1]
         while start >= 0 && words.length > 0
@@ -97,7 +97,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
               end: end
             start -= 1
             i += 1
-            
+
         matches
 
     hintReplace = (editor) ->
@@ -122,7 +122,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
             editor.replaceRange(curPos.word.text,
               CodeMirror.Pos(cur.line, curPos.start),
               CodeMirror.Pos(cur.line, curPos.end))
-                  
+
     $scope.codemirrorLoaded = (editor) ->
 
         CodeMirror.registerHelper "hint", "anyword", hintReplace
@@ -145,7 +145,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 CodeMirror.commands.autocomplete(editor)
 
     $scope.splitTextToBlocks = (input) ->
-        blocks = input.split /\n+(?!\s)/ .filter (== /\S/)        
+        input.split /\n+(?!\s)/ .filter (== /\S/)
 
     $scope.parseAndDisplay = !->
         $scope.parsed = []
@@ -162,14 +162,14 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
 
             jar.stdout.on \end, !->
                 outputFromJar = []
-                ctr = 0
-                for i in [1 to buffer.length]
+                for block in buffer.join("").split(/\n\n+(?=\S)/)
                     try
-                        output = JSON.parse buffer.slice(ctr, i).join("")
+                        output = JSON.parse block
                         $scope.output.push output
                         $scope.data.push {value: output}
-                        ctr = i
                     catch err
+                        console.error err.stack
+                        $scope.data.push {error: err.toString!}
                 $scope.$apply!
 
             jar.stderr.on \data, (data) !->
@@ -196,14 +196,19 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 # scope: window.scope
             ).value!
 
-            fs.writeFileSync "/tmp/synopsis.txt" $scope.code
-            fs.writeFileSync "/tmp/synopsis.json" JSON.stringify $scope.parsed
+            toStream = (stream) ->
+              for parsedBlock in $scope.parsed
+                  stream.write <| JSON.stringify(parsedBlock)
+                  stream.write "\n\n"
+              stream.end!
             
+            fs.writeFileSync "/tmp/synopsis.txt" $scope.code
+
+            stream = fs.createWriteStream "/tmp/synopsis.json"
+            stream.once \open -> toStream stream
+
             jar.stdin.setEncoding('utf-8')
-            for parsedBlock in $scope.parsed
-                jar.stdin.write <| JSON.stringify(parsedBlock)
-                jar.stdin.write "\n\n"
-            jar.stdin.end!
+            toStream jar.stdin
         catch err
             console.error err
             $scope.parsed = err

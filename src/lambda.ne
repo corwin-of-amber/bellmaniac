@@ -2,6 +2,8 @@
 ####### ROOT EXPRESSION #######
 ###############################
 
+term -> _ expression _ {% take(1) %}
+
 expression 	-> setDeclaration {% id %}
 	| untypedExpression (_ colon _ type):? {% function(d) {
 		if (d[1] === null) {
@@ -10,7 +12,6 @@ expression 	-> setDeclaration {% id %}
 			d[0].type = d[1][3];
 			return d[0].type && d[0];
 		} } %}
-    | backtick _ type {% take(2) %}
 
 ###############################
 ####### SET DECLARATION #######
@@ -55,6 +56,7 @@ fixedExpression -> fix __ lambdaOrRootExpression {% function(d) { return fixedEx
 rootExpression -> parenthesizedExpression {% id %}
  	| listExpression {% id %}
     | variable {% id %}
+    | backtick _ type {% take(2) %}
 
 listExpression -> leftbracket _ expression (_ comma _ expression):* _ rightbracket {% function(d) {
 	var consHelper = function (vars) {

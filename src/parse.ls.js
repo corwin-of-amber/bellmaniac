@@ -233,13 +233,12 @@
       });
     };
     $scope.splitTextToBlocks = function(input){
-      var blocks;
-      return blocks = input.split(/\n+(?!\s)/).filter((function(it){
+      return input.split(/\n+(?!\s)/).filter((function(it){
         return /\S/.exec(it);
       }));
     };
     $scope.parseAndDisplay = function(){
-      var blocks, buffer, jar, i$, ref$, len$, parsedBlock, err;
+      var blocks, buffer, jar, toStream, stream, err;
       $scope.parsed = [];
       $scope.output = [];
       $scope.data = [];
@@ -252,30 +251,25 @@
           buffer.push(data);
         });
         jar.stdout.on('end', function(){
-          var outputFromJar, ctr, i$, ref$, len$, i, output, err;
+          var outputFromJar, i$, ref$, len$, block, output, err;
           outputFromJar = [];
-          ctr = 0;
-          for (i$ = 0, len$ = (ref$ = (fn$())).length; i$ < len$; ++i$) {
-            i = ref$[i$];
+          for (i$ = 0, len$ = (ref$ = buffer.join("").split(/\n\n+(?=\S)/)).length; i$ < len$; ++i$) {
+            block = ref$[i$];
             try {
-              output = JSON.parse(buffer.slice(ctr, i).join(""));
+              output = JSON.parse(block);
               $scope.output.push(output);
               $scope.data.push({
                 value: output
               });
-              ctr = i;
             } catch (e$) {
               err = e$;
+              console.error(err.stack);
+              $scope.data.push({
+                error: err.toString()
+              });
             }
           }
           $scope.$apply();
-          function fn$(){
-            var i$, to$, results$ = [];
-            for (i$ = 1, to$ = buffer.length; i$ <= to$; ++i$) {
-              results$.push(i$);
-            }
-            return results$;
-          }
         });
         jar.stderr.on('data', function(data){
           console.error('Java error: ' + data);
@@ -298,15 +292,22 @@
             check: block
           };
         }).value();
+        toStream = function(stream){
+          var i$, ref$, len$, parsedBlock;
+          for (i$ = 0, len$ = (ref$ = $scope.parsed).length; i$ < len$; ++i$) {
+            parsedBlock = ref$[i$];
+            stream.write(JSON.stringify(parsedBlock));
+            stream.write("\n\n");
+          }
+          return stream.end();
+        };
         fs.writeFileSync("/tmp/synopsis.txt", $scope.code);
-        fs.writeFileSync("/tmp/synopsis.json", JSON.stringify($scope.parsed));
+        stream = fs.createWriteStream("/tmp/synopsis.json");
+        stream.once('open', function(){
+          return toStream(stream);
+        });
         jar.stdin.setEncoding('utf-8');
-        for (i$ = 0, len$ = (ref$ = $scope.parsed).length; i$ < len$; ++i$) {
-          parsedBlock = ref$[i$];
-          jar.stdin.write(JSON.stringify(parsedBlock));
-          jar.stdin.write("\n\n");
-        }
-        jar.stdin.end();
+        toStream(jar.stdin);
       } catch (e$) {
         err = e$;
         console.error(err);

@@ -116,7 +116,7 @@ CodeMirror.defineMode("scheme", function () {
                     break;
                 case "s-expr-comment": // s-expr commenting mode
                     state.mode = false;
-                    if(stream.peek() == "(" || stream.peek() == "["){
+                    if(stream.peek() == "(" || stream.peek() == "[" || stream.peek() == "⟨"){
                         // actually start scheme s-expr commenting mode
                         state.sExprComment = 0;
                     }else{
@@ -188,7 +188,8 @@ CodeMirror.defineMode("scheme", function () {
                         (;something else, bracket, etc.
                         */
 
-                        while ((letter = stream.eat(/[^\s\(\[\;\)\]]/)) != null) {
+                        // I'm disabling this. corwin
+                        /*while ((letter = stream.eat(/[^\s\(\[\;\)\]⟨⟩]/)) != null) {
                             keyWord += letter;
                         }
 
@@ -206,14 +207,16 @@ CodeMirror.defineMode("scheme", function () {
                                 pushStack(state, indentTemp + stream.current().length, ch); // else we match
                             }
                         }
-                        stream.backUp(stream.current().length - 1); // undo all the eating
-
+                        stream.backUp(stream.current().length - 1); // undo all the eating */
+                        pushStack(state, indentTemp + stream.current().length, ch);
+                      
                         if(typeof state.sExprComment == "number") state.sExprComment++;
 
                         returnType = BRACKET;
                     } else if (ch == ")" || ch == "]" || ch == "⟩") {
                         returnType = BRACKET;
-                        if (state.indentStack != null && state.indentStack.type == (ch == ")" ? "(" : "[")) {
+                        var opn = {")": "(", "]": "[", "⟩": "⟨"};
+                        if (state.indentStack != null && state.indentStack.type == opn[ch]) {
                             popStack(state);
 
                             if(typeof state.sExprComment == "number"){

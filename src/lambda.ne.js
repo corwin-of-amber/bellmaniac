@@ -4,6 +4,7 @@
 function id(x) {return x[0]; }
 var grammar = {
     ParserRules: [
+    {"name": "term", "symbols": ["_", "expression", "_"], "postprocess": take(1)},
     {"name": "expression", "symbols": ["setDeclaration"], "postprocess": id},
     {"name": "expression", "symbols": ["untypedExpression", "expression$ebnf$1"], "postprocess":  function(d) {
         if (d[1] === null) {
@@ -12,7 +13,6 @@ var grammar = {
         	d[0].type = d[1][3];
         	return d[0].type && d[0];
         } } },
-    {"name": "expression", "symbols": ["backtick", "_", "type"], "postprocess": take(2)},
     {"name": "setDeclaration$string$1", "symbols": [{"literal":"s"}, {"literal":"e"}, {"literal":"t"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "setDeclaration", "symbols": ["identifier", "_", "colon", "_", "setDeclaration$string$1"], "postprocess":  
         function(d, loc, reject) { return declareSet(d[0]) || reject; } },
@@ -35,6 +35,7 @@ var grammar = {
     {"name": "rootExpression", "symbols": ["parenthesizedExpression"], "postprocess": id},
     {"name": "rootExpression", "symbols": ["listExpression"], "postprocess": id},
     {"name": "rootExpression", "symbols": ["variable"], "postprocess": id},
+    {"name": "rootExpression", "symbols": ["backtick", "_", "type"], "postprocess": take(2)},
     {"name": "listExpression", "symbols": ["leftbracket", "_", "expression", "listExpression$ebnf$1", "_", "rightbracket"], "postprocess":  function(d) {
         	var consHelper = function (vars) {
         		if (vars.length === 0) {
@@ -128,7 +129,7 @@ var grammar = {
     {"name": "lambdaExpression$ebnf$1$subexpression$1", "symbols": ["possiblyTypedLambdaParameter", "__"]},
     {"name": "lambdaExpression$ebnf$1$subexpression$2", "symbols": ["possiblyTypedLambdaParameter", "__"]}
 ]
-  , ParserStart: "expression"
+  , ParserStart: "term"
 }
 if (typeof module !== 'undefined'&& typeof module.exports !== 'undefined') {
    module.exports = grammar;
