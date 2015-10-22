@@ -14,8 +14,8 @@ var grammar = {
         	return d[0].type && d[0];
         } } },
     {"name": "setDeclaration$string$1", "symbols": [{"literal":"s"}, {"literal":"e"}, {"literal":"t"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "setDeclaration", "symbols": ["identifier", "_", "colon", "_", "setDeclaration$string$1"], "postprocess":  
-        function(d, loc, reject) { return declareSet(d[0]) || reject; } },
+    {"name": "setDeclaration", "symbols": ["identifier", "setDeclaration$ebnf$1", "_", "colon", "_", "setDeclaration$string$1"], "postprocess":  
+        function(d, loc, reject) { return declareSets(d[0], d[1].map(take(1))) || reject; } },
     {"name": "untypedExpression", "symbols": ["applicationExpression"], "postprocess": id},
     {"name": "untypedExpression", "symbols": ["lambdaExpression"], "postprocess": id},
     {"name": "applicationExpression", "symbols": ["applicationWithInfixExpression"], "postprocess": id},
@@ -63,6 +63,7 @@ var grammar = {
         d[1].type = d[5];
         return d[5] && d[1]; } },
     {"name": "variable", "symbols": ["identifier"], "postprocess": function(d, loc, reject) {return variable(d[0]) || reject; }},
+    {"name": "variable", "symbols": ["escaped"], "postprocess": function(d) { return tree(identifier(d[0],'variable')); }},
     {"name": "notatedInfixOperator", "symbols": ["backtick", "variable", "backtick"], "postprocess": function(d) {return d[1]; }},
     {"name": "notatedInfixOperator", "symbols": [/[+*\-]/], "postprocess": function(d) {return tree(operator(d[0]),[]); }},
     {"name": "defaultInfixOperator", "symbols": [{"literal":"/"}], "postprocess": function(d) {return operator(d[0]); }},
@@ -76,7 +77,6 @@ var grammar = {
     {"name": "typeVariable", "symbols": ["identifier"], "postprocess": function(d, loc, reject) {return typeVariable(d[0]) || reject; }},
     {"name": "identifier", "symbols": ["letter", "idrest"], "postprocess": function(d) {return d[0].concat(d[1]); }},
     {"name": "identifier", "symbols": ["op"], "postprocess": id},
-    {"name": "identifier", "symbols": ["escaped"], "postprocess": id},
     {"name": "idrest", "symbols": ["idrest$ebnf$1"], "postprocess": function(d) {return d[0].join(""); }},
     {"name": "idrest", "symbols": ["idrest$ebnf$2", "underscore", "op"], "postprocess": function(d) {return d[0].join("").concat("_").concat(d[2]);}},
     {"name": "letterOrDigit", "symbols": ["letter"], "postprocess": id},
@@ -108,6 +108,8 @@ var grammar = {
     {"name": "fix", "symbols": ["fix$string$1"]},
     {"name": "expression$ebnf$1", "symbols": ["expression$ebnf$1$subexpression$1"], "postprocess": id},
     {"name": "expression$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "setDeclaration$ebnf$1", "symbols": []},
+    {"name": "setDeclaration$ebnf$1", "symbols": ["setDeclaration$ebnf$1$subexpression$1", "setDeclaration$ebnf$1"], "postprocess": function arrconcat(d) {return [d[0]].concat(d[1]);}},
     {"name": "listExpression$ebnf$1", "symbols": []},
     {"name": "listExpression$ebnf$1", "symbols": ["listExpression$ebnf$1$subexpression$1", "listExpression$ebnf$1"], "postprocess": function arrconcat(d) {return [d[0]].concat(d[1]);}},
     {"name": "lambdaExpression$ebnf$1", "symbols": ["lambdaExpression$ebnf$1$subexpression$1"]},
@@ -125,6 +127,7 @@ var grammar = {
     {"name": "__$ebnf$1", "symbols": [/[\s]/]},
     {"name": "__$ebnf$1", "symbols": [/[\s]/, "__$ebnf$1"], "postprocess": function arrconcat(d) {return [d[0]].concat(d[1]);}},
     {"name": "expression$ebnf$1$subexpression$1", "symbols": ["_", "colon", "_", "type"]},
+    {"name": "setDeclaration$ebnf$1$subexpression$1", "symbols": ["__", "identifier"]},
     {"name": "listExpression$ebnf$1$subexpression$1", "symbols": ["_", "comma", "_", "expression"]},
     {"name": "lambdaExpression$ebnf$1$subexpression$1", "symbols": ["possiblyTypedLambdaParameter", "__"]},
     {"name": "lambdaExpression$ebnf$1$subexpression$2", "symbols": ["possiblyTypedLambdaParameter", "__"]}

@@ -17,8 +17,8 @@ expression 	-> setDeclaration {% id %}
 ####### SET DECLARATION #######
 ###############################
 
-setDeclaration -> identifier _ colon _ "set" {% 
-  function(d, loc, reject) { return declareSet(d[0]) || reject; } %}
+setDeclaration -> identifier (__ identifier):* _ colon _ "set" {% 
+  function(d, loc, reject) { return declareSets(d[0], d[1].map(take(1))) || reject; } %}
 
 ###########################################
 ####### LAMBDA CALCULUS EXPRESSIONS #######
@@ -89,6 +89,7 @@ possiblyTypedLambdaParameter -> variable {% id %}
 		return d[5] && d[1]; } %}
 
 variable -> identifier {% function(d, loc, reject) {return variable(d[0]) || reject; } %}
+    | escaped {% function(d) { return tree(identifier(d[0],'variable')); } %}
 
 notatedInfixOperator -> backtick variable backtick {% function(d) {return d[1]; } %}
 	| [+*\-] {% function(d) {return tree(operator(d[0]),[]); } %}
@@ -119,7 +120,6 @@ typeVariable -> identifier {% function(d, loc, reject) {return typeVariable(d[0]
 
 identifier -> letter idrest {% function(d) {return d[0].concat(d[1]); } %}
 	| op {% id %}
-    | escaped {% id %}
 
 idrest -> letterOrDigit:* {% function(d) {return d[0].join(""); } %}
 	| letterOrDigit:* underscore op {% function(d) {return d[0].join("").concat("_").concat(d[2]);} %}

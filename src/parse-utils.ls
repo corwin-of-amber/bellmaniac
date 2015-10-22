@@ -32,6 +32,12 @@ root.declareSet = (literal) ->
 		# console.error <| "Literal " + literal + " is reserved."
 		false
 
+root.declareSets = (head, tail) ->
+	for literal in [head] ++ tail
+		if !(newSet = root.declareSet(literal))
+			return false
+	newSet # returns last set?
+        
 root.typeVariable = (literal) ->
 	if root.keywords.indexOf(literal) > -1
 		# console.error <| "Literal " + literal + " is reserved."

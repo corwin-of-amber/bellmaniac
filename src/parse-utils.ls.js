@@ -42,6 +42,16 @@
       return false;
     }
   };
+  root.declareSets = function(head, tail){
+    var i$, ref$, len$, literal, newSet;
+    for (i$ = 0, len$ = (ref$ = [head].concat(tail)).length; i$ < len$; ++i$) {
+      literal = ref$[i$];
+      if (!(newSet = root.declareSet(literal))) {
+        return false;
+      }
+    }
+    return newSet;
+  };
   root.typeVariable = function(literal){
     if (root.keywords.indexOf(literal) > -1) {
       return false;
