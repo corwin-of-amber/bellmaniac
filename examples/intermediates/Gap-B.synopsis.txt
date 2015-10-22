@@ -1,0 +1,43 @@
+J : set
+K : set
+J₀ J₁ : set
+K₀ K₁ : set
+L₀ L₁ L₂ L₃ : set
+M₀ M₁ M₂ M₃ : set
+
+B `J `K₀ `K₁
+
+Slice 🄰 (⟨`J₀, `J₁⟩ ⟨`M₂, `M₃⟩)
+LetSlash (slasher 🄰) 🄰 (ctx 🄰 ψ)
+LetSlash (slasher 🄰) 🄰 (ctx 🄰 ψ)
+LetSlash (slasher 🄰) 🄰 (ctx 🄰 ψ)
+⟨Slice (find 🄵 ψ) (⟨`?⟩ ⟨`M₀, `M₁⟩),
+ Slice (find 🄸 ψ) (⟨`?⟩ ⟨`M₀, `M₁⟩),
+ Slice (find 🄻 ψ) (⟨`?⟩ ⟨`M₀, `M₁⟩),
+ Slice (find 🄾 ψ) (⟨`?⟩ ⟨`M₀, `M₁⟩),
+ Slice (findAll (q ↦ ?)) ⟨`M₀, `M₁⟩⟩
+
+⟨Distrib "/" 🄵 (find 🄵 (ψ / ?)),
+ Distrib "/" 🄺 (find 🄺 (ψ / ?)),
+ Distrib "/" 🄿 (find 🄿 (ψ / ?)),
+ Distrib "/" 🅄 (find 🅄 (ψ / ?))⟩
+
+⟨SlashToReduce min ⟨🄵,🄶⟩, SlashToReduce min ⟨🄻,🄼⟩, 
+ SlashToReduce min ⟨🅁,🅂⟩, SlashToReduce min ⟨🅇,🅈⟩⟩
+
+Distrib min
+Assoc min
+
+⟨LetReduce min (slasher 🄰) ⟨🄴,🄵,🄷⟩ (ctx 🄰 ψ),
+ LetReduce min (slasher 🄱) ⟨🄹,🄺,🄼⟩ (ctx 🄱 ψ),
+ LetReduce min (slasher 🄲) ⟨🄾,🄿,🅁⟩ (ctx 🄲 ψ),
+ LetReduce min (slasher 🄳) ⟨🅃,🅄,🅆⟩ (ctx 🄳 ψ)⟩
+
+⟨Synth 🄰 (B `J₁ `M₁ `M₃) (ctx 🄰 ψ),
+ Synth 🄱 (B `J₁ `M₀ `M₃) (ctx 🄱 ψ),
+ Synth 🄲 (B `J₁ `M₁ `M₂) (ctx 🄲 ψ),
+ Synth 🄳 (B `J₁ `M₀ `M₂) (ctx 🄳 ψ),
+ Synth 🄴 (B `J₀ `M₁ `M₃) (ctx 🄴 ψ),
+ Synth 🄵 (B `J₀ `M₀ `M₃) (ctx 🄵 ψ),
+ Synth 🄶 (B `J₀ `M₁ `M₂) (ctx 🄶 ψ),
+ Synth 🄷 (B `J₀ `M₀ `M₂) (ctx 🄷 ψ)⟩

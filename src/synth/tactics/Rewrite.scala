@@ -44,7 +44,7 @@ object Rewrite {
     def apply(term: Term, within: Iterable[Term])(implicit env: Environment) = {
       implicit val scope = env.scope
       val matches = 
-        for ((from, to) <- ematch; subterm <- within; m <- from find subterm)
+        for ((from, to) <- ematch; subterm <- within; m <- from findInBodies subterm)
           yield (m, Binding.prebind(to))
       Some(TypeInference.infer(TypedTerm.replaceDescendants(term, matches))._2)
     }

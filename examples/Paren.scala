@@ -176,13 +176,13 @@ object Paren {
 
     import ConsPod.`⟨ ⟩`
 
-    class APod(val J: Term) {
+    class APod(val J: Term) extends Pod {
       import Prelude.{fix,min,?}
 
       val A = $TV("A")
       val (ψ, θ, i, j, k) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), TV("k"))
 
-      val program = TI("program")(
+      override val program = TI("program")(
         A :- (ψ ↦ fix(
             (θ :: ((J x J) ∩ <) ->: R) ↦: i ↦: j ↦: (
     
@@ -202,7 +202,7 @@ object Paren {
       def apply(J: Term) = new APod(J)
     }
     
-    class BPod(J0: Term, J1: Term) {
+    class BPod(J0: Term, J1: Term) extends Pod {
       import Prelude._
       
       val B = $TV("B")
@@ -210,7 +210,7 @@ object Paren {
 
       val (ψ, θ, i, j, k) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), TV("k"))
 
-      val program = TI("program")(
+      override val program = TI("program")(
         B :- (ψ ↦ fix(
           /::(
             $TV ↦ ψ :: ? ->: (J0 x J0) ->: ?,
@@ -235,14 +235,14 @@ object Paren {
       def apply(J0: Term, J1: Term) = new BPod(J0, J1)
     }
     
-    class CPod(J0: Term, J1: Term, J2: Term) {
+    class CPod(J0: Term, J1: Term, J2: Term) extends Pod {
       import semantics.Prelude._
       
       val C = $TV("C")
       val P = $TV("▚")
       val (ψ, θ, i, j, k) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), TV("k"))
 
-      val program = Prelude.program(
+      override val program = Prelude.program(
           ψ ↦ /::(
             ψ :: (J0 x J1) ->: ?,
             i ↦: j ↦: (
@@ -338,13 +338,11 @@ object Paren {
           case Some((L("fixee"), List(~(t)))) => fixee(s.program, t)
           case Some((L("ctx"), List(~(t), T(symbol, Nil)))) => ctx(s.program, t)(symbol.literal)
           case Some((L("slasher"), List(~(t)))) => slasher(s.program, t)
-          case Some((L("find"), List(pat))) => (new SimplePattern(pat) find s.program head).subterm
-          case Some((L("find"), List(~(t), pat))) => (new SimplePattern(pat) find t head).subterm
+          case Some((L("find"), List(pat))) => (new SimplePattern(pat) findOne_! s.program).subterm
+          case Some((L("find"), List(~(t), pat))) => (new SimplePattern(pat) findOne_! t).subterm
 
-          /* This part is Paren-specific */
-          case Some((L("A"), List(~(j)))) => APod(j).program |> instapod
-          case Some((L("B"), List(~(j0), ~(j1)))) => BPod(j0, j1).program |> instapod
-          case Some((L("C"), List(~(j0), ~(j1), ~(j2)))) => CPod(j0, j1, j2).program |> instapod
+          case Some(x) => (pods andThen (_.program |> instapod)) applyOrElse (x,
+              { case _ => expr }: PartialFunction[(Term, List[Term]), Term] )
 
           case _ => expr
         }
@@ -352,9 +350,13 @@ object Paren {
 
       def evalList(expr: Term)(implicit s: State): List[Term] = ConsPod.`⟨ ⟩?`(expr) match {
         case Some(l) => l map evalTerm
-        case _ => ConsPod.`⟨ ⟩?`(evalTerm(expr)) match {
-          case Some(l) => l
-          case _ => throw new TranslationError("expected a list") at expr
+        case _ => expr match {
+          case T(@:.root, List(~~(l1), ~~(l2))) => for (a <- l1; b <- l2) yield a x b
+          case _ => ConsPod.`⟨ ⟩?`(evalTerm(expr)) match {
+            case Some(l) => l
+            case _ =>
+              throw new TranslationError("expected a list") at expr
+          }
         }
       }
 
@@ -403,6 +405,10 @@ object Paren {
               case Some((L("Assoc"), List(L("min")))) =>
                 SimplePattern(min :@ (* :- ?)) find s.program flatMap (_(*) |> `⟨ ⟩?`) map
                     (MinAssocPod(_)) filterNot (_.isTrivial)
+              case Some((L("Distrib"), List(L("/"), ~(f), ~(box)))) =>
+                List(SlashDistribPod(f, box))
+              case Some((L("SlashToReduce"), List(reduce, ~~(elements)))) =>
+                List(SlashToReducePod(elements, min))
               case Some((cmd, l)) => throw new TranslationError(s"unknown command '${cmd}' (with ${l.length} arguments)") at command
               case _ =>
                 throw new TranslationError("not a valid command syntax") at command
@@ -433,6 +439,23 @@ object Paren {
         }, s)
       }
 
+      def execute(reader: BufferedReader)(implicit sc: SerializationContainer=new DisplayContainer) {
+        val head #:: blocks = sc.flatten(CLI.getBlocks(reader) map
+                              JSON.parse map (_.asInstanceOf[DBObject]))
+        (initial(head) /: blocks) { (s, json) => transform(s, json) }
+      }
+
+      def executeFile(filename: String)(implicit sc: SerializationContainer=new DisplayContainer) {
+        execute(new BufferedReader(new FileReader(filename)))
+      }
+
+      /* This part is Paren-specific */
+      def pods(implicit s: State): PartialFunction[(Term, List[Term]), Pod] = {
+        case (L("A"), List(~(j))) => APod(j)
+        case (L("B"), List(~(j0), ~(j1))) => BPod(j0, j1)
+        case (L("C"), List(~(j0), ~(j1), ~(j2))) => CPod(j0, j1, j2)
+      }
+
     }
 
     object Interpreter {
@@ -443,15 +466,7 @@ object Paren {
     }
 
     def followRecipe(implicit env: Environment, scope: Scope) {
-      implicit val sc = new DisplayContainer
-
-      import Interpreter.State
-      val interp = new Interpreter()
-
-      val recipef = new BufferedReader(new FileReader("/tmp/synopsis.json")) //"examples/intermediates/Paren-A.synopsis.json"))
-      val head #:: blocks = sc.flatten(CLI.getBlocks(recipef) map JSON.parse map (_.asInstanceOf[DBObject]))
-
-      (interp.initial(head) /: blocks) { (s, json) => interp.transform(s, json) }
+      new Interpreter().executeFile("/tmp/synopsis.json")
     }
 
     def rewriteA(implicit env: Environment, scope: Scope) {

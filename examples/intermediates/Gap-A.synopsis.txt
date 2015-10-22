@@ -1,0 +1,49 @@
+J : set
+K : set
+J₀ : set
+J₁ : set
+K₀ : set
+K₁ : set
+
+A `J `K
+
+Slice (find (θ ↦ ?)) ⟨`?×J₀×K₀, `?×J₀×K₁, `?×J₁×K₀, `?×J₁×K₁⟩
+
+StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
+StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
+StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
+
+⟨Slice (find 🄰 (q ↦ ?)) ⟨`K₀, `K₁⟩,
+ Slice (find 🄰 (p ↦ ?)) ⟨`J₀, `J₁⟩,
+ Slice (find 🄵 θ) (⟨`J₀,`J₁⟩ ⟨`K₀,`K₁⟩), 
+ Slice (find 🄱 (p ↦ ?)) ⟨`J₀, `J₁⟩,
+ Slice (find 🄹 θ) (⟨`J₀,`J₁⟩ ⟨`?⟩), 
+ Slice (find 🄲 (q ↦ ?)) ⟨`K₀, `K₁⟩,
+ Slice (find 🄽 θ) (⟨`?⟩ ⟨`K₀,`K₁⟩)⟩
+
+⟨Distrib "/" 🄵 (find 🄵 (θ / ?)),
+ Distrib "/" 🄽 (find 🄽 (θ / ?)),
+ Distrib "/" 🅃 (find 🅃 (θ / ?))⟩
+
+⟨SlashToReduce min ⟨🄵,🄶,🄷,🄸⟩,
+ SlashToReduce min ⟨🅀,🅁⟩,
+ SlashToReduce min ⟨🅇,🅈⟩⟩
+
+Distrib min
+Assoc min
+
+⟨StratifyReduce min (fixee 🄰) ⟨🄴,🄵⟩ (ctx 🄰 ψ),
+ StratifyReduce min (fixee 🄱) ⟨🄽,🄾,🅁⟩ (ctx 🄱 ψ),
+ StratifyReduce min (fixee 🄲) ⟨🅃,🅄,🅆⟩ (ctx 🄲 ψ)⟩
+
+StratifyReduce min (fixee 🄰) ⟨🄷,🄸,🄻⟩ (ctx 🄰 ψ)
+StratifyReduce min (fixee 🄰) ⟨🄸,🄹,🄼⟩ (ctx 🄰 ψ)
+
+⟨Synth (fixee 🄰) 🄰 (A `J₁ `K₁) (ctx 🄰 ψ),
+ Synth (fixee 🄱) 🄱 (C `J₀ `J₁ `K₁) (ctx 🄱 ψ),
+ Synth (fixee 🄲) 🄲 (B `J₁ `K₀ `K₁) (ctx 🄲 ψ),
+ Synth (fixee 🄴) 🄴 (A `J₁ `K₀) (ctx 🄳 ψ),
+ Synth (fixee 🄵) 🄵 (C `J₀ `J₁ `K₀) (ctx 🄵 ψ),
+ Synth (fixee 🄶) 🄶 (A `J₀ `K₁) (ctx 🄶 ψ),
+ Synth (fixee 🄷) 🄷 (B `J₀ `K₀ `K₁) (ctx 🄷 ψ),
+ Synth (fixee 🄸) 🄸 (A `J₀ `K₀) (ctx 🄸 ψ)⟩

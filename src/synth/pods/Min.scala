@@ -34,7 +34,7 @@ class MinPod(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implici
   
   override val decl = new Declaration(min, argmin) where (if (opaque) List() else List(
       min =:= { val g = $TyTV("g", D -> R) ; TypedTerm(g ↦ (g :@ TypedTerm(argmin :@ g, D)), (D->R) -> R) },
-      ∀:(D->R, D, (g, i) => (↓(g :@ i) -> (↓(min :@ g) & ~(< :@ (g :@ i) :@ (min :@ g)))) )/*,
+      ∀:(D->R, D, (g, i) => ↓(g :@ i) -> (↓(min :@ g) & ~(< :@ (g :@ i) :@ (min :@ g))) )/*,
       ∀:(R, R, (a,b) => ((min2:@(a,b)) =:= a) | ((min2:@(a,b)) =:= b)) */
     ))
   
@@ -45,11 +45,11 @@ object MinPod {
 }
 
 class MinDistribPod(val fs: List[Term]) extends Pod {
-  import Prelude.{min,cons,nil}
+  import Prelude.min
   import ConsPod.`⟨ ⟩`
   
   override val program =
-    (min :@ (/::(fs))) =:= (min :@ `⟨ ⟩`(fs map (min :@ _)))
+    (min :@ /::(fs)) =:= (min :@ `⟨ ⟩`(fs map (min :@ _)))
 }
 
 object MinDistribPod {
@@ -79,13 +79,16 @@ object MinAssocPod {
   def apply(fs: List[Term]) = new MinAssocPod(fs)
 }
 
-object SlashToReducePod {
+class SlashToReducePod(val fs: List[Term], val reduce: Term) extends Pod {
   
   import ConsPod.`⟨ ⟩`
   
   // Expect fs to be of scalar type (otherwise reduce(`⟨ ⟩`(fs)) does not type-check)
   
-  def apply(fs: List[Term], reduce: Term) = {
-    /::(fs) =:= (reduce:@(`⟨ ⟩`(fs)))
-  }
+  override val program =
+    /::(fs) =:= (reduce:@`⟨ ⟩`(fs))
+}
+
+object SlashToReducePod {
+  def apply(fs: List[Term], reduce: Term) = new SlashToReducePod(fs, reduce)
 }

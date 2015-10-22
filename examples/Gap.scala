@@ -1,9 +1,11 @@
 package examples
 
-import report.data.{Rich, DisplayContainer, SerializationContainer}
+import report.data.{Rich, DisplayContainer}
 import syntax.AstSugar._
+import syntax.Identifier
 import syntax.transform.Extrude
 
+import semantics.Prelude
 import semantics.Prelude._
 import semantics.{TypeTranslation, Scope, TypedLambdaCalculus, Trench}
 import semantics.TypeTranslation.Environment
@@ -24,27 +26,36 @@ object Gap {
   val J1 = TS("J₁")
   val K0 = TS("K₀")
   val K1 = TS("K₁")
-  
+  val L0 = TS("L₀")
+  val L1 = TS("L₁")
+  val L2 = TS("L₂")
+  val L3 = TS("L₃")
+  val M0 = TS("M₀")
+  val M1 = TS("M₁")
+  val M2 = TS("M₂")
+  val M3 = TS("M₃")
+
   val w = TV("w")
   val `w'` = TV("w'")
   val S = TV("S")
   
   val f = TV("f")
-  
-  def < = TV("<")
+
+  def J_< = T(new Identifier("<", "variable", ns=J))
+  def K_< = T(new Identifier("<", "variable", ns=K))
   val _1 = TI(1)
   
   val program = TI("program")(
-      w :: ((K x K) /*∩ <*/) -> R,
-      `w'` :: ((J x J) /*∩ <*/) -> R,
+      w :: ((K x K) ∩ K_<) -> R,
+      `w'` :: ((J x J) ∩ J_<) -> R,
       S :: (J x K) -> R
     )
     
-  class APod(val J: Term, val K: Term) {
+  class APod(val J: Term, val K: Term) extends Pod {
     val A = TI("A")
     val (ψ, θ, i, j, p, q) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), TV("p"), TV("q"))
     
-    val program = TI("program")(
+    override val program = Prelude.program(
         A :- (ψ ↦ fix(
           ((θ :: (J x K) -> R) ↦: i ↦: j ↦: (min :@
             `⟨ ⟩`(
@@ -62,21 +73,21 @@ object Gap {
     def apply(J: Term, K: Term) = new APod(J, K)
   }
   
-  class BPod(val J: Term, val K0: Term, val K1: Term) {
+  class BPod(val J: Term, val K0: Term, val K1: Term) extends Pod {
     val B = TI("B")
     val (ψ, θ, i, j, p, q) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), $TV("p"), $TV("q"))
     
-    val program = TI("program")(
-        B :- (ψ ↦ fix(
-          (θ ↦: i ↦: j ↦: (min :@
-            `⟨ ⟩`(
+    override val program = Prelude.program(
+        B :- ψ ↦
+          /::(
+            ψ :: ((J x K0) -> R),
+            (i ↦: j ↦: (min :@ `⟨ ⟩`(
               ψ:@(i,j),
-              (θ:@(i-_1, j-_1)) + (S:@(i,j)),
-              min :@ (q ↦ ((θ:@(i,q)) + (w:@(q,j))))
-            )
-          )) :: ((J x K0) -> ?) -> ((J x K1) -> ?)
-        ))
-      )
+              (ψ:@(i-_1, (j-_1)::K0)) + (S:@(i,j)),
+              min :@ ((q::K0) ↦ ((ψ:@(i,q)) + (w:@(q,j))))
+            ))) :: ((J x K1) -> R)
+          )
+        )
   }
   
   object BPod {
@@ -87,15 +98,14 @@ object Gap {
   implicit val env = {
     import semantics.Domains._
     val scope = new Scope
-    scope.sorts.declare(R)
-    scope.sorts.declare(N)
-    scope.sorts.declare(J)
-    scope.sorts.declare(K)
 
-    scope.sorts.declare(J0 :<: J)
-    scope.sorts.declare(J1 :<: J)
-    scope.sorts.declare(K0 :<: K)
-    scope.sorts.declare(K1 :<: K)
+    List(R, N, J, K) foreach scope.sorts.declare
+
+    List(J0 :<: J, J1 :<: J, K0 :<: K, K1 :<: K,
+         L0 :<: J0, L1 :<: J0, L2 :<: J1, L3 :<: J1,
+         M0 :<: K0, M1 :<: K0, M2 :<: K1, M3 :<: K1) foreach scope.sorts.declare
+
+    scope.sorts.cork()
 
     TypeTranslation.subsorts(scope) where
       (compl(J)(J0, J1), compl(K)(K0, K1))
@@ -108,9 +118,22 @@ object Gap {
     
     def main(args: Array[String]): Unit = {
       implicit val scope = env.scope
-      rewriteA
+      //rewriteA
+      new Interpreter().executeFile("/tmp/synopsis.json")
     }
-    
+
+    import Paren.BreakDown.Interpreter
+
+    class Interpreter(implicit scope: Scope) extends Paren.BreakDown.Interpreter {
+      import Interpreter._
+      /* This part is Gap-specific */
+      override def pods(implicit s: State) = {
+        case (L("A"), List(~(j), ~(k))) => APod(j, k)
+        case (L("B"), List(~(j), ~(k0), ~(k1))) => BPod(j, k0, k1)
+      }
+    }
+
+
     import syntax.transform.Extrude
     import semantics.pattern.SimplePattern 
     import synth.tactics.Rewrite.{Rewrite,instantiate}

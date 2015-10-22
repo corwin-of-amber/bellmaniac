@@ -82,16 +82,21 @@ object PadPod {
 }
 
 
-object SlashDistribPod {
+class SlashDistribPod(val f: Term, val box: Term)(implicit scope: Scope) extends Pod {
   import TypedTerm.replaceDescendant
   
-  def apply(f: Term, box: Term)(implicit scope: Scope) = {
+  override val program =
     if (f.nodes exists (_ eq box)) {
       f =:= /::(box.split(I("/")) map (x => replaceDescendant(f, (box, x))))
     }
     else throw new TacticalError(s"'${box toPretty}' should be a sub-term of '${f toPretty}'")
-  }
+
 }
+
+object SlashDistribPod {
+  def apply(f: Term, box: Term)(implicit scope: Scope) = new SlashDistribPod(f, box)
+}
+
 
 object StratifyPod {
   import Prelude.{ω,ℐ,?}

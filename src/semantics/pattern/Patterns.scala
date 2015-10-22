@@ -28,13 +28,27 @@ class ExactMatch(val pattern: Term) {
   
   def find(term: Term)(implicit env: Environment=Environment.empty) =
     term.nodes filter (matchInclTypes(pattern, _, top=true))
+
+  def findInBodies(term: Term)(implicit env: Environment=Environment.empty) =
+    nodesInBodies(term) filter (matchInclTypes(pattern, _, top=true))
+
+  def nodesInBodies(t: Term): Stream[Term] = t #:: {subtreesExceptBinders(t).toStream flatMap nodesInBodies}
+
+  def subtreesExceptBinders(t: Term) =
+    if (t =~ ("↦", 2) || (t =~ (":", 2))) t.subtrees.tail else t.subtrees
 }
 
 class SimplePattern(val pattern: Term) {
     
   def find(term: Term) =
     term.nodes flatMap (n => this(n))
-    
+
+  def findOne(term: Term) =
+    find(term) match { case first #:: _ => Some(first) case _ => None }
+
+  def findOne_! (term: Term) =
+    findOne(term) getOrElse { throw new Exception(s"not found: '${pattern toPretty}'") }
+
   def apply(term: Term): Option[Matched] = apply(pattern, term, true) map (new Matched(term, _))
   
   def apply(pattern: Term, term: Term, top: Boolean=false): Option[Map[Identifier, Term]] = {
