@@ -186,48 +186,53 @@
       return editor.replaceRange(curPos.word.text, CodeMirror.Pos(cur.line, curPos.start), CodeMirror.Pos(cur.line, curPos.end));
     }
   };
-  root.initEditor = function(submitCallback){
+  root.cmOptions = function(){
     return {
-      options: {
-        mode: "scheme",
-        matchBrackets: {
-          bracketRegex: /[(){}[\]⟨⟩]/,
-          bracketMatching: {
-            "(": ")>",
-            ")": "(<",
-            "[": "]>",
-            "]": "[<",
-            "{": "}>",
-            "}": "{<",
-            "⟨": "⟩>",
-            "⟩": "⟨<"
-          }
-        },
-        theme: "neat",
-        styleActiveLine: true,
-        viewportMargin: Infinity,
-        extraKeys: {
-          "Cmd-Enter": submitCallback
+      mode: "scheme",
+      matchBrackets: {
+        bracketRegex: /[(){}[\]⟨⟩]/,
+        bracketMatching: {
+          "(": ")>",
+          ")": "(<",
+          "[": "]>",
+          "]": "[<",
+          "{": "}>",
+          "}": "{<",
+          "⟨": "⟩>",
+          "⟩": "⟨<"
         }
       },
-      loaded: function(editor){
-        CodeMirror.registerHelper("hint", "anyword", hintReplace);
-        CodeMirror.commands.autocomplete = function(cm){
-          return cm.showHint({
-            hint: CodeMirror.hint.anyword,
-            completeSingle: false
-          });
-        };
-        return editor.on('change', function(editor, changeObj){
-          var text, valid;
-          localStorage.setItem('codeMirrorContents', editor.getValue());
-          text = changeObj.text[0];
-          valid = text != null && text.length === 1 && ((text >= "a" && text <= "z") || (text >= "A" && text <= "Z") || (text >= "0" && text <= "9") || (text === ';' || text === '=' || text === ',' || text === '-' || text === '.' || text === '/' || text === '`' || text === '[' || text === '\\' || text === ']' || text === '\'' || text === '<' || text === '>' || text === '*'));
-          if (valid) {
-            autoReplace(editor);
-            CodeMirror.commands.autocomplete(editor);
-          }
+      theme: "neat",
+      styleActiveLine: true,
+      viewportMargin: Infinity
+    };
+  };
+  root.initEditor = function(submitCallback, loadedCallback){
+    return function(editor){
+      CodeMirror.registerHelper("hint", "anyword", hintReplace);
+      CodeMirror.commands.autocomplete = function(cm){
+        return cm.showHint({
+          hint: CodeMirror.hint.anyword,
+          completeSingle: false
         });
+      };
+      editor.on('change', function(editor, changeObj){
+        var text, valid;
+        localStorage.setItem('codeMirrorContents', editor.getValue());
+        text = changeObj.text[0];
+        valid = text != null && text.length === 1 && ((text >= "a" && text <= "z") || (text >= "A" && text <= "Z") || (text >= "0" && text <= "9") || (text === ';' || text === '=' || text === ',' || text === '-' || text === '.' || text === '/' || text === '`' || text === '[' || text === '\\' || text === ']' || text === '\'' || text === '<' || text === '>' || text === '*'));
+        if (valid) {
+          autoReplace(editor);
+          CodeMirror.commands.autocomplete(editor);
+        }
+      });
+      if (submitCallback) {
+        editor.setOption("extraKeys", {
+          "Cmd-Enter": submitCallback
+        });
+      }
+      if (loadedCallback) {
+        return loadedCallback(editor);
       }
     };
   };

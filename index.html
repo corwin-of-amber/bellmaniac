@@ -15,6 +15,7 @@
 	<script src="src/parse-utils.ls.js"></script>
 	<script src="src/lambda.ne.js"></script>
 	<script src="src/parse.ls.js"></script>
+	<script src="src/debug.ls.js"></script>
 	<script src="../web.realtime/reload.js"></script>
 
 	<link rel="stylesheet" href="node_modules/codemirror/lib/codemirror.css">
@@ -33,16 +34,18 @@
 		<div ng-app="app" ng-controller="Ctrl">
 			<h3>Input</h3>
 
-			<textarea ui-codemirror="{ onLoad : editor.loaded, indentWithTabs : true }" ui-codemirror-opts="editor.options" ng-model="code" id="code"></textarea>
+			<textarea ui-codemirror="{ onLoad : loaded, indentWithTabs : true }" ui-codemirror-opts="cmOptions" ng-model="code" id="code"></textarea>
 			<br>
 			<button class="btn btn-default" ng-click="parseAndDisplay()" id="submit">Parse!</button>
 			<hr>
+
 			<h3>Output</h3>
 
+			<div ng-show="errorMsg.length > 0" class="alert alert-danger">{{errorMsg}}</div>
+
 			<ul class="nav nav-tabs" role="tablist">
-				<li role="presentation" class="active"><a href="#parsed" aria-controls="parsed" role="tab" data-toggle="tab">Parsed AST</a></li>
-				<li role="presentation"><a href="#output" aria-controls="output" role="tab" data-toggle="tab">Raw Output</a></li>
-				<li role="presentation"><a href="#format" aria-controls="format" role="tab" data-toggle="tab">Formatted Output</a></li>
+				<li role="presentation" class="active"><a href="#parsed" aria-controls="parsed" role="tab" data-toggle="tab">Parse</a></li>
+				<li role="presentation"><a href="#format" aria-controls="format" role="tab" data-toggle="tab">Output</a></li>
 			</ul>
 			<br>
 
@@ -51,12 +54,8 @@
 					<pre>{{parsed | json:0}}</pre>
 					<pre>{{parsed | json:4}}</pre>
 				</div>
-				<div role="tabpanel" class="tab-pane" id="output">
-					<pre>{{output | json:0}}</pre>
-					<pre>{{output | json:4}}</pre>
-				</div>
 				<div role="tabpanel" class="tab-pane" id="format">
-					<div class="cell" ng-repeat="cell in data | orderBy:'index'">
+					<div class="cell" ng-repeat="cell in output | orderBy:'index'">
 						<display o="cell.value"></display>
 					</div>
 				</div>
