@@ -28,8 +28,8 @@ root.bellmaniaParse = (input, success, error) ->
             try
                 for block in buffer.join("").split(/\n\n+(?=\S)/)
                     outputBlock = JSON.parse(block)
-                    if (outputBlock.error)
-                        throw outputBlock
+                    # if (outputBlock.error)
+                    #     throw outputBlock
                     output.fromJar.push({value: outputBlock})
                 success(output)
             catch err

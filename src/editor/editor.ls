@@ -113,7 +113,6 @@ root.cmOptions = ->
 		bracketRegex: /[(){}[\]⟨⟩]/
 		bracketMatching: {"(": ")>", ")": "(<", "[": "]>", "]": "[<", "{": "}>", "}": "{<", "⟨": "⟩>", "⟩": "⟨<"}
 	theme: "neat"
-	styleActiveLine: true
 	viewportMargin: Infinity
 
 root.initEditor = (submitCallback, loadedCallback) ->

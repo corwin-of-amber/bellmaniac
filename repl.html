@@ -19,6 +19,7 @@
 
 	<script src="src/parse-utils.ls.js"></script>
 	<script src="src/lambda.ne.js"></script>
+	<script src="src/parse.ls.js"></script>
 	<script src="src/repl.ls.js"></script>
 	<script src="../web.realtime/reload.js"></script>
 
@@ -41,14 +42,41 @@
 						<textarea ui-codemirror="{ onLoad : wrapper(h), indentWithTabs : true }" ui-codemirror-opts="cmOptions" ng-model="h.input"></textarea>
 					</div>
 				</div>
+				<div ng-show="h.error.length > 0" class="alert alert-danger">{{h.error}}</div>
 				<div class="row" ng-if="h.output">
 					<br>
 					<div class="col-xs-1">{{"Out[" + h.id + "]"}}</div>
 					<div class="col-xs-11">
-						<pre>{{h.output}}</pre>
+						<div class="cell" ng-repeat="cell in h.output | orderBy:'index'">
+							<display o="cell.value"></display>
+						</div>
 					</div>
 				</div>
 			</div>
 		</div>
+		<template type="text/ng-template" id="display">
+			<compute ng-if="o.tape" let="parts = o | display">
+				<span class="code"
+				 ng-class="mark[1]"
+				 data-tip="{{mark[2]}}"
+				 ng-repeat="mark in parts track by $index">{{mark[0]}}</span>
+			</compute>
+			<div ng-if="o.vbox" ng-repeat="el in o.vbox">
+				<display o="el"></display>
+			</div>
+			<ul ng-if="o.list">
+				<li ng-repeat="el in o.list">
+					<display o="el"></display>
+				</li>
+			</ul>
+			<ul ng-if="o.tree" class="c" bullet="{{o.bullet}}">
+				<li>
+					<display o="o.tree.root"></display>
+					<display ng-repeat="s in o.tree.subtrees" o="{tree: s}"></display>
+				</li>
+			</ul>
+			<span class="code" ng-if="o | isString">{{o}}</span>
+		</template>
 	</div>
+</body>
 </html>

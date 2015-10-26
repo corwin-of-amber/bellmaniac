@@ -203,7 +203,6 @@
         }
       },
       theme: "neat",
-      styleActiveLine: true,
       viewportMargin: Infinity
     };
   };
