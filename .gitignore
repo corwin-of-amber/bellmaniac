@@ -74,3 +74,5 @@ bower_components
 .bower-registry
 .bower-tmp
 
+### binary ###
+lib/bell.jar
