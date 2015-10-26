@@ -5,18 +5,20 @@
 	<script src="node_modules/nearley/lib/nearley.js"></script>
 	<script src="node_modules/codemirror/lib/codemirror.js"></script>
 	<script src="node_modules/codemirror/addon/hint/show-hint.js"></script>
+	<script src="node_modules/codemirror/addon/selection/active-line.js"></script>
 	<script src="node_modules/angular/angular.js"></script>
 	<script src="node_modules/angular-recursion/angular-recursion.js"></script>
 	<script src="node_modules/angular-ui-codemirror/src/ui-codemirror.js"></script>
     <script src="src/editor/scheme-patched.js"></script>
     <script src="src/editor/matchbrackets-patched.js"></script>
+    <script src="src/editor/editor.ls.js"></script>
 	<script src="src/parse-utils.ls.js"></script>
 	<script src="src/lambda.ne.js"></script>
 	<script src="src/parse.ls.js"></script>
 	<script src="../web.realtime/reload.js"></script>
 
 	<link rel="stylesheet" href="node_modules/codemirror/lib/codemirror.css">
-	<link rel="stylesheet" href="node_modules/codemirror/theme/material.css">
+	<link rel="stylesheet" href="node_modules/codemirror/theme/neat.css">
 	<link rel="stylesheet" href="node_modules/codemirror/addon/hint/show-hint.css">
 	<link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
 	<link rel="stylesheet" href="src/index.css">
@@ -31,7 +33,7 @@
 		<div ng-app="app" ng-controller="Ctrl">
 			<h3>Input</h3>
 
-			<textarea ui-codemirror="{ onLoad : codemirrorLoaded, indentWithTabs : true }" ui-codemirror-opts="editorOptions" ng-model="code" id="code"></textarea>
+			<textarea ui-codemirror="{ onLoad : editor.loaded, indentWithTabs : true }" ui-codemirror-opts="editor.options" ng-model="code" id="code"></textarea>
 			<br>
 			<button class="btn btn-default" ng-click="parseAndDisplay()" id="submit">Parse!</button>
 			<hr>
