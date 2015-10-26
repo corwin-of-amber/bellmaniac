@@ -30,6 +30,9 @@
           for (i$ = 0, len$ = (ref$ = buffer.join("").split(/\n\n+(?=\S)/)).length; i$ < len$; ++i$) {
             block = ref$[i$];
             outputBlock = JSON.parse(block);
+            if (outputBlock.error) {
+              throw outputBlock;
+            }
             output.fromJar.push({
               value: outputBlock
             });
