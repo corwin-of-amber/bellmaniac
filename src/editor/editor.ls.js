@@ -188,7 +188,7 @@
   };
   root.cmOptions = function(){
     return {
-      mode: "scheme",
+      mode: "bellmania",
       matchBrackets: {
         bracketRegex: /[(){}[\]⟨⟩]/,
         bracketMatching: {

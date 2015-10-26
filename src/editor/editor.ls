@@ -108,7 +108,7 @@ autoReplace = (editor) ->
 			CodeMirror.Pos(cur.line, curPos.end))
 
 root.cmOptions = ->
-	mode:  "scheme"
+	mode:  "bellmania"
 	matchBrackets:
 		bracketRegex: /[(){}[\]⟨⟩]/
 		bracketMatching: {"(": ")>", ")": "(<", "[": "]>", "]": "[<", "{": "}>", "}": "{<", "⟨": "⟩>", "⟩": "⟨<"}
