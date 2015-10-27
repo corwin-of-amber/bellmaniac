@@ -1,7 +1,24 @@
 //@Copyright: Jesmin Jahan Tithi, Rezaul Chowdhury, Department of Computer Science, Stony Brook University, Ny-11790
 //Contact: jtithi@cs.stonybrook.edu,
 
-//compile with :icpc -O3 -o gap Gap_DQ.cpp  -vec-report -parallel -xhost -AVX  -ansi-alias -restrict -ip -I$TACC_PAPI_INC -L$TACC_PAPI_LIB -DUSE_PAPI -lpapi  -lpfm -DUSE_PAPI -DCO -DLOOPDP
+/*This program implements recursive divide and conquer algorithms for the Gap Problem.
+ It uses Z morton lay out to store the data. This program works for any n.
+ When running the program, it takes input size, base case, number of cores as input.
+ 
+ If you want you can compile only the standard iterative version by compiling with Flag -DLOOPDP.
+ Or you can only compile the recursive version by compiling it with -DCO.
+ 
+ If you use both -DLOOPDP and -DCO at the same time, it will automatically test the resultant matrices for correctness.
+ 
+ You can see the actual values stored in the matrices, use -Dpdebug during compilation.
+ 
+ To get cache misses, compile with -DUSE_PAPI -lpapi -I/path to papi include -L/path to papi lib
+ 
+ compile with :icpc -O3 -AVX  -xhost -o  fwr FW_COZ.cpp  -ansi-alias -ip -opt-subscript-in-range -opt-prefetch=4 -fomit-frame-pointer -funroll-all-loops -vec-report  -parallel -restrict
+ 
+ However, these parameters are not guaranteed to give the best running times. You may need to check several of them.
+ 
+ */
 #include <stdio.h>
 #include <math.h>
 
@@ -14,10 +31,10 @@
 #include<cilk/cilk_api.h>
 
 // User defined libraries
-#include "cilktime.h" // tiMINg library
+#include "cilktime.h" // Timing library.
 
 #ifdef USE_PAPI
-#include "papilib.h"
+#include "papilib.h"  // Papi library.
 #endif
 
 using namespace std;
@@ -26,28 +43,46 @@ using namespace std;
 #define TYPE int
 #endif
 
+// Change the alignment based on the machine parameters.
 #ifndef ALIGNMENT
 #define ALIGNMENT 64
 #endif
 
+/*
+ N = matrix dimension.
+ NP = matrix dimension after padding (if needed) for LOOPDP. Padding is required to reduce set associative cache miss.
+ 
+ B = base-case size or switching point to iterative algorithm.
+ 
+ Gap is the initial matrix for recursive.
+ G is used for iterative/LOOPDP computation.
+ GG is used to store the Z morton conversion of Gap and then used for the actual computation.
+ X = string 1
+ Y = string 2
+ 
+ Pointers are used to improve running time for all the basecase kernels. In the basecases. Pointer xx used to point to x, uu used to point to u and vv used to point to v.
+ 
+ */
 int N, B, NP;
 TYPE *Gap;
 TYPE *G, *GG;
 int *X, *Y;
 
+// Used to get different statistics from each of those functions.
 #ifdef profile
 int funcA_1=0, funcA_2 = 0, funcB_1 = 0, funcB_2 = 0, funcC_1=0, funcC_2 = 0;
-
 int timeC=0, timeB=0, timeA=0;
 #endif
 
-#define w1(q, j) (j+q)
-#define w2(p, i) (i+p)
-#define Sn(x, y) ((x==y)?0:1)
+#define w1(q, j) (q+j) // weight function for delete
+#define w2(p, i) (p+i) // weight function for insert
+#define Sn(x, y) ((x==y)?0:1) // match or substitute cost
 
 #define min(a,b) (a<b?a:b)
 #define max(a,b) (a>b?a:b)
 
+/*Function to convert a row major matrix to Z-morton row major matrix. Gap is the row major, x is Z-morton row major, ix, jx are the indices of the top left corner. ilen and jlen are the lengths of the x and y dimensions.
+ */
 void conv_RM_2_ZM_RM(TYPE *x, int ix, int jx, int ilen, int jlen) {
     if (ilen <= 0 || jlen <= 0)
         return;
@@ -95,6 +130,11 @@ void conv_RM_2_ZM_RM(TYPE *x, int ix, int jx, int ilen, int jlen) {
         
     }
 }
+
+
+/*Function to convert a Z-morton row major matrix back to row major matrix. V is the row major, x is Z-morton row major matrix, ix, jx are the indices of the top left corner. ilen and jlen are the lengths of the x and y dimensions.
+ Pointers are used to improve running time all around.
+ */
 void conv_ZM_2_RM_RM(TYPE *x, TYPE* V, int ix, int jx, int ilen, int jlen) {
     if (ilen <= 0 || jlen <= 0)
         return;
@@ -142,9 +182,13 @@ void conv_ZM_2_RM_RM(TYPE *x, TYPE* V, int ix, int jx, int ilen, int jlen) {
     }
 }
 
+/*
+ Parallel iterative algorithm that solves GAp problem. It first works on upper triangle of a matrix and then works on the lower triangle. Solves cells diagonal by diagonal.
+ */
+
 #ifdef LOOPDP
 void LoopGAP(int n) {
-    
+    // Solving upper triangle
     for (int t = 2; t <= n; t++) {
         
         cilk_for(int i = 1; i<t; i++)
@@ -180,6 +224,7 @@ void LoopGAP(int n) {
         }
         
     }
+    //Solving lower triangle
     int end = n + n + 1;
     for (int t = n + 1; t<end; t++) {
         
@@ -235,19 +280,30 @@ void genRandInput(int *X, int *Y, int n) {
     
 }
 
-
+/*
+ Function C for Gap recursive Algo. This implementation works for any N. Here x1 = i, y1=j and x2=k.
+ x1, y1 = index of the top-left corner of output matrix, x.
+ Xilen = length of row dimension for x.
+ Xjlen = length of column dimension for x
+ Tilen = length of row dimension for v.
+ Pointers arithmatics are used to improve running time all around.
+ */
 void funcC_S( TYPE* x, TYPE* v, int x1, int y1, int x2, int Xilen, int Xjlen,
              int Tilen) {
     
+    //if outsize of actual N, then return
     if (Tilen <= 0 || Xilen <= 0 || Xjlen <= 0)
         return;
 #ifdef profile
     funcC_1++;
 #endif
+    
+    //if current size is less than base case size, use loop based approach
     if (Xilen <= B && Xjlen <= B) {
-        //#if N>2047
+       
+        // recursive case 1.
         if (Tilen > B) {
-            
+            // Chose by which dimension we want to divide.
             int n = (Tilen > Xjlen) ? Tilen : Xjlen;
             int c = 1;
             while (c < n)
@@ -255,13 +311,14 @@ void funcC_S( TYPE* x, TYPE* v, int x1, int y1, int x2, int Xilen, int Xjlen,
             c = c >> 1;
             
             int tni, tnii;
-            
             tni = min(c, Tilen);
             tnii = max(0, Tilen - c);
             
             funcC_S(x, v, x1, y1, x2, Xilen, Xjlen, tni);
             funcC_S(x, v + tni * Xjlen, x1, y1, x2 + tni, Xilen, Xjlen, tnii);
         } else {
+            // Basecase.
+            // Starts papi counter.
 #ifdef USE_PAPI
             int id = tid();
             int retval = 0;
@@ -269,6 +326,7 @@ void funcC_S( TYPE* x, TYPE* v, int x1, int y1, int x2, int Xilen, int Xjlen,
             if ( (retval=PAPI_start(EventSet[id])) != PAPI_OK)
                 ERROR_RETURN(retval);
 #endif
+            
             __declspec(align(64)) TYPE V[Tilen * Xjlen];
             TYPE *xx, *vv;
             
@@ -316,6 +374,7 @@ void funcC_S( TYPE* x, TYPE* v, int x1, int y1, int x2, int Xilen, int Xjlen,
         }
     } else {
         
+        // recursive case 2.
         int n = (Xilen > Xjlen) ? Xilen : Xjlen;
         n = max(n, Tilen);
         int c = 1;
@@ -361,15 +420,26 @@ void funcC_S( TYPE* x, TYPE* v, int x1, int y1, int x2, int Xilen, int Xjlen,
     }
 }
 
+/*
+ Function B for Gap recursive Algo. This implementation works for any N. Here x1 = i, y1=j and y2=k.
+ x1, y1 = index of the top-left corner of output matrix, x.
+ x1, y2 = index of the top left corner of input matrix, u.
+ Pointers arithmatics are used to improve running time all around.
+ in function B, x1, x2 are the same.
+ Xilen = length of row dimension for x.
+ Xjlen = length of column dimension for x
+ Lilen = length of row dimension for u.
+ */
 void funcB_S( TYPE*x, TYPE*u, int x1, int y1, int y2, int Xilen, int Xjlen,
              int Ljlen) {
-    
+    //if outsize the range, return;
     if (Xilen <= 0 || Xjlen <= 0 || Ljlen <= 0)
         return;
 #ifdef profile
     funcB_1++;
 #endif
     
+    //recursive case 1
     if (Xilen <= B && Xjlen <= B) {
         if (Ljlen > B) // Then further divide it
         {
@@ -391,7 +461,9 @@ void funcB_S( TYPE*x, TYPE*u, int x1, int y1, int y2, int Xilen, int Xjlen,
             funcB_S(x, u + Xilen * lnj, x1, y1, y2 + lnj, Xilen, Xjlen, lnjj);
             
         } else {
+             //if less than base case size, use loop based version
 #ifdef USE_PAPI
+            //starts papi counter
             int id = tid();
             int retval = 0;
             papi_for_thread(id);
@@ -425,54 +497,15 @@ void funcB_S( TYPE*x, TYPE*u, int x1, int y1, int y2, int Xilen, int Xjlen,
                 }
             }
             
-            /*		  __declspec(align(64)) TYPE U[Xilen*Ljlen];
-             #pragma parallel
-             for(int i = 0; i<Xilen; i++)
-             {
-             int in = (i)*Ljlen;
-             #pragma ivdep
-             for(int j = 0; j<Ljlen; j++)
-             {
-             U[i*Ljlen+j]=u[in+j];
-             
-             }
-             }
-             // TYPE *uu;
-             int js = (y1==0)?1:0;
-             register int ii, jj;
-             int in;
-             for(int i = (x1==0)?1:0; i <Xilen; i++)
-             {
-             ii = x1+i;
-             // TYPE *xx=x+i*(B)+js;
-             in = i*Xjlen;
-             for(int j = js; j< Xjlen ; j++ )
-             {
-             jj = y1+j;
-             
-             TYPE G_ij = x[in+j];
-             //*xx;
-             // uu = u + i*(Ljlen);
-             #pragma ivdep
-             for(int q = 0 ; q<Ljlen; q++)
-             {
-             G_ij = min (G_ij, U[i*(Ljlen)+q] + w1(y2+q, jj));
-             //G_ij = min (G_ij, *uu + w1(y2+q, jj));
-             //uu++;
-             }
-             
-             //*xx= G_ij;
-             x[in+j] = G_ij;
-             //xx++;
-             }
-             }*/
 #ifdef USE_PAPI
+            //ends papi counter
             countMisses(id );
 #endif
             return;
         }
     } else {
         
+        //recursive case 2.
         int n = (Xilen > Xjlen) ? Xilen : Xjlen;
         n = max(n, Ljlen);
         int c = 1;
@@ -532,6 +565,20 @@ void funcB_S( TYPE*x, TYPE*u, int x1, int y1, int y2, int Xilen, int Xjlen,
     }
 }
 
+/*
+ Function A for Gap recursive Algo. This implementation works for any n. Here x1 = i, y1=j
+ x1, y1 = index of the top-left corner of output matrix.
+ x1, y2 = index of the top left corner of input matrix.
+ Pointers arithmatics are used to improve running time all around.
+ x = output matrix,
+ D = matrix in the bottom
+ T = matrix in the top
+ L = matrix in the left
+ Dilen = row dimension for the down matrix
+ Djlen = column dimension for the down matrix
+ Xilen = row dimension for the X matrix
+ Xjlen = column dimension for the X matrix
+ */
 void funcA_S(TYPE *x, TYPE*D, TYPE* T, TYPE* L, int Dilen, int Djlen, int Xilen,
              int Xjlen, int x1, int y1) {
     if (Xilen <= 0 || Xjlen <= 0 || x1 > N + 1 || y1 > N + 1)
@@ -808,8 +855,7 @@ int main(int argc, char *argv[]) {
     N = 0;
     B = 0;
     
-    //cout<<argv[0]<<endl;
-    
+    // Takes N, B and Number of threads.
     if (argc > 1)
         N = atoi(argv[1]);
     if (argc > 2)
@@ -820,8 +866,7 @@ int main(int argc, char *argv[]) {
             return 1;
         }
     }
-    //B = 32;
-    //printf( "Original N = %d , B = %d \n", N, B );
+    
     
     int NN = 2;
     NP = N + 1;
@@ -832,30 +877,36 @@ int main(int argc, char *argv[]) {
         B = N;
     }
     
+    // Padding
     if (NN == N + 1)
         NP = N + 2;
+    
+    // Allocating X and Y strings and initializing
     X = (int *) _mm_malloc((N + 1) * sizeof(int), ALIGNMENT);
     Y = (int *) _mm_malloc((N + 1) * sizeof(int), ALIGNMENT);
     
     X[0] = Y[0] = 32;
     genRandInput(X, Y, N + 1);
     
+     // Initialize papi library.
 #ifdef USE_PAPI
     papi_init();
 #endif
     
+    // Allocate for Recursive algo
 #ifdef CO
     Gap = (TYPE *)_mm_malloc((N + 1) * (N + 1) * sizeof(TYPE), ALIGNMENT);
     GG = (TYPE *)_mm_malloc((N + 1) * (N + 1) * sizeof(TYPE), ALIGNMENT);
     Gap[0] = 0;
 #endif
     
+    // Allocate for iterative algo
 #ifdef LOOPDP
     G = (TYPE *)_mm_malloc((NP) * (NP) * sizeof(TYPE), ALIGNMENT);
     G[0] = 0;
-    
 #endif
     
+    // Setup initial values.
     TYPE inf = (TYPE) (1e9);
     for (int i = 0; i < N + 1; i++) {
         int in = i * (N + 1);
@@ -891,6 +942,7 @@ int main(int argc, char *argv[]) {
         }
     
 #ifdef LOOPDP
+    // Standard iterative
     unsigned long long tstart1 = cilk_getticks();
     LoopGAP(N);
     unsigned long long tend1 = cilk_getticks();
@@ -926,19 +978,23 @@ int main(int argc, char *argv[]) {
 #endif
     
 #ifdef CO
-    
+    // converts row major to z morton
     conv_RM_2_ZM_RM(GG, 0, 0, (N + 1), (N + 1));
 #ifdef USE_PAPI
     papi_reset();
 #endif
     unsigned long long tstart = cilk_getticks();
+    //Recursive divide and conquer algorithm
     funcA_S(GG, GG, GG, GG, N+1, N+1, N+1, N+1, 0, 0); //send NN instead of N
     unsigned long long tend = cilk_getticks();
+    
     cout<<"CO,"<<N<<","<<__cilkrts_get_nworkers()<<","<<B<<","<<cilk_ticks_to_seconds(tend-tstart)<<",";
 #ifdef USE_PAPI
     countTotalMiss(p);
     cout<<",";
 #endif
+    
+     // converts  z morton to row major
     conv_ZM_2_RM_RM(GG, Gap, 0, 0, (N + 1), (N + 1));
     _mm_free(GG);
     

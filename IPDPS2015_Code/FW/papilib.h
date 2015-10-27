@@ -2,8 +2,11 @@
 #include <papi.h>
 
 using namespace std;
-int p = 0;
+int p = 0; // used to store number of threads.
+
+#ifndef
 #define NUM_EVENTS 3
+#endif
 
 #define ERROR_RETURN(retval) { fprintf(stderr, "Error %d %s:line %d: \n", retval,__FILE__,__LINE__);  exit(retval); }
 bool *threadcounter;
@@ -117,17 +120,17 @@ void countTotalMiss(int p) {
                     != PAPI_OK)
                     ERROR_RETURN(retval);
                 
-               /* if ((retval = PAPI_remove_event(EventSet[i], PAPI_L1_ICM))
-                    != PAPI_OK)
-                    ERROR_RETURN(retval);*/
+                /* if ((retval = PAPI_remove_event(EventSet[i], PAPI_L1_ICM))
+                 != PAPI_OK)
+                 ERROR_RETURN(retval);*/
                 
                 if ((retval = PAPI_remove_event(EventSet[i], PAPI_L2_TCM))
                     != PAPI_OK)
                     ERROR_RETURN(retval);
                 
                 /*if ((retval = PAPI_remove_event(EventSet[i], PAPI_L2_ICM))
-                    != PAPI_OK)
-                    ERROR_RETURN(retval);*/
+                 != PAPI_OK)
+                 ERROR_RETURN(retval);*/
                 
                 if ((retval = PAPI_remove_event(EventSet[i], PAPI_L3_TCM))
                     != PAPI_OK)
