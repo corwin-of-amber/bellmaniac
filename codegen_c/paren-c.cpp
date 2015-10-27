@@ -4,6 +4,8 @@
 #define TYPE int
 #endif
 
+#define MAXVAL 1000000
+
 /* Min Max and Weight Function */
 #define min(a,b) (a<b?a:b)
 #define max(a,b) (a>b?a:b)
@@ -12,7 +14,7 @@
 #define N 100
 
 int B;
-TYPE [N][N] dist;
+int dist[N][N];
 
 #define FOR(i,n,m) for(int i=n;i<m;i++)
 #define BASE_CONSTRAINT(a,b,c,d,e,f) (b-a <= B && d-c<= B && f-e <= B)
@@ -28,10 +30,10 @@ void funcC_loop(int K0_start, int K0_end, int K1_start, int K1_end,
 			TYPE t14 = MAXVAL;
 			FOR(k, K1_start, K1_end)
 			{
-				t14 = min(t14, dist[ui][uk] + dist[uk][uj] + w(i, k, j));
+				t14 = min(t14, dist[i][k] + dist[k][j] + w(i, k, j));
 			}
 
-			dist[ui][uj] = min(t14, dist[ui][uj]);
+			dist[i][j] = min(t14, dist[i][j]);
 		}
 	}
 
@@ -56,15 +58,15 @@ void funcC_rec(int K0_start, int K0_end, int K1_start, int K1_end, int K2_start,
 	int L5_start;
 	int L5_end;
 	L4_start = K2_start;
-	L4_end = (K2_end - _start) / 2;
+	L4_end = (K2_end - K2_start) / 2;
 	L5_start = L4_end;
 	L5_end = K2_end;
 	L2_start = K1_start;
-	L2_end = (K1_end - _start) / 2;
+	L2_end = (K1_end - K1_start) / 2;
 	L3_start = L2_end;
 	L3_end = K1_end;
 	L0_start = K0_start;
-	L0_end = (K0_end - _start) / 2;
+	L0_end = (K0_end - K0_start) / 2;
 	L1_start = L0_end;
 	L1_end = K0_end;
 
