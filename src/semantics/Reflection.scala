@@ -232,10 +232,10 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     
   def uncurry0(term: Term): Term = currying get term.root match {
     case Some(oset) => oset find (x => arity(x.typ) == term.subtrees.length) match {
-      case Some(variant) => T(variant, term.subtrees map uncurry _)
+      case Some(variant) => T(variant, term.subtrees map uncurry)
       case _ => uncurry1(T(term.root), term.subtrees)
     }
-    case _ => T(term.root, term.subtrees map uncurry _)
+    case _ => T(term.root, term.subtrees map uncurry)
   }
     
   def uncurry1(fun: Term, args: List[Term]) = {

@@ -18,6 +18,7 @@ object Prelude {
 
   val ∩ = TI("∩")
   def min = TI("min")
+  def max = TI("max")
   val fix = TI("fix")
   val ω = TI("ω")
   def nil = TI("nil")

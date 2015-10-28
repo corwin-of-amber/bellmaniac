@@ -78,7 +78,7 @@ object Formula {
     override def format(term: AstSugar.Term) = {
       /**/ assume(term.subtrees.length == 2) /**/
       val List(fun, arg) = term.subtrees
-      if (fun =~ ("+", 0) || fun =~ ("-", 0))
+      if (fun.isLeaf && (INFIX contains fun.root.literal.toString))
         tape"${display(arg, if (isOp(arg, fun.leaf)) priority else 0, Assoc.Left)} ${fun.leaf}"
       else {
         val lst = splitOp(term, "cons")
@@ -103,7 +103,8 @@ object Formula {
   def M(ops: InfixOperator*) = ops map (x => (x.literal, x)) toMap
 
   val INFIX = M(O("->", 1, Assoc.Right), O("<->", 1), O("&", 1), O("|", 1), O("<", 1), O("=", 1), O("↦", 1, Assoc.Right),
-    O(":", 1), O("::", 1), O("/", 1), O("|_", 1), O("|!", 1), O("∩", 1), O("×", 1)) ++
+    O(":", 1), O("::", 1), O("/", 1), O("|_", 1), O("|!", 1), O("∩", 1), O("×", 1),
+    O("+", 1), O("-", 1), O("⨁", 1), O("⨀", 1)) ++
     Map("@" -> new AppOperator("", 1, Assoc.Left))
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
 

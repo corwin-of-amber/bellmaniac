@@ -1,10 +1,10 @@
 package synth.pods
 
 import syntax.AstSugar._
-import semantics.{Scope, Prelude, TypedTerm}
+import semantics.{Scope, Prelude, TypedTerm, TraceableException}
 import semantics.TypeTranslation.TypingSugar._
 import semantics.TypeTranslation.Declaration
-import semantics.pattern.{SimpleTypedPattern, SimplePattern, MacroMap}
+import semantics.pattern.{SimpleTypedPattern, MacroMap}
 
 
 trait Pod {
@@ -15,7 +15,7 @@ trait Pod {
 }
 
 object Pod {
-  class TacticalError(msg: String) extends Exception(msg) {}
+  class TacticalError(msg: String) extends TraceableException(msg) {}
 }
 
 
@@ -72,9 +72,7 @@ object TotalOrderPod {
 
 class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: Scope) extends Pod {
   import Prelude.{↓,B}
-
-  val _0 = TI(0)
-  val _1 = TI(1)
+  import IndexArithPod.{_0,_1}
 
   private val succJ = $TyTI("+1", "predicate", J ->: J ->: B)
   private val predJ = $TyTI("-1", "function", J -> J)
@@ -83,13 +81,13 @@ class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: S
   private val X = TV("x")
   private val Y = TV("y")
 
-  val MINUSPAT = SimplePattern((X :- $TV("?")) - _1)
+  val MINUSPAT = SimpleTypedPattern((X :- TypedTerm($TV("?"), J)) - _1)
   val SUCCPAT = SimpleTypedPattern(succ:@(TypedTerm(X :- $TV("?"), J), TypedTerm(Y :- $TV("?"), J)))
   val ZEROPAT = SimpleTypedPattern(TypedTerm(_0, J))
 
   override val macros = MacroMap(
-    I("-") -> { x => MINUSPAT(x) map (_(X)) map (x => (predJ:@x) |! succJ(predJ(x),x)) },
-    succ ~> { x => SUCCPAT(x) map (m => succJ:@(m(X), m(Y))) },
+    I("-") -> { x => MINUSPAT(x) map (_(X)) map (x => TypedTerm((predJ:@x) |! (succJ:@(predJ:@(x),x)), J)) },
+    succ ~> { x => SUCCPAT(x) map (m => TypedTerm(succJ:@(m(X), m(Y)), J)) },
     _0 ~> { x => ZEROPAT(x) map (x => _0J)})
 
   override val decl = new Declaration(_0J, succJ, predJ) where (
@@ -101,6 +99,8 @@ class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: S
 
 
 object IndexArithPod {
+  val _0 = TI(0)
+  val _1 = TI(1)
   val succ = TV("+1")
 
   def apply(J: Term, < : Term)(implicit scope: Scope) = new IndexArithPod(J, <, succ)

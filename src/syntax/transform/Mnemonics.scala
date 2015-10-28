@@ -35,7 +35,8 @@ class Mnemonics {
       if (isIdentifierPart(c)) c
       else ESC getOrElse (c, "_")
     } mkString ;
-    if (esc.length > 0 && isIdentifierStart(esc.charAt(0))) esc
+    if (esc == "_") "_u"
+    else if (esc.length > 0 && isIdentifierStart(esc.charAt(0))) esc
     else "_" + esc
   }
 

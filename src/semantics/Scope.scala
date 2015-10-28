@@ -1,6 +1,7 @@
 
 package semantics
 
+import syntax.AstSugar.Term
 import syntax.{Tree, Identifier, AstSugar}
 import syntax.transform.TreeSubstitution
 import semantics.TypeTranslation.Declaration
@@ -32,7 +33,7 @@ object Domains {
 class Domains {
 
   import Domains._
-  import AstSugar.{T,TreeBuild,Term}
+  import AstSugar.{T,TreeBuild}
   import Scope.TypingException
 
   var hierarchy = new Tree(⊤, List(new Tree(⊥)))
@@ -157,13 +158,17 @@ class FunctionType(val args: List[Identifier], val ret: Identifier) {
 }
 
 class Scope {
-  
-  import AstSugar._
-  
+
   val sorts = new Domains
   val functypes = collection.mutable.Map[Term, FunctionType]()
-  //var signature = Map[Identifier,Term]()
-  
+
+  def this(base: Term*)(sub: Domains.Extends*) = {
+    this()
+    base map sorts.declare
+    sub map sorts.declare
+    sorts.cork()
+  }
+
   def declFunctionType(rawType: Term): FunctionType = {
     def arg(e: Term) = if (e.isLeaf) e.root else declFunctionType(e).faux
     functypes get rawType match {
@@ -177,9 +182,11 @@ class Scope {
 }
 
 object Scope {
+
+  import syntax.AstSugar._
+
   class TypingException(msg: String) extends Exception(msg) {
-    import syntax.AstSugar._
-    
+
     var formula: Term = null;
     def at(formula: Term): TypingException = {
       this.formula = formula; this

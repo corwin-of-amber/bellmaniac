@@ -149,6 +149,7 @@ object Gap {
     class Instantiated[RawPod <: Pod](val it: RawPod)(implicit scope: Scope) extends Pod {
       override val program = instantiate(it.program)._2
       override val obligations = if (it.obligations == semantics.Prelude.program) program else instantiate(it.obligations)._2
+      override val decl = it.decl
     }
 
     val * = TI("*")

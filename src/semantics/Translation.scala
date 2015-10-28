@@ -465,14 +465,24 @@ object TermTranslation {
         val (expr_id, expr_terms) = this(expr)
         val guard = T(TypedIdentifier($v(s"${expr_id.untype}`"), rawtype(env.typeOf_!(expr_id))))
         assert(expr_id.isLeaf)
-        (guard, expr_terms :+ (guard =:= TypedTerm(expr_id |! cond, env.typeOf_!(expr_id))))
+        (guard, expr_terms :+ (guard =:= TypedTerm(expr_id |! unguard(cond), env.typeOf_!(expr_id))))
       }
       else if (term =~ (":", 2)) {
         term0(term.subtrees(1))
       }
       else throw new Scope.TypingException(s"don't quite know what to do with ${term toPretty}")
     }
-    
+
+    // @@@ this code repeats in synth.proof.Assistant
+    def unguard(cond: Term): Term = {
+      implicit val scope = env.scope
+      val inner = cond.nodes filter (_ =~ ("|!", 2)) toList
+      def hoist = &&(inner map (_.subtrees(1)))
+      if (inner.isEmpty) cond
+      else
+        TypedTerm.replaceDescendants(cond, inner map (n => (n, n.subtrees(0)))) & hoist
+    }
+
     import semantics.TypedLambdaCalculus.typecheck0
     
     def generalize(eqs: List[Term], arg: Term, target: Term): (Map[Identifier,Identifier], List[Term]) = {

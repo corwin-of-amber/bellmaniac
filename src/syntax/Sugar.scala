@@ -57,11 +57,14 @@ object AstSugar {
     def &(that: Term) = TI("&")(term, that)
     def |(that: Term) = TI("|")(term, that)
     def <->(that: Term) = TI("<->")(term, that)
-    def unary_~ = TI("~")(term)
+    def unary_~ = TI("¬")(term)
     def x(that: Term) = TI("×")(term, that)
     def ∩(that: Term) = TI("∩")(term, that)
     def +(that: Term) = TI("+"):@(term, that)
     def -(that: Term) = TI("-"):@(term, that)
+    def *(that: Term) = TI("⋅"):@(term, that)
+    def ⨁(that: Term) = TI("⨁"):@(term, that)
+    def ⨀(that: Term) = TI("⨀"):@(term, that)
     def =:=(that: Term) = TI("=")(term, that)
     
     def :@(that: Term*) = @:(term)(that:_*).foldLeft
@@ -102,6 +105,9 @@ object AstSugar {
   
   def &&(conjuncts: Term*): Term = &&(conjuncts.toList)
   def &&(conjuncts: List[Term]) = if (conjuncts.isEmpty) Prelude.TRUE else TI("&")(conjuncts)<<
+
+  def ||(disjuncts: Term*): Term = ||(disjuncts.toList)
+  def ||(disjuncts: List[Term]) = if (disjuncts.isEmpty) Prelude.FALSE else TI("|")(disjuncts)<<
 
   def /::(parts: Term*): Term = /::(parts.toList)
   def /::(parts: List[Term]) = TI("/")(parts)>>

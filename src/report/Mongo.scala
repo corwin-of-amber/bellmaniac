@@ -43,7 +43,7 @@ class FileLog(val file: File, val container: SerializationContainer=new Serializ
   def +=(json: DBObject) {
     out.write(json.toString)
     out.write(SEP)
-    out.flush
+    out.flush()
   }
 
   def +=(m: Map[String,AnyRef]) {

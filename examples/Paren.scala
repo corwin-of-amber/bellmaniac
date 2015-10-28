@@ -303,7 +303,7 @@ object Paren {
 
       implicit val env = new Environment(scope, Map())
       
-      followRecipe
+      rewriteA
     }
     
     
@@ -322,12 +322,14 @@ object Paren {
     def fixee(A: Term, q: Term) = fixer(A, q).subtrees(0)
     def ctx(A: Term, t: Term) = TypedLambdaCalculus.context(A, t)
 
-    def slasher(A: Term, q: Term) = (SimplePattern(/::(`...`(q))) find A head) |> (_.subterm)
+    def slasher(A: Term, q: Term) = A.nodes find (n => n.root == "/" && (n.split(I("/")) exists (_ eq q))) get
 
     class Interpreter(implicit scope: Scope, env: Environment) {
       import Interpreter._
 
       val extrude = Extrude(Set(I("/"), cons.root))
+
+      val logf = new FileLog(new java.io.File("/tmp/bell.json"), new DisplayContainer)
 
       def evalTerm(expr: Term)(implicit s: State): Term = {
         if (expr.isLeaf) {
@@ -340,6 +342,9 @@ object Paren {
           case Some((L("slasher"), List(~(t)))) => slasher(s.program, t)
           case Some((L("find"), List(pat))) => (new SimplePattern(pat) findOne_! s.program).subterm
           case Some((L("find"), List(~(t), pat))) => (new SimplePattern(pat) findOne_! t).subterm
+          case Some((L("find"), List(pat, #:(n)))) => (new SimplePattern(pat) find s.program get (n-1)).subterm
+          case Some((L("find"), List(~(t), pat, #:(n)))) => (new SimplePattern(pat) find t get (n-1)).subterm
+            // TODO error checking: index out of range
 
           case Some(x) => (pods andThen (_.program |> instapod)) applyOrElse (x,
               { case _ => expr }: PartialFunction[(Term, List[Term]), Term] )
@@ -362,8 +367,11 @@ object Paren {
 
       def resolvePatterns(command: Term)(implicit s: State) = {
         command.nodes map (c => (c, LambdaCalculus.isAppOf(c, TI("findAll")))) find (_._2.isDefined) match {
-          case Some((at, Some(List(pat)))) => println(x) ; SimplePattern(pat) find s.program map { mo =>
-            command.replaceDescendant(at, mo.subterm)
+          case Some((node, Some(List(pat)))) => SimplePattern(pat) find s.program map { mo =>
+            command.replaceDescendant(node, mo.subterm)
+          }
+          case Some((node, Some(List(~(subterm), pat)))) => SimplePattern(pat) find subterm map { mo =>
+            command.replaceDescendant(node, mo.subterm)
           }
           case _ => Stream(command)
         }
@@ -376,9 +384,13 @@ object Paren {
 
       object ~ { def unapply(expr: Term)(implicit s: State) = Some(evalTerm(expr)) }
       object ~~ { def unapply(expr: Term)(implicit s: State) = Some(evalList(expr)) }
+      object #: { def unapply(expr: Term)(implicit s: State) = expr match {
+        case L(n : Int) => Some(n) case _ => None
+      } }
 
       def transform(s: State, command: Term) = {
         implicit val st = s
+        var cert = false
         def pods(command: Term): Iterable[Pod] =
           ConsPod.`⟨ ⟩?`(command) match {
             case Some(commands) => commands flatMap pods
@@ -390,8 +402,13 @@ object Paren {
               case Some((L("StratifyReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ)))) =>
                 SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
                   StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
-              case Some((L("Synth"), List(~(h), ~(subterm), synthed, ~(ψ)))) =>
-                List(SynthPod(h, subterm, encaps(synthed), ψ))
+
+              case Some((L("Stratify"), List(L("/"), ~(h), ~~(subelements), ~(ψ)))) =>
+                val slashes = slasher(h, subelements.head)
+                List(StratifySlash2Pod(TermWithHole.puncture(h, slashes), slashes, subelements, ψ))
+              case Some((L("Synth"), List(~(h), ~(subterm), synthed, ~(ψ), ~~(areaTypes)))) =>
+                cert = true
+                List(SynthPod(h, subterm, encaps(synthed), evalTerm(synthed), ψ, areaTypes))
               case Some((L("LetSlash"), List(~(h), ~(quadrant), ~(ψ)))) =>
                 List(LetSlashPod(h, quadrant, ψ))
               case Some((L("LetReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ)))) =>
@@ -415,13 +432,17 @@ object Paren {
             }
           }
 
-        val derivatives = resolvePatterns(command) flatMap pods
+        val derivatives = resolvePatterns(command) flatMap pods map instapod
 
-        Rewrite(derivatives |>> instapod)(s.program) match {
+        if (cert) derivatives foreach invokeProver
+
+        Rewrite(derivatives)(s.program) match {
           case Some(rw) => State(rw, extrude(rw))
           case _ => throw new TranslationError("rewrite failed?") at command
         }
       }
+
+      def invokeProver(pod: Pod) { }
 
       import scala.collection.JavaConversions._
       import syntax.Nullable._
@@ -435,7 +456,7 @@ object Paren {
       def transform(s: State, json: DBObject)(implicit sc: SerializationContainer): State = json match {
         case l: BasicDBList =>  (s /: (l map (_.asInstanceOf[DBObject])))(transform)
         case _ => json.get("check") andThen ({ check =>
-          transform(s, Formula.fromJson(check.asInstanceOf[DBObject])) |-- (s => display(s.ex))
+          transform(s, Formula.fromJson(check.asInstanceOf[DBObject])) |-- { s => display(s.ex) ; logf += Rich.display(s.ex) }
         }, s)
       }
 
@@ -481,7 +502,7 @@ object Paren {
       val ex = extrude(A) |-- display
       outf += Map("program" -> "A[J]", "style" -> "loop", "text" -> sdisplay(ex), "term" -> A)
 
-      val cert = false
+      val cert = true
 
       val f = (A :/ "f").subtrees(1)
       val slicef = SlicePod(f, List(J0 x J0, J0 x J1, J1 x J1) map (? x _)) |> instapod
@@ -727,6 +748,10 @@ object Paren {
       import synth.proof._
       import synth.pods._
       import semantics.Trench
+
+      val extrude = Extrude(Set(I("/"), cons.root))
+
+      for (goal <- goals) extrude(goal)  |-- report.console.Console.display
 
       implicit val env = Paren.env
       implicit val scope = env.scope

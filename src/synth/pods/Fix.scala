@@ -1,12 +1,11 @@
 package synth.pods
 
 import syntax.AstSugar._
-import semantics.Prelude
+import semantics._
 import semantics.Prelude._
-import semantics.TypedTerm
-import semantics.Scope
+import semantics.TypeTranslation.Declaration
 import semantics.TypedScheme.TermWithHole
-
+import synth.pods.Pod.TacticalError
 
 
 /**
@@ -64,6 +63,35 @@ object StratifySlashPod {
 }
 
 
+class StratifySlash2Pod(val e: TermWithHole, val slashes: Term, val subelements: List[Term], val ψ: Term) extends Pod {
+
+  val elements = slashes.split(I("/"))
+
+  val x̅ = e.x̅
+
+  val h = e(slashes)
+  val f = e(/::(subelements))
+  val g = ψ ↦ e(/::((ψ:@(x̅ drop 1)) +: (elements filter (x => !subelements.exists(_ eq x)))))
+
+  val gψ = e(/::((ψ:@(x̅ drop 1)) +: (elements filter (x => !subelements.exists(_ eq x)))))
+
+  override val program =
+    fix(h) =:= (TI("let") :- ((ψ ↦ fix (gψ)):@fix(f)))
+
+  val θ = $TV("θ")
+  val ζ = $TV("ζ")
+
+  override val obligations = &&(
+    (g:@(f:@θ, θ)) =:= (h:@θ),
+    (f:@(g:@(ζ,θ))) =:= (f:@ζ)
+  )
+}
+
+object StratifySlash2Pod {
+  def apply(e: TermWithHole, slashes: Term, subelements: List[Term], ψ: Term)(implicit scope: Scope) = new StratifySlash2Pod(e, slashes, subelements, ψ)
+}
+
+
 class StratifyReducePod(val e: TermWithHole, val reduce: Term, val elements: List[Term], val subelements: List[Term], val ψ: Term) extends Pod {
 
   import ConsPod.`⟨ ⟩`
@@ -115,7 +143,8 @@ object LetSlashPod {
 }
 
 
-class LetReducePod(val e: TermWithHole, val reduce: Term, val elements: List[Term], val subelements: List[Term], val ψ: Term) extends Pod {
+class LetReducePod(val e: TermWithHole, val reduce: Term, val elements: List[Term],
+                   val subelements: List[Term], val ψ: Term) extends Pod {
 
   import ConsPod.`⟨ ⟩`
 
@@ -138,17 +167,54 @@ object LetReducePod {
 }
 
 
-class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val ψ: Term)(implicit scope: Scope) extends Pod {
+class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val impl: Term, val ψ: Term,
+               val area: List[Term])(implicit scope: Scope) extends Pod {
 
   val new_h = TypedTerm.replaceDescendant(h, (subterm, synthed))
 
   override val program =
     fix(h) =:= (new_h :@ ψ)
 
+  /* The obligations are rather involved */
+
+  import semantics.TypeTranslation.TypingSugar._
+  import semantics.TypePrimitives._
+  import TypedTerm.typeOf_!
+
+  val indexDomain = shape(area.head)
+  val P = TyTV("P", rawtype(scope, area.head ->: B))
+
+  val areaChecks = {
+    val vars = qvars(args(typeOf_!(P)))
+    ∀(vars)(P(vars) <->
+      ||(area map (a => &&(TypeTranslation.checks(scope, a -> B, vars)))))
+  }
+
+  def equivQuadrant(lhs: Term, rhs: Term) = {
+    val y = (indexDomain ∩ P) -> ?
+    &&(
+      (rhs :: (? -> y)) =:= (rhs :: (y -> y)),
+      (lhs :: (? -> y)) =:= (rhs :: (? -> y))
+    )
+  }
+
+  override val obligations =
+  {
+    impl.nodes find (_ =~ ("fix", 1)) match {
+      case Some(x) =>
+        val u = TypedLambdaCalculus.pullOut(impl, x.subtrees(0)).get
+        equivQuadrant(h, u :@ ψ)
+      case _ =>
+        throw new TacticalError("Synth: expected recursive implementation") at impl
+    }
+  }
+
+  override val decl = new Declaration(P) where areaChecks
 }
 
 object SynthPod {
-  def apply(h: Term, subterm: Term, synthed: Term, ψ: Term)(implicit scope: Scope) = new SynthPod(h, subterm, synthed, ψ)
+  def apply(h: Term, subterm: Term, synthed: Term, impl: Term, ψ: Term,
+               area: List[Term])(implicit scope: Scope) = new SynthPod(h, subterm, synthed, impl, ψ, area)
 }
 
 
@@ -173,6 +239,7 @@ class SynthSlashPod(val h: List[Term], val f: List[Term]) extends Pod {
   override val program =
     fix(/::(h)) =:= /::(f map (fix(_)))
 
+  override val obligations = TRUE  // for now
 }
 
 object SynthSlashPod {
