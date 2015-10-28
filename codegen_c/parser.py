@@ -4,11 +4,14 @@ import json
 import argparse
 import re
 from string import Template
+VALIDFNAMES = ['A','B','C'] #TODO: generate automatically based on input files
 DEBUG = True
 superset = {}
 SPACE = u' '
-
-
+PNAME = None
+def getDecl(name,newparams,intv,impl):
+    return "func" + name + "_" + impl + "(" + ",".join([intv + x for x in newparams]) + ")"
+    
 
      
 def Assert(cond,msg):
@@ -18,6 +21,8 @@ def Assert(cond,msg):
         sys.exit(1)
 bmProg = {}
 INT = u"int"
+INTERVAL = u"interval"
+
 PSI = u"\u03C8"
 THETA = u"\u03B8"
 MAPSTO = u"\u21A6"
@@ -36,9 +41,8 @@ def tempDefCode():
     lefts = {}
     retStr = u""
     for i in sorted(superset.keys()):
-        retStr += INT+u" "+i+u"_start;\n"
-        retStr += INT+u" "+i+u"_end;\n"
-
+        #retStr += INTERVAL+u" "+i+u";\n"
+        
         if superset[i] not in lefts:
             lefts[superset[i]] = []
         lefts[superset[i]].append(i)
@@ -46,11 +50,13 @@ def tempDefCode():
         n = len(lefts[K])
         Assert(n == 2,"Must divide the set by 2")
         L0 = lefts[K][0]
-        retStr += L0+u"_start = "+K+u"_start;\n"
-        retStr += L0+u"_end = ("+K+u"_end -"+u"_start)/2;\n"
+        retStr += INTERVAL+u" "+L0+u" = {"+K+u".begin,("+K+u".end + "+K+u".begin)/2};\n"
+        #retStr += L0+u".begin = "+K+u".begin;\n"
+        #retStr += L0+u".end = ("+K+u".end + "+K+u".begin)/2;\n"
         L1 = lefts[K][1]
-        retStr += L1+u"_start = "+L0+u"_end;\n"
-        retStr += L1+u"_end = "+K+u"_end;\n"
+        retStr += INTERVAL+u" "+L1+u" = {"+L0+u".end,"+K+u".end};\n"
+        #retStr += L1+u".begin = "+L0+u".end;\n"
+        #retStr += L1+u".end = "+K+u".end;\n"
     return retStr
 
 def sanitizeSubs(string):
@@ -77,12 +83,12 @@ def parseJsons(files):
 
 
 def arrayAccessStr(funct,largs):
-    return funct + u'[u' + u'][u'.join(largs) + u']'
+    return funct + u'[' + u']['.join(largs) + u']'
             
 def arrayAccess(funct,largs):
     for x in largs:
         x.setCode(False)
-    return funct + u'[u' + u'][u'.join([x.code for x in largs]) + u']'
+    return funct + u'[' + u']['.join([x.code for x in largs]) + u']'
 def funCall(funct,largs):
     for x in largs:
         x.setCode(False)
@@ -262,20 +268,6 @@ class bmTerm(bmRoot):
             print '\t'.join('' for x in range(ctr)),t.parent.literal,t.parent.type.__str__()
             t=t.parent
             ctr = ctr+1
-    '''def setSlashApplyArgs(self):
-        Assert(self.isSlashApplyNode(),u"Must be a / apply node here")
-        #take all largs of "/ apply" nodes and put them in slashargs
-        retList = list(self.funct.slashargs)       
-        for arg in self.largs:
-            if arg.isSlashApplyNode():
-                arg.setSlashApplyArgs()
-                retList.extend(arg.slashargs)
-            elif arg.literal == u"/":
-                retList.append(arg.slashargs)
-            else:
-                retList.append(arg)
-        self.slashargs = retList 
-    '''
     def setSupersetRelationships(self,name,newparams):
         prg = bmProg[name]
         params = prg.params
@@ -323,7 +315,7 @@ class bmTerm(bmRoot):
                 for v,r in child.fvranges:
                     Assert(v in VARS and v not in [PSI,THETA],u"Can't have PSI, THETA inside min")
                     Assert(r.literal != MAPSTO,u"this variable must be INT SET type")
-                    rs += u"FOR("+v+u","+r.literal+u"_start,"+r.literal+u"_end){\n"
+                    rs += u"FOR("+v+u","+r.literal+u"){\n"
                 rs += self.strTemp() + u" = min(" + self.strTemp() +u"," + child.boundExpr.code + u");\n"
                 
                 for v,r in child.fvranges:
@@ -360,18 +352,21 @@ class bmTerm(bmRoot):
                     rs+=u";"
             return rs
         else:
-            for pname in bmProg:
-                if self.funct.literal.startswith(pname):
+            #for pname in bmProg:
+            #    if self.funct.literal.startswith(pname):
                     #recursive call to the function
-                    prg_name = filter(None,re.split('\[|,|\]',self.funct.literal))
-                    name = prg_name[0]
-                    Assert(name == pname,"function call name != pname")
-                    newparams = prg_name[1:]
-                    
-                    #Make sure subset relationships are enforced
+            
+            prg_name = filter(None,re.split('\[|,|\]',self.funct.literal))
+            if prg_name in VALIDFNAMES:
+                name = prg_name[0]
+                #Assert(name == pname,"function call name != pname")
+                newparams = prg_name[1:]
+                if name == PNAME:
                     self.setSupersetRelationships(name,newparams)
-                    return bmProg[name].getDecl(newparams,"") 
-            Assert(False,"Can't be here")
+                    #Make sure subset relationships are enforced
+                return getDecl(name,newparams,"","rec") #(name,newparams,intv,impl)
+            
+            #Assert(False,"Can't be here")
             print self.funct.literal,self.largs[0].literal
             if self.funct.literal == MAPSTO:
                 Assert(self.funct.subtrees[0].literal == PSI,"LOL")
@@ -468,11 +463,15 @@ class bmTerm(bmRoot):
                 rs = u""
                 lsargs =[]
                 for v,r in self.fvranges:
-                    if v in ["?"]:
+                    if v in [u"?"]:
                         continue
-                    Assert(v in VARS and v not in [PSI],u"Can't have PSI, THETA inside min")
+                    if v == THETA:
+                        #remember its available from now on to use
+                        rs+=  THETA + u":" + r.__str__() + u"\n"
+                        continue;
+                    Assert(v in VARS and v not in [PSI],u"Can't have PSI, THETA inside / -> MAPSTO")
                     Assert(r.literal != MAPSTO,u"this variable must be INT SET type")
-                    rs += u"FOR("+v+u","+r.literal+u"_start,"+r.literal+u"_end){\n"
+                    rs += u"FOR("+v+u","+r.literal+u"){\n"
                     lsargs.append(v)
                 self.boundExpr.setCode(False)
                 #add any temporary definitions
@@ -480,6 +479,8 @@ class bmTerm(bmRoot):
                 rs += arrayAccessStr("dist", lsargs) + u" = " + self.boundExpr.code + u";\n"
                 
                 for v,r in self.fvranges:
+                    if v in [u"?",THETA]:
+                        continue
                     rs+=u"}\n"
             else:
                 rs = u""
@@ -496,13 +497,15 @@ class bmTerm(bmRoot):
             cmds = []
             for x in self.subtrees:
                 x.setCode(False)
+                if x.literal == MAPSTO and x.subtrees[0].literal == u'?' and x.subtrees[1].literal == PSI:
+                    continue;
                 if x.literal != PSI and x.code !=u"":
                     cmds.append(x.code)
             #print cmds
             if len(cmds) == 1:
                 self.code = cmds[0]
             elif len(cmds) == 2:
-                self.code == cmds[0] + u";" + cmds[1]
+                self.code = cmds[0] + u";" + cmds[1]
             else:
                 self.code = u""
         elif len(self.subtrees) == 0:
@@ -548,7 +551,7 @@ class bmTerm(bmRoot):
             retStr += u"[|"
             for v,r in self.fvranges:
                 retStr += v + u":" + r.__str__() + u"|" 
-            retStr += u"]\n"
+            retStr += u"] : "+ self.type.__str__()+ u"\n"
             retStr += self.boundExpr.__str__(ctr=ctr+1,typed=typed)
             #for i in self.largs:
             #    retStr += i.__str__(ctr=ctr+2,typed=typed)
@@ -569,11 +572,12 @@ class bmProgram(object):
     def __init__(self,prg):
         #parse prg to get the components
         global bmProg
+        global PNAME
         Assert("program" in prg and "term" in prg, "program and/or term not available in prg ")
         prg_name = filter(None,re.split('\[|,|\]',prg["program"]))
         self.name = prg_name[0]
         bmProg[self.name] = self
-        
+        PNAME = self.name 
         self.params = prg_name[1:]
         Assert(prg["term"]["root"]["literal"] == "program", "'program' literal not found in root of first term")
         Assert(len(prg["term"]["subtrees"]) == 1, "'program' should have one central root term")
@@ -587,30 +591,25 @@ class bmProgram(object):
             self.text = prg["text"]
         else:
             self.text = ""
-    def getDecl(self,newparams,intv,impl=None):
-        if not impl:
-            impl = self.impl
-        return "func" + self.name + "_" + impl + "(" + ",".join([intv + x+"_start,"+intv+x+"_end" for x in newparams]) + ")"
     
     def getBaseCase(self):
         Assert(self.impl == u"rec",u"Should be recursive!")
-        retStr = u"if (BASE_CONSTRAINT(" + ",".join([x+"_start,"+x+"_end" for x in self.params]) +u")){\n"
-        retStr += self.getDecl(self.params,u"",impl=u"loop") + u";\n"
+        retStr = u"if (BASE_CONSTRAINT(" + u",".join(self.params) +u")){\n"
+        retStr += getDecl(self.name,self.params,u"",impl=u"loop") + u";\n"
         retStr += u"return;\n"
         retStr += u"}"
         return retStr 
     def printCode(self):
-        print "//DEFINITIONS and HEADERS"
         #print "#define FOR_FORWARD(i,s,e) for(int i=s;i<e;i++)"
         #print "#define FOR_BACKWARD(i,s,e) for(int i=e-1;i>=s;i--)"
         self.term.setCode(False)
-        intv = INT + u" "
-        print u"void " + self.getDecl(self.params,intv) + u"{"
+        intv = INTERVAL + u" "
+        print u"void " + getDecl(self.name,self.params,intv,self.impl) + u"{"
         if self.impl == u"rec":
             print self.getBaseCase()
         print tempDefCode()
         print self.term.code
-        print "}"
+        print u"}"
     def __str__(self):
         retStr = self.name + u"[" 
         retStr += u','.join(self.params)  + u"] " + self.impl+ u": \n"
@@ -643,18 +642,23 @@ def findUniqueVals(l,keys):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--debug",action='store_true')
     parser.add_argument("files", metavar="F",type=str,nargs='+', help="All JSON files")
     args = parser.parse_args()
     prgs = getBmProgram(args.files)
     
     
     for prg in prgs:
-        print prg.text
+        superset ={}
+        #print "PANEM: ",PNAME
+        #print prg.text
         prg.printCode()
         
+        
     #print superset
-    #for prg in prgs:
-    #    print prg.__str__()
+    if args.debug:
+        for prg in prgs:
+            print prg.__str__()
     #printSlashes() 
       
 
