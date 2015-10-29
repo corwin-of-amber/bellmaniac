@@ -22,6 +22,7 @@ trait SerializationContainer {
     case o: DBObject => o
     case _ => value.toString
   }
+  def byRef(value: AnyRef): AnyRef = anyRef(value)
   def list[A <: AnyRef](elements: Iterable[A]) = {
     val l = new BasicDBList
     l.addAll(elements map anyRef)
@@ -49,15 +50,27 @@ trait Numerator {
 
 class DisplayContainer extends SerializationContainer with Numerator {
   import syntax.AstSugar._
+  import semantics.Id
 
   override def any(value: Any): Any = value match {
-    case t: Formula.TermTag =>
-      val tag = new BasicDBObject("term", any(t.term))
-      t.term match {
-        case typed: TypedTerm => tag.append("type", typed.typ.toPretty)
-        case _ => tag
-      }
+    case t: Formula.TermTag => termTag(t)
+    case t: Term => withRefid(t.get.asJson(this), new Id(t))
     case _ => super.any(value)
+  }
+
+  override def anyRef(value: AnyRef): AnyRef = value match {
+    case t: Term => withRefid(t.get.asJson(this), new Id(t))
+    case _ => super.anyRef(value)
+  }
+
+  override def byRef(value: AnyRef): AnyRef = -->?(value)
+
+  def termTag(tag: Formula.TermTag) = {
+    val json = new BasicDBObject("term", -->?(tag.term))
+    tag.term match {
+      case typed: TypedTerm => json.append("type", typed.typ.toPretty)
+      case _ => json
+    }
   }
 
   val mapped: collection.mutable.Map[Any,Int] = collection.mutable.Map.empty
@@ -72,6 +85,19 @@ class DisplayContainer extends SerializationContainer with Numerator {
     case Some((ns, _)) => ns
     case _ => val ns = new Uid
       mapped += (ns -> index) ; max = Math.max(max, index) ; ns
+  }
+
+  def -->? (value: AnyRef) = mapped get value match {
+    case Some(idx) => ref(any(idx))
+    case _ => anyRef(value)
+  }
+
+  def ref(refid: Any) = new BasicDBObject("ref", refid)
+
+  def withRefid(json: DBObject, value: Any) = {
+    max = max + 1 ; mapped += (value -> max)
+    json.put("_id", max)
+    json
   }
 }
 

@@ -327,7 +327,7 @@ case class TypedTerm(term: Term, val typ: Term)
   extends AstSugar.Term(term.root, term.subtrees) {
   override def toString = s"${super.toString} :: $typ"
   override def asJson(container: SerializationContainer) =
-    super.asJson(container).append("type", typ.asJson(container))
+    super.asJson(container).append("type", container.anyRef(typ))
   def untype = term.untype
 }
   

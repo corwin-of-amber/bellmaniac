@@ -3,6 +3,8 @@ J₀ J₁ I₀ I₁ : set
 
 A `I `J
 
+SaveAs (A `I `J) "loop"
+
 Slice (find (θ ↦ ?)) (⟨`?⟩ ⟨`I₀, `I₁⟩ ⟨`J₀, `J₁⟩)
 StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
 StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
@@ -35,3 +37,5 @@ Stratify "/" (fixee 🄰) ⟨🄸,🄹,🄻⟩ (ctx 🄰 ψ)
  Synth (fixee 🄶) 🄶 (A `I₀ `J₁) (ctx 🄶 ψ) ⟨`I₀×J₁⟩,
  Synth (fixee 🄴) 🄴 (A `I₁ `J₀) (ctx 🄴 ψ) ⟨`I₁×J₀⟩,
  Synth (fixee 🄰) 🄰 (A `I₁ `J₁) (ctx 🄰 ψ) ⟨`I₁×J₁⟩⟩
+
+SaveAs (A `I `J) "rec"

@@ -30,13 +30,13 @@ class TapeString(val text: String, val markup: Map[(Int, Int), Any]=Map.empty) e
 object TapeString {
   def apply(text: String, markup: Map[(Int, Int), Any]=Map.empty) = new TapeString(text, markup)
   
-  implicit def fromAny(text: Any) = text match {
+  implicit def fromAny(text: Any): TapeString = text match {
     case x: TapeString => x
     case _ => TapeString(text.toString)
   }
   
   def shift(markup: Map[(Int, Int), Any], offset: Int) =
-    markup map { case ((from, to), v) => ((from + offset, to + offset), v) } toMap
+    markup map { case ((from, to), v) => ((from + offset, to + offset), v) }
 
   implicit class TapeFormat(val sc: StringContext) extends AnyVal {
     def tape(args: Any*) = {

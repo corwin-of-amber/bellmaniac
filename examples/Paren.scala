@@ -329,6 +329,7 @@ object Paren {
 
       val extrude = Extrude(Set(I("/"), cons.root))
 
+      val outf = new FileLog(new java.io.File("/tmp/prog.json"), new DisplayContainer)
       val logf = new FileLog(new java.io.File("/tmp/bell.json"), new DisplayContainer)
 
       def evalTerm(expr: Term)(implicit s: State): Term = {
@@ -426,6 +427,11 @@ object Paren {
                 List(SlashDistribPod(f, box))
               case Some((L("SlashToReduce"), List(reduce, ~~(elements)))) =>
                 List(SlashToReducePod(elements, min))
+
+              case Some((L("SaveAs"), List(prog, L(style)))) =>
+                outf += Map("program" -> encaps(prog).toString, "style" -> style.toString, "text" -> sdisplay(s.ex), "term" -> s.program)
+                List()
+
               case Some((cmd, l)) => throw new TranslationError(s"unknown command '${cmd}' (with ${l.length} arguments)") at command
               case _ =>
                 throw new TranslationError("not a valid command syntax") at command
@@ -434,11 +440,14 @@ object Paren {
 
         val derivatives = resolvePatterns(command) flatMap pods map instapod
 
-        if (cert) derivatives foreach invokeProver
+        if (derivatives.isEmpty) s
+        else {
+          if (cert) derivatives foreach invokeProver
 
-        Rewrite(derivatives)(s.program) match {
-          case Some(rw) => State(rw, extrude(rw))
-          case _ => throw new TranslationError("rewrite failed?") at command
+          Rewrite(derivatives)(s.program) match {
+            case Some(rw) => State(rw, extrude(rw))
+            case _ => throw new TranslationError("rewrite failed?") at command
+          }
         }
       }
 
