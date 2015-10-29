@@ -16,6 +16,8 @@ class Explicate(implicit scope: Scope) {
   import LambdaCalculus.{isApp, isAbs}
 
   val @: = I("@")
+  val :- = I(":")
+  val |! = I("|!")
 
   def apply(t: Term) = explicate0(t)(collate(t)(List()))
 
@@ -43,6 +45,22 @@ class Explicate(implicit scope: Scope) {
     case Some(existing) => map + (key -> (existing ++ values))
   }
 
+  def hoist(t: Term): Term = t match {
+    case T(`@:`, sub) =>
+      val guarded = sub map hoist map { case T(`|!`, List(expr, cond)) => (expr, Some(cond)) case expr => (expr, None) }
+      preserve(t, preserve(t, T(@:, guarded map (_._1))) |!! (guarded flatMap (_._2)))
+    case T(`:-`, List(lbl, expr)) => hoist(expr) match {
+      case T(`|!`, List(expr, cond)) =>
+        preserve(t, preserve(t, lbl :- expr) |! cond)
+      case expr => preserve(t, lbl :- expr)
+    }
+    case T(`|!`, List(expr, cond1)) => hoist(expr) match {
+      case T(`|!`, List(expr, cond2)) => preserve(t, expr |! (cond1 & cond2))
+      case expr => preserve(t, expr |! cond1)
+    }
+    case T(r, s) => preserve(t, T(r, s map hoist))
+  }
+
   def isScalar(t: Term) = typeOf_!(t).root != "->"
 
   def nontriv(asserts: List[Term])(implicit assumptions: List[Term]) =
@@ -51,4 +69,8 @@ class Explicate(implicit scope: Scope) {
 
 object Explicate {
   def explicate(t: Term)(implicit scope: Scope) = new Explicate apply t
+  def explicateHoist(t: Term)(implicit scope: Scope) = {
+    val e = new Explicate
+    e.hoist(e(t))
+  }
 }

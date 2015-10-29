@@ -72,6 +72,8 @@ object AstSugar {
 
     def conjuncts = term split I("&")
 
+    def |!!(that: List[Term]) = if (that.isEmpty) term else this |! &&(that)
+
     def ~>[A](that: A) = term.leaf -> that
     
     def =~(root: Any, arity: Int) =

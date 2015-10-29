@@ -1,11 +1,11 @@
 package report.data
 
-import report.DisplayAsJson
+import collection.JavaConversions._
+
 import com.mongodb.DBObject
 import com.mongodb.BasicDBObject
 import com.mongodb.BasicDBList
 
-import collection.JavaConversions._
 
 
 class TapeString(val text: String, val markup: Map[(Int, Int), Any]=Map.empty) extends AsJson {

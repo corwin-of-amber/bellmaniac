@@ -23,7 +23,7 @@ object LCS {
 
   import synth.pods.IndexArithPod._1
 
-  case class APod(I0: Term, J0: Term) extends Pod {
+  case class APod(I: Term, J: Term) extends Pod {
 
     val (ψ, θ, i, j) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"))
 
@@ -33,14 +33,13 @@ object LCS {
           ψ:@(i,j),
           ( (θ:@(i-_1,j-_1)) + _1 ) |! (δ:@(i,j)),
           ( (θ:@(i,j-_1)) ⨁ (θ:@(i-_1,j)) ) |! (~(δ:@(i,j)))
-        )) :: ((I0 x J0) -> R) ->: ((I0 x J0) -> R))
-      ) :: ((I x J) -> R) ->: ((I0 x J0) -> R)
+        )) :: ((I x J) -> R) ->: ((I x J) -> R))
+      ) :: ? ->: ((I x J) -> R)
     )
 
   }
 
   import semantics.TypedTerm.typeOf_!
-  import semantics.TypeTranslation.TypingSugar._
 
   implicit val scope = new Scope(R, N, I, J)(I0 :<: I, I1 :<: I, J0 :<: J, J1 :<: J)
 

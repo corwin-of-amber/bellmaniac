@@ -9,6 +9,7 @@ import examples.Gap.BreakDown.Instantiated
 import report.FileLog
 import report.data.{SerializationContainer, Rich, DisplayContainer}
 import semantics.TypedScheme.TermWithHole
+import semantics.transform.Explicate
 import syntax.{Formula, Tree, Identifier}
 import semantics._
 import semantics.TypeTranslation.Declaration
@@ -217,7 +218,7 @@ object Paren {
             (θ :: ((J x J) ∩ <) ->: R) ↦: i ↦: j ↦: (
               min:@`⟨ ⟩`(
                 min:@(k ↦
-                  ( ((θ:@(i, k)) + (θ:@(k, j)))/*((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j)))*/ -: TV("item") )
+                  ( ((θ:@(i, k)) + (θ:@(k, j)) + (w:@(i, k, j))) -: TV("item") )
                 ),
                 ψ:@(i, j)
               )
@@ -248,7 +249,7 @@ object Paren {
             i ↦: j ↦: (
               min:@`⟨ ⟩`(
                 min:@((k :: J1) ↦
-                    ( ((ψ:@(i, k)) + (ψ:@(k, j)) + (w:@(i, k, j))) )
+                    (( ((ψ:@(i, k)) + (ψ:@(k, j)) + (w:@(i, k, j))) ) |! (<(i, k) & <(k, j)))
                     ),
                 ψ:@(i, j)
               )
@@ -303,7 +304,7 @@ object Paren {
 
       implicit val env = new Environment(scope, Map())
       
-      rewriteA
+      rewriteC
     }
     
     
@@ -406,9 +407,9 @@ object Paren {
 
               case Some((L("Stratify"), List(L("/"), ~(h), ~~(subelements), ~(ψ)))) =>
                 val slashes = slasher(h, subelements.head)
+                cert = true
                 List(StratifySlash2Pod(TermWithHole.puncture(h, slashes), slashes, subelements, ψ))
               case Some((L("Synth"), List(~(h), ~(subterm), synthed, ~(ψ), ~~(areaTypes)))) =>
-                cert = true
                 List(SynthPod(h, subterm, encaps(synthed), evalTerm(synthed), ψ, areaTypes))
               case Some((L("LetSlash"), List(~(h), ~(quadrant), ~(ψ)))) =>
                 List(LetSlashPod(h, quadrant, ψ))
@@ -429,7 +430,8 @@ object Paren {
                 List(SlashToReducePod(elements, min))
 
               case Some((L("SaveAs"), List(prog, L(style)))) =>
-                outf += Map("program" -> encaps(prog).toString, "style" -> style.toString, "text" -> sdisplay(s.ex), "term" -> s.program)
+                val sout = emit(s)
+                outf += Map("program" -> encaps(prog).toString, "style" -> style.toString, "text" -> sdisplay(sout.ex), "term" -> sout.program)
                 List()
 
               case Some((cmd, l)) => throw new TranslationError(s"unknown command '${cmd}' (with ${l.length} arguments)") at command
@@ -445,13 +447,25 @@ object Paren {
           if (cert) derivatives foreach invokeProver
 
           Rewrite(derivatives)(s.program) match {
-            case Some(rw) => State(rw, extrude(rw))
+            case Some(rw) => mkState(rw)
             case _ => throw new TranslationError("rewrite failed?") at command
           }
         }
       }
 
+      def mkState(term: Term) = State(term, extrude(term))
+
       def invokeProver(pod: Pod) { }
+
+      /*
+       * Output part
+       */
+
+      def emit(s: State) = mkState(Explicate.explicateHoist(s.program))
+
+      /*
+       * JSON part
+       */
 
       import scala.collection.JavaConversions._
       import syntax.Nullable._
@@ -499,6 +513,13 @@ object Paren {
       new Interpreter().executeFile("/tmp/synopsis.json")
     }
 
+    def emit(term: Term)(implicit scope: Scope) = Explicate.explicateHoist(term)
+
+    def preformat(doc: Map[String, AnyRef], extrude: Extrude) = doc get "term" match {
+      case Some(term: Term) => doc - "term" + ("text" -> sdisplay(extrude(term))) + ("term" -> term)
+      case _ => doc
+    }
+
     def rewriteA(implicit env: Environment, scope: Scope) {
       import Prelude.?
       val (_, tA) = instantiate(APod(J).program)
@@ -509,9 +530,10 @@ object Paren {
       val outf = new FileLog(new java.io.File("Paren-A.json"), new DisplayContainer)
 
       val ex = extrude(A) |-- display
-      outf += Map("program" -> "A[J]", "style" -> "loop", "text" -> sdisplay(ex), "term" -> A)
 
-      val cert = true
+      outf += preformat(Map("program" -> "A[J]", "style" -> "loop", "term" -> emit(A)), extrude)
+
+      val cert = false
 
       val f = (A :/ "f").subtrees(1)
       val slicef = SlicePod(f, List(J0 x J0, J0 x J1, J1 x J1) map (? x _)) |> instapod
@@ -552,7 +574,7 @@ object Paren {
                                fixer(A, ex :/ "🄲") =:= (newC :@ ctx(A, ex :/ "🄲")("ψ")) )
             for (A <- Rewrite( synths )(A)) {
               val ex = extrude(A) |-- display
-              outf += Map("program" -> "A[J]", "style" -> "rec", "text" -> sdisplay(ex), "term" -> A)
+              outf += preformat(Map("program" -> "A[J]", "style" -> "rec", "term" -> emit(A)), extrude)
             }
           }
         }
@@ -571,7 +593,7 @@ object Paren {
       import syntax.Piping._
       
       val ex = extrude(B) |-- display
-      outf += Map("program" -> "B[J₀,J₁]", "style" -> "loop", "text" -> sdisplay(ex), "term" -> B)
+      outf += preformat(Map("program" -> "B[J₀,J₁]", "style" -> "loop", "term" -> emit(B)), extrude)
 
       val cert = false
 
@@ -650,7 +672,7 @@ object Paren {
                         )
                         for (B <- Rewrite(synths)(B)) {
                           val ex = extrude(B) |-- display
-                          outf += Map("program" -> "B[J₀,J₁]", "style" -> "rec", "text" -> sdisplay(ex), "term" -> B)
+                          outf += preformat(Map("program" -> "B[J₀,J₁]", "style" -> "rec", "term" -> emit(B)), extrude)
                         }
                       }
                     }
@@ -676,7 +698,7 @@ object Paren {
       val extrude = Extrude(Set(I("/"), cons.root))
 
       val ex = extrude(C) |-- display
-      outf += Map("program" -> "C[K₀,K₁,K₂]", "style" -> "loop", "text" -> sdisplay(ex), "term" -> C)
+      outf += preformat(Map("program" -> "C[K₀,K₁,K₂]", "style" -> "loop", "term" -> emit(C)), extrude)
 
       def slasher(A: Term, f: Term) =
         (SimplePattern(/::(`...`(f))) find A head) |> (_.subterm)
@@ -740,7 +762,7 @@ object Paren {
                       )
                       for (C <- Rewrite(synths)(C)) {
                         val ex = extrude(C) |-- display
-                        outf += Map("program" -> "C[K₀,K₁,K₂]", "style" -> "rec", "text" -> sdisplay(ex), "term" -> C)
+                        outf += preformat(Map("program" -> "C[K₀,K₁,K₂]", "style" -> "rec", "term" -> emit(C)), extrude)
                       }
                     }
                   }
