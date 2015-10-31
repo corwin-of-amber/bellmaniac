@@ -10,6 +10,7 @@ import semantics.Prelude._
 import semantics.{TypeTranslation, Scope, TypedLambdaCalculus, Trench}
 import semantics.TypeTranslation.Environment
 import semantics.TypedScheme.TermWithHole
+import synth.engine.TacticApplicationEngine
 
 import synth.pods._
 import synth.pods.ConsPod.{`⟨ ⟩`, `⟨ ⟩?`}
@@ -122,11 +123,9 @@ object Gap {
       new Interpreter().executeFile("/tmp/synopsis.json")
     }
 
-    import Paren.BreakDown.Interpreter
+    class Interpreter(implicit scope: Scope) extends TacticApplicationEngine {
+      import TacticApplicationEngine._
 
-    class Interpreter(implicit scope: Scope) extends Paren.BreakDown.Interpreter {
-      import Interpreter._
-      /* This part is Gap-specific */
       override def pods(implicit s: State) = {
         case (L("A"), List(~(j), ~(k))) => APod(j, k)
         case (L("B"), List(~(j), ~(k0), ~(k1))) => BPod(j, k0, k1)
@@ -137,7 +136,7 @@ object Gap {
     import syntax.transform.Extrude
     import semantics.pattern.SimplePattern 
     import synth.tactics.Rewrite.{Rewrite,instantiate}
-    import synth.pods.{SlicePod,StratifyPod,StratifyReducePod,MinDistribPod,MinAssocPod}
+    import synth.pods.{SlicePod,StratifyPod,StratifyReducePod,ReduceDistribPod,ReduceAssocPod}
     import semantics.TypedLambdaCalculus.{simplify,pullOut}
     import syntax.Piping._
     import report.console.Console.display
@@ -216,11 +215,11 @@ object Gap {
                   for (A <- Rewrite(s2m)(A)) {
                     // MinDistrib
                     val mindist = (SimplePattern(min :@ (* :- /::(`...`))) find A map 
-                                   (x => MinDistribPod(x(*).split))) |>> instapod
+                                   (x => ReduceDistribPod(min, x(*).split))) |>> instapod
                     for (A <- Rewrite(mindist)(A)) {
                       // MinAssoc
                       val minassoc = (SimplePattern(min :@ (* :- ?)) find A flatMap (_(*) |> `⟨ ⟩?`) map
-                                      (MinAssocPod(_)) filterNot (_.isTrivial)) |>> instapod
+                                      (ReduceAssocPod(min, _)) filterNot (_.isTrivial)) |>> instapod
                       for (A <- Rewrite(minassoc)(A)) {
                         val ex = extrude(A) |-- display
                         // Stratify   🄴, 🄵      in  🄰

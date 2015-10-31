@@ -1,14 +1,11 @@
 package synth.pods
 
-import syntax.Identifier
 import syntax.AstSugar._
 import semantics.TypeTranslation.TypingSugar._
 import semantics.Prelude
-import semantics.Scope
 import semantics.TypedTerm
 import semantics.pattern.SimpleTypedPattern
 import semantics.pattern.MacroMap
-import javax.lang.model.`type`.DeclaredType
 import semantics.TypeTranslation.Declaration
 import semantics.TypeTranslation.Environment
 
@@ -44,24 +41,28 @@ object MinPod {
   def apply(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implicit env: Environment) = new MinPod(domain, range, <, opaque)
 }
 
-class MinDistribPod(val fs: List[Term]) extends Pod {
+class ReduceDistribPod(val reduce: Term, val fs: List[Term]) extends Pod {
   import Prelude.min
   import ConsPod.`⟨ ⟩`
-  
+
+  assert(reduce.isLeaf)
+
   override val program =
-    (min :@ /::(fs)) =:= (min :@ `⟨ ⟩`(fs map (min :@ _)))
+    (reduce :@ /::(fs)) =:= (reduce :@ `⟨ ⟩`(fs map (min :@ _)))
 }
 
-object MinDistribPod {
-  def apply(fs: List[Term]) = new MinDistribPod(fs)
+object ReduceDistribPod {
+  def apply(reduce: Term, fs: List[Term]) = new ReduceDistribPod(reduce, fs)
 }
 
-class MinAssocPod(val fs: List[Term]) extends Pod {
+class ReduceAssocPod(val reduce: Term, val fs: List[Term]) extends Pod {
   import Prelude.{min,cons,nil}
   import ConsPod.{`⟨ ⟩`, `⟨ ⟩?`}
   import semantics.LambdaCalculus.isAppOf
-  
-  def flatten(t: Term): List[Term] = isAppOf(t, min) match {
+
+  assert(reduce.isLeaf)
+
+  def flatten(t: Term): List[Term] = isAppOf(t, reduce) match {
     case Some(List(arg)) => `⟨ ⟩?`(arg) match {
       case Some(elements) => elements flatMap flatten
       case _ => List(t)
@@ -70,13 +71,13 @@ class MinAssocPod(val fs: List[Term]) extends Pod {
   }
 
   override val program =
-    (min :@ `⟨ ⟩`(fs)) =:= (min :@ `⟨ ⟩`(fs flatMap flatten))
+    (reduce :@ `⟨ ⟩`(fs)) =:= (reduce :@ `⟨ ⟩`(fs flatMap flatten))
 
   val isTrivial = program.subtrees(0) == program.subtrees(1)
 }
 
-object MinAssocPod {
-  def apply(fs: List[Term]) = new MinAssocPod(fs)
+object ReduceAssocPod {
+  def apply(reduce: Term, fs: List[Term]) = new ReduceAssocPod(reduce, fs)
 }
 
 class SlashToReducePod(val fs: List[Term], val reduce: Term) extends Pod {

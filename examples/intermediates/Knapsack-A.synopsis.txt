@@ -1,0 +1,33 @@
+J : set
+J₀ J₁ I₀ I₁ : set
+
+A `I `J
+
+Slice (find (θ ↦ ?)) (⟨`?⟩ ⟨`I₀, `I₁⟩ ⟨`J₀, `J₁⟩)
+Stratify "/" (fixee 🄰) 🄰 (ctx 🄰 ψ)
+Stratify "/" (fixee 🄰) 🄰 (ctx 🄰 ψ)
+Stratify "/" (fixee 🄰) 🄰 (ctx 🄰 ψ)
+
+⟨Slice (find 🄼 θ) (`? ⟨`J₀, `J₁⟩),   Slice (find 🄶 θ) ⟨`I₀×?, `I₁×J₀, `I₁×J₁⟩⟩
+⟨Distrib "/" 🄼 (find 🄼 (θ / θ)),    Distrib "/" 🄶 (find 🄶 (θ / ?))⟩
+⟨SlashToReduce max ⟨🄾,🄿⟩,           SlashToReduce max ⟨🄶,🄷,🄸⟩⟩
+
+⟨Slice (find 🄵 θ) (⟨`I₀, `I₁⟩ `?),   Slice (findAll 🄱 θ) (⟨`I₀, `I₁⟩ `?)⟩
+⟨Distrib "/" 🄵 (find 🄵 (θ / ?)),    Distrib "/" 🄻 (find 🄻 (θ / ?)),
+                                      Distrib "/" 🄼 (find 🄼 (θ / ?))⟩
+⟨SlashToReduce max ⟨🄵,🄶⟩,           SlashToReduce max ⟨🄼,🄽⟩,
+                                      SlashToReduce max ⟨🄾,🄿⟩⟩
+Assoc max
+
+⟨Stratify max (fixee 🄰) ⟨🄴,🄵,🄷⟩ (ctx 🄰 ψ),
+ Stratify max (fixee 🄱) ⟨🄺,🄻,🄽⟩ (ctx 🄱 ψ),
+ Stratify max (fixee 🄲) ⟨🄿,🅁⟩ (ctx 🄲 ψ)⟩
+⟨Stratify max (fixee 🄰) ⟨🄷,🄹⟩ (ctx 🄰 ψ)⟩
+
+⟨Synth (fixee 🄷) 🄷 (A `I₀ `J₀) (ctx 🄷 ψ) ⟨`I₀×J₀⟩,
+ Synth (fixee 🄵) 🄵 (A `I₀ `J₁) (ctx 🄵 ψ) ⟨`I₀×J₁⟩,
+ Synth (fixee 🄳) 🄳 (A `I₁ `J₀) (ctx 🄳 ψ) ⟨`I₁×J₀⟩,
+ Synth (fixee 🄰) 🄰 (A `I₁ `J₁) (ctx 🄰 ψ) ⟨`I₁×J₁⟩⟩
+
+⟨Synth (fixee 🄳) 🄳 (B `I₀ `J₀ `J₁) (ctx 🄳 ψ) ⟨`I₀×J₀,`I₀×J₁⟩,
+ Synth (fixee 🄰) 🄰 (B `I₁ `J₀ `J₁) (ctx 🄰 ψ) ⟨`I₁×J₀,`I₁×J₁⟩⟩

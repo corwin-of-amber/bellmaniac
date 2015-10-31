@@ -3,6 +3,7 @@ package examples
 import semantics.{TypeTranslation, Scope, Prelude}
 import semantics.Prelude._
 import syntax.AstSugar._
+import synth.engine.TacticApplicationEngine
 import synth.pods.ConsPod._
 import synth.pods.Pod
 
@@ -55,11 +56,9 @@ object Eggs {
     new Interpreter().executeFile("/tmp/synopsis.json")
   }
 
-  import Paren.BreakDown.Interpreter
+  class Interpreter(implicit scope: Scope) extends TacticApplicationEngine {
+    import TacticApplicationEngine._
 
-  class Interpreter(implicit scope: Scope) extends Paren.BreakDown.Interpreter {
-    import Interpreter._
-    /* This part is Eggs-specific */
     override def pods(implicit s: State) = {
       case (L("A"), List(~(j), ~(k))) => APod(j, k)
       //case (L("B"), List(~(j), ~(k0), ~(k1))) => BPod(j, k0, k1)

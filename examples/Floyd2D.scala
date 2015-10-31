@@ -3,6 +3,7 @@ package examples
 import semantics.{TypeTranslation, Scope, Prelude}
 import semantics.Prelude._
 import syntax.AstSugar._
+import synth.engine.TacticApplicationEngine
 import synth.pods.Pod
 import synth.pods.ConsPod._
 import semantics.Domains.SubsortAssocT
@@ -39,15 +40,13 @@ object Floyd2D {
 
   def main(args: Array[String]): Unit = {
     implicit val scope = env.scope
-    //rewriteA
+
     new Interpreter().executeFile("/tmp/synopsis.json")
   }
 
-  import Paren.BreakDown.Interpreter
+  class Interpreter(implicit scope: Scope) extends TacticApplicationEngine {
+    import TacticApplicationEngine._
 
-  class Interpreter(implicit scope: Scope) extends Paren.BreakDown.Interpreter {
-    import Interpreter._
-    /* This part is Floyd2D-specific */
     override def pods(implicit s: State) = {
       case (L("A"), List(~(j))) => APod(j)
       //case (L("B"), List(~(j), ~(k0), ~(k1))) => BPod(j, k0, k1)

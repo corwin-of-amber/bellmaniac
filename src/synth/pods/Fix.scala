@@ -69,11 +69,13 @@ class StratifySlash2Pod(val e: TermWithHole, val slashes: Term, val subelements:
 
   val x̅ = e.x̅
 
+  val ψx̅ = if (x̅.isEmpty) $TV ↦ ψ else ψ :@ x̅.tail
+
   val h = e(slashes)
   val f = e(/::(subelements))
-  val g = ψ ↦ e(/::((ψ:@(x̅ drop 1)) +: (elements filter (x => !subelements.exists(_ eq x)))))
+  val g = ψ ↦ e(/::(ψx̅ +: (elements filter (x => !subelements.exists(_ eq x)))))
 
-  val gψ = e(/::((ψ:@(x̅ drop 1)) +: (elements filter (x => !subelements.exists(_ eq x)))))
+  val gψ = e(/::(ψx̅ +: (elements filter (x => !subelements.exists(_ eq x)))))
 
   override val program =
     fix(h) =:= (TI("let") :- ((ψ ↦ fix (gψ)):@fix(f)))
@@ -193,8 +195,9 @@ class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val impl: Term
   def equivQuadrant(lhs: Term, rhs: Term) = {
     val y = (indexDomain ∩ P) -> ?
     &&(
-      (rhs :: (? -> y)) =:= (rhs :: (y -> y)),
-      (lhs :: (? -> y)) =:= (rhs :: (? -> y))
+      //(rhs :: (? -> y)) =:= (rhs :: (y -> y)),
+      rhs =:= (rhs :: (? -> y)),
+      (lhs :: (? -> y)) =:= (rhs :: (y -> y))
     )
   }
 
@@ -205,7 +208,8 @@ class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val impl: Term
         val u = TypedLambdaCalculus.pullOut(impl, x.subtrees(0)).get
         equivQuadrant(h, u :@ ψ)
       case _ =>
-        throw new TacticalError("Synth: expected recursive implementation") at impl
+        if (impl.isLeaf) TRUE  /* placeholder; should be deprecated */
+        else TRUE //throw new TacticalError("Synth: expected recursive implementation") at impl
     }
   }
 
