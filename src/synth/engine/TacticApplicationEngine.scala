@@ -64,7 +64,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   def evalList(expr: Term)(implicit s: State): List[Term] = ConsPod.`⟨ ⟩?`(expr) match {
     case Some(l) => l map evalTerm
     case _ => expr match {
-      case T(@:.root, List(~~(l1), ~~(l2))) => for (a <- l1; b <- l2) yield a x b
+      case T(`@:`, List(~~(l1), ~~(l2))) => for (a <- l1; b <- l2) yield a x b
       case _ =>
         val eexpr = evalTerm(expr)
         ConsPod.`⟨ ⟩?`(eexpr) match {
@@ -102,72 +102,86 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     case L("min") | L("max") => Some(expr)  case _ => None
   } }
 
+  val @: = I("@")
   val * = TI("*")
+
+  def command(command: Term)(implicit s: State): Iterable[Pod] = LambdaCalculus.isApp(command) match {
+    case Some((L("Slice"), List(~(f), ~~(domains)))) =>
+      List(SlicePod(f, domains))
+
+    /* deprecated */
+    case Some((L("StratifySlash"), List(~(h), ~(quadrant), ~(ψ)))) =>
+      List(StratifySlashPod(h, quadrant, ψ))
+    case Some((L("StratifyReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ)))) =>
+      SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
+        StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
+    case Some((L("LetSlash"), List(~(h), ~(quadrant), ~(ψ)))) =>
+      List(LetSlashPod(h, quadrant, ψ))
+    case Some((L("LetReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ)))) =>
+      SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
+        LetReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
+
+    case Some((L("Stratify"), List(L("/"), ~(h), ~~(subelements), ~(ψ)))) =>
+      val slashes = slasher(h, subelements.head)
+      if (subelements.length == 1 && (slashes eq h))
+        List(StratifySlashPod(h, subelements.head, ψ))
+      else
+        List(StratifySlash2Pod(TermWithHole.puncture(h, slashes), slashes, subelements, ψ))
+    case Some((L("Stratify"), List(++(reduce), ~(h), ~~(subelements), ~(ψ)))) =>
+      SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
+        StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
+    case Some((L("Synth"), List(~(h), ~(subterm), synthed, ~(ψ), ~~(areaTypes)))) =>
+      List(SynthPod(h, subterm, encaps(synthed), evalTerm(synthed), ψ, areaTypes))
+    case Some((L("Let"), List(L("/"), ~(h), ~(quadrant), ~(ψ)))) =>
+      List(LetSlashPod(h, quadrant, ψ))
+    case Some((L("Let"), List(++(reduce), ~(h), ~~(subelements), ~(ψ)))) =>
+      SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
+        LetReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
+    case Some((L("Synth"), List(~(h), synthed, ~(ψ)))) =>
+      List(LetSynthPod(h, encaps(synthed), evalTerm(synthed), ψ))
+    case Some((L("Distrib"), List(++(reduce)))) =>
+      SimplePattern(reduce :@ (* :- /::(`...`))) find s.program map
+          (x => ReduceDistribPod(reduce, x(*).split))
+    case Some((L("Assoc"), List(++(reduce)))) =>
+      SimplePattern(reduce :@ (* :- ?)) find s.program flatMap (_(*) |> `⟨ ⟩?`) map
+          (ReduceAssocPod(reduce, _)) filterNot (_.isTrivial)
+    case Some((L("Distrib"), List(L("/"), ~(f), ~(box)))) =>
+      List(SlashDistribPod(f, box))
+    case Some((L("SlashToReduce"), List(reduce, ~~(elements)))) =>
+      List(SlashToReducePod(elements, reduce))
+
+    case Some((L("SaveAs"), List(prog, L(style)))) =>
+      val sout = emit(s)
+      outf += Map("program" -> encaps(prog).toString, "style" -> style.toString, "text" -> sdisplay(sout.ex), "term" -> sout.program)
+      List()
+
+    case Some((cmd, l)) => throw new TranslationError(s"unknown command '${cmd}' (with ${l.length} arguments)") at command
+    case _ =>
+      throw new TranslationError("not a valid command syntax") at command
+  }
 
   def transform(s: State, command: Term) = {
     implicit val st = s
     var cert = false
+    var within = List(s.program)
     def pods(command: Term): Iterable[Pod] =
       ConsPod.`⟨ ⟩?`(command) match {
         case Some(commands) => commands flatMap pods
-        case _ => LambdaCalculus.isApp(command) match {
-          case Some((L("Slice"), List(~(f), ~~(domains)))) =>
-            List(SlicePod(f, domains))
-          case Some((L("StratifySlash"), List(~(h), ~(quadrant), ~(ψ)))) =>
-            List(StratifySlashPod(h, quadrant, ψ))
-          case Some((L("StratifyReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ)))) =>
-            SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
-              StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
-
-          case Some((L("Stratify"), List(L("/"), ~(h), ~~(subelements), ~(ψ)))) =>
-            val slashes = slasher(h, subelements.head)
-            //cert = true
-            if (subelements.length == 1 && (slashes eq h))
-              List(StratifySlashPod(h, subelements.head, ψ))
-            else
-              List(StratifySlash2Pod(TermWithHole.puncture(h, slashes), slashes, subelements, ψ))
-          case Some((L("Stratify"), List(++(reduce), ~(h), ~~(subelements), ~(ψ)))) =>
-            SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
-              StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
-          case Some((L("Synth"), List(~(h), ~(subterm), synthed, ~(ψ), ~~(areaTypes)))) =>
-            cert = true
-            List(SynthPod(h, subterm, encaps(synthed), evalTerm(synthed), ψ, areaTypes))
-          case Some((L("LetSlash"), List(~(h), ~(quadrant), ~(ψ)))) =>
-            List(LetSlashPod(h, quadrant, ψ))
-          case Some((L("LetReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ)))) =>
-            SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
-              LetReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
-          case Some((L("Synth"), List(~(h), synthed, ~(ψ)))) =>
-            List(LetSynthPod(h, encaps(synthed), ψ))
-          case Some((L("Distrib"), List(++(reduce)))) =>
-            SimplePattern(reduce :@ (* :- /::(`...`))) find s.program map
-                (x => ReduceDistribPod(reduce, x(*).split))
-          case Some((L("Assoc"), List(++(reduce)))) =>
-            SimplePattern(reduce :@ (* :- ?)) find s.program flatMap (_(*) |> `⟨ ⟩?`) map
-                (ReduceAssocPod(reduce, _)) filterNot (_.isTrivial)
-          case Some((L("Distrib"), List(L("/"), ~(f), ~(box)))) =>
-            List(SlashDistribPod(f, box))
-          case Some((L("SlashToReduce"), List(reduce, ~~(elements)))) =>
-            List(SlashToReducePod(elements, reduce))
-
-          case Some((L("SaveAs"), List(prog, L(style)))) =>
-            val sout = emit(s)
-            outf += Map("program" -> encaps(prog).toString, "style" -> style.toString, "text" -> sdisplay(sout.ex), "term" -> sout.program)
-            List()
-
-          case Some((cmd, l)) => throw new TranslationError(s"unknown command '${cmd}' (with ${l.length} arguments)") at command
-          case _ =>
-            throw new TranslationError("not a valid command syntax") at command
+        case _ => command match {
+          case T(`@:`, List(T(`@:`, List(cmd, L("in"))), ~~(terms))) => within = terms ; pods(cmd)
+          case _ => this.command(command)
         }
       }
 
     val derivatives = resolvePatterns(command) flatMap pods map instapod
 
+    cert = derivatives exists (_.it.isInstanceOf[LetSynthPod])
+
     if (derivatives.isEmpty) s
     else {
       if (cert) derivatives filter (_.obligations != TRUE) foreach invokeProver
 
-      Rewrite(derivatives)(s.program) match {
+      Rewrite(derivatives)(s.program, within) match {
         case Some(rw) => mkState(rw)
         case _ => throw new TranslationError("rewrite failed?") at command
       }

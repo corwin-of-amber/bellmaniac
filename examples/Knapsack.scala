@@ -20,6 +20,7 @@ object Knapsack {
   val I1 = TS("I₁")
   val J0 = TS("J₀")
   val J1 = TS("J₁")
+  val K0 = TS("K₀") ; val K1 = TS("K₁") ; val K2 = TS("K₂") ; val K3 = TS("K₃")
 
   val v = TyTV("v", I ->: R)
   val w = TyTV("w", I ->: J)
@@ -42,20 +43,22 @@ object Knapsack {
 
   case class BPod(I: Term, J0: Term, J1: Term) extends Pod {
 
-    val (ψ, θ, i, j) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"))
+    val (ψ, i, j) = ($TV("ψ"), $TV("i"), $TV("j"))
 
     override val program = Prelude.program(
-      ψ ↦ fix((θ ↦: i ↦: j ↦: (
-          max:@ `⟨ ⟩`(
-            ψ:@(i,j),
-            (θ:@(i-_1,j-(w:@i))) + (v:@i))
-          )
-          ) :: ((I x J) -> R) ->: ((I x J) -> R))
+      ψ ↦: /::(
+        ψ :: ((I x J0) -> R),
+        (i ↦: j ↦: (max:@ `⟨ ⟩`(
+          ψ:@(i,j),
+          ((ψ :: ((I x J0) -> R)):@(i-_1,j-(w:@i))) + (v:@i))
+        )) :: ((I x J1) -> R)
+      )
     )
 
   }
 
-  implicit val scope = new Scope(R, N, I, J)(I0 :<: I, I1 :<: I, J0 :<: J, J1 :<: J)
+  implicit val scope = new Scope(R, N, I, J)(I0 :<: I, I1 :<: I, J0 :<: J, J1 :<: J,
+      K0 :<: J0, K1 :<: J0, K2 :<: J1, K3 :<: J1)
 
   implicit val env = TypeTranslation.subsorts(scope)
 
@@ -69,6 +72,7 @@ object Knapsack {
 
     override def pods(implicit s: State) = {
       case (L("A"), List(~(i), ~(j))) => APod(i, j)
+      case (L("B"), List(~(i), ~(j0), ~(j1))) => BPod(i, j0, j1)
     }
 
     override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }

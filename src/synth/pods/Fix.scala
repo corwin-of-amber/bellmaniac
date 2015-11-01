@@ -222,7 +222,7 @@ object SynthPod {
 }
 
 
-class LetSynthPod(val h: Term, val synthed: Term, val ψ: Term)(implicit scope: Scope) extends Pod {
+class LetSynthPod(val h: Term, val synthed: Term, val impl: Term, val ψ: Term)(implicit scope: Scope) extends Pod {
 
   import TypedTerm.typeOf_!
 
@@ -231,10 +231,17 @@ class LetSynthPod(val h: Term, val synthed: Term, val ψ: Term)(implicit scope: 
   override val program =
     h =:= (new_h :@ ψ)
 
+  override val obligations = {
+    val body = impl match {
+      case T(Prelude.program.root, List(body)) => body
+      case _ => impl
+    }
+    h =:= ((body :: (? -> typeOf_!(h))) :@ ψ)
+  }
 }
 
 object LetSynthPod {
-  def apply(h: Term, synthed: Term, ψ: Term)(implicit scope: Scope) = new LetSynthPod(h, synthed, ψ)
+  def apply(h: Term, synthed: Term, impl: Term, ψ: Term)(implicit scope: Scope) = new LetSynthPod(h, synthed, impl, ψ)
 }
 
 
