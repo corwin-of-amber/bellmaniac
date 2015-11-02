@@ -82,9 +82,12 @@ class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: S
   private val X = TV("x")
   private val Y = TV("y")
 
-  val MINUSPAT = SimpleTypedPattern((X :- TypedTerm($TV("?"), J)) - (Y :- $TV("?")))
-  val MINUS1PAT = SimpleTypedPattern((X :- TypedTerm($TV("?"), J)) - _1)
-  val SUCCPAT = SimpleTypedPattern(succ:@(TypedTerm(X :- $TV("?"), J), TypedTerm(Y :- $TV("?"), J)))
+  val ? = $TV("?")
+  val J_? = TypedTerm(?, J)
+
+  val MINUSPAT = SimpleTypedPattern((X :- J_?) - (Y :- J_?))
+  val MINUS1PAT = SimpleTypedPattern((X :- J_?) - _1)
+  val SUCCPAT = SimpleTypedPattern(succ:@(X :- J_?, Y :- J_?))
   val ZEROPAT = SimpleTypedPattern(TypedTerm(_0, J))
 
   override val macros = MacroMap(

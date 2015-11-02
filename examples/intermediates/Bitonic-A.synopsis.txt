@@ -1,0 +1,29 @@
+J : set
+J₀ J₁ : set
+K₀ K₁ K₂ K₃ : set
+
+A `J
+
+SaveAs (A `J) "loop"
+
+Slice (find (θ ↦ ?)) (`? ⟨`J₀×J₀, `J₀×J₁, `J₁×J₁⟩)
+Stratify "/" (fixee 🄰) 🄰 ψ
+Stratify "/" (fixee 🄰) 🄰 ψ
+⟨Slice (find 🄷 θ) (`? ⟨`J₀,`J₁⟩), Slice (find 🄸 θ) (`? ⟨`J₀,`J₁⟩)⟩
+⟨Distrib "/" 🄷, Distrib "/" 🄸⟩
+⟨SlashToReduce min ⟨🄷,🄸⟩, SlashToReduce min ⟨🄹,🄺⟩⟩
+Assoc min
+Stratify min (fixee 🄱) ⟨🄶,🄷,🄹⟩ ψ
+Slice (find 🄰 (k ↦ ?)) ⟨`J₀, `J₁⟩
+Distrib "/" 🄶
+SlashToReduce min ⟨🄶,🄷⟩
+Assoc min
+
+Stratify min (fixee 🄰) ⟨🄴,🄶⟩ ψ
+
+⟨Synth (fixee 🄰) 🄰 (A `J₁) ψ `J₁×J₁,
+ Synth (fixee 🄲) 🄲 (B `J₀ `J₁) ψ `J₀×J₁,
+ Synth (fixee 🄱) 🄱 (C `J₀ `J₁) ψ ⟨`J₀×J₁,`J₁×J₁⟩,
+ Synth (fixee 🄴) 🄴 (A `J₀) ψ ⟨`J₀×J₀⟩⟩
+
+SaveAs (A `J) "rec"

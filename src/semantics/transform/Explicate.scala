@@ -35,8 +35,11 @@ class Explicate(implicit scope: Scope) {
       case Some((vars, body)) =>
         val precond = nontriv(vars filter isScalar flatMap (v => TypeTranslation.checks(scope, v.typedLeaf, List())))
         accumulate(collate(body)(assumptions ++ precond), body, precond)
-      case _ =>
-        t.subtrees flatMap collate toMap
+      case _ => t match {
+        case T(`|!`, List(expr, cond)) => collate(expr)
+        case _ =>
+          t.subtrees flatMap collate toMap
+      }
     }
   }
 
