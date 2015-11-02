@@ -4,13 +4,20 @@ _ = require \lodash
 
 root = exports ? this
 
-splitTextToBlocks = (input) ->
-    input.split /\n+(?!\s)/ .filter (== /\S/)
+stripComments = (input) ->
+    input.replace /\s*;.*$/mg, ''
 
+splitTextToBlocks = (input) ->
+    blocks = input.split /(\n+)(?!\s)/ .map ->
+      text: it
+    countLines = (text) -> (text.match(/\n/g)||[]).length
+    _.reduce blocks, ((x,y) -> y.line = x ; x + countLines(y.text)), 1
+    blocks .filter (.text == /\S/)
+ 
 root.bellmaniaParse = (input, success, error) ->
 
-    blocks = splitTextToBlocks(input)
-
+    blocks = splitTextToBlocks(stripComments(input))
+    
     try
         buffer = []
 
@@ -46,11 +53,14 @@ root.bellmaniaParse = (input, success, error) ->
         .map((block) ->
             # parse block with nearley, filter only non-false results, assert parse unambiguous
             p = new nearley.Parser grammar.ParserRules, grammar.ParserStart
-            parsed = p.feed block
-            results = _.filter parsed.results, (r) -> r
-            assert results.length > 0, "No possible parse of input found."
-            assert results.length == 1, JSON.stringify(results) + " is not a unique parse."
-            results[0]
+            try
+              parsed = p.feed block.text
+              results = _.compact parsed.results
+              if results.length == 0 then throw {msg: "no possible parse of input found"}
+              assert results.length == 1, JSON.stringify(results) + " is not a unique parse."
+              results[0]
+            catch err
+              throw {line: block.line, err}
         ).filter((block) ->
             # only take the expressions that aren't set declarations
             # nearley has already pushed set declarations to root.scope
@@ -76,5 +86,5 @@ root.bellmaniaParse = (input, success, error) ->
         toStream jar.stdin
 
     catch err
-
+        err.message = JSON.stringify(err)
         error(err)
