@@ -29,7 +29,7 @@ import semantics.Trench
  * Carries out automatic proofs employing macro expansion, term translation,
  * and reflection.
  */
-class Prover(val pods: List[Pod])(implicit env: Environment) {
+class Prover(val pods: List[Pod], verbose: Prover.Verbosity=Prover.Verbosity.All)(implicit env: Environment) {
 
   import TypeTranslation.TypingSugar._
   import TypedTerm.typeOf_!
@@ -66,8 +66,10 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
     val (vassign, typed) = TypeInference.infer(Binding.prebind(term), typedecl)
     (TypeTranslation.decl(env.scope, vassign), expand(typed))
   }
-  
-  class Transaction {
+
+  import Prover.Verbosity
+
+  class Transaction(verbose: Verbosity=verbose) {
     val termb = new TermBreak(env)
     val formulat = new FormulaTranslation(termb)
     val termlings = collection.mutable.ListBuffer[(Environment, List[Term])]()
@@ -124,14 +126,14 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
       val env2 = (env1 /: (pods map (_.decl.shallow))) { case (e, d) => e + d }
       val terms1 = termlings map (_._2)
       
-      val reflect = new Reflection(env2, typedecl ++ typedecls(locals))
+      val reflect = new Reflection(env2, typedecl ++ typedecls(locals))(verbose)
       reflect.currying ++= symbols filter (x => env1.typeOf(x) exists Reflection.isFuncType) map
                                           (symbol => (symbol, reflect.overload(symbol))) toMap
   
       for (variants <- reflect.currying.values)
         reflect.alwaysDefined ++= (variants dropRight 1)
                                       
-      println("· " * 25)
+      if (verbose == Verbosity.All) println("· " * 25)
   
       reflect.solve(terms1.toList flatten, lassumptions ++ (pods flatMap (_.decl.precondition)), lgoals)
     }
@@ -174,4 +176,10 @@ class Prover(val pods: List[Pod])(implicit env: Environment) {
         
   }
   
+}
+
+
+object Prover {
+  val Verbosity = Reflection.Verbosity
+  type Verbosity = Reflection.Verbosity
 }

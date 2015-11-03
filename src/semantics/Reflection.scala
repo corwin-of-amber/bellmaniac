@@ -17,8 +17,13 @@ import java.io.ByteArrayOutputStream
 
 
 object Reflection {
-  
-  case class Compound(val definitions: List[Term], val proposition: Term)
+
+  object Verbosity extends Enumeration {
+    val All, ResultsOnly, None = Value
+  }
+  type Verbosity = Verbosity.Value
+
+  case class Compound(definitions: List[Term], proposition: Term)
   object Compound {
     def apply(p: Term): Compound = Compound(List(), p)
     def apply(d: List[Term], ps: List[Term]): Compound = ps match {
@@ -49,9 +54,8 @@ object Reflection {
 
 
 
-class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
+class Reflection(val env: Environment, val typedecl: Map[Identifier, Term])(implicit verbose: Reflection.Verbosity=Reflection.Verbosity.All) {
 
-  import TypeTranslation.Declaration
   import TypeTranslation.TypingSugar._
   import Reflection._
   import Prelude.B
@@ -204,10 +208,9 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
   // Currying Part
   //--------------
   
-  import TypeTranslation.{MicroCode,In,Out,Check}
+  import TypeTranslation.{MicroCode,In,Out}
   import TypePrimitives.arity
-  import syntax.Scheme
-        
+
   val currying = collection.mutable.Map[Identifier, List[TypedIdentifier]]()
   
   def uncurry(term: Term): Term = {
@@ -368,13 +371,15 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
     val fo_prelude = e(prelude) map_/ reflect filter (_ != TRUE)
     
     log.fine("-" * 60)
-  
-    Trench.display(fo_assumptions)
-    report.NotebookLog.out += Trench.displayRich(fo_assumptions)
-    Trench.display(fo_prelude)
-    for ((fo_gdefs, fo_goal) <- fo_goals) {
-      //Trench.display(fo_gdefs)
-      Trench.display(fo_goal, "◦")
+
+    if (verbose == Verbosity.All) {
+      Trench.display(fo_assumptions)
+      report.NotebookLog.out += Trench.displayRich(fo_assumptions)
+      Trench.display(fo_prelude)
+      for ((fo_gdefs, fo_goal) <- fo_goals) {
+        Trench.display(fo_gdefs)
+        Trench.display(fo_goal, "◦")
+      }
     }
     
     val (z3g, fo_base) = TypeTranslation toSmt List(env)
@@ -399,9 +404,11 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term]) {
           
     val statusMap = (fo_goals_pn.toList map (new Id(_))) zip status toMap
     val results = fo_goals_pn map_/ (s => TI(statusMap(s).toPretty)(TI(finish + "ms")))
-    
-    Trench.display(results, "◦")
-    report.NotebookLog.out += Trench.displayRich(results, "◦")
+
+    if (verbose == Verbosity.All || verbose == Verbosity.ResultsOnly) {
+      Trench.display(results, "◦")
+      report.NotebookLog.out += Trench.displayRich(results, "◦")
+    }
 
     results
   }

@@ -8,9 +8,10 @@ import semantics._
  * Makes guard conditions explicit (hence the name) by creating guard expressions 'a |! b'
  * when appropriate, according to types of sub-terms.
  *
+ * @param includePreconditions
  * @param scope
  */
-class Explicate(implicit scope: Scope) {
+class Explicate(includePreconditions: Boolean=false)(implicit scope: Scope) {
 
   import TypedTerm.{preserve, typeOf_!}
   import LambdaCalculus.{isApp, isAbs}
@@ -33,7 +34,9 @@ class Explicate(implicit scope: Scope) {
       accumulate((f +: args) flatMap (x => collate(x)(assumptions ++ precond)) toMap, t, precond)
     case _ => isAbs(t) match {
       case Some((vars, body)) =>
-        val precond = nontriv(vars filter isScalar flatMap (v => TypeTranslation.checks(scope, v.typedLeaf, List())))
+        val precond = nontriv(vars filter isScalar flatMap (v =>
+          TypeTranslation.checks(scope, v.typedLeaf,
+                                 if (includePreconditions) vars else List())))
         accumulate(collate(body)(assumptions ++ precond), body, precond)
       case _ => t match {
         case T(`|!`, List(expr, cond)) => collate(expr)
@@ -50,7 +53,10 @@ class Explicate(implicit scope: Scope) {
 
   def hoist(t: Term): Term = t match {
     case T(`@:`, sub) =>
-      val guarded = sub map hoist map { case T(`|!`, List(expr, cond)) => (expr, Some(cond)) case expr => (expr, None) }
+      val guarded = sub map hoist map {
+        case T(`|!`, List(expr, cond)) => (expr, Some(cond))
+        case expr => (expr, None)
+      }
       preserve(t, preserve(t, T(@:, guarded map (_._1))) |!! (guarded flatMap (_._2)))
     case T(`:-`, List(lbl, expr)) => hoist(expr) match {
       case T(`|!`, List(expr, cond)) =>
@@ -71,9 +77,10 @@ class Explicate(implicit scope: Scope) {
 }
 
 object Explicate {
-  def explicate(t: Term)(implicit scope: Scope) = new Explicate apply t
-  def explicateHoist(t: Term)(implicit scope: Scope) = {
-    val e = new Explicate
+  def explicate(t: Term, includePreconditions: Boolean=false)(implicit scope: Scope) =
+    new Explicate(includePreconditions) apply t
+  def explicateHoist(t: Term, includePreconditions: Boolean=false)(implicit scope: Scope) = {
+    val e = new Explicate(includePreconditions)
     e.hoist(e(t))
   }
 }

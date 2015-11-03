@@ -225,7 +225,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
    * Output part
    */
 
-  def emit(s: State) = mkState(Explicate.explicateHoist(s.program))
+  def emit(s: State) = mkState(Explicate.explicateHoist(s.program, includePreconditions=true))
 
   /*
    * JSON part

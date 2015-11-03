@@ -31,11 +31,8 @@ object Rewrite {
     format.layOutAndAnnotate(term, (env.typeOf(_) map (_.toPretty)), (_.toPretty))
   }
 
-  import syntax.transform.Extrude
-  import TypedLambdaCalculus.{pullOut,simplify}
-  import semantics.pattern.{ExactMatch, SimplePattern}
-  import synth.pods.{MinDistribPod,SlicePod}
-  
+  import semantics.pattern.ExactMatch
+
   class Rewrite(val fromTo: List[(Term, Term)]) {
     private val ematch = fromTo map { case (from, to) => (new ExactMatch(from), to) }
     

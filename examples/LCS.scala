@@ -1,8 +1,8 @@
 package examples
 
-import semantics.{Trench, TypeTranslation, Scope, Prelude}
-import semantics.Prelude._
 import syntax.AstSugar._
+import semantics.{TypeTranslation, Scope, Prelude}
+import semantics.Prelude._
 import semantics.TypeTranslation.TypingSugar._
 import semantics.Domains.SubsortAssocT
 import synth.engine.TacticApplicationEngine
@@ -67,7 +67,9 @@ object LCS {
       import synth.pods._
       import syntax.Piping._
 
-      for (goal <- goals) extrude(goal)  |-- report.console.Console.display
+      for (goal <- goals) extrude(goal) |> report.console.Console.display
+
+      println("· " * 25)
 
       val a = new Assistant
 
@@ -79,7 +81,7 @@ object LCS {
       val partI = PartitionPod(I, toI.<, I0, I1)
       val partJ = PartitionPod(J, toJ.<, J0, J1)
 
-      val p = new Prover(List(NatPod, TuplePod, toR, toI, toJ, idxI, idxJ, partI, partJ) ++ pods)
+      val p = new Prover(List(NatPod, TuplePod, toR, toI, toJ, idxI, idxJ, partI, partJ) ++ pods, Prover.Verbosity.ResultsOnly)
 
       val commits =
         for (goals <- goals map (List(_))) yield {
@@ -94,10 +96,9 @@ object LCS {
 
       val results = commits reduce (_ ++ _)
 
-      println("=" * 80)
-      Trench.display(results, "◦")
-
       if (!(results.toList forall (_.root == "valid"))) System.exit(1)
+
+      println("=" * 80)  // QED!
     }
   }
 }
