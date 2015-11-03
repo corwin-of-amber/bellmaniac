@@ -64,7 +64,7 @@ object Bitonic {
         (ψ :: (((J0 x J1) ∩ <) -> R),
         (i ↦: j ↦: (min:@ `⟨ ⟩`(
             ψ:@(i,j),
-            (min:@(k ↦ ((ψ:@(k,i)) + (d:@(k,i))))) |! (succ:@(i,j))
+            (min:@((k :: J0) ↦ ((ψ:@(k,i)) + (d:@(k,i))))) |! (succ:@(i,j))
           )
         )) :: (((J1 x J1) ∩ <) -> R)
       )
@@ -88,6 +88,7 @@ object Bitonic {
     override def pods(implicit s: State) = {
       case (L("A"), List(~(j))) => APod(j)
       case (L("B"), List(~(j0), ~(j1))) => BPod(j0, j1)
+      case (L("C"), List(~(j0), ~(j1))) => CPod(j0, j1)
     }
 
     override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }

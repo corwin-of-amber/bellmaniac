@@ -1,6 +1,6 @@
 package synth.engine
 
-import java.io.{FileReader, BufferedReader}
+import java.io.{File, FileReader, BufferedReader}
 
 import com.mongodb.util.JSON
 import com.mongodb.{BasicDBList, DBObject}
@@ -175,6 +175,15 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       throw new TranslationError("not a valid command syntax") at command
   }
 
+  def initial(term: Term): State = {
+    implicit val empty = State.empty
+    val A = evalTerm(term) match {
+      case prg @ T(program.root, _) => prg
+      case x => program(instapod(x))
+    }
+    State(A, extrude(A) |-- display)
+  }
+
   def transform(s: State, command: Term) = {
     implicit val st = s
     var cert = false
@@ -192,6 +201,10 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
     cert = derivatives exists (x => x.it.isInstanceOf[LetSynthPod] || x.it.isInstanceOf[SynthPod])
     //cert = derivatives exists (x => x.it.isInstanceOf[StratifySlashPod] || x.it.isInstanceOf[StratifyReducePod])
+
+    val tacticf = new FileLog(new File("/tmp/tactic.json"))
+    tacticf += Map("tactic" -> command, "term" -> s.program)
+    tacticf.out.close()
 
     if (derivatives.isEmpty) s
     else {
@@ -222,9 +235,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   import syntax.Nullable._
 
   def initial(json: DBObject)(implicit sc: SerializationContainer): State = json.get("check") andThen ({ check =>
-    implicit val empty = State.empty
-    val A = evalTerm( Formula.fromJson(check.asInstanceOf[DBObject]) )
-    State(A, extrude(A) |-- display)
+    initial( Formula.fromJson(check.asInstanceOf[DBObject]) )
   }, { throw new TranslationError("not a valid start element") })
 
   def transform(s: State, json: DBObject)(implicit sc: SerializationContainer): State = json match {

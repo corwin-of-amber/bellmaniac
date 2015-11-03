@@ -49,7 +49,7 @@ object Console {
   def annotateWithTypes(term: Term, top: Boolean=true): Term = {
     if (term =~ ("↦", 2)) {
       val List(arg, body) = term.subtrees
-      val targ = if (top) arg else arg :: typeOf_!(arg)
+      val targ = if (top) arg else typeOf(arg) match { case Some(typ) => arg :: typ case _ => arg }
       T(term.root, List(targ, body) map (annotateWithTypes(_, top)))
     }
     else if (term =~ ("@", 2) && term.subtrees(0) =~ ("↦", 2))

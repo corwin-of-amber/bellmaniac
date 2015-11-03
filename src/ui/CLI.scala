@@ -5,22 +5,25 @@ import java.io.{InputStreamReader, BufferedReader, FileReader}
 import com.mongodb.{BasicDBObject, DBObject}
 import com.mongodb.util.JSON
 
-import report.data.{Rich, DisplayContainer}
-import semantics._
+import syntax.AstSugar._
+import syntax.Formula
+import syntax.transform.Extrude
 import syntax.Nullable._
 import syntax.Piping._
 
+import semantics.Scope
+import semantics.Trench
+import semantics.TypeInference
 import semantics.Prelude._
-import syntax.Formula
-import syntax.AstSugar._
-import syntax.transform.Extrude
-import report.console.Console.display
+import semantics.pattern.SimplePattern
 
 import examples.Gap
 import examples.Gap._
+import synth.engine.TacticApplicationEngine
 import synth.pods._
 import synth.proof.{Assistant, Prover}
-import semantics.pattern.{SimpleTypedPattern, MacroMap, SimplePattern}
+
+import report.data.{SerializationError, Rich, DisplayContainer}
 
 
 
@@ -86,13 +89,21 @@ object CLI {
 
     def interpretElement(json: DBObject): DBObject = {
       try {
+        implicit val scope = json.get("scope") andThen (_.asInstanceOf[DBObject] |> Scope.fromJson, Gap.env.scope)
         json.get("check") match {
           case check: DBObject =>
             val term = Formula.fromJson(check)
-            implicit val scope = json.get("scope") andThen(_.asInstanceOf[DBObject] |> Scope.fromJson, Gap.env.scope)
             Rich.display(extrude(TypeInference.infer(term)._2)).asJson(cc)
-          case _ =>
-            new BasicDBObject("error", "unrecognized JSON element").append("json", json)
+          case _ => json.get("tactic") match {
+            case tactic: DBObject =>
+              val term = json.get("term") andThen (_.asInstanceOf[DBObject] |> Formula.fromJson, { throw new SerializationError("tactic: missing 'term' key", json) })
+              val command = tactic |> Formula.fromJson
+              val tae = new TacticApplicationEngine()
+              val result = tae.transform(tae.initial(term), command)
+              Rich.display(result.ex).asJson(cc)
+            case _ =>
+              new BasicDBObject("error", "unrecognized JSON element").append("json", json)
+          }
         }
       }
       catch {
@@ -105,7 +116,7 @@ object CLI {
       for (blk <- blocks) {
         val json = JSON.parse(blk).asInstanceOf[DBObject]
         if (json != null) {
-          println(interpretElement(json))
+          println(Console.withOut(System.err) { interpretElement(json) })
         }
         else {
           println("""{"error": "failed to parse JSON element"}""")
@@ -127,10 +138,16 @@ object CLI {
 
   def main(args: Array[String]) {
     val filename = if (args.length > 0) args(0) else "-"
-    val f = new BufferedReader(
-      if (filename == "-") new InputStreamReader(System.in) else new FileReader(filename))
+    try {
+      val f = new BufferedReader(
+        if (filename == "-") new InputStreamReader(System.in) else new FileReader(filename))
 
-    val session = new Session
-    session repl getBlocks(f)
+      val session = new Session
+      session repl getBlocks(f)
+    }
+    catch {
+      case e: Throwable =>
+        println(new BasicDBObject("error", "fatal").append("message", e.toString))
+    }
   }
 }
