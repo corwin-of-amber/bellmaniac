@@ -25,7 +25,7 @@ root.genericIdentifier = (literal) -> identifier(literal, \?)
 
 root.declareSet = (literal) ->
 	if root.keywords.indexOf(literal) == -1
-		newSet = tree(identifier(literal, \set), [])
+		newSet = identifier(literal, \set)
 		root.scope.push newSet
 		newSet
 	else
@@ -37,22 +37,22 @@ root.declareSets = (head, tail) ->
 		if !(newSet = root.declareSet(literal))
 			return false
 	newSet # returns last set?
-        
+
 root.typeVariable = (literal) ->
 	if root.keywords.indexOf(literal) > -1
 		# console.error <| "Literal " + literal + " is reserved."
 		false
 	else if root.scope.filter((set) ->
-		set.root.literal == literal
+		set.literal == literal
 	).length > 0
 		tree(identifier(literal, \set), [])
 	else
 		# console.error <| "Literal " + literal + " has not yet been declared as a set."
-		tree(identifier(literal, 'type variable'), [])
+		tree(identifier(literal, "type variable"), [])
 
 root.variable = (literal) ->
 	if root.keywords.indexOf(literal) == -1 && root.scope.filter((set) ->
-		set.root.literal == literal
+		set.literal == literal
 	).length == 0
 		tree(identifier(literal, \variable), [])
 	else
@@ -66,6 +66,8 @@ root.abstraction = (par, body) -> par && body && tree(genericIdentifier(\↦), [
 root.application = (lhs, rhs) -> lhs && rhs && tree(genericIdentifier(\@), [lhs, rhs])
 
 root.typeOperation = (op, lhs, rhs) -> op && lhs && rhs && tree(operator(op), [lhs, rhs])
+
+root.functionType = (lhs, rhs) -> lhs && rhs && tree(genericIdentifier(\->), [lhs, rhs])
 
 root.slashExpression = (lhs, rhs) -> lhs && rhs && tree(operator(\/), [lhs, rhs])
 

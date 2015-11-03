@@ -30,7 +30,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 $scope.errorMsg = err.message
             )
 
-        bellmaniaParse($scope.code, success, error)
+        bellmaniaParse({isTactic: false, text: $scope.code}, success, error)
 
   ..filter "collapse" ->
     lead = -> it.match /^\s*/ .0.length

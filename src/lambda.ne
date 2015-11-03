@@ -17,7 +17,7 @@ expression 	-> setDeclaration {% id %}
 ####### SET DECLARATION #######
 ###############################
 
-setDeclaration -> identifier (__ identifier):* _ colon _ "set" {% 
+setDeclaration -> identifier (__ identifier):* _ colon _ "set" {%
   function(d, loc, reject) { return declareSets(d[0], d[1].map(take(1))) || reject; } %}
 
 ###########################################
@@ -103,7 +103,7 @@ defaultInfixOperator -> "/" {% function(d) {return operator(d[0]); } %}
 ####### TYPE EXPRESSIONS #######
 ################################
 
-type -> typeWithOperations _ typeArrow _ type {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
+type -> typeWithOperations _ typeArrow _ type {% function(d) {return functionType(d[0], d[4]); } %}
 	| typeWithOperations {% id %}
 
 ## assume type operators (\, * and ∩) are left associative

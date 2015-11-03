@@ -9,26 +9,27 @@
     $scope.wrapper = function(parent){
       var submitCallback, loadCallback;
       submitCallback = function(cm){
-        var calc, success, error;
+        var calc, thisIdx, thisId, success, error;
         calc = cm.parent;
         calc.output = null;
         calc.error = null;
+        thisIdx = _.findIndex($scope.history, function(h){
+          return h.id === calc.id;
+        });
+        thisId = thisIdx + 1;
         success = function(output){
           return $timeout(function(){
-            var thisIdx;
             calc.output = output.fromJar;
-            thisIdx = 1 + _.findIndex($scope.history, function(h){
-              return h.id === calc.id;
-            });
-            if (thisIdx === $scope.history.length) {
+            calc.fromNearley = output.fromNearley;
+            if (thisId === $scope.history.length) {
               $scope.history.push({
-                id: thisIdx + 1,
+                id: thisId + 1,
                 input: "",
                 output: null,
                 error: null
               });
             }
-            return $scope.mostRecentId = thisIdx;
+            return $scope.mostRecentId = thisId;
           });
         };
         error = function(err){
@@ -36,7 +37,19 @@
             return calc.error = err.message;
           });
         };
-        bellmaniaParse(calc.input, success, error);
+        if (thisIdx === 0) {
+          bellmaniaParse({
+            isTactic: false,
+            text: calc.input
+          }, success, error);
+        } else {
+          console.log($scope.history);
+          bellmaniaParse({
+            isTactic: true,
+            text: calc.input,
+            termJson: _.last($scope.history[thisIdx - 1].fromNearley)
+          }, success, error);
+        }
         cm.getInputField().blur();
         return $scope.$apply();
       };

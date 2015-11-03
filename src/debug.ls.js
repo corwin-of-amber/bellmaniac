@@ -29,7 +29,10 @@
           return $scope.errorMsg = err.message;
         });
       };
-      bellmaniaParse($scope.code, success, error);
+      bellmaniaParse({
+        isTactic: false,
+        text: $scope.code
+      }, success, error);
     };
   });
   x$.filter("collapse", function(){

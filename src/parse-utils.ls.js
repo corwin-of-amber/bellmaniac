@@ -35,7 +35,7 @@
   root.declareSet = function(literal){
     var newSet;
     if (root.keywords.indexOf(literal) === -1) {
-      newSet = tree(identifier(literal, 'set'), []);
+      newSet = identifier(literal, 'set');
       root.scope.push(newSet);
       return newSet;
     } else {
@@ -56,16 +56,16 @@
     if (root.keywords.indexOf(literal) > -1) {
       return false;
     } else if (root.scope.filter(function(set){
-      return set.root.literal === literal;
+      return set.literal === literal;
     }).length > 0) {
       return tree(identifier(literal, 'set'), []);
     } else {
-      return tree(identifier(literal, 'type variable'), []);
+      return tree(identifier(literal, "type variable"), []);
     }
   };
   root.variable = function(literal){
     if (root.keywords.indexOf(literal) === -1 && root.scope.filter(function(set){
-      return set.root.literal === literal;
+      return set.literal === literal;
     }).length === 0) {
       return tree(identifier(literal, 'variable'), []);
     } else {
@@ -80,6 +80,9 @@
   };
   root.typeOperation = function(op, lhs, rhs){
     return op && lhs && rhs && tree(operator(op), [lhs, rhs]);
+  };
+  root.functionType = function(lhs, rhs){
+    return lhs && rhs && tree(genericIdentifier('->'), [lhs, rhs]);
   };
   root.slashExpression = function(lhs, rhs){
     return lhs && rhs && tree(operator('/'), [lhs, rhs]);

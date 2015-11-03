@@ -28,7 +28,8 @@
   };
   root.bellmaniaParse = function(input, success, error){
     var blocks, buffer, output, jar, toStream, stream, err;
-    blocks = splitTextToBlocks(stripComments(input));
+    console.log(input);
+    blocks = splitTextToBlocks(stripComments(input.text));
     try {
       buffer = [];
       output = {
@@ -85,18 +86,34 @@
           };
         }
       }).filter(function(block){
-        return block.root.kind !== 'set';
+        return block.kind !== 'set';
       }).map(function(block){
         return {
-          check: block
+          check: block,
+          scope: window.scope
         };
       }).value();
       toStream = function(stream){
-        var i$, ref$, len$, parsedBlock;
-        for (i$ = 0, len$ = (ref$ = output.fromNearley).length; i$ < len$; ++i$) {
-          parsedBlock = ref$[i$];
-          stream.write(JSON.stringify(parsedBlock));
-          stream.write("\n\n");
+        var i$, ref$, len$, parsedBlock, tacticBlock;
+        if (input.isTactic) {
+          for (i$ = 0, len$ = (ref$ = output.fromNearley).length; i$ < len$; ++i$) {
+            parsedBlock = ref$[i$];
+            tacticBlock = {
+              tactic: parsedBlock.check,
+              term: tree(identifier('program', 'variable'), [input.termJson.check])
+            };
+            console.log("sending2");
+            console.log(JSON.stringify(tacticBlock, null, 2));
+            stream.write(JSON.stringify(tacticBlock));
+            stream.write("\n\n");
+          }
+        } else {
+          for (i$ = 0, len$ = (ref$ = output.fromNearley).length; i$ < len$; ++i$) {
+            parsedBlock = ref$[i$];
+            console.log("sending1", parsedBlock);
+            stream.write(JSON.stringify(parsedBlock));
+            stream.write("\n\n");
+          }
         }
         return stream.end();
       };
