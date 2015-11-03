@@ -1,3 +1,4 @@
+I : set
 J : set
 J₀ J₁ I₀ I₁ : set
 
@@ -6,9 +7,9 @@ A `I `J
 SaveAs (A `I `J) "loop"
 
 Slice (find (θ ↦ ?)) (⟨`?⟩ ⟨`I₀, `I₁⟩ ⟨`J₀, `J₁⟩)
-StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
-StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
-StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
+Stratify "/" (fixee 🄰) 🄰 ψ
+Stratify "/" (fixee 🄰) 🄰 ψ
+Stratify "/" (fixee 🄰) 🄰 ψ
 
 ⟨Slice (find 🄶 θ) (⟨`?⟩ ⟨`J₀, `J₁⟩),
  Slice (find 🄵 θ) (⟨`I₀, `I₁⟩ ⟨`J₀, `J₁⟩),
@@ -16,26 +17,21 @@ StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
  Slice (find 🄹 θ 2) (⟨`I₀, `I₁⟩ ⟨`?⟩),
  Slice (find 🄻 θ) (⟨`?⟩ ⟨`J₀, `J₁⟩),
  Slice (find 🄼 θ) (⟨`?⟩ ⟨`J₀, `J₁⟩)⟩
-⟨Distrib "/" 🄶 (find 🄶 (θ / θ)),
- Distrib "/" 🄹 (find 🄹 (θ / θ)),
- Distrib "/" 🄼 (find 🄼 (θ / θ))⟩
+⟨Distrib "/" 🄶, Distrib "/" 🄹, Distrib "/" 🄼⟩
 ⟨Slice (find 🄶 θ 2) (⟨`I₀, `I₁⟩ ⟨`?⟩),
  Slice (find 🄷 θ 2) (⟨`I₀, `I₁⟩ ⟨`?⟩)⟩
-⟨Distrib "/" 🄵 (find 🄵 (θ / ?)),
- Distrib "/" 🄶 (find 🄶 (θ / θ)),
- Distrib "/" 🄷 (find 🄷 (θ / θ)),
- Distrib "/" 🄹 (find 🄹 (θ / θ)),
- Distrib "/" 🄽 (find 🄽 (θ / θ))⟩
+⟨Distrib "/" 🄵, Distrib "/" 🄶, Distrib "/" 🄷,
+ Distrib "/" 🄹, Distrib "/" 🄽⟩
 
-⟨Stratify "/" (fixee 🄰) ⟨🄴,🄵,🄹⟩ (ctx 🄰 ψ),
- Stratify "/" (fixee 🄱) ⟨🄽,🄾,🅀⟩ (ctx 🄱 ψ),
- Stratify "/" (fixee 🄲) ⟨🅂,🅃,🅅⟩ (ctx 🄲 ψ)⟩
-Stratify "/" (fixee 🄰) ⟨🄷,🄸,🄼⟩ (ctx 🄰 ψ)
-Stratify "/" (fixee 🄰) ⟨🄸,🄹,🄻⟩ (ctx 🄰 ψ)
+⟨Stratify "/" (fixee 🄰) ⟨🄴,🄵,🄹⟩ ψ,
+ Stratify "/" (fixee 🄱) ⟨🄽,🄾,🅀⟩ ψ,
+ Stratify "/" (fixee 🄲) ⟨🅂,🅃,🅅⟩ ψ⟩
+Stratify "/" (fixee 🄰) ⟨🄷,🄸,🄼⟩ ψ
+Stratify "/" (fixee 🄰) ⟨🄸,🄹,🄻⟩ ψ
 
-⟨Synth (fixee 🄸) 🄸 (A `I₀ `J₀) (ctx 🄸 ψ) ⟨`I₀×J₀⟩,
- Synth (fixee 🄶) 🄶 (A `I₀ `J₁) (ctx 🄶 ψ) ⟨`I₀×J₁⟩,
- Synth (fixee 🄴) 🄴 (A `I₁ `J₀) (ctx 🄴 ψ) ⟨`I₁×J₀⟩,
- Synth (fixee 🄰) 🄰 (A `I₁ `J₁) (ctx 🄰 ψ) ⟨`I₁×J₁⟩⟩
+⟨Synth (fixee 🄸) 🄸 (A `I₀ `J₀) ψ ⟨`I₀×J₀⟩,
+ Synth (fixee 🄶) 🄶 (A `I₀ `J₁) ψ ⟨`I₀×J₁⟩,
+ Synth (fixee 🄴) 🄴 (A `I₁ `J₀) ψ ⟨`I₁×J₀⟩,
+ Synth (fixee 🄰) 🄰 (A `I₁ `J₁) ψ ⟨`I₁×J₁⟩⟩
 
 SaveAs (A `I `J) "rec"
