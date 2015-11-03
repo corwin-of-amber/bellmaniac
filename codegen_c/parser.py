@@ -27,6 +27,7 @@ APPLY = u'@'
 FIX = u'fix'
 MIN = u'min'
 PSI = u"\u03C8"
+SLASH = u'/'
 THETA = u"\u03B8"
 MAPSTO = u"\u21A6"
 SUBNUMS = {u"\u2080":0,
@@ -111,6 +112,8 @@ def refineTypes(trm,readSet,freeVars = {}):
         Assert(len(trm.largs)==2,"Only 2 args supported for theta: " + trm.__str__())
         lv = trm.largs[0]
         rv = trm.largs[1]
+        if lv.literal == APPLY or rv.literal == APPLY:
+            return
         Assert((lv.literal,lv.ns) in freeVars,"lvar of Theta not in freeVars!")
         lfv = freeVars[(lv.literal,lv.ns)]
         Assert((rv.literal,rv.ns) in freeVars,"rvar of Theta not in freeVars!")
@@ -156,11 +159,13 @@ class bmRoot(object):
     '''
     def __init__(self,root):
         for k in root.keys():
-            Assert(k in [u'literal',u'$',u'kind',u'ns'],"root has more keys than accounted for: " + str(root))
+            Assert(k in [u'type',u'literal',u'$',u'kind',u'ns'],"root has more keys than accounted for: " + str(root))
         self.literal = root[u'literal']
         #if self.literal[0] in VALIDFNAMES:
         #    print "LIT: ", self.literal
-        Assert(self.literal != u"",u"Empty literal found!")
+        if self.literal == u"":
+            self.literal = u"B"
+        #Assert(self.literal != u"",u"Empty literal found!")
         Assert(root[u'$'] == u'Identifier',u"$ value not Identifier in " + str(root))
         self.kind = root[u'kind']
         if u'ns' in root:
@@ -187,7 +192,7 @@ class bmType(bmRoot):
         
         #first char of sets is a caps
         if self.kind == 'set':
-            Assert(self.literal[0].isupper(),"First char of set in TypeTree must be caps") 
+            Assert(self.literal[0].isupper(),"First char of set in TypeTree must be caps: "+ self.literal) 
         Assert(self.ns is None, "ns value is always None in rootType nodes")
         
         Assert(typ[u'$'] == 'Tree',"$ value != identifier in bmType: " + typ[u'$'])
@@ -270,7 +275,12 @@ class bmTerm(bmRoot):
                 continue
             self.subtrees.append(bmTerm(i,self,prg))
         
-        if isRecCall(self.literal):
+        #Integer terms
+        if self.literal == 0 or self.literal == 1:
+            self.kind = "const"
+            self.literal= str(self.literal)
+        elif isRecCall(self.literal):
+            
             prg_name = filter(None,re.split('\[|,|\]',self.literal))
             name = prg_name[0]
             newparams = prg_name[1:]
@@ -377,7 +387,7 @@ class bmTerm(bmRoot):
                 if self.funct.boundExpr.code[-1] != u";":
                     rs+=u";"
             return rs
-        elif self.funct.literal == u'/':
+        elif self.funct.literal == SLASH:
             Assert(len(self.largs) == 1,"largs must be size 1")
             self.funct.setCode(False)
             rs = self.funct.code
@@ -437,7 +447,7 @@ class bmTerm(bmRoot):
         if self.tempMade:
             temps[self.id] = self.preCode
         for x in self.subtrees:
-            if x.literal != u'/': 
+            if x.literal != SLASH: 
                 x.getTempDefs(temps)
     def getTempDefsStr(self):
         temps = {}
@@ -508,10 +518,17 @@ class bmTerm(bmRoot):
             rootWithType += u"{" + self.type.__str__() + u"}"
         
         if self.literal == MAPSTO:
-            if self.parent is not None and self.parent.literal == u'/':
+            if self.parent is not None and self.parent.literal in [SLASH,FIX]:
                 #This is array recomputation
                 rs = self.buildForLoop(self.fvranges,self.boundExpr,"", u"default")
+            elif self.subtrees[0].literal == PSI:
+                self.subtrees[1].setCode(False)
+                rs = self.subtrees[1].code
             else:
+                #print self.parent.__str__()
+                print self.__str__()
+                Assert(False, "Why here?")
+                
                 rs = u""
                 rs += self.getFVRangeStr()
                 self.boundExpr.setCode(False)
@@ -555,7 +572,7 @@ class bmTerm(bmRoot):
             if guarding:
                 retStr += u"\n}\n"
             self.code = retStr
-        elif self.literal == u'/':
+        elif self.literal == SLASH:
             #print "SLASH: ",self.parent.parent.literal,self.parent.parent.type.__str__(),self.type.arrType(),self.subtrees[0].type.arrType(),self.subtrees[1].type.arrType()
             #self.setSlashRelationships()
             cmds = []
@@ -563,7 +580,7 @@ class bmTerm(bmRoot):
                 x.setCode(False)
                 if x.literal == PSI or (x.literal == MAPSTO and x.subtrees[0].literal == u'?' and x.subtrees[1].literal == PSI):
                     continue;
-                elif x.literal == u'/' or (x.literal != PSI and x.code !=u""):
+                elif x.literal == SLASH or (x.literal != PSI and x.code !=u""):
                     cmds.append(x.code)
                 else:
                     Assert(False,"Not accessible: " + x.literal)
@@ -721,6 +738,7 @@ class bmProgram(object):
             else:
                 self.superset[newparams[i]] = self.params[i]    
     def computeSupersets(self,curtrm):
+        
         if isRecCall(curtrm.literal):
             prg_name = filter(None,re.split('\[|,|\]',curtrm.literal))
             name = prg_name[0]
@@ -793,17 +811,18 @@ def main():
     args = parser.parse_args()
     prgs = getBmProgram(args.files)
     
-        
+    if args.debug:
+        for prg in prgs:
+            print prg.text
+            print prg.__str__()
+     
     for prg in prgs:
         superset ={}
         #print "PANEM: ",PNAME
         #print prg.text
         prg.printCode()
         
-    if args.debug:
-        for prg in prgs:
-            print prg.text
-            print prg.__str__()
+    
        
     #print superset
     

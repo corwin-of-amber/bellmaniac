@@ -30,6 +30,9 @@ struct interval {
 #define FOR_FORWARD(i,K) for(TYPE i=K.begin;i<K.end;i++)
 #define FOR_BACKWARD(i,K) for(TYPE i=K.end-1;i>=K.begin;i--)
 
+#define FOR_A_loop_1(i,K) FOR_FORWARD(i,K)
+#define FOR_A_loop_2(i,K) FOR_FORWARD(i,K)
+#define FOR_A_loop_3(i,K) FOR_FORWARD(i,K)
 #define FOR_B_loop_1(i,K) FOR_BACKWARD(i,K)
 #define FOR_B_loop_2(i,K) FOR_FORWARD(i,K)
 #define FOR_C_loop_1(i,K) FOR_FORWARD(i,K)
@@ -37,8 +40,10 @@ struct interval {
 #define FOR_C_loop_3(i,K) FOR_FORWARD(i,K)
 
 #define FORUNION(i,K,L,ZZ) for(TYPE i=K.begin;i<K.end;i++){ZZ};for(TYPE i=L.begin;i<L.end;i++){ZZ}
-#define BASE_CONSTRAINT_C(a,b,c) (a.end-a.begin <= B || b.end-b.begin <= B || c.end-c.begin <= B)
-#define BASE_CONSTRAINT_B(a,b) (a.end-a.begin <= B || b.end-b.begin <= B )
+#define BASE_CONSTRAINT_A(a) (a.end-a.begin <= B)
+#define BASE_CONSTRAINT_B(a,b) (BASE_CONSTRAINT_A(a) || BASE_CONSTRAINT_A(b))
+#define BASE_CONSTRAINT_C(a,b,c) (BASE_CONSTRAINT_B(a,b) || BASE_CONSTRAINT_A(c))
+
 void funcC_loop(interval K0, interval K1, interval K2) {
 
 	FOR_C_loop_2(i, K0)
@@ -117,6 +122,39 @@ void funcB_rec(interval J0, interval J1) {
 	funcB_rec(K0, K3);
 }
 
+void funcA_loop(interval J) {
+
+	FOR_A_loop_2(i, J)
+	{
+		FOR_A_loop_3(j, J)
+		{
+
+			TYPE t16 = MAXVAL;
+			FOR_A_loop_1(k, J)
+			{
+				if (i < k && k < j) {
+					t16 = min(t16, dist[i][k]+dist[k][j]+w(i,k,j));
+				}
+			}
+
+			dist[i][j] = min(t16, dist[i][j]);
+		}
+	}
+
+}
+void funcA_rec(interval J) {
+	if (BASE_CONSTRAINT_A(J)) {
+		funcA_loop(J);
+		return;
+	}
+	interval J0 = { J.begin, (J.end + J.begin) / 2 };
+	interval J1 = { J0.end, J.end };
+
+	funcA_rec(J0);
+	funcA_rec(J1);
+	funcB_rec(J0, J1);
+}
+
 TYPE dorig[N][N];
 TYPE dloop[N][N];
 TYPE drec[N][N];
@@ -133,7 +171,7 @@ void print_dist(TYPE comp[N][N], bool PRINTALL = false) {
 		}
 		//cout<<endl;
 	}
-	cout << ctr << " Values changed." << endl;
+	cout << ctr << " Values changed here." << endl;
 }
 void dcopy(TYPE from[N][N], TYPE to[N][N]) {
 	for (int i = 0; i < N; i++) {
@@ -142,75 +180,103 @@ void dcopy(TYPE from[N][N], TYPE to[N][N]) {
 		}
 	}
 }
+
+void printError(string msg, int i, int j) {
+	cout << "ERROR: " << msg << "\ni\tj\torig\tloop\trec\n" << i << "\t" << j
+			<< "\t" << dorig[i][j] << "\t" << dloop[i][j] << "\t" << drec[i][j]
+			<< endl;
+	exit(1);
+}
+void checkLoopRec(string func) {
+	int ctr = 0;
+	for (int i = 0; i < N; i++) {
+		for (int j = 0; j < N; j++) {
+			if (i >= j && dloop[i][j] != MAXVAL) {
+				printError("loop didn't maintain MAXVAL", i, j);
+			} else if (i >= j && drec[i][j] != MAXVAL) {
+				printError("rec didn't maintain MAXVAL", i, j);
+			} else if (dloop[i][j] != drec[i][j]) {
+				printError("Values not the same", i, j);
+			}
+			if (dloop[i][j] != dorig[i][j])
+				ctr++;
+		}
+	}
+	cout << ctr << " values updated by both " << func << " functions correctly."
+			<< endl;
+	//cout << "DONE" << endl;
+}
+
 void testC() {
 
-	srand (time(NULL));for (int i=0;i<N;i++) {
-		for (int j=0;j<N;j++) {
-			dorig[i][j] = (rand()%40)-20;
-		}
-	}
-	interval K0,K1,K2;
-	K0.begin = 0; K0.end = N/3;
-	K1.begin = K0.end; K1.end = (2*N)/3;
-	K2.begin = K1.end; K2.end = N;
-	dcopy(dorig,dist);
-//if (N<20) print_dist(dist,true);
-	funcC_loop(K0,K1,K2);
-	if (N<20) print_dist(dorig);
-	dcopy(dist,dloop);
+	interval K0 = { 0 / N / 3 };
+	interval K1 = { K0.end, (2 * N) / 3 };
+	interval K2 = { K1.end, N };
+	dcopy(dorig, dist);
+	funcC_loop(K0, K1, K2);
+	if (N < 20)
+		print_dist(dorig);
+	dcopy(dist, dloop);
 
-	dcopy(dorig,dist);
-	funcC_rec(K0,K1,K2);
-	if (N<20) print_dist(dorig);
-	dcopy(dist,drec);
-	int ctr = 0;
-	for (int i=0;i<N;i++) {
-		for (int j=0;j<N;j++) {
-			if(dloop[i][j] != drec[i][j]) {
-				cout<<"Not the same: "<<i<<" "<<j<<endl;
-				exit(1);
-			}
-			if (dloop[i][j] != dorig[i][j]) ctr++;
-		}
-	}
-	cout<<ctr<<" values updated by both functions correctly."<<endl;
-	cout<<"DONE"<<endl;
+	dcopy(dorig, dist);
+	funcC_rec(K0, K1, K2);
+	if (N < 20)
+		print_dist(dorig);
+	dcopy(dist, drec);
+	checkLoopRec("funcC");
 }
 
 void testB() {
 
-	srand (time(NULL));for (int i=0;i<N;i++) {
-		for (int j=0;j<N;j++) {
-			dorig[i][j] = (rand()%40)-20;
-		}
-	}
-	interval K0,K1;
-	K0.begin = 0; K0.end = N/2;
-	K1.begin = K0.end; K1.end = N;
-	dcopy(dorig,dist);
-//if (N<20) print_dist(dist,true);
-	funcB_loop(K0,K1);
-	if (N<20) print_dist(dorig);
-	dcopy(dist,dloop);
+	interval K0 = { 0, N / 2 };
+	interval K1 = { K0.end, N };
+	dcopy(dorig, dist);
+	funcB_loop(K0, K1);
+	if (N < 20)
+		print_dist(dorig);
+	dcopy(dist, dloop);
 
-	dcopy(dorig,dist);
-	funcB_rec(K0,K1);
-	if (N<20) print_dist(dorig);
-	dcopy(dist,drec);
-	int ctr = 0;
-	for (int i=0;i<N;i++) {
-		for (int j=0;j<N;j++) {
-			if(dloop[i][j] != drec[i][j]) {
-				cout<<"Not the same: "<<i<<" "<<j<<endl;
-				exit(1);
-			}
-			if (dloop[i][j] != dorig[i][j]) ctr++;
-		}
-	}
-	cout<<ctr<<" values updated by both functions correctly."<<endl;
-	cout<<"DONE"<<endl;
+	dcopy(dorig, dist);
+	funcB_rec(K0, K1);
+	if (N < 20)
+		print_dist(dorig);
+	dcopy(dist, drec);
+	checkLoopRec("funcB");
+}
+
+void testA() {
+
+	interval K0 = { 0, N };
+	dcopy(dorig, dist);
+	funcA_loop(K0);
+	if (N < 20)
+		print_dist(dorig);
+	dcopy(dist, dloop);
+
+	dcopy(dorig, dist);
+	funcA_rec(K0);
+	if (N < 20)
+		print_dist(dorig);
+	dcopy(dist, drec);
+	checkLoopRec("funcA");
 }
 
 int main(int argc, char *argv[]) {
+	srand (time(NULL));cout<<"Random dist: "<<endl;
+
+	for (int i=0;i<N;i++) {
+		for (int j=0;j<N;j++) {
+			if (i<j) {
+				dorig[i][j] = (rand()%40)-20;
+				cout<<i<<'\t'<<j<<'\t'<<dorig[i][j]<<endl;
+			}
+			else dorig[i][j] = MAXVAL;
+		}
+	}
+	cout<<"funcC test: "<<endl;
+	testC();
+	cout<<"funcB test: "<<endl;
 	testB();
+	cout<<"funcA test: "<<endl;
+	testA();
 }
