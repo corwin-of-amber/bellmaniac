@@ -28,7 +28,7 @@ struct interval {
 };
 
 #define FOR_FORWARD(i,K) for(TYPE i=K.begin;i<K.end;i++)
-#define FOR_BACKWARD(i,K) for(TYPE i=K.end;i>=K.begin;i--)
+#define FOR_BACKWARD(i,K) for(TYPE i=K.end-1;i>=K.begin;i--)
 
 #define FOR_B_loop_1(i,K) FOR_BACKWARD(i,K)
 #define FOR_B_loop_2(i,K) FOR_FORWARD(i,K)
