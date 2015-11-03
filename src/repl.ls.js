@@ -11,26 +11,24 @@
       submitCallback = function(cm){
         var calc, success, error;
         calc = cm.parent;
-        delete calc.output;
-        delete calc.error;
+        calc.output = null;
+        calc.error = null;
         success = function(output){
           return $timeout(function(){
-            var thisIdx, nextIdx;
+            var thisIdx;
             calc.output = output.fromJar;
-            thisIdx = _.findIndex($scope.history, function(h){
+            thisIdx = 1 + _.findIndex($scope.history, function(h){
               return h.id === calc.id;
             });
-            if (thisIdx === $scope.history.length - 1 || typeof $scope.history[thisIdx + 1].output !== 'undefined') {
-              nextIdx = _.max($scope.history, function(h){
-                return h.id;
-              }).id + 1;
-              return $scope.history.splice(thisIdx + 1, 0, {
-                id: nextIdx,
-                input: ""
+            if (thisIdx === $scope.history.length) {
+              $scope.history.push({
+                id: thisIdx + 1,
+                input: "",
+                output: null,
+                error: null
               });
-            } else {
-              return $scope.history[thisIdx + 1].input = "";
             }
+            return $scope.mostRecentId = thisIdx;
           });
         };
         error = function(err){
@@ -49,8 +47,14 @@
     };
     $scope.history = [{
       id: 1,
-      input: "a b"
+      input: "a b",
+      output: null,
+      error: null
     }];
+    $scope.mostRecentId = 1;
+    $scope.isInvalid = function(h){
+      return $scope.mostRecentId < h.id && h.output !== null;
+    };
     $scope.output = {};
     $scope.data = [];
   });

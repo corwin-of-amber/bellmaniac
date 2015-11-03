@@ -21,6 +21,10 @@
   white-space: pre;
 }
 
+.icon {
+  margin-right: 15px;
+}
+
 /* get bootstrap styling for CodeMirror */
 textarea, .CodeMirror {
   line-height: 1.3em;

@@ -9,23 +9,20 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
         submitCallback = (cm) ->
 
             calc = cm.parent
-            delete calc.output
-            delete calc.error
+            calc.output = null
+            calc.error = null
 
             success = (output) ->
                 $timeout(->
                     calc.output = output.fromJar
-                    thisIdx = _.findIndex($scope.history, (h) ->
+                    thisIdx = 1 + _.findIndex($scope.history, (h) ->
                         h.id == calc.id
                     )
-                    if (thisIdx == ($scope.history.length - 1) ||
-                        typeof $scope.history[thisIdx+1].output != \undefined)
 
-                        nextIdx = _.max($scope.history, (h) -> h.id).id + 1
-                        $scope.history.splice(thisIdx+1, 0,
-                            {id: nextIdx, input: ""})
-                    else
-                        $scope.history[thisIdx+1].input = ""
+                    if (thisIdx == ($scope.history.length))
+                        $scope.history.push({id: thisIdx + 1, input: "", output: null, error: null})
+
+                    $scope.mostRecentId = thisIdx
                 )
 
             error = (err) ->
@@ -43,8 +40,11 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
         initEditor(submitCallback, loadCallback)
 
     $scope.history = [
-        {id: 1, input: "a b"}
+        {id: 1, input: "a b", output: null, error: null}
     ]
+    $scope.mostRecentId = 1
+    $scope.isInvalid = (h) ->
+        return ($scope.mostRecentId < h.id && h.output != null)
     $scope.output = {}
     $scope.data = []
   ..filter "collapse" ->

@@ -30,53 +30,56 @@
 	<link rel="stylesheet" href="src/index.css">
 </head>
 <body>
-	<div class="container">
-		<div ng-app="app" ng-controller="Ctrl">
+	<div ng-app="app" ng-controller="Ctrl">
+		<div class="container">
 			<h1>Bellmania Interface</h1>
 			<p>Press Cmd-Enter in the code editor to parse current code.</p>
-			<div ng-repeat="h in history">
-				<hr ng-if="$index > 0">
-				<div class="row">
-					<div class="col-xs-1">{{"In[" + h.id + "]"}}</div>
-					<div class="col-xs-11">
-						<textarea ui-codemirror="{ onLoad : wrapper(h), indentWithTabs : true }" ui-codemirror-opts="cmOptions" ng-model="h.input"></textarea>
-					</div>
+		</div>
+		<div class="container" ng-repeat="h in history">
+			<hr ng-if="$index > 0">
+			<div class="row">
+				<span ng-show="isInvalid(h)" class="label label-danger pull-right icon">OUTDATED</span>
+			</div>
+			<div class="row">
+				<div class="col-xs-1">{{"In[" + h.id + "]"}}</div>
+				<div class="col-xs-11">
+					<textarea ui-codemirror="{ onLoad : wrapper(h), indentWithTabs : true }" ui-codemirror-opts="cmOptions" ng-model="h.input"></textarea>
 				</div>
-				<div ng-show="h.error.length > 0" class="alert alert-danger">{{h.error}}</div>
-				<div class="row" ng-if="h.output">
-					<br>
-					<div class="col-xs-1">{{"Out[" + h.id + "]"}}</div>
-					<div class="col-xs-11">
-						<div class="cell" ng-repeat="cell in h.output | orderBy:'index'">
-							<display o="cell.value"></display>
-						</div>
+			</div>
+			<div ng-show="h.error.length > 0" class="alert alert-danger">{{h.error}}</div>
+			<div class="row" ng-if="h.output">
+				<br>
+				<div class="col-xs-1">{{"Out[" + h.id + "]"}}</div>
+				<div class="col-xs-11">
+					<div class="cell" ng-repeat="cell in h.output | orderBy:'index'">
+						<display o="cell.value"></display>
 					</div>
 				</div>
 			</div>
 		</div>
-		<template type="text/ng-template" id="display">
-			<compute ng-if="o.tape" let="parts = o | display">
-				<span class="code"
-				 ng-class="mark[1]"
-				 data-tip="{{mark[2]}}"
-				 ng-repeat="mark in parts track by $index">{{mark[0]}}</span>
-			</compute>
-			<div ng-if="o.vbox" ng-repeat="el in o.vbox">
-				<display o="el"></display>
-			</div>
-			<ul ng-if="o.list">
-				<li ng-repeat="el in o.list">
-					<display o="el"></display>
-				</li>
-			</ul>
-			<ul ng-if="o.tree" class="c" bullet="{{o.bullet}}">
-				<li>
-					<display o="o.tree.root"></display>
-					<display ng-repeat="s in o.tree.subtrees" o="{tree: s}"></display>
-				</li>
-			</ul>
-			<span class="code" ng-if="o | isString">{{o}}</span>
-		</template>
 	</div>
+	<template type="text/ng-template" id="display">
+		<compute ng-if="o.tape" let="parts = o | display">
+			<span class="code"
+			 ng-class="mark[1]"
+			 data-tip="{{mark[2]}}"
+			 ng-repeat="mark in parts track by $index">{{mark[0]}}</span>
+		</compute>
+		<div ng-if="o.vbox" ng-repeat="el in o.vbox">
+			<display o="el"></display>
+		</div>
+		<ul ng-if="o.list">
+			<li ng-repeat="el in o.list">
+				<display o="el"></display>
+			</li>
+		</ul>
+		<ul ng-if="o.tree" class="c" bullet="{{o.bullet}}">
+			<li>
+				<display o="o.tree.root"></display>
+				<display ng-repeat="s in o.tree.subtrees" o="{tree: s}"></display>
+			</li>
+		</ul>
+		<span class="code" ng-if="o | isString">{{o}}</span>
+	</template>
 </body>
 </html>
