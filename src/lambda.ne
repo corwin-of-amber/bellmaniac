@@ -56,6 +56,7 @@ fixedExpression -> fix __ lambdaOrRootExpression {% function(d) { return fixedEx
 rootExpression -> parenthesizedExpression {% id %}
  	| listExpression {% id %}
     | variable {% id %}
+    | integer {% id %}
     | backtick _ type {% take(2) %}
 
 listExpression -> leftbracket _ expression (_ comma _ expression):* _ rightbracket {% function(d) {
@@ -90,6 +91,8 @@ possiblyTypedLambdaParameter -> variable {% id %}
 
 variable -> identifier {% function(d, loc, reject) {return variable(d[0]) || reject; } %}
     | escaped {% function(d) { return tree(identifier(d[0],'variable')); } %}
+
+integer -> num {% function(d) { return tree(identifier(d[0],'?')); } %}
 
 notatedInfixOperator -> backtick variable backtick {% function(d) {return d[1]; } %}
 	| [+*\-] {% function(d) {return tree(operator(d[0]),[]); } %}
@@ -132,6 +135,8 @@ letter -> [a-zA-Z$_\u00C0-\u00D6\u00D8-\u1FFF\u2080-\u2089\u2C00-\uD7FF] {% id %
 digit -> [0-9] {% id %}
 
 letter -> [\uD83C\uDD30-\uDD49] {% id %}    # boxed letters
+
+num -> digit:+ {% function(d) { return parseInt(d[0].join("")); } %}
 
 op -> validStandaloneOpchars {% id %}
 	| opchar opchar:+ {% function(d) { return [d[0]].concat(d[1]).join(""); } %}

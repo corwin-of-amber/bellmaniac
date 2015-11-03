@@ -31,7 +31,7 @@ CodeMirror.defineMode("bellmania", function () {
     var operators = makeKeywords("/ + × ∩ - * ↦ :");
 
     // tactics
-    var tactics = makeKeywords("Slice Synth StratifySlash");
+    var tactics = makeKeywords("Slice Synth Stratify Distrib Assoc Let SlashToReduce SaveAs");
 
     var boxedRegex = new RegExp(/\ud83c[\udd30-\udd38](\u0332)?/);
 
@@ -120,8 +120,8 @@ CodeMirror.defineMode("bellmania", function () {
                     if (ch == "\"") { // enter string parsing mode
                         state.mode = "string";
                         returnType = STRING;
-                    } else if (ch == "`") { // everything from backtick to whitespace is an atom
-                        stream.eatWhile(/[^\s]/);
+                    } else if (ch == "`") { // everything from backtick to whitespace/separator is an atom
+                        stream.eatWhile(/[^\s()\[\]⟨⟩,]/);
                         returnType = ATOM;
                     } else if (ch == "'") {
                         returnType = ATOM;
@@ -144,7 +144,7 @@ CodeMirror.defineMode("bellmania", function () {
                         if(typeof state.sExprComment == "number") state.sExprComment++;
                         returnType = BRACKET;
                     } else if (ch === "\ud83c") {
-                        stream.eatWhile(/[\udd30-\udd38\u0332]/);
+                        stream.eatWhile(/[\udd30-\udd49\u0332]/);
                         returnType = ATOM;
                     } else if (ch == ")" || ch == "]" || ch == "⟩") {
                         returnType = BRACKET;
