@@ -1,5 +1,7 @@
 /*
- * Run as: ++ -D N=100 -D B=5 -o parena paren-a.cpp  && ./parena
+ * Run as: g++ -D N=100 -D B=5 -o parena paren-a.cpp
+ * ./parena random
+ * ./parena optimal
  */
 #include <cstdio>
 #include <cstdlib>
