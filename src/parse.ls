@@ -47,7 +47,6 @@ root.bellmaniaParse = (input, success, error) ->
                     output.fromJar.push({value: outputBlock})
                 success(output)
             catch err
-                console.log err
                 error(err)
 
         jar.stderr.on \data, (data) !->
@@ -83,7 +82,7 @@ root.bellmaniaParse = (input, success, error) ->
                 for parsedBlock in output.fromNearley
                     tacticBlock = {
                         tactic: parsedBlock.check,
-                        term: tree(identifier(\program, \variable), [input.termJson.check])
+                        term: tree(identifier(\program, \variable), [input.termJson])
                     }
                     console.log("sending2");
                     console.log(JSON.stringify(tacticBlock, null, 2));

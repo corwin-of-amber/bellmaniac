@@ -57,7 +57,6 @@
           success(output);
         } catch (e$) {
           err = e$;
-          console.log(err);
           error(err);
         }
       });
@@ -100,7 +99,7 @@
             parsedBlock = ref$[i$];
             tacticBlock = {
               tactic: parsedBlock.check,
-              term: tree(identifier('program', 'variable'), [input.termJson.check])
+              term: tree(identifier('program', 'variable'), [input.termJson])
             };
             console.log("sending2");
             console.log(JSON.stringify(tacticBlock, null, 2));

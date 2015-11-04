@@ -47,7 +47,7 @@
           bellmaniaParse({
             isTactic: true,
             text: calc.input,
-            termJson: _.last($scope.history[thisIdx - 1].fromNearley)
+            termJson: _.last($scope.history[thisIdx - 1].output).value.term
           }, success, error);
         }
         cm.getInputField().blur();

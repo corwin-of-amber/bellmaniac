@@ -37,11 +37,11 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
                 bellmaniaParse({isTactic: false, text: calc.input}, success, error)
             else
                 # parse as a tactic
-                console.log($scope.history);
+                console.log($scope.history)
                 bellmaniaParse({
                     isTactic: true,
                     text: calc.input,
-                    termJson: _.last($scope.history[thisIdx-1].fromNearley)
+                    termJson: _.last($scope.history[thisIdx-1].output).value.term
                     },
                     success, error)
             # bellmaniaParse(calc.input, success, error)

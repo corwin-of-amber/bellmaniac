@@ -59,6 +59,7 @@
 		</div>
 	</div>
 	<template type="text/ng-template" id="display">
+        <display ng-if="o.display" o="o.display"></display>
 		<compute ng-if="o.tape" let="parts = o | display">
 			<span class="code"
 			 ng-class="mark[1]"
