@@ -132,7 +132,7 @@ void funcA_loop(interval J) {
 
 			TYPE t16= MAXVAL;
 
-			FOR_A_loop_1(k,J){ if (i<k && k<j){ /*{cout<<"loopA:\t"<<i<<'\t'<<k<<'\t'<<j<<endl;}*/t16 = min(t16,dist[i][k]+dist[k][j]+w(i,k,j)); } }
+			FOR_A_loop_1(k,J){ if (i<k && k<j){ t16 = min(t16,dist[i][k]+dist[k][j]+w(i,k,j)); } }
 
 			dist[i][j] = min(t16,dist[i][j]);)
 
@@ -303,6 +303,21 @@ if	(argc > 1) {
 			for (int j=0;j<N;j++) {
 				if (i<j) {
 					dorig[i][j] = (rand()%40)-20;
+					if (N < 20) {
+						cout<<i<<'\t'<<j<<'\t'<<dorig[i][j]<<endl;
+					}
+				}
+				else dorig[i][j] = MAXVAL;
+			}
+		}
+	}
+	else if (distType == "optimal") {
+		cout<<"Optimal dist: "<<endl;
+
+		for (int i=0;i<N;i++) {
+			for (int j=0;j<N;j++) {
+				if (j == i+1) {
+					dorig[i][j] = i+1;
 					if (N < 20) {
 						cout<<i<<'\t'<<j<<'\t'<<dorig[i][j]<<endl;
 					}
