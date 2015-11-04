@@ -94,9 +94,9 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
   ..filter "isString" -> _.isString
 
   ..filter "display" ->
-    (input) ->
+    f = (input) ->
       if _.isString input
-        input
+        [input]
       else if input.tape?
         last = 0
         text = input.tape.text
@@ -110,7 +110,6 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
             if y.length then ..push [y,cls,mark.type]
           x = text.substring(last)
           if x.length then ..push [x]
-        #JSON.stringify input.tape.markup
       else
         [JSON.stringify input]
 

@@ -6,7 +6,7 @@
   _ = require('lodash');
   root = typeof exports != 'undefined' && exports !== null ? exports : this;
   stripComments = function(input){
-    return input.replace(/\s*;.*$/mg, '');
+    return input.replace(/\s*\/\/.*$|\/\*[\s\S]*?\*\//mg, '');
   };
   splitTextToBlocks = function(input){
     var blocks, countLines;

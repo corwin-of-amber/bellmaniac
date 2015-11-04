@@ -120,10 +120,11 @@
     return _.isString;
   });
   x$.filter("display", function(){
-    return function(input){
+    var f;
+    return f = function(input){
       var last, text, x$, i$, ref$, len$, ref1$, ref2$, u, v, mark, x, y, cls;
       if (_.isString(input)) {
-        return input;
+        return [input];
       } else if (input.tape != null) {
         last = 0;
         text = input.tape.text;

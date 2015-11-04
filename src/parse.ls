@@ -5,7 +5,7 @@ _ = require \lodash
 root = exports ? this
 
 stripComments = (input) ->
-    input.replace /\s*;.*$/mg, ''
+    input.replace //  \s* \/\/ .*$  |  \/\* [\s\S]*? \*\/  //mg, ''
 
 splitTextToBlocks = (input) ->
     blocks = input.split /(\n+)(?!\s)/ .map ->

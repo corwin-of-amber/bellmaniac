@@ -28,7 +28,7 @@ CodeMirror.defineMode("bellmania", function () {
 
     // actually reserved in language
     var keywords = makeKeywords("set fix");
-    var operators = makeKeywords("/ + × ∩ - * ↦ :");
+    var operators = makeKeywords("/ + × ∩ - * ↦ : min max");
 
     // tactics
     var tactics = makeKeywords("Slice Synth Stratify Distrib Assoc Let SlashToReduce SaveAs");
@@ -95,7 +95,7 @@ CodeMirror.defineMode("bellmania", function () {
             switch(state.mode){
                 case "string": // multi-line string parsing mode
                     var next, escaped = false;
-                    while ((next = stream.next()) !== null) {
+                    while ((next = stream.next()) != null) {
                         if (next == "\"" && !escaped) {
                             state.mode = false;
                             break;
@@ -106,7 +106,7 @@ CodeMirror.defineMode("bellmania", function () {
                     break;
                 case "comment": // multi-line comment ends with */
                     var next, maybeEnd = false;
-                    while ((next = stream.next()) !== null) {
+                    while ((next = stream.next()) != null) {
                         if (next == "/" && maybeEnd) {
                             state.mode = false;
                             break;
@@ -134,7 +134,7 @@ CodeMirror.defineMode("bellmania", function () {
                         } else if (stream.eat('/')) {
                             stream.skipToEnd(); // rest of the line is a comment
                             returnType = COMMENT;
-                        }
+                        } 
                     } else if (/^[-+0-9.]/.test(ch) && isDecimalNumber(stream, true)) { // decimal number
                         returnType = NUMBER;
                     } else if (ch == "(" || ch == "[" || ch == "⟨") {
