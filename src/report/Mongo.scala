@@ -19,6 +19,7 @@ import com.mongodb.DB
 
 trait AppendLog {
   def +=(text: String)
+  def +=(m: Map[String,AnyRef]) { this += m.toString }
   def +=(any: Any) { this += any.toString }
   
   def <<(op: => Unit) {
@@ -28,7 +29,7 @@ trait AppendLog {
   }
 }
 
-class DevNull extends AppendLog {
+object DevNull extends AppendLog {
   def +=(text: String) {}
 }
 
@@ -46,7 +47,7 @@ class FileLog(val file: File, val container: SerializationContainer=new Serializ
     out.flush()
   }
 
-  def +=(m: Map[String,AnyRef]) {
+  override def +=(m: Map[String,AnyRef]) {
     this += container.map(m)
   }
 
@@ -95,7 +96,7 @@ object NotebookLog {
     new MongoClient("localhost:5001", MongoClientOptions.builder.connectTimeout(100).build )
   } catch { case _: MongoTimeoutException => null }*/
   
-  val out = if (mongo == null) new DevNull
+  val out = if (mongo == null) DevNull
     else {
       val log = new NotebookLog(mongo.getDB("meteor").getCollection("cells"))
       log.clear

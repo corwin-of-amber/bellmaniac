@@ -19,10 +19,11 @@ import semantics.TypeTranslation.Environment
 import syntax.AstSugar._
 import syntax.Piping._
 import syntax.{Tree, Formula}
-import syntax.transform.{ExtrudedTerms, Extrude}
+import syntax.transform.{TreeSubstitution, ExtrudedTerms, Extrude}
 import synth.pods.ConsPod._
 import synth.pods._
 import synth.tactics.Rewrite._
+import synth.tactics.Synth
 import ui.CLI
 
 
@@ -76,7 +77,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
   def ctx_?(subterm: Term, expr: Term)(implicit s: State) =
     if (expr.isLeaf && TypedTerm.typeOf(expr).isEmpty)
-      ctx(s.program, subterm) getOrElse (expr.root.literal, expr)
+      ctx(s.program, subterm) getOrElse (expr.root.literal, throw new Exception(s"undefined variable ${expr}"))//expr)
     else expr
 
   def resolvePatterns(command: Term)(implicit s: State) = {
@@ -115,21 +116,25 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       List(SlicePod(f, domains))
 
     /* deprecated */
-    case Some((L("StratifySlash"), List(~(h), ~(quadrant), ~(ψ)))) =>
+    case Some((L("StratifySlash"), List(~(h), ~(quadrant), ~(ψ_)))) =>
+      val ψ = ctx_?(h, ψ_)
       List(StratifySlashPod(h, quadrant, ψ))
-    case Some((L("StratifyReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ)))) =>
+    case Some((L("StratifyReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ_)))) =>
+      val ψ = ctx_?(h, ψ_)
       SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
         StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
-    case Some((L("LetSlash"), List(~(h), ~(quadrant), ~(ψ)))) =>
+    case Some((L("LetSlash"), List(~(h), ~(quadrant), ~(ψ_)))) =>
+      val ψ = ctx_?(h, ψ_)
       List(LetSlashPod(h, quadrant, ψ))
-    case Some((L("LetReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ)))) =>
+    case Some((L("LetReduce"), List(reduce, ~(h), ~~(subelements), ~(ψ_)))) =>
+      val ψ = ctx_?(h, ψ_)
       SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
         LetReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
 
     case Some((L("Stratify"), List(L("/"), ~(h), ~~(subelements), ~(ψ_)))) =>
       val slashes = slasher(h, subelements.head)
       val ψ = ctx_?(subelements.head, ψ_)
-      if (subelements.length == 1 && (slashes eq h))
+      if (subelements.length == 1 && TypedTerm.eq(slashes, h))
         List(StratifySlashPod(h, subelements.head, ψ))
       else
         List(StratifySlash2Pod(TermWithHole.puncture(h, slashes), slashes, subelements, ψ))
@@ -150,6 +155,18 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     case Some((L("Synth"), List(~(h), synthed, ~(ψ_)))) =>
       val ψ = ctx_?(h, ψ_)
       List(LetSynthPod(h, encaps(synthed), evalTerm(synthed), ψ))
+
+    case Some((L("SynthAuto"), List(~(h), ~(subterm), template, ~(ψ_)))) =>
+      val ψ = ctx_?(h, ψ_)
+      LambdaCalculus.isApp(template) match {
+        case Some((name, args)) =>
+          val pod = pods(s).apply((name, args))  // note: do not typecheck yet
+          val solution = Synth.synthesizeFixPodSubterm(h, subterm, pod).run()
+          println(solution mapValues (_.toPretty))
+          println(new TreeSubstitution(solution map { case (k,v) => (TI(k), v) } toList)(template))
+          List()
+        case _ => throw new Exception("invalid synth template")
+      }
 
     case Some((L("Distrib"), List(L("/"), ~(f)))) =>
       val box = SimplePattern(? /: ?) findOne_! f
@@ -199,8 +216,8 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
     val derivatives = resolvePatterns(command) flatMap pods map instapod
 
-    cert = derivatives exists (x => x.it.isInstanceOf[LetSynthPod] || x.it.isInstanceOf[SynthPod])
-    //cert = derivatives exists (x => x.it.isInstanceOf[StratifySlashPod] || x.it.isInstanceOf[StratifyReducePod])
+    cert ||= derivatives exists (x => x.it.isInstanceOf[LetSynthPod] || x.it.isInstanceOf[SynthPod])
+    //cert ||= derivatives exists (x => x.it.isInstanceOf[StratifySlashPod] || x.it.isInstanceOf[StratifyReducePod])
 
     val tacticf = new FileLog(new File("/tmp/tactic.json"))
     tacticf += Map("tactic" -> command, "term" -> s.program)
@@ -242,7 +259,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     case l: BasicDBList =>  (s /: (l map (_.asInstanceOf[DBObject])))(transform)
     case _ => json.get("check") andThen ({ check =>
       transform(s, Formula.fromJson(check.asInstanceOf[DBObject])) |-- {
-        new_s => if (new_s ne s) { display(new_s.ex) ; logf += Rich.display(new_s.ex) }
+        new_s => if (new_s ne s) { display(new_s.ex) ; logf += Map("term" -> new_s.program, "display" -> Rich.display(new_s.ex)) }
       }
     }, s)
   }

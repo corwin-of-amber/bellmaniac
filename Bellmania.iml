@@ -11,5 +11,6 @@
     <orderEntry type="library" name="scala-sdk-2.11.6" level="application" />
     <orderEntry type="library" name="mongo-java-driver-2.13.1" level="project" />
     <orderEntry type="library" name="z3" level="application" />
+    <orderEntry type="library" name="sketch-frontend-1.7.0" level="project" />
   </component>
 </module>

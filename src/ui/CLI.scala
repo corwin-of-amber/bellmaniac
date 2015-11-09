@@ -93,14 +93,17 @@ object CLI {
         json.get("check") match {
           case check: DBObject =>
             val term = Formula.fromJson(check)
-            Rich.display(extrude(TypeInference.infer(term)._2)).asJson(cc)
+            val result = TypeInference.infer(term)._2
+            cc.map(Map("term" -> result,
+                       "display" -> Rich.display(extrude(result))))
           case _ => json.get("tactic") match {
             case tactic: DBObject =>
               val term = json.get("term") andThen (_.asInstanceOf[DBObject] |> Formula.fromJson, { throw new SerializationError("tactic: missing 'term' key", json) })
               val command = tactic |> Formula.fromJson
               val tae = new TacticApplicationEngine()
               val result = tae.transform(tae.initial(term), command)
-              Rich.display(result.ex).asJson(cc)
+              cc.map(Map("term" -> result.program,
+                         "display" -> Rich.display(result.ex)))
             case _ =>
               new BasicDBObject("error", "unrecognized JSON element").append("json", json)
           }

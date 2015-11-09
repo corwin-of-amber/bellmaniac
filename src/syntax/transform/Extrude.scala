@@ -44,9 +44,13 @@ class Extrude(val ops: Set[Identifier]) {
   
   def smallEnough(e: Term) = {
     if (e.isLeaf) Some(e)
-    else if (e =~ ("↦", 2) && e.subtrees.forall(_.isLeaf) && e.subtrees(0).root == "?") Some(T(I(e.subtrees(1).root.literal + "̇")))
+    else if (e =~ ("↦", 2) && e.subtrees.forall(_.isLeaf) && e.subtrees(0).root == "?") Some(T(dotAbove(e.subtrees(1).root)))
     else None
   }
+
+  def dotAbove(id: Identifier) =
+    new Identifier(id.literal + "̇", id.kind, id.ns)
+
 }
 
 object Extrude {

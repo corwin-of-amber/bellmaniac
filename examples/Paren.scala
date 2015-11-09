@@ -6,7 +6,7 @@ import java.io.{BufferedReader, FileReader}
 import com.mongodb.{BasicDBList, DBObject, BasicDBObject}
 import com.mongodb.util.JSON
 import examples.Gap.BreakDown.Instantiated
-import report.FileLog
+import report.{AppendLog, DevNull, FileLog}
 import report.data.{SerializationContainer, Rich, DisplayContainer}
 import semantics.TypedScheme.TermWithHole
 import semantics.transform.Explicate
@@ -328,7 +328,7 @@ object Paren {
       }
 
       override def invokeProver(pod: Pod): Unit = {
-        Paren.BreakDown.invokeProver(List(), pod.obligations.conjuncts, List(pod))
+        Paren.BreakDown.invokeProver(List(), pod.obligations.conjuncts, List(pod), logf)
       }
     }
 
@@ -598,14 +598,15 @@ object Paren {
     }
 
 
-    def invokeProver(assumptions: Iterable[Term], goals: Iterable[Term], pods: Iterable[Pod]=List()): Unit = {
+    def invokeProver(assumptions: Iterable[Term], goals: Iterable[Term], pods: Iterable[Pod]=List(), logf: AppendLog=DevNull): Unit = {
       import synth.proof._
       import synth.pods._
       import semantics.Trench
 
       val extrude = Extrude(Set(I("/"), cons.root))
 
-      for (goal <- goals) extrude(goal)  |-- report.console.Console.display
+      for (goal <- goals) logf += Map("term" -> goal,
+        "display" -> Rich.display(extrude(goal) |-- report.console.Console.display))
 
       implicit val env = Paren.env
       implicit val scope = env.scope
@@ -624,13 +625,15 @@ object Paren {
 
       val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, minJR, minNR, nilNR) ++ pods)
 
+      val dummy = new p.Transaction
+
       val commits =
         for (goals <- goals map (List(_))) yield {
         //for (goals <- List(goals)) yield {
           val igoals = goals map a.intros
           import semantics.pattern.SimplePattern
           val t = new p.Transaction
-          val switch = t.commonSwitch(new p.CommonSubexpressionElimination(igoals, new SimplePattern(min :@ ?)))
+          val switch = dummy.commonSwitch(new p.CommonSubexpressionElimination(igoals, new SimplePattern(min :@ ?)))
 
           t.commit(assumptions map a.simplify map t.prop, igoals map (switch(_)) map a.simplify map t.goal)
         }

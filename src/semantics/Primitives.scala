@@ -65,7 +65,7 @@ object TypePrimitives {
   def args(micro: List[MicroCode]) = micro flatMap { case In(typ) => Some(typ) case _ => None}
 
   def args(typ: Term): List[Term] =
-    if (typ.root == "->") (typ.subtrees dropRight 1) ++ args(typ.subtrees.last)
+    if (typ.root == "->") (typ.subtrees dropRight 1 flatMap dom) ++ args(typ.subtrees.last)
     else List()
     
   /**
@@ -74,7 +74,15 @@ object TypePrimitives {
   def ret(typ: Term): Term =
     if (typ.root == "->") ret(typ.subtrees.last)
     else typ
-    
+
+  def dom(typexpr: Term): List[Term] =
+    if (typexpr.root == "×") typexpr.subtrees flatMap dom
+    else if (typexpr.root == "∩") {
+      val doms = dom(typexpr.subtrees(0))
+      if (doms.length == 1) List(typexpr) else doms
+    }
+    else List(typexpr)
+
   /**
    * Computes an intersection type in MicroCode form.
    */
@@ -312,20 +320,20 @@ object `package` {
   }
 }
 
-case class TypedIdentifier(symbol: Identifier, val typ: Term)
+case class TypedIdentifier(symbol: Identifier, typ: Term)
   extends Identifier(symbol.literal, symbol.kind, symbol.ns) {
   import AstSugar._
-  override def toString = s"${super.toString} :: $typ"
-  def toPretty = s"${super.toString} :: ${typ.toPretty}"
+  override def toString() = s"${super.toString()} :: $typ"
+  def toPretty = s"${super.toString()} :: ${typ.toPretty}"
   def untype = new Identifier(symbol.literal, symbol.kind, symbol.ns)
 
   override def asJson(container: SerializationContainer) =
     super.asJson(container).append("type", typ.asJson(container))
 }
 
-case class TypedTerm(term: Term, val typ: Term)
+case class TypedTerm(term: Term, typ: Term)
   extends AstSugar.Term(term.root, term.subtrees) {
-  override def toString = s"${super.toString} :: $typ"
+  override def toString() = s"${super.toString()} :: $typ"
   override def asJson(container: SerializationContainer) =
     super.asJson(container).append("type", container.anyRef(typ))
   def untype = term.untype
@@ -362,6 +370,12 @@ object TypedTerm {
     if (term =~ (":", 2)) split(term.subtrees(1), sep)
     else if (term.root == sep) term.subtrees flatMap (split(_, sep))
     else List(term)
+
+  // Likewise, "eq" that skips ":"
+  def eq(termA: Term, termB: Term): Boolean =
+    if (termA =~ (":", 2)) eq (termA.subtrees(1), termB)
+    else if (termB =~ (":", 2)) eq (termA, termB.subtrees(1))
+    else termA eq termB
 
   def preserve(term: Term, newterm: Term) = typeOf(term) match {
     case Some(typ) => TypedTerm(newterm, typ)

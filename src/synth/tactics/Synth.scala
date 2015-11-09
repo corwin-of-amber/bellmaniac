@@ -1,24 +1,33 @@
 package synth.tactics
 
-import java.io.FileWriter
+import java.io._
+
+import com.mongodb.util.JSON
+import com.mongodb.{DBObject, BasicDBList}
+import report.data.{Cached, SerializationContainer}
+import scala.collection.JavaConversions._
 
 import semantics.TranslationError
 import semantics.TypeTranslation.TypingSugar
 import semantics.pattern.SimplePattern
+import synth.pods.{ConsPod, Pod}
 
 import scala.collection.immutable.HashSet
 
 import syntax.AstSugar._
-import syntax.{Strip, Identifier}
+import syntax.{Formula, Strip, Identifier}
 import syntax.Piping._
-import syntax.transform.Mnemonics
+import syntax.transform.{Extrude, Mnemonics}
 import semantics._
 import semantics.transform.{Escalate, Explicate}
 import synth.proof.Assistant
 
+import scala.sys.process.ProcessIO
 
 
 object Synth {
+
+  val extrude = new Extrude(Set(I("/"), Prelude.cons.root, Prelude.fix.root))
 
   def main(args: Array[String]) {
 
@@ -30,40 +39,114 @@ object Synth {
     import semantics.Prelude.{R, min, ?, fix}
     import examples.Paren.{J, J0, J1, K1, K2}
     import examples.Paren.BreakDown.{APod, BPod}
+    import TypedTerm.typeOf_!
     import TypedLambdaCalculus.pullOut
 
     val a = new Assistant()
 
     println("-" * 50)
 
-    {
-      val A = APod(J).program
-      val f = (A :-/ "f") |> a.compile
+    val * = TI("*")
 
-      val AP = APod(J ∩ TV("P")).program
-      val fP = (AP :-/ "f") |> a.compile
+    //if (false)
+    {
+      val pod = APod(J)
+      val f = (SimplePattern(fix(* :- ?)) findOne_! pod.program)(*)
+      val ψ = TypedLambdaCalculus.context(pod.program, f)("ψ")
+
+      val A = fix(/::(
+        f :: ((? x J0 x J0) -> R),
+        ($TV ↦ ψ) :: ((? x J0 x J1) -> R),
+        ($TV ↦ ψ) :: ((? x J1 x J1) -> R)
+      )) |> a.compile // APod(J).program.subtrees(0) |> a.compile
+      val AP = (APod(? ∩ TV("P")).program.subtrees(0) :: (? -> typeOf_!(A))) |> a.compile
 
       val X = J0 x J0
 
-      synthesize(f, fP, X -> R)
+      report.console.Console.display(extrude(A))
+      report.console.Console.display(extrude(AP))
+
+      val solution = synthesizeFix(A, AP, X -> R).run()
+
+      println(solution mapValues (_.toPretty))
     }
 
-    val * = TI("*")
-
+    //if (false)
     {
-      val B = BPod(J0, J1).program
-      val f = pullOut(B, (SimplePattern(fix(* :- ?)) find B).head(*)).get |> a.compile
-
-      val BP = BPod(J ∩ TV("P1"), J ∩ TV("P2")).program
-      val fP = pullOut(BP, (SimplePattern(fix(* :- ?)) find BP).head(*)).get |> a.compile
+      val B = (SimplePattern(* :- fix(?)) findOne_! BPod(J0, J1).program)(*) |> a.compile
+      val BP = BPod(J ∩ TV("P1"), J ∩ TV("P2")).program |> a.compile
 
       val X = K1 x K2
 
-      synthesize(f, fP, X -> R)
+      val solution = synthesizeFix(B, BP, X -> R).run()
+
+      println(solution mapValues (_.toPretty))
     }
+
+    //val solution = new ReadSketchResults apply new BufferedReader( new FileReader("autogen.out") )
+    //println(solution mapValues (_.toPretty))
   }
 
-  def synthesize(f: Term, fP: Term, quadrant: Term)(implicit scope: Scope) {
+  class Sketch(val skfile: File) {
+    import Sketch._
+
+    val command =
+      Seq(SKETCH, "--slv-lightverif", "--fe-custom-codegen", CODEGEN, skfile.getName)
+
+    def run()(implicit scope: Scope) = {
+      cached getOrElse (md5, {
+        import scala.sys.process._
+        println("# Sketch...")
+        (new ReadSketchResults() apply command.lineStream) |-- save
+      })
+    }
+
+    def md5 = { import scala.sys.process._ ; (Seq("md5", "-q", skfile.getName) !!).stripLineEnd }
+    def save(results: Map[String, Term]) = cached.save(md5, results)
+  }
+
+  object Sketch {
+    val SKETCH = "sketch"
+    val CODEGEN = "ccg.jar"
+
+    val cached = new Cached("cache.json")
+  }
+
+  def synthesizeFixPodSubterm(term: Term, subterm: Term, pod: Pod)(implicit scope: Scope) = {
+    import Prelude.{fix,?}
+    import TypedLambdaCalculus.enclosure
+    import TypedTerm.typeOf_!
+    import TypePrimitives.shape
+    import synth.engine.TacticApplicationEngine.instapod
+    val * = TI("*")
+
+    val inputs = enclosure(pod.program, (SimplePattern(* :- fix(?)) findOne_! pod.program)(*)) get
+    val intendedType = (inputs :\ shape(typeOf_!(term)))((x,y) => ? -> y)
+    val instance = (pod.program match {
+        case T(Prelude.program.root, List(x)) => x case x => x
+      }) :: intendedType |> instapod
+
+    val quadrant = TypePrimitives.curry(TypedTerm.typeOf_!(subterm))._2
+
+    report.console.Console.display(extrude(term))
+    report.console.Console.display(extrude(instance))
+    println(quadrant toPretty)
+
+    synthesizeFix(term, instance, quadrant)
+  }
+
+  def synthesizeFix(h: Term, hP: Term, quadrant: Term)(implicit scope: Scope) = {
+    import Prelude.{fix,?}
+    import TypedLambdaCalculus.pullOut
+    val * = TI("*")
+
+    val f = pullOut(h, (SimplePattern(fix(* :- ?)) find h).head(*)).get
+    val fP = pullOut(hP, (SimplePattern(fix(* :- ?)) find hP).head(*)).get
+
+    synthesizeFlat(f, fP, quadrant)
+  }
+
+  def synthesizeFlat(f: Term, fP: Term, quadrant: Term)(implicit scope: Scope) = {
     val escalate = new Escalate
     val explicate = new Explicate
     val codegen = new CodeGen
@@ -84,6 +167,14 @@ object Synth {
 
     println(code1 toPretty)
 
+    import Prelude._
+    val builtin = Set(min, max, cons, nil, TV("+"), TV("-"))
+    val decl = codegen.decl(LambdaCalculus.uncurry(ir0)._1 ++ (LambdaCalculus.freevars(ir0) -- builtin) map TypedTerm.raw)
+
+    val codeX = codegen.pred(quadrant, "X")//, sized=false)
+    println(codeX toPretty)
+
+    /* Sketch file generation */
     val sketch = new SketchOutput
 
     val outf = new FileWriter("synth-autogened.sk")
@@ -93,18 +184,14 @@ object Synth {
     fprintln(sketch(code0))
     fprintln(sketch(code1))
 
-    import Prelude._
-    val builtin = Set(min, cons, nil, TV("+"))
-    val decl = codegen.decl(LambdaCalculus.uncurry(ir0)._1 ++ (LambdaCalculus.freevars(ir0) -- builtin) map TypedTerm.raw)
-
-    val codeX = codegen.pred(quadrant, "X")//, sized=false)
-    println(codeX toPretty)
     fprintln("\n" + sketch(codeX) + "\n")
 
     fprintln("\n/* -- harness -- */\n")
     fprintln(sketch.harness(decl))
 
     outf.close()
+
+    new Sketch(new File("synth-autogened.sk"))
   }
 
 
@@ -143,7 +230,7 @@ object Synth {
       else if (t =~ (":", 2)) expr(t.subtrees(1))
       else if (t =~ ("/", 2)) {
         assert(typeOf_!(t).isLeaf)
-        preserve(t, slash(t.subtrees map expr))
+        TypedTerm(slash(t.subtrees map expr), scalar)
       }
       else isApp(t) match {
         case Some((f, args)) =>
@@ -307,6 +394,46 @@ object Synth {
     def param(t: Term) = s"${typ(typeOf_!(t))} ${mne(t)}"
 
     def indent(block: String) = block split "\n" map ("    " + _) mkString "\n"
+  }
+
+
+  class ReadSketchResults(implicit scope: Scope) {
+
+    val re = raw"/\* \{(.*?): (.*?)\} \*/".r
+
+    def apply(reader: BufferedReader): Map[String, Term] = apply(ui.CLI.getLines(reader))
+    def apply(lines: Stream[String]) =
+      {
+        for (line <- lines;
+             mo <- re.findPrefixMatchOf(line))
+          yield (mo.group(1), mo.group(2) |> parse |> conj)
+      } toMap
+
+    def parse(s: String) = JSON.parse(s) |> parseJson
+
+    def parseJson(json: Any): Any = json match {
+      case s: String => scope.sorts.findSortHie(I(s)) match
+                        { case Some(h) => h.root case _ => V(s); }
+      case l: BasicDBList => l.toList map parseJson
+    }
+
+    /* parse components */
+    private def conj(o: Any): Term = o match {
+      case l :: ps => (disj(l) /: ps)((l,p) => l map (_ ∩ atom(p))) match {
+        case List(one) => one
+        case many => ConsPod.`⟨ ⟩`(many)
+      }
+      case id: Identifier => T(id)
+    }
+    private def disj(o: Any): List[Term] = o match {
+      case l: List[_] => l map atom
+      case id: Identifier => List(T(id))
+    }
+    private def atom(o: Any): Term = o match {
+      case Nil => T(Domains.⊥)
+      case l: List[_] => (l map atom) reduce (_ x _)
+      case id: Identifier => T(id)
+    }
   }
 }
 

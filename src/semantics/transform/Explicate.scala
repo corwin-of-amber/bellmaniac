@@ -11,7 +11,7 @@ import semantics._
  * @param includePreconditions
  * @param scope
  */
-class Explicate(includePreconditions: Boolean=false)(implicit scope: Scope) {
+class Explicate(includePreconditions: Boolean=true)(implicit scope: Scope) {
 
   import TypedTerm.{preserve, typeOf_!}
   import LambdaCalculus.{isApp, isAbs}
@@ -34,10 +34,13 @@ class Explicate(includePreconditions: Boolean=false)(implicit scope: Scope) {
       accumulate((f +: args) flatMap (x => collate(x)(assumptions ++ precond)) toMap, t, precond)
     case _ => isAbs(t) match {
       case Some((vars, body)) =>
-        val precond = nontriv(vars filter isScalar flatMap (v =>
+        //println(s"${f toPretty}  @:  ${args map (_.toPretty)}")
+        val precond = nontriv(TypeTranslation.checks(scope, typeOf_!(t), vars))
+        /*val precond = nontriv(vars filter isScalar flatMap (v =>
           TypeTranslation.checks(scope, v.typedLeaf,
                                  if (includePreconditions) vars else List())))
-        accumulate(collate(body)(assumptions ++ precond), body, precond)
+                                 */
+        accumulate(collate(body)(assumptions ++ precond), body, if (includePreconditions) precond else List())
       case _ => t match {
         case T(`|!`, List(expr, cond)) => collate(expr)
         case _ =>

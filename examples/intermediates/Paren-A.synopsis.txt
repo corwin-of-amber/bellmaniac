@@ -1,12 +1,11 @@
 J  : set
-J₀ : set
-J₁ : set
+J₀ J₁ : set
 
-A (`J)
+A `J
 
-Slice f ⟨`?×J₀×J₀, `?×J₀×J₁, `?×J₁×J₁⟩
-StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
-StratifySlash (fixee 🄱) 🄱 (ctx 🄱 ψ)
-⟨Synth (fixee 🄰) (fixee 🄰) "B[J₀,J₁]" (ctx 🄰 ψ) ⟨`J×J⟩,
- Synth (fixee 🄱) 🄱 (A `J₁) (ctx 🄱 ψ) ⟨`J₁×J₁⟩,
- Synth (fixee 🄲) 🄲 (A `J₀) (ctx 🄲 ψ) ⟨`J₀×J₀⟩⟩
+Slice (find (θ ↦ ?)) (`? ⟨`J₀×J₀, `J₀×J₁, `J₁×J₁⟩)
+Stratify "/" (fixee 🄰) 🄰 ψ
+Stratify "/" (fixee 🄱) 🄱 ψ
+⟨Synth (fixee 🄰) 🄰 (B `J₀ `J₁) ψ ⟨`J×J∩<⟩,
+ Synth (fixee 🄱) 🄱 (A `J₁) ψ ⟨`J₁×J₁⟩,
+ Synth (fixee 🄲) 🄲 (A `J₀) ψ ⟨`J₀×J₀⟩⟩
