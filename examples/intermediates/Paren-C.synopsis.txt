@@ -10,23 +10,27 @@ L₅ : set
 
 C `K₀ `K₁ `K₂
 
+SaveAs (C `K₀ `K₁ `K₂) "loop"
+
 Slice (find (i ↦ ?)) ⟨`L₀×L₄, `L₀×L₅, `L₁×L₄, `L₁×L₅⟩
-LetSlash (slasher 🄰) 🄰 (ctx 🄰 ψ)
-LetSlash (slasher 🄰) 🄰 (ctx 🄰 ψ)
-LetSlash (slasher 🄰) 🄰 (ctx 🄰 ψ)
+Let "/" (slasher 🄰) 🄰 ψ
+Let "/" (slasher 🄰) 🄰 ψ
+Let "/" (slasher 🄰) 🄰 ψ
 Slice (findAll (k ↦ ?)) ⟨`L₂, `L₃⟩
 Distrib min
 Assoc min
-⟨LetReduce min (slasher 🄴) ⟨🄴,🄶⟩ (ctx 🄴 ψ),
- LetReduce min (slasher 🄷) ⟨🄷,🄹⟩ (ctx 🄷 ψ),
- LetReduce min (slasher 🄺) ⟨🄺,🄼⟩ (ctx 🄺 ψ),
- LetReduce min (slasher 🄽) ⟨🄽,🄿⟩ (ctx 🄽 ψ)⟩
+⟨Let min (slasher 🄰) ⟨🄴,🄶⟩ ψ,
+ Let min (slasher 🄱) ⟨🄷,🄹⟩ ψ,
+ Let min (slasher 🄲) ⟨🄺,🄼⟩ ψ,
+ Let min (slasher 🄳) ⟨🄽,🄿⟩ ψ⟩
 
-⟨Synth 🄰 (C `L₁ `L₃ `L₅) (ctx 🄰 ψ),
- Synth 🄱 (C `L₁ `L₂ `L₅) (ctx 🄱 ψ),
- Synth 🄲 (C `L₁ `L₃ `L₄) (ctx 🄱 ψ),
- Synth 🄳 (C `L₁ `L₂ `L₄) (ctx 🄱 ψ),
- Synth 🄴 (C `L₀ `L₂ `L₅) (ctx 🄱 ψ),
- Synth 🄵 (C `L₀ `L₂ `L₅) (ctx 🄱 ψ),
- Synth 🄶 (C `L₀ `L₂ `L₄) (ctx 🄱 ψ),
- Synth 🄷 (C `L₀ `L₂ `L₄) (ctx 🄱 ψ) ⟩
+⟨Synth 🄰 (C `L₁ `L₃ `L₅) ψ,
+ Synth 🄱 (C `L₁ `L₂ `L₅) ψ,
+ Synth 🄲 (C `L₁ `L₃ `L₄) ψ,
+ Synth 🄳 (C `L₁ `L₂ `L₄) ψ,
+ Synth 🄴 (C `L₀ `L₃ `L₅) ψ,
+ Synth 🄵 (C `L₀ `L₂ `L₅) ψ,
+ Synth 🄶 (C `L₀ `L₃ `L₄) ψ,
+ Synth 🄷 (C `L₀ `L₂ `L₄) ψ ⟩
+
+SaveAs (C `K₀ `K₁ `K₂) "rec"

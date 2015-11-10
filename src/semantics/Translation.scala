@@ -301,11 +301,11 @@ object TypeTranslation {
   
   def simplify(scope: Scope, tpe: Term): Term = {
     if (tpe.root == "∩") {
-      val tset = (tpe.unfold.subtrees map (simplify(scope, _)) toSet)
+      val tset = tpe.unfold.subtrees map (simplify(scope, _)) toSet
       val (types, nontypes) = tset partition (x => x.isLeaf && scope.sorts.contains(x.root))
       val meet = if (types.isEmpty) None
-        else Some(T(types map (_.root) reduce scope.sorts.meet _))
-      T(tpe.root)(meet ++: (nontypes toList)).foldLeft
+        else Some(T(types map (_.root) reduce scope.sorts.meet))
+      T(tpe.root)(meet ++: nontypes.toList).foldLeft
     }
     else T(tpe.root)(tpe.subtrees map (simplify(scope, _)))
   }

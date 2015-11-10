@@ -95,18 +95,23 @@ public class SynthSCP extends FEReplacer
 
 	public Object visitFunction(Function func)
 	{
-        if (!func.getAnnotation("Param").isEmpty()) {
+		for (Annotation ann : func.getAnnotation("Param")) {
             out.println("/*" + func.getName() + "*/");
-            calls = new LinkedList<>();
-            super.visitFunction(func);
-            out.println("/* {" + func.getName() + ": " + toJson(calls) + "} */");
+            String value = encode(ann.contents());
+            if (value.contains(":"))
+                out.println("/* {" + value + "} */");
+            else {
+                calls = new LinkedList<>();
+                super.visitFunction(func);
+                out.println("/* {" + value + ": " + toJson(calls) + "} */");
+            }
         }
 
-        if (!func.getAnnotation("Inv").isEmpty()) {
+        for (Annotation ann : func.getAnnotation("Inv")) {
             out.println("/*" + func.getName() + "*/");
             areas = new LinkedList<>();
             super.visitFunction(func);
-            out.println("/* {" + func.getName() + ": " + toJson(areas) + "} */");
+            out.println("/* {" + encode(ann.contents()) + ": " + toJson(areas) + "} */");
         }
 
         for (Annotation sortAnn : func.getAnnotation("Sort")) {

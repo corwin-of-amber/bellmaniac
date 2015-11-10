@@ -5,6 +5,7 @@ import java.io._
 import com.mongodb.util.JSON
 import com.mongodb.{DBObject, BasicDBList}
 import report.data.{Cached, SerializationContainer}
+import synth.pods.Pod.TacticalError
 import scala.collection.JavaConversions._
 
 import semantics.TranslationError
@@ -60,25 +61,27 @@ object Synth {
         ($TV ↦ ψ) :: ((? x J1 x J1) -> R)
       )) |> a.compile // APod(J).program.subtrees(0) |> a.compile
       val AP = (APod(? ∩ TV("P")).program.subtrees(0) :: (? -> typeOf_!(A))) |> a.compile
+      val BP = BPod(J ∩ TV("P1"), J ∩ TV("P2")).program |> a.compile
 
       val X = J0 x J0
 
       report.console.Console.display(extrude(A))
       report.console.Console.display(extrude(AP))
+      report.console.Console.display(extrude(BP))
 
-      val solution = synthesizeFix(A, AP, X -> R).run()
+      val solution = synthesizeFix(A, List(AP, BP), X -> R).run()
 
       println(solution mapValues (_.toPretty))
     }
 
-    //if (false)
+    if (false)
     {
       val B = (SimplePattern(* :- fix(?)) findOne_! BPod(J0, J1).program)(*) |> a.compile
       val BP = BPod(J ∩ TV("P1"), J ∩ TV("P2")).program |> a.compile
 
       val X = K1 x K2
 
-      val solution = synthesizeFix(B, BP, X -> R).run()
+      val solution = synthesizeFix(B, List(BP), X -> R).run()
 
       println(solution mapValues (_.toPretty))
     }
@@ -97,7 +100,10 @@ object Synth {
       cached getOrElse (md5, {
         import scala.sys.process._
         println("# Sketch...")
-        (new ReadSketchResults() apply command.lineStream) |-- save
+        try {
+          (new ReadSketchResults() apply command.lineStream) |-- save
+        }
+        catch { case _: RuntimeException => throw new TacticalError("Internal error: Sketch failed") }
       })
     }
 
@@ -112,7 +118,7 @@ object Synth {
     val cached = new Cached("cache.json")
   }
 
-  def synthesizeFixPodSubterm(term: Term, subterm: Term, pod: Pod)(implicit scope: Scope) = {
+  def synthesizeFixPodSubterm(term: Term, subterm: Term, pods: Iterable[Pod])(implicit scope: Scope) = {
     import Prelude.{fix,?}
     import TypedLambdaCalculus.enclosure
     import TypedTerm.typeOf_!
@@ -120,33 +126,35 @@ object Synth {
     import synth.engine.TacticApplicationEngine.instapod
     val * = TI("*")
 
-    val inputs = enclosure(pod.program, (SimplePattern(* :- fix(?)) findOne_! pod.program)(*)) get
-    val intendedType = (inputs :\ shape(typeOf_!(term)))((x,y) => ? -> y)
-    val instance = (pod.program match {
-        case T(Prelude.program.root, List(x)) => x case x => x
-      }) :: intendedType |> instapod
+    val instances = pods map { pod =>
+      val inputs = enclosure(pod.program, (SimplePattern(* :- fix(?)) findOne_! pod.program)(*)) get
+      val intendedType = (inputs :\ shape(typeOf_!(term)))((x,y) => ? -> y)
+      (pod.program match {
+          case T(Prelude.program.root, List(x)) => x case x => x
+        }) :: intendedType |> instapod
+    }
 
     val quadrant = TypePrimitives.curry(TypedTerm.typeOf_!(subterm))._2
 
     report.console.Console.display(extrude(term))
-    report.console.Console.display(extrude(instance))
+    instances foreach (instance => report.console.Console.display(extrude(instance)))
     println(quadrant toPretty)
 
-    synthesizeFix(term, instance, quadrant)
+    synthesizeFix(term, instances, quadrant)
   }
 
-  def synthesizeFix(h: Term, hP: Term, quadrant: Term)(implicit scope: Scope) = {
+  def synthesizeFix(h: Term, hP: Iterable[Term], quadrant: Term)(implicit scope: Scope) = {
     import Prelude.{fix,?}
     import TypedLambdaCalculus.pullOut
     val * = TI("*")
 
     val f = pullOut(h, (SimplePattern(fix(* :- ?)) find h).head(*)).get
-    val fP = pullOut(hP, (SimplePattern(fix(* :- ?)) find hP).head(*)).get
+    val fP = hP map (hP => pullOut(hP, (SimplePattern(fix(* :- ?)) find hP).head(*)).get)
 
     synthesizeFlat(f, fP, quadrant)
   }
 
-  def synthesizeFlat(f: Term, fP: Term, quadrant: Term)(implicit scope: Scope) = {
+  def synthesizeFlat(f: Term, fP: Iterable[Term], quadrant: Term)(implicit scope: Scope) = {
     val escalate = new Escalate
     val explicate = new Explicate
     val codegen = new CodeGen
@@ -155,17 +163,15 @@ object Synth {
 
     println(ir0 toPretty)
 
-    val code0 = codegen(ir0, "h")
+    val code0 = codegen(ir0, "h")  |--  { code0 => println(code0 toPretty) }
 
-    println(code0 toPretty)
+    val code1 = for ((fP,i) <- fP.zipWithIndex) yield {
+      val ir1 = fP |> escalate.apply |> explicate.apply |> TypedTerm.raw |> TypedLambdaCalculus.simplify
 
-    val ir1 = fP |> escalate.apply |> explicate.apply |> TypedTerm.raw |> TypedLambdaCalculus.simplify
+      println(ir1 toPretty)
 
-    println(ir1 toPretty)
-
-    val code1 = codegen(ir1, "f_i")
-
-    println(code1 toPretty)
+      codegen(ir1, s"f_$i")  |--  { code1 => println(code1 toPretty) }
+    }
 
     import Prelude._
     val builtin = Set(min, max, cons, nil, TV("+"), TV("-"))
@@ -182,7 +188,17 @@ object Synth {
 
     fprintln("#include \"scalar.sk\"\n#include \"scope.sk\"\n\n")
     fprintln(sketch(code0))
-    fprintln(sketch(code1))
+    code1 foreach (code1 => fprintln(sketch(code1)))
+
+    /* @@@ this part is the hackiest @@@ */
+    {
+      for ((_, i) <- code1.zipWithIndex)
+        fprintln(s"""@Param("selected: $i") int _${i}_(int n) { return n; }""")
+
+      val alts = code1.zipWithIndex map { case (_, i) => s"f_$i(_${i}_(n), Context_JJR, theta, i, j)" }
+
+      fprintln(s"generator |scalar| f_i(int n, fun theta, int i, int j) { return {| ${alts mkString " | "} |}; }")
+    }
 
     fprintln("\n" + sketch(codeX) + "\n")
 
@@ -414,6 +430,7 @@ object Synth {
     def parseJson(json: Any): Any = json match {
       case s: String => scope.sorts.findSortHie(I(s)) match
                         { case Some(h) => h.root case _ => V(s); }
+      case i: Int => I(i)
       case l: BasicDBList => l.toList map parseJson
     }
 

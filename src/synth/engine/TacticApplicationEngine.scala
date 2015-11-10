@@ -75,6 +75,8 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     }
   }
 
+  def list(expr: Term): List[Term] = ConsPod.`⟨ ⟩?`(expr) getOrElse List(expr)
+
   def ctx_?(subterm: Term, expr: Term)(implicit s: State) =
     if (expr.isLeaf && TypedTerm.typeOf(expr).isEmpty)
       ctx(s.program, subterm) getOrElse (expr.root.literal, throw new Exception(s"undefined variable ${expr}"))//expr)
@@ -101,6 +103,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
   object ~ { def unapply(expr: Term)(implicit s: State) = Some(evalTerm(expr)) }
   object ~~ { def unapply(expr: Term)(implicit s: State) = Some(evalList(expr)) }
+  object `⟨⟩` { def unapply(expr: Term) = Some(list(expr)) }
   object #: { def unapply(expr: Term) = expr match {
     case L(n : Int) => Some(n)  case _ => None
   } }
@@ -156,17 +159,26 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       val ψ = ctx_?(h, ψ_)
       List(LetSynthPod(h, encaps(synthed), evalTerm(synthed), ψ))
 
-    case Some((L("SynthAuto"), List(~(h), ~(subterm), template, ~(ψ_)))) =>
+    case Some((L("SynthAuto"), List(~(h), ~(subterm), `⟨⟩`(templates), ~(ψ_)))) =>
       val ψ = ctx_?(h, ψ_)
-      LambdaCalculus.isApp(template) match {
-        case Some((name, args)) =>
-          val pod = pods(s).apply((name, args))  // note: do not typecheck yet
-          val solution = Synth.synthesizeFixPodSubterm(h, subterm, pod).run()
-          println(solution mapValues (_.toPretty))
-          println(new TreeSubstitution(solution map { case (k,v) => (TI(k), v) } toList)(template))
-          List()
-        case _ => throw new Exception("invalid synth template")
+      val ipods = templates map { template =>
+        LambdaCalculus.isApp(template) match {
+          case Some((name, args)) =>
+            pods(s).apply((name, args))  // note: do not typecheck yet
+          case _ => throw new Exception("invalid synth template")
+        }
       }
+
+      val solution = Synth.synthesizeFixPodSubterm(h, subterm, ipods).run()
+      println(solution mapValues (_.toPretty))
+      val selected = solution("selected").root.literal.asInstanceOf[Int]
+      val synthed = new TreeSubstitution(solution map { case (k,v) => (TI("?") ∩ TI(k), v) } toList)(templates(selected))
+      println(synthed toPretty)
+      val quadrant = TypePrimitives.curry(TypedTerm.typeOf_!(subterm))._2
+      val areaTypes = TypePrimitives.dom(quadrant) :: evalList(solution("Q"))
+      println(areaTypes map (_ toPretty))
+      List(SynthPod(h.subtrees(0), subterm, encaps(synthed), evalTerm(synthed), ψ, areaTypes))
+      //List()
 
     case Some((L("Distrib"), List(L("/"), ~(f)))) =>
       val box = SimplePattern(? /: ?) findOne_! f

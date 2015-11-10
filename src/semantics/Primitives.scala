@@ -1,6 +1,7 @@
 package semantics
 
 import report.data.SerializationContainer
+import semantics.Scope.TypingException
 import syntax.Identifier
 import syntax.Tree
 import syntax.AstSugar
@@ -49,7 +50,12 @@ object TypePrimitives {
     else
       T(typ.root, subs toList)
   }
-    
+
+  def canonical(micro: List[MicroCode])(implicit scope: Scope): Term =
+    TypeTranslation.canonical(scope, micro)
+  def canonical(typ: Term)(implicit scope: Scope): Term =
+    TypeTranslation.canonical(scope, TypeTranslation.emit(scope, typ))
+
   /**
    * Counts the arguments of a function type.
    */
@@ -65,7 +71,7 @@ object TypePrimitives {
   def args(micro: List[MicroCode]) = micro flatMap { case In(typ) => Some(typ) case _ => None}
 
   def args(typ: Term): List[Term] =
-    if (typ.root == "->") (typ.subtrees dropRight 1 flatMap dom) ++ args(typ.subtrees.last)
+    if (typ.root == "->") (typ.subtrees dropRight 1 flatMap dim) ++ args(typ.subtrees.last)
     else List()
     
   /**
@@ -75,11 +81,23 @@ object TypePrimitives {
     if (typ.root == "->") ret(typ.subtrees.last)
     else typ
 
-  def dom(typexpr: Term): List[Term] =
-    if (typexpr.root == "×") typexpr.subtrees flatMap dom
+  /**
+   * Retrieves the domain expression of a function type.
+   * E.g. dom(J ->: J ->: R) == J x J
+   *      dom(I ->: ((J x J) ∩ <) ->: B) == I x ((J x J) ∩ <)
+   */
+  def dom(typ: Term): Term = {
+    def comps(typ: Term): List[Term] =
+      if (typ.root == "->") (typ.subtrees dropRight 1) ++ comps(typ.subtrees.last)
+      else List()
+    comps(typ) reduceOption (_ x _) getOrElse { throw new TypingException("not a function type") at typ }
+  }
+
+  def dim(typexpr: Term): List[Term] =
+    if (typexpr.root == "×") typexpr.subtrees flatMap dim
     else if (typexpr.root == "∩") {
-      val doms = dom(typexpr.subtrees(0))
-      if (doms.length == 1) List(typexpr) else doms
+      val dims = dim(typexpr.subtrees(0))
+      if (dims.length == 1) List(typexpr) else dims
     }
     else List(typexpr)
 
@@ -105,6 +123,7 @@ object TypePrimitives {
   
   def intersection(scope: Scope, types: List[Term]): Term = {
     import syntax.Piping._
+    implicit val sc = scope
     if (types.tail forall (_ == types.head)) types.head
     else {
       val emits = types map (emit(scope, _))
@@ -138,6 +157,7 @@ object TypePrimitives {
   
   def union(scope: Scope, types: List[Term]): Term = {
     import syntax.Piping._
+    implicit val sc = scope
     if (types.tail forall (_ == types.head)) types.head
     else {
       val emits = types map (emit(scope, _))

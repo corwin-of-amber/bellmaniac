@@ -27,24 +27,36 @@ object Paren {
   import semantics.Domains._
   import semantics.Prelude._
   
-  val J = T(S("J"))
-  val J0 = T(S("J₀"))
-  val J1 = T(S("J₁"))
-  val K0 = T(S("K₀"))
-  val K1 = T(S("K₁"))
-  val K2 = T(S("K₂"))
-  val K3 = T(S("K₃"))
-  
+  val J  = TS("J")
+  val J0 = TS("J₀")
+  val J1 = TS("J₁")
+  val K0 = TS("K₀")
+  val K1 = TS("K₁")
+  val K2 = TS("K₂")
+  val K3 = TS("K₃")
+  val L0 = TS("L₀")
+  val L1 = TS("L₁")
+  val L2 = TS("L₂")
+  val L3 = TS("L₃")
+  val L4 = TS("L₄")
+  val L5 = TS("L₅")
+
   val scope = new Scope
-  scope.sorts.declare(N.root)
-  scope.sorts.declare(R.root)
-  scope.sorts.declare(J.root)
-  scope.sorts.declare(J0.root :<: J.root)
-  scope.sorts.declare(J1.root :<: J.root)
-  scope.sorts.declare(K0.root :<: J0.root)
-  scope.sorts.declare(K1.root :<: J0.root)
-  scope.sorts.declare(K2.root :<: J1.root)
-  scope.sorts.declare(K3.root :<: J1.root)
+  scope.sorts.declare(N)
+  scope.sorts.declare(R)
+  scope.sorts.declare(J)
+  scope.sorts.declare(J0 :<: J)
+  scope.sorts.declare(J1 :<: J)
+  scope.sorts.declare(K0 :<: J0)
+  scope.sorts.declare(K1 :<: J0)
+  scope.sorts.declare(K2 :<: J1)
+  scope.sorts.declare(K3 :<: J1)
+  scope.sorts.declare(L0 :<: K0)
+  scope.sorts.declare(L1 :<: K0)
+  scope.sorts.declare(L2 :<: K1)
+  scope.sorts.declare(L3 :<: K1)
+  scope.sorts.declare(L4 :<: K2)
+  scope.sorts.declare(L5 :<: K2)
 
   scope.sorts.cork()
 
@@ -249,7 +261,7 @@ object Paren {
             i ↦: j ↦: (
               min:@`⟨ ⟩`(
                 min:@((k :: J1) ↦
-                    (( ((ψ:@(i, k)) + (ψ:@(k, j)) + (w:@(i, k, j))) ) |! (<(i, k) & <(k, j)))
+                    (( ((ψ:@(i, k)) + (ψ:@(k, j)) + (w:@(i, k, j))) ) /*|! (<(i, k) & <(k, j))*/)
                     ),
                 ψ:@(i, j)
               )
@@ -269,12 +281,6 @@ object Paren {
     }
         
   
-    val L0 = TS("L₀")
-    val L1 = TS("L₁")
-    val L2 = TS("L₂")
-    val L3 = TS("L₃")
-    val L4 = TS("L₄")
-    val L5 = TS("L₅")
     val * = TI("*")
     
     def main(args: Array[String]): Unit = {
@@ -619,21 +625,23 @@ object Paren {
       val partJ = PartitionPod(J, <, J0, J1)
       val partJ0 = PartitionPod(J0, <, K0, K1)
       val partJ1 = PartitionPod(J1, <, K2, K3)
+      val partK0 = PartitionPod(K0, <, L0, L1)
+      val partK1 = PartitionPod(K1, <, L2, L3)
+      val partK2 = PartitionPod(K2, <, L4, L5)
       val nilNR = NilPod(N, R)
       val minJR = MinPod(J, R, toR.<) //, opaque=true)
       val minNR = MinPod(N, R, toR.<) //, opaque=true)
 
-      val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, minJR, minNR, nilNR) ++ pods)
-
-      val dummy = new p.Transaction
+      val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, partK0, partK1, partK2, minJR, minNR, nilNR) ++ pods, verbose = Prover.Verbosity.ResultsOnly)
 
       val commits =
         for (goals <- goals map (List(_))) yield {
         //for (goals <- List(goals)) yield {
           val igoals = goals map a.intros
+
           import semantics.pattern.SimplePattern
           val t = new p.Transaction
-          val switch = dummy.commonSwitch(new p.CommonSubexpressionElimination(igoals, new SimplePattern(min :@ ?)))
+          val switch = t.commonSwitch(new p.CommonSubexpressionElimination(igoals, new SimplePattern(min :@ ?)))
 
           t.commit(assumptions map a.simplify map t.prop, igoals map (switch(_)) map a.simplify map t.goal)
         }

@@ -3,9 +3,18 @@ J₀ J₁ : set
 
 A `J
 
+SaveAs (A `J) "loop"
+
 Slice (find (θ ↦ ?)) (`? ⟨`J₀×J₀, `J₀×J₁, `J₁×J₁⟩)
 Stratify "/" (fixee 🄰) 🄰 ψ
 Stratify "/" (fixee 🄱) 🄱 ψ
+⟨SynthAuto (fixer 🄱) 🄱 ⟨A `?∩P, B `?∩P1 `?∩P2⟩ ψ,
+ SynthAuto (fixer 🄰) 🄰 ⟨A `?∩P, B `?∩P1 `?∩P2⟩ ψ,
+ SynthAuto (fixer 🄲) 🄲 ⟨A `?∩P, B `?∩P1 `?∩P2⟩ ψ⟩
+/*
 ⟨Synth (fixee 🄰) 🄰 (B `J₀ `J₁) ψ ⟨`J×J∩<⟩,
  Synth (fixee 🄱) 🄱 (A `J₁) ψ ⟨`J₁×J₁⟩,
  Synth (fixee 🄲) 🄲 (A `J₀) ψ ⟨`J₀×J₀⟩⟩
+*/
+
+SaveAs (A `J) "rec"
