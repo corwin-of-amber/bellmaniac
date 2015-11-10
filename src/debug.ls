@@ -13,7 +13,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
     initState()
 
     $scope.cmOptions = cmOptions()
-    $scope.loaded = initEditor((cm) -> , (cm) -> )
+    $scope.loaded = initEditor((cm) -> , (cm) ->)
 
     $scope.parseAndDisplay = !->
 
@@ -23,7 +23,6 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
             $timeout(->
                 $scope.parsed = output.fromNearley
                 $scope.output = output.fromJar
-                console.log output.fromJar
             )
 
         error = (err, output) ->

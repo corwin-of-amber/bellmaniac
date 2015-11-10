@@ -203,7 +203,8 @@
         }
       },
       theme: "neat",
-      viewportMargin: Infinity
+      viewportMargin: Infinity,
+      showErrorUnderline: true
     };
   };
   root.initEditor = function(submitCallback, loadedCallback){

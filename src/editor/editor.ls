@@ -114,6 +114,7 @@ root.cmOptions = ->
 		bracketMatching: {"(": ")>", ")": "(<", "[": "]>", "]": "[<", "{": "}>", "}": "{<", "⟨": "⟩>", "⟩": "⟨<"}
 	theme: "neat"
 	viewportMargin: Infinity
+	showErrorUnderline: true
 
 root.initEditor = (submitCallback, loadedCallback) ->
 	(editor) ->

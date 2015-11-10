@@ -61,7 +61,7 @@ root.bellmaniaParse = (input, success, error) ->
             try
               parsed = p.feed block.text
               results = _.compact parsed.results
-              if results.length == 0 then throw {msg: "no possible parse of input found"}
+              if results.length == 0 then throw {message: "No possible parse of input found."}
               assert results.length == 1, JSON.stringify(results) + " is not a unique parse."
               results[0]
             catch err

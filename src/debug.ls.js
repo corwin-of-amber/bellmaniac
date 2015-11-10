@@ -21,8 +21,7 @@
       success = function(output){
         return $timeout(function(){
           $scope.parsed = output.fromNearley;
-          $scope.output = output.fromJar;
-          return console.log(output.fromJar);
+          return $scope.output = output.fromJar;
         });
       };
       error = function(err, output){

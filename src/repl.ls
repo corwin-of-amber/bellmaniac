@@ -8,6 +8,8 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
     $scope.wrapper = (parent) ->
         submitCallback = (cm) ->
 
+            cm.removeOverlay(cm.currentOverlay)
+
             calc = cm.parent
             calc.output = null
             calc.error = null
@@ -27,7 +29,9 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
 
             error = (err) ->
                 $timeout(->
-                    calc.error = err.message
+                    calc.error = err.err.message
+                    cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.err.offset + 1)
+                    cm.addOverlay(cm.currentOverlay)
                 )
 
             if (thisIdx == 0)

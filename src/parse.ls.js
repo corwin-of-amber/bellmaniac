@@ -71,7 +71,7 @@
           results = _.compact(parsed.results);
           if (results.length === 0) {
             throw {
-              msg: "no possible parse of input found"
+              message: "No possible parse of input found."
             };
           }
           assert(results.length === 1, JSON.stringify(results) + " is not a unique parse.");

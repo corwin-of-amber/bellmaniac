@@ -10,6 +10,7 @@
       var submitCallback, loadCallback;
       submitCallback = function(cm){
         var calc, thisIdx, thisId, success, error;
+        cm.removeOverlay(cm.currentOverlay);
         calc = cm.parent;
         calc.output = null;
         calc.error = null;
@@ -33,7 +34,9 @@
         };
         error = function(err){
           return $timeout(function(){
-            return calc.error = err.message;
+            calc.error = err.err.message;
+            cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.err.offset + 1);
+            return cm.addOverlay(cm.currentOverlay);
           });
         };
         if (thisIdx === 0) {
