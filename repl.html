@@ -47,7 +47,7 @@
 				</div>
 			</div>
 			<div ng-show="h.error.length > 0" class="alert alert-danger">{{h.error}}</div>
-			<div class="row" ng-if="h.output">
+			<div class="row" ng-if="h.output" ng-class="{invalid: isInvalid(h)}">
 				<br>
 				<div class="col-xs-1">{{"Out[" + h.id + "]"}}</div>
 				<div class="col-xs-11">

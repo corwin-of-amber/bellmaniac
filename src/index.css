@@ -112,3 +112,11 @@ ul.c li:before {
 ul.c[bullet="◦"] li:before {
   content: "◦ ";
 }
+
+.invalid div {
+  color: gainsboro !important;
+}
+
+.invalid span.tip {
+  color: gainsboro !important;
+}

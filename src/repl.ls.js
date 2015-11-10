@@ -22,14 +22,13 @@
             calc.output = output.fromJar;
             calc.fromNearley = output.fromNearley;
             if (thisId === $scope.history.length) {
-              $scope.history.push({
+              return $scope.history.push({
                 id: thisId + 1,
                 input: "",
                 output: null,
                 error: null
               });
             }
-            return $scope.mostRecentId = thisId;
           });
         };
         error = function(err){
@@ -43,7 +42,6 @@
             text: calc.input
           }, success, error);
         } else {
-          console.log($scope.history);
           bellmaniaParse({
             isTactic: true,
             text: calc.input,
@@ -51,6 +49,7 @@
           }, success, error);
         }
         cm.getInputField().blur();
+        $scope.mostRecentId = thisId;
         return $scope.$apply();
       };
       loadCallback = function(cm){

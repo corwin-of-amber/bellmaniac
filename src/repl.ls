@@ -23,8 +23,6 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
 
                     if (thisId == ($scope.history.length))
                         $scope.history.push({id: thisId + 1, input: "", output: null, error: null})
-
-                    $scope.mostRecentId = thisId
                 )
 
             error = (err) ->
@@ -37,15 +35,14 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
                 bellmaniaParse({isTactic: false, text: calc.input}, success, error)
             else
                 # parse as a tactic
-                console.log($scope.history)
                 bellmaniaParse({
                     isTactic: true,
                     text: calc.input,
                     termJson: _.last($scope.history[thisIdx-1].output).value.term
                     },
                     success, error)
-            # bellmaniaParse(calc.input, success, error)
             cm.getInputField().blur()
+            $scope.mostRecentId = thisId
             $scope.$apply()
 
         loadCallback = (cm) ->

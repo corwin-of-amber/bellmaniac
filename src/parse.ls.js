@@ -28,7 +28,6 @@
   };
   root.bellmaniaParse = function(input, success, error){
     var blocks, buffer, output, jar, toStream, stream, err;
-    console.log(input);
     blocks = splitTextToBlocks(stripComments(input.text));
     try {
       buffer = [];
@@ -93,23 +92,25 @@
         };
       }).value();
       toStream = function(stream){
-        var i$, ref$, len$, parsedBlock, tacticBlock;
+        var i$, ref$, len$, parsedBlock, term, tacticBlock;
         if (input.isTactic) {
           for (i$ = 0, len$ = (ref$ = output.fromNearley).length; i$ < len$; ++i$) {
             parsedBlock = ref$[i$];
+            if (input.termJson.root.literal !== 'program') {
+              term = tree(identifier('program', 'variable'), [input.termJson]);
+            } else {
+              term = input.termJson;
+            }
             tacticBlock = {
               tactic: parsedBlock.check,
-              term: tree(identifier('program', 'variable'), [input.termJson])
+              term: term
             };
-            console.log("sending2");
-            console.log(JSON.stringify(tacticBlock, null, 2));
             stream.write(JSON.stringify(tacticBlock));
             stream.write("\n\n");
           }
         } else {
           for (i$ = 0, len$ = (ref$ = output.fromNearley).length; i$ < len$; ++i$) {
             parsedBlock = ref$[i$];
-            console.log("sending1", parsedBlock);
             stream.write(JSON.stringify(parsedBlock));
             stream.write("\n\n");
           }
