@@ -83,27 +83,14 @@ void funcC_rec(interval K0, interval K1, interval K2) {
 
 void funcB_loop(interval J0, interval J1) {
 
-	FOR_B_loop_1(i, J0)
+	FOR_B_loop_1(i,J0)
 	{
-		FOR_B_loop_2(j, J1)
+		FOR_B_loop_2(j,J1)
 		{
 
 			TYPE t21 = MAXVAL;
-			/*FORUNION(k, J0, J1,
-			 if (i<k && k<j){ t21 = min(t21,dist[i][k]+dist[k][j]+w(i,k,j)); })
-			 */
-			FOR_FORWARD(k, J0)
-			{
-				if (i < k && k < j) {
-					t21 = min(t21, dist[i][k]+dist[k][j]+w(i,k,j));
-				}
-			}
-			FOR_FORWARD(k, J1)
-			{
-				if (i < k && k < j) {
-					t21 = min(t21, dist[i][k]+dist[k][j]+w(i,k,j));
-				}
-			}
+			FORUNION(k, J0, J1,
+					if (i<k && k<j){ t21 = min(t21,dist[i][k]+dist[k][j]+w(i,k,j)); })
 
 			dist[i][j] = min(t21, dist[i][j]);
 		}
