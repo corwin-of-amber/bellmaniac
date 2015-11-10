@@ -13,6 +13,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
             calc = cm.parent
             calc.output = null
             calc.error = null
+            calc.loading = true
             thisIdx = _.findIndex($scope.history, (h) ->
                 h.id == calc.id
             )
@@ -25,6 +26,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
 
                     if (thisId == ($scope.history.length))
                         $scope.history.push({id: thisId + 1, input: "", output: null, error: null})
+                    calc.loading = false
                 )
 
             error = (err) ->
@@ -32,6 +34,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
                     calc.error = err.message
                     cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.offset + 1)
                     cm.addOverlay(cm.currentOverlay)
+                    calc.loading = false
                 )
 
             if (thisIdx == 0)

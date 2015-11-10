@@ -23,6 +23,7 @@
     "prelude-ls": "^1.1.2",
     "underscore": "*"
   },
+  "chromium-args": "--enable-threaded-compositing",
   "main": "index.html",
   "window": {
     "toolbar": true

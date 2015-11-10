@@ -14,6 +14,7 @@
         calc = cm.parent;
         calc.output = null;
         calc.error = null;
+        calc.loading = true;
         thisIdx = _.findIndex($scope.history, function(h){
           return h.id === calc.id;
         });
@@ -23,20 +24,22 @@
             calc.output = output.fromJar;
             calc.fromNearley = output.fromNearley;
             if (thisId === $scope.history.length) {
-              return $scope.history.push({
+              $scope.history.push({
                 id: thisId + 1,
                 input: "",
                 output: null,
                 error: null
               });
             }
+            return calc.loading = false;
           });
         };
         error = function(err){
           return $timeout(function(){
             calc.error = err.message;
             cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.offset + 1);
-            return cm.addOverlay(cm.currentOverlay);
+            cm.addOverlay(cm.currentOverlay);
+            return calc.loading = false;
           });
         };
         if (thisIdx === 0) {
