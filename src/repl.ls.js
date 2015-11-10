@@ -34,8 +34,8 @@
         };
         error = function(err){
           return $timeout(function(){
-            calc.error = err.err.message;
-            cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.err.offset + 1);
+            calc.error = err.message;
+            cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.offset + 1);
             return cm.addOverlay(cm.currentOverlay);
           });
         };

@@ -8,12 +8,15 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
         $scope.parsed = []
         $scope.output = []
         $scope.errorMsg = ""
+        if ($scope.cm)
+          $scope.cm.removeOverlay($scope.cm.currentOverlay)
 
     $scope.code = localStorage.getItem('codeMirrorContents') || "a b"
     initState()
 
     $scope.cmOptions = cmOptions()
-    $scope.loaded = initEditor((cm) -> , (cm) ->)
+    $scope.loaded = initEditor((cm) -> , (cm) ->
+      $scope.cm = cm)
 
     $scope.parseAndDisplay = !->
 
@@ -28,6 +31,8 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
         error = (err, output) ->
             $timeout(->
                 $scope.errorMsg = err.message
+                $scope.cm.currentOverlay = errorOverlay($scope.cm.getLine(err.line - 1), err.offset + 1)
+                $scope.cm.addOverlay($scope.cm.currentOverlay)
             )
 
         bellmaniaParse({isTactic: false, text: $scope.code}, success, error)

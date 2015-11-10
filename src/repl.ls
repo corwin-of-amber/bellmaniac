@@ -29,8 +29,8 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
 
             error = (err) ->
                 $timeout(->
-                    calc.error = err.err.message
-                    cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.err.offset + 1)
+                    calc.error = err.message
+                    cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.offset + 1)
                     cm.addOverlay(cm.currentOverlay)
                 )
 

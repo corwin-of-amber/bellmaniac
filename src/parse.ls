@@ -39,11 +39,17 @@ root.bellmaniaParse = (input, success, error) ->
 
         jar.stdout.on \end, !->
             try
-                for block in buffer.join("").split(/\n\n+(?=\S)/)
-                    outputBlock = JSON.parse(block)
-                    if (outputBlock.error)
-                        throw outputBlock
-                    output.fromJar.push({value: outputBlock})
+                for block, blockIdx in buffer.join("").split(/\n\n+(?=\S)/)
+                    try
+                        outputBlock = JSON.parse(block)
+                        if (outputBlock.error)
+                            throw outputBlock
+                        output.fromJar.push({value: outputBlock})
+                    catch err
+                        # add block index to error before re-throwing
+                        # so that correct line can be highlighted
+                        err.line = blockIdx + setDeclarations + 1
+                        throw err
                 success(output)
             catch err
                 error(err)
@@ -53,23 +59,28 @@ root.bellmaniaParse = (input, success, error) ->
 
         # reset global list of sets to empty
         root.scope = []
+        setDeclarations = 0
 
         output.fromNearley = _.chain(blocks)
         .map((block) ->
             # parse block with nearley, filter only non-false results, assert parse unambiguous
             p = new nearley.Parser grammar.ParserRules, grammar.ParserStart
             try
-              parsed = p.feed block.text
-              results = _.compact parsed.results
-              if results.length == 0 then throw {message: "No possible parse of input found."}
-              assert results.length == 1, JSON.stringify(results) + " is not a unique parse."
-              results[0]
+                parsed = p.feed block.text
+                results = _.compact parsed.results
+                if results.length == 0 then throw {message: "No possible parse of input found."}
+                assert results.length == 1, JSON.stringify(results) + " is not a unique parse."
+                results[0]
             catch err
-              throw {line: block.line, err: err}
+                err.line = block.line
+                throw err
         ).filter((block) ->
             # only take the expressions that aren't set declarations
             # nearley has already pushed set declarations to root.scope
-            block.kind != \set
+            if (block.kind == \set)
+                setDeclarations += 1
+                return false
+            return true
         ).map((block) ->
             # wrap each expression in another layer that includes scope
             check: block
@@ -105,5 +116,6 @@ root.bellmaniaParse = (input, success, error) ->
         toStream jar.stdin
 
     catch err
-        err.message = JSON.stringify(err)
         error(err)
+        # err.message = JSON.stringify(err)
+        # error(err)

@@ -27,7 +27,7 @@
     });
   };
   root.bellmaniaParse = function(input, success, error){
-    var blocks, buffer, output, jar, toStream, stream, err;
+    var blocks, buffer, output, jar, setDeclarations, toStream, stream, err;
     blocks = splitTextToBlocks(stripComments(input.text));
     try {
       buffer = [];
@@ -41,17 +41,24 @@
         buffer.push(data);
       });
       jar.stdout.on('end', function(){
-        var i$, ref$, len$, block, outputBlock, err;
+        var i$, ref$, len$, blockIdx, block, outputBlock, err;
         try {
           for (i$ = 0, len$ = (ref$ = buffer.join("").split(/\n\n+(?=\S)/)).length; i$ < len$; ++i$) {
+            blockIdx = i$;
             block = ref$[i$];
-            outputBlock = JSON.parse(block);
-            if (outputBlock.error) {
-              throw outputBlock;
+            try {
+              outputBlock = JSON.parse(block);
+              if (outputBlock.error) {
+                throw outputBlock;
+              }
+              output.fromJar.push({
+                value: outputBlock
+              });
+            } catch (e$) {
+              err = e$;
+              err.line = blockIdx + setDeclarations + 1;
+              throw err;
             }
-            output.fromJar.push({
-              value: outputBlock
-            });
           }
           success(output);
         } catch (e$) {
@@ -63,6 +70,7 @@
         error(data);
       });
       root.scope = [];
+      setDeclarations = 0;
       output.fromNearley = _.chain(blocks).map(function(block){
         var p, parsed, results, err;
         p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
@@ -78,13 +86,15 @@
           return results[0];
         } catch (e$) {
           err = e$;
-          throw {
-            line: block.line,
-            err: err
-          };
+          err.line = block.line;
+          throw err;
         }
       }).filter(function(block){
-        return block.kind !== 'set';
+        if (block.kind === 'set') {
+          setDeclarations += 1;
+          return false;
+        }
+        return true;
       }).map(function(block){
         return {
           check: block,
@@ -126,7 +136,6 @@
       return toStream(jar.stdin);
     } catch (e$) {
       err = e$;
-      err.message = JSON.stringify(err);
       return error(err);
     }
   };

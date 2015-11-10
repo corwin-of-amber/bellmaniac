@@ -9,12 +9,17 @@
     initState = function(){
       $scope.parsed = [];
       $scope.output = [];
-      return $scope.errorMsg = "";
+      $scope.errorMsg = "";
+      if ($scope.cm) {
+        return $scope.cm.removeOverlay($scope.cm.currentOverlay);
+      }
     };
     $scope.code = localStorage.getItem('codeMirrorContents') || "a b";
     initState();
     $scope.cmOptions = cmOptions();
-    $scope.loaded = initEditor(function(cm){}, function(cm){});
+    $scope.loaded = initEditor(function(cm){}, function(cm){
+      return $scope.cm = cm;
+    });
     $scope.parseAndDisplay = function(){
       var success, error;
       initState();
@@ -26,7 +31,9 @@
       };
       error = function(err, output){
         return $timeout(function(){
-          return $scope.errorMsg = err.message;
+          $scope.errorMsg = err.message;
+          $scope.cm.currentOverlay = errorOverlay($scope.cm.getLine(err.line - 1), err.offset + 1);
+          return $scope.cm.addOverlay($scope.cm.currentOverlay);
         });
       };
       bellmaniaParse({
