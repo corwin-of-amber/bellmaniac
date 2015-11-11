@@ -1,6 +1,11 @@
 package synth.tactics
 
 import java.io._
+import semantics.Prelude._
+import semantics.TypePrimitives._
+import semantics.TypedLambdaCalculus._
+import semantics.TypedTerm._
+
 import scala.collection.mutable.ListMap
 import scala.collection.JavaConversions._
 
@@ -123,25 +128,15 @@ object Synth {
   }
 
   def synthesizeFixPod(term: Term, pods: Iterable[Pod], quadrant: Term)(implicit scope: Scope) = {
-    import Prelude.{fix,?}
-    import TypedLambdaCalculus.enclosure
-    import TypedTerm.typeOf_!
-    import TypePrimitives.shape
-    import synth.engine.TacticApplicationEngine.instapod
-
     val intendedShape = shape(typeOf_!(term))
+    val θ = $TV("θ")
 
-    val instances = pods flatMap { pod =>
-      val shallow = TypeInference.inferShallow(pod.program)._2
-      findBodyWithType(shallow, intendedShape) map { body =>
-        val inputs = enclosure(shallow, body) get
-        val intendedType = (inputs :\ shape(typeOf_!(term)))((x,y) => ? -> y)
-        val retargeted = if (SimplePattern(fix(?)) findOne body isDefined) shallow else shallow.replaceDescendant((body, fix($TV("θ") ↦ body)))
-        (retargeted.untype match {
-          case T(Prelude.program.root, List(x)) => x case x => x
-        }) :: intendedType |> instapod
-      }
-    }
+    val instances = pods flatMap (
+        Alignment.refit(_, intendedShape, intendedShape, (term, body) =>
+          if (body.nodes exists (_ =~ ("fix", 1))) term
+          else term.replaceDescendant((body, fix(θ ↦ body)))
+        )
+      )
 
     for (instance <- instances) {
       extrude(instance) |-- report.console.Console.display
@@ -151,48 +146,60 @@ object Synth {
   }
 
   def synthesizeFlatPod(term: Term, pods: Iterable[Pod], quadrant: Term)(implicit scope: Scope) = {
-    import Prelude.{fix,?}
-    import TypedLambdaCalculus.enclosure
-    import TypedTerm.typeOf_!
-    import TypePrimitives.shape
-    import synth.engine.TacticApplicationEngine.instapod
+    import Alignment.θ_↦
 
     val intendedShape = shape(typeOf_!(term))
+    val θ = $TV("θ")
 
-    val instances = pods flatMap { pod =>
-      val shallow = TypeInference.inferShallow(pod.program)._2
-      findBodyWithType(shallow, intendedShape) map { body =>
-        val inputs = enclosure(shallow, body) get
-        val intendedType = (inputs :\ shape(typeOf_!(term) -> typeOf_!(term)))((x,y) => ? -> y)
-        val retargeted = shallow.replaceDescendant((body, $TV("θ") ↦ body))
-        (retargeted.untype match {
-          case T(Prelude.program.root, List(x)) => x case x => x
-        }) :: intendedType |> instapod
-      }
-    }
+    val instances = pods flatMap (
+        Alignment.refit(_, intendedShape, intendedShape -> intendedShape,
+          (term, body) =>
+          if (body =~ ("fix", 1)) term.replaceDescendant(body, body.subtrees(0))
+          else term.replaceDescendant((body, θ ↦ body))
+        )
+      )
 
     for (instance <- instances) {
       extrude(instance) |-- report.console.Console.display
     }
 
-    def θ_↦(t: Term) = TypedLambdaCalculus.typecheck0($TyTV("θ", typeOf_!(t)) ↦ t)
-
     synthesizeFlat(θ_↦(term), instances, quadrant)
   }
 
-  def findBodyWithType(prog: Term, typ: Term): Option[Term] = {
+  object Alignment {
+
     import Prelude.program
     val * = TI("*")
     val ↦ = I("↦")
     val `:` = I(":")
+    val :: = I("::")
 
-    prog match {
+    def refit(pod: Pod, shape: Term, reshape: Term, hack: (Term, Term) => Term)(implicit scope: Scope) = {
+      val shallow = TypeInference.inferShallow(pod.program)._2
+      findBodyWithType(shallow, shape) map { body =>
+        val inputs = enclosure(shallow, body) get
+        val intendedType = (inputs :\ reshape)((x,y) => ? -> y)
+        val refitted = hack(shallow, body)
+        stripProg(refitted.untype :: intendedType) |> (TypeInference.infer(_)._2)
+      }
+    }
+
+    def findBodyWithType(prog: Term, typ: Term): Option[Term] = prog match {
       case T(program.root, List(p)) => findBodyWithType(p, typ)
       case typed: TypedTerm if Unify.?(typed.typ, typ) => Some(typed)
       case T(`↦`, List(v, body)) => findBodyWithType(body, typ)
       case T(`:`, List(l, term)) => findBodyWithType(term, typ)
       case _ => None
     }
+
+    def stripProg(prog: Term) = prog match {
+      case T(program.root, List(p)) => p
+      case T(`::`, List(T(program.root, List(p)), typ)) => p :: typ
+      case _ => prog
+    }
+
+    def θ_↦(t: Term) = typecheck0($TyTV("θ", typeOf_!(t)) ↦ t)
+
   }
 
 
@@ -216,7 +223,7 @@ object Synth {
     val * = TI("*")
 
     val f = try pullOut(h, (SimplePattern(fix(* :- ?)) find h).head(*)) get
-            catch { case _: NoSuchElementException => throw new TacticalError("not a fix term") at h }
+            catch { case _: NoSuchElementException => throw new TacticalError("not a recursive term") at h }
     val fP = hP flatMap (hP => pullOut(hP, (SimplePattern(fix(* :- ?)) find hP).head(*))) filter
                         (fP => shape(typeOf_!(f)) != shape(typeOf_!(fP)))
 
