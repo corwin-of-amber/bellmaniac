@@ -184,22 +184,26 @@ class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val impl: Term
   import TypedTerm.typeOf_!
 
   val indexDomain = shape(area.head)
-  val P = TyTV("P", rawtype(scope, area.head ->: B))
+  val Q = $TyTV("Q", rawtype(scope, area.head ->: B))
 
   val areaChecks = {
-    val vars = qvars(args(typeOf_!(P)))
-    ∀(vars)(P(vars) <->
+    val vars = qvars(args(typeOf_!(Q)))
+    ∀(vars)(Q(vars) <->
       ||(area map (a => &&(TypeTranslation.checks(scope, a -> B, vars)))))
   }
 
   def equivQuadrant(lhs: Term, rhs: Term) = {
-    val y = (indexDomain ∩ P) -> ?
+    val y = (indexDomain ∩ Q) -> ?
     &&(
-      //(rhs :: (? -> y)) =:= (rhs :: (y -> y)),
-      //rhs =:= (rhs :: (? -> y)),
       (lhs :: (? -> y)) =:= (lhs :: (y -> y)),
       (lhs :: (? -> y)) =:= (rhs :: (y -> y))
     )
+  }
+
+  def stableQuadrant(lhs: Term, rhs: Term) = {
+    val θ = $TV("θ")
+    val y = (indexDomain ∩ Q) -> ?
+    ((lhs:@(lhs:@θ)) :: y) =:= (rhs :: y)
   }
 
   override val obligations =
@@ -210,11 +214,14 @@ class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val impl: Term
         equivQuadrant(h, u :@ ψ)
       case _ =>
         if (impl.isLeaf) TRUE  /* placeholder; should be deprecated */
-        else TRUE //throw new TacticalError("Synth: expected recursive implementation") at impl
+        else {
+          val u = if (impl.root == Prelude.program.root) impl.subtrees(0) else impl
+          stableQuadrant(h, u :@ ψ)
+        }
     }
   }
 
-  override val decl = new Declaration(P) where areaChecks
+  override val decl = new Declaration(Q) where areaChecks
 }
 
 object SynthPod {

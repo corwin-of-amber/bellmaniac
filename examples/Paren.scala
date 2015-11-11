@@ -284,33 +284,9 @@ object Paren {
     val * = TI("*")
     
     def main(args: Array[String]): Unit = {
-      import semantics.Domains._
-      import semantics.Prelude._
-      
-      
-      implicit val scope = new Scope
-      scope.sorts.declare(J)
-      scope.sorts.declare(J0 :<: J)
-      scope.sorts.declare(J1 :<: J)
-      scope.sorts.declare(K0 :<: J0)
-      scope.sorts.declare(K1 :<: J0)
-      scope.sorts.declare(K2 :<: J1)
-      scope.sorts.declare(K3 :<: J1)
-      scope.sorts.declare(L0 :<: K0)
-      scope.sorts.declare(L1 :<: K0)
-      scope.sorts.declare(L2 :<: K1)
-      scope.sorts.declare(L3 :<: K1)
-      scope.sorts.declare(L4 :<: K2)
-      scope.sorts.declare(L5 :<: K2)
-      scope.sorts.declare(N)
-      scope.sorts.declare(R)
+      val filename = if (args.length > 0) args(0) else "/tmp/synopsis.json"
 
-      scope.sorts.cork()
-
-
-      implicit val env = new Environment(scope, Map())
-
-      new Interpreter().executeFile("/tmp/synopsis.json") //"examples/intermediates/Paren-A.synopsis.json")
+      new Interpreter()(scope, env).executeFile(filename)
     }
     
     

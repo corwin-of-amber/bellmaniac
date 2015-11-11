@@ -165,9 +165,12 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
     case Some((L("SynthAuto"), List(~(h), ~(subterm), `⟨⟩`(templates), ~(ψ_)))) =>
       val ψ = ctx_?(h, ψ_)
-      val (synthed, footprint) = invokeSynthesis(h, subterm, templates)
+      val (synthed, footprint) = invokeSynthesis(h, subterm, templates, fix=true)
       List(SynthPod(h.subtrees(0), subterm, encaps(synthed), evalTerm(synthed), ψ, footprint))
-      //List()
+    case Some((L("SynthAuto"), List(~(h), `⟨⟩`(templates), ~(ψ_)))) =>
+      val ψ = ctx_?(h, ψ_)
+      val (synthed, _) = invokeSynthesis(h, h, templates, fix=false)
+      List(LetSynthPod(h, encaps(synthed), evalTerm(synthed), ψ))
 
     case Some((L("Distrib"), List(L("/"), ~(f)))) =>
       val box = SimplePattern(? /: ?) findOne_! f
@@ -242,7 +245,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
   def invokeProver(pod: Pod) { }
 
-  def invokeSynthesis(h: Term, subterm: Term, templates: List[Term])(implicit s: State) = {
+  def invokeSynthesis(h: Term, subterm: Term, templates: List[Term], fix: Boolean)(implicit s: State) = {
 
     val expandedTemplates = templates flatMap { template =>
       if (template =~ ("...", 0)) prototypes.values
@@ -260,7 +263,8 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
     val ∩ = I("∩")
 
-    val solution = Synth.synthesizeFixPodSubterm(h, subterm, ipods).run()
+    val solution = (if (fix) Synth.synthesizeFixPodSubterm(h, subterm, ipods)
+                        else Synth.synthesizeFlatPodSubterm(h, subterm, ipods)).run()
     println(solution)
     val selected = expandedTemplates(solution("selected").root.literal.asInstanceOf[Int])
     val synthed = selected.replaceDescendants(

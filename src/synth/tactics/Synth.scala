@@ -19,10 +19,11 @@ import syntax.{Unify, Formula, Strip, Identifier}
 import syntax.Piping._
 import syntax.transform.{Extrude, Mnemonics}
 import semantics._
+import semantics.TypeTranslation.TypingSugar._
 import semantics.transform.{Escalate, Explicate}
 import synth.proof.Assistant
 
-import scala.sys.process.ProcessIO
+//import scala.sys.process.ProcessIO
 
 
 object Synth {
@@ -135,7 +136,7 @@ object Synth {
       findBodyWithType(shallow, intendedShape) map { body =>
         val inputs = enclosure(shallow, body) get
         val intendedType = (inputs :\ shape(typeOf_!(term)))((x,y) => ? -> y)
-        val retargeted = if (SimplePattern(fix(?)) findOne body isDefined) shallow else shallow.replaceDescendant((body, fix($TV ↦ body)))
+        val retargeted = if (SimplePattern(fix(?)) findOne body isDefined) shallow else shallow.replaceDescendant((body, fix($TV("θ") ↦ body)))
         (retargeted.untype match {
           case T(Prelude.program.root, List(x)) => x case x => x
         }) :: intendedType |> instapod
@@ -147,6 +148,36 @@ object Synth {
     }
 
     synthesizeFix(term, instances, quadrant)
+  }
+
+  def synthesizeFlatPod(term: Term, pods: Iterable[Pod], quadrant: Term)(implicit scope: Scope) = {
+    import Prelude.{fix,?}
+    import TypedLambdaCalculus.enclosure
+    import TypedTerm.typeOf_!
+    import TypePrimitives.shape
+    import synth.engine.TacticApplicationEngine.instapod
+
+    val intendedShape = shape(typeOf_!(term))
+
+    val instances = pods flatMap { pod =>
+      val shallow = TypeInference.inferShallow(pod.program)._2
+      findBodyWithType(shallow, intendedShape) map { body =>
+        val inputs = enclosure(shallow, body) get
+        val intendedType = (inputs :\ shape(typeOf_!(term) -> typeOf_!(term)))((x,y) => ? -> y)
+        val retargeted = shallow.replaceDescendant((body, $TV("θ") ↦ body))
+        (retargeted.untype match {
+          case T(Prelude.program.root, List(x)) => x case x => x
+        }) :: intendedType |> instapod
+      }
+    }
+
+    for (instance <- instances) {
+      extrude(instance) |-- report.console.Console.display
+    }
+
+    def θ_↦(t: Term) = TypedLambdaCalculus.typecheck0($TyTV("θ", typeOf_!(t)) ↦ t)
+
+    synthesizeFlat(θ_↦(term), instances, quadrant)
   }
 
   def findBodyWithType(prog: Term, typ: Term): Option[Term] = {
@@ -166,31 +197,15 @@ object Synth {
 
 
   def synthesizeFixPodSubterm(term: Term, subterm: Term, pods: Iterable[Pod])(implicit scope: Scope) = {
-    /*import Prelude.{program,fix,?}
-    import TypedLambdaCalculus.enclosure
-    import TypedTerm.typeOf_!
-    import TypePrimitives.shape
-    import synth.engine.TacticApplicationEngine.instapod
-    val * = TI("*")
-
-    val instances = pods map { pod =>
-      val inputs = enclosure(pod.program, (SimplePattern(* :- fix(?)) findOne_! pod.program)(*)) get
-      val intendedType = (inputs :\ shape(typeOf_!(term)))((x,y) => ? -> y)
-      (pod.program match {
-          case T(Prelude.program.root, List(x)) => x case x => x
-        }) :: intendedType |> instapod
-    }
-
-    val quadrant = TypePrimitives.curry(TypedTerm.typeOf_!(subterm))._2
-
-    report.console.Console.display(extrude(term))
-    instances foreach (instance => report.console.Console.display(extrude(instance)))
-    println(quadrant toPretty)
-
-    synthesizeFix(term, instances, quadrant)*/
     val quadrant = TypePrimitives.curry(TypedTerm.typeOf_!(subterm))._2
 
     synthesizeFixPod(term, pods, quadrant)
+  }
+
+  def synthesizeFlatPodSubterm(term: Term, subterm: Term, pods: Iterable[Pod])(implicit scope: Scope) = {
+    val quadrant = TypedTerm.typeOf_!(subterm)
+
+    synthesizeFlatPod(term, pods, quadrant)
   }
 
   def synthesizeFix(h: Term, hP: Iterable[Term], quadrant: Term)(implicit scope: Scope) = {
@@ -200,7 +215,8 @@ object Synth {
     import TypePrimitives.shape
     val * = TI("*")
 
-    val f = pullOut(h, (SimplePattern(fix(* :- ?)) find h).head(*)).get
+    val f = try pullOut(h, (SimplePattern(fix(* :- ?)) find h).head(*)) get
+            catch { case _: NoSuchElementException => throw new TacticalError("not a fix term") at h }
     val fP = hP flatMap (hP => pullOut(hP, (SimplePattern(fix(* :- ?)) find hP).head(*))) filter
                         (fP => shape(typeOf_!(f)) != shape(typeOf_!(fP)))
 

@@ -1,12 +1,5 @@
-K₀ : set
-K₁ : set
-K₂ : set
-L₀ : set
-L₁ : set
-L₂ : set
-L₃ : set
-L₄ : set
-L₅ : set
+K₀ K₁ K₂ : set
+L₀ L₁ L₂ L₃ L₄ L₅ : set
 
 C `K₀ `K₁ `K₂
 
@@ -24,6 +17,8 @@ Assoc min
  Let min (slasher 🄲) ⟨🄺,🄼⟩ ψ,
  Let min (slasher 🄳) ⟨🄽,🄿⟩ ψ⟩
 
+🄰 🄱 🄲 🄳 🄴 🄵 🄶 🄷 ↦ SynthAuto . ⟨C⟩ ψ
+/*
 ⟨Synth 🄰 (C `L₁ `L₃ `L₅) ψ,
  Synth 🄱 (C `L₁ `L₂ `L₅) ψ,
  Synth 🄲 (C `L₁ `L₃ `L₄) ψ,
@@ -32,5 +27,5 @@ Assoc min
  Synth 🄵 (C `L₀ `L₂ `L₅) ψ,
  Synth 🄶 (C `L₀ `L₃ `L₄) ψ,
  Synth 🄷 (C `L₀ `L₂ `L₄) ψ ⟩
-
+*/
 SaveAs (C `K₀ `K₁ `K₂) "rec"

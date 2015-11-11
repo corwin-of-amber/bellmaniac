@@ -1,9 +1,5 @@
-J₀ : set
-J₁ : set
-K₀ : set
-K₁ : set
-K₂ : set
-K₃ : set
+J₀ J₁ : set
+K₀ K₁ K₂ K₃ : set
 
 B `J₀ `J₁
 
