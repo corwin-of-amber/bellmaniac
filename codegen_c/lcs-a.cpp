@@ -1,5 +1,5 @@
 /*
- * g++ -O3
+ * g++ -o lcs -D N=15 -D M=15 -D B=4 -O3 lcs-a.cpp  && ./lcs
  *
  */
 #include <cstdio>
