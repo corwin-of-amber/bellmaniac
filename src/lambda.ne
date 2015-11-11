@@ -106,11 +106,11 @@ defaultInfixOperator -> "/" {% function(d) {return operator(d[0]); } %}
 type -> typeWithOperations _ typeArrow _ type {% function(d) {return functionType(d[0], d[4]); } %}
 	| typeWithOperations {% id %}
 
-## assume type operators (\, * and ∩) are left associative
-typeWithOperations -> typeWithOperations _ typeOperator _ rootType {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
+## type operators (× and ∩) are right associative
+typeWithOperations -> 
+      typeWithOperations _ "×" _ rootType {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
+    | typeWithOperations _ "∩" _ variable {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
 	| rootType {% id %}
-
-typeOperator -> [×∩] {% id %}
 
 rootType -> leftparen type rightparen {% function(d) {return d[1];} %}
 	| typeVariable {% id %}
@@ -123,6 +123,7 @@ typeVariable -> identifier {% function(d, loc, reject) {return typeVariable(d[0]
 
 identifier -> letter idrest {% function(d) {return d[0].concat(d[1]); } %}
 	| op {% id %}
+    | ".":+ {% function(d) {return d[0].join(""); } %}
 
 idrest -> letterOrDigit:* {% function(d) {return d[0].join(""); } %}
 	| letterOrDigit:* underscore op {% function(d) {return d[0].join("").concat("_").concat(d[2]);} %}

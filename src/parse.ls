@@ -107,7 +107,7 @@ root.bellmaniaParse = (input, success, error) ->
                     stream.write "\n\n"
             stream.end!
 
-        fs.writeFileSync "/tmp/synopsis.txt" input
+        fs.writeFileSync "/tmp/synopsis.txt" input.text
 
         stream = fs.createWriteStream "/tmp/synopsis.json"
         stream.once \open -> toStream stream
