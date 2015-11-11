@@ -1,0 +1,91 @@
+\section{More Tactics}
+\label{annex:more tactics}
+
+\tacticdef{Associativity}
+\[\reduce\big\langle \reduce\langle\overline x_1\rangle,\cdots, \reduce\langle\overline x_r\rangle\big\rangle ~=~ \reduce \langle \overline x_1, \cdots, \overline x_r\rangle\]
+%
+where $\reduce$ is a built-in aggregation ($\min$, $\max$, $\Sigma$), 
+and $\overline x_i$ are lists of terms (of the same type).
+If any of $\overline x_i$ is of length one, $\reduce\langle\overline x_i\rangle$ can be
+replaced by $\overline x_i$.
+
+\Obligations none.
+
+\tacticdef{Distributivity}
+Let $e$ be an expression with a hole, $e[\square] = (\cdots \square \cdots)$.
+%
+\[\renewcommand\arraystretch{1.2}
+  \begin{array}{@{}r@{~}c@{~}l@{}}
+    e[t_1/\cdots/t_r] &=& e[t_1] / \cdots / e[t_r] \\
+    e[t_1/\cdots/t_r] &=& \reduce\langle e[t_1],\cdots,e[t_r]\rangle \\
+    \reduce e[t_1/\cdots/t_r] &=& \reduce\langle \reduce e[t_1],\cdots,\reduce e[t_r]\rangle
+  \end{array}\]
+
+This tactic provides several alternatives for different uses of aggregations.
+Clearly, $\big/$ does not distribute over any expression; we give just a few examples
+where this tactic is applicable.
+\begin{itemize}
+  \item $(x/y)+1 ~=~ (x+1)~/~(y+1)$
+  \item $x/0 ~=~ \max\langle x,0\rangle$ ~(for $x:\N$)
+  \item $\min \big(f\big|_{J_0}~\big/~f\big|_{J_1}\big) ~=~
+         \min\left\langle \min f\big|_{J_0} ~,~ \min f\big|_{J_1}\right\rangle$
+\end{itemize}
+
+\Obligations tactic.
+
+\tacticdef{Elimination}
+\[e[t] ~=~ e[\bot]\]
+%
+Used to eliminate a sub-term that is either always undefined or has no effect
+in the context in which it occurs.
+
+\Obligations tactic.
+
+\tacticdef{Let Insertion}
+
+Let $e$ be an expression with a hole, $e[\square] = (\cdots x_1 \mapsto \cdots x_k\mapsto \cdots \square \cdots)$, 
+where $x_{1..k}\mapsto$ are abstraction terms enclosing $\square$. The bodies may contain arbitrary terms
+in addition to these abstractions.
+%
+\[\renewcommand\arraystretch{1.2}
+  \begin{array}{@{}r@{}c@{}l@{}}
+  e[t] & ~=~ & (\overline{x}\mapsto t) ~\applt~ z\mapsto e[z\,\overline{x}] \\
+  e[\reduce \langle\overline{a},\overline{b}\rangle] & ~=~ &
+     (\overline{x}\mapsto \reduce\langle\overline{a}\rangle) ~\applt~ z\mapsto e[\reduce\langle z\,\overline{x}, \overline{b}\rangle]
+  \end{array}\]
+%
+where $\overline{x}=x_{1..k}$, and $z$ is a fresh variable.
+This tactic also has a special version that involves $\reduce$.
+The items in $\langle \overline{a},\overline{b}\rangle$ may be interleaved, since
+$\min,\max,\Sigma$ all happen to be commutative.\footnote{If non-commutative functions get added in the future, then this will change into $\langle \overline{a}, \overline{b}, \overline{c}\rangle$ non-interleaving, with the right hand side being $(\overline{x}\mapsto \reduce\langle\overline{b}\rangle) ~\applt~ z\mapsto e[\reduce\langle \overline{a}, z\,\overline{x}, \overline{c}\rangle]$.}
+
+\Obligations tactic, if $z$ occurs free in $e$; otherwise none.
+
+\tacticdef{Let Insertion [$\reduce$]}
+%
+\[e[\reduce \langle\overline{a},\overline{b}\rangle] ~=~ 
+  (\overline{x}\mapsto \reduce\langle\overline{a}\rangle) ~\applt~ z\mapsto e[\reduce\langle z\,\overline{x}, \overline{b}\rangle]\]
+%
+where $\overline{x}=x_{1..k}$, and $z$ a fresh variable.
+
+\Obligations tactic, if $z$ occurs free in $e$; otherwise none.
+
+\tacticdef{Padding}
+\[t ~=~ \big(t~/~f_1/\cdots/f_r\big) :: \T\]
+%
+where $\T$ is the type of $t$. This tactic is commonly used with Let insertion,
+to make the type of a sub-computation match the type of the entire term.
+
+\Obligations tactic.
+
+\tacticdef{Pull Out}
+For $e[\square]$ as defined previously:
+\[z ~=~ \overline{x}\mapsto t\]
+%
+where $z$ is a fresh variable.
+
+Similar to Let Insertion, but does not change the original term; instead,
+it is used to single out and name a particular expression $t$, preserving the context
+in which it occurs in $e[t]$. It is not a tactic {\it per se}, as it does not
+actually effect any transformation on $e[t]$; instead, it is designed to increase
+readability of the development and simplify successive human-computer interaction.

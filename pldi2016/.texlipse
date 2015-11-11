@@ -1,0 +1,14 @@
+#TeXlipse project settings
+#Mon Jun 22 19:19:57 EDT 2015
+markTmpDer=true
+builderNum=2
+outputDir=out/
+makeIndSty=
+bibrefDir=
+outputFormat=pdf
+tempDir=tmp
+mainTexFile=pldi2016.tex
+outputFile=pldi2016.pdf
+langSpell=en
+markDer=true
+srcDir=src/

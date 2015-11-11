@@ -1,0 +1,294 @@
+\section{Tactics}
+\label{tactics}
+
+We now define the method by which that our framework transforms program terms, by means of \newterm{tactics}.
+A tactic is a scheme of equalities that can be used for rewriting.
+When applied to a program term, any occurrence of the left-hand side is replaced by the right-hand side.
+A valid application of a tactic is an instance of the scheme that is well-typed and logically valid
+(that is, the two sides have the same interpretation in any structure that interprets the free
+variables occurring in the equality).
+
+The application of tactics yields a sequence of program terms, each of which is checked to
+be equivalent to the previous one. We refer to this sequence by the name \newterm{development}.
+
+We associate with each tactic some \newterm{proof obligations}, listed after the word \textbf{\textit{Obligations}}
+in the following paragraph.
+When applying a tactic instance, these obligations are also instantiated and given to an automated prover. 
+If verified successfully, they entail the validity of the instance. 
+Clearly the tactic itself can be used as its proof obligation, if it is easy enough to prove automatically; 
+in such cases we write ``\textbf{\textit{Obligations}:} tactic.''
+
+The following are the major tactics provided by our framework. 
+More tactic definitions are given in the appendix.
+
+\newcommand\Obligations{\medskip\noindent\textbf{\textit{Obligations}:} }
+\newcommand\reduce{\operatorname{reduce}}
+\newcommand\listConcat{{\scriptstyle \,++\,}}
+
+\theoremstyle{definition}
+\newtheorem{tactic}{Tactic}
+
+\newcommand\tacticdef[1]{\subsection*{#1}}
+
+\tacticdef{Slice} \label{tactics:Slice}
+\[f ~=~ f\big|_{X_1} ~\Big/~ f\big|_{X_2} ~\Big/ ~\cdots~ \Big/~ f\big|_{X_r}\] 
+
+This tactic partitions a mapping into sub-regions. Each $X_i$ may be a $\times$-expression
+according to the arity of $f$.
+
+\Obligations tactic.
+
+Informally, the recombination expression is equal to $f$
+when $X_{1..r}$ ``cover'' all the defined points of $f$ (also known as the \newterm{support} of $f$).
+
+\tacticdef{Shrink} \label{tactics:Shrink}
+\[f ~=~ f :: \T\] 
+
+Used to extra-specify the type of a sub-term.
+
+\Obligations tactic.
+
+For arrow-typed terms, this essentially requires to prove that $f$ is undefined anyway for
+argument values outside the domain of $\T$, and that the defined values are in the range of $\T$.
+
+\tacticdef{Stratify} \label{tactics:Stratify}
+\[\fix (f\applt g) ~=~ \fix f ~\applt~ \psi\mapsto \fix (\dot\psi\applt g)\]
+%
+where $\dot\psi$ abbreviates $\theta\mapsto\psi$, with fresh variable $\theta$.
+
+This tactic is used to break a long (recursive) computation into simpler sub-computations.
+$\psi$ may be fresh, or it may reuse a variable already occurring in $g$, rebinding those occurrences.
+The example of this section will illustrate why this is useful.
+
+\Obligations Let $h=f\applt g$ and $g'=\psi\mapsto\dot\psi\applt g$. Let $\theta,\zeta$ be
+fresh variables.
+\begin{equation}
+\renewcommand\arraystretch{1.5}
+\begin{array}{l}
+f\,(g'\,\zeta\,\theta) ~=~ f\,\zeta \\
+g'\,(f\,\theta)\,\theta ~=~ h\,\theta
+\end{array}
+\label{tactics:Stratify obligations}
+\end{equation}
+
+Although the proof is not hard, we defer it to a later theorem.
+
+\tacticdef{Synth} \label{tactics:Synth}
+\[\fix\big(h_1 ~\big/~ \cdots ~\big/~ h_r\big) ~=~ 
+  (\fix f_1) :: \T_1 ~\big/~ \cdots ~\big/~ (\fix f_r) :: \T_r\]
+
+This tactic is used to generate recursive calls to sub-programs. For $i=1..r$, $f_i$
+is typically either $h_i$ or a sub-term occurring earlier in the development.
+
+\Obligations Let $h=h_1/\cdots/h_r$, let $\overline\theta\!=\!\theta_{1..r}$ be $r$ fresh variables, and let
+$f = \theta_{1..r} \mapsto (f_1\,\theta_1)::\T_1/\cdots/(f_r\,\theta_r)::\T_r$.
+\begin{itemize}
+  \item $\T_{1..r}$ are disjoint mappings.
+  \item {\bf Either}\quad $h\,(f\,\overline\theta) = f\,\overline\theta$ \\{\bf or}\qquad
+  $\begin{array}[t]{l} h\,\theta=\theta ~\limplies~ (f_i\,\theta :: \T_i)=\theta :: \T_i ~, \\
+  \theta::\T_1~/~\cdots~/~\theta::\T_r=\theta\end{array}$
+\end{itemize}
+
+(We give two alternatives, as the first is usually easier to prove, but may hold in less cases)
+
+\newenvironment{tacticbox}[1]{\begin{center}\begin{tabular}{|@{~~~~}l@{~~~~}|}\hline\rule{0pt}{2.3ex}\underline{#1}\\[.4em]$}{$\\[-1em] \\[.3ex] \hline\end{tabular}\end{center}}
+
+\noindent
+\begin{minipage}{\columnwidth}
+\exampleTitle \begin{comment}\subsection{Example}\end{comment}
+
+For simplicity of the example, we assume that the input to the Simplified Arbiter problem
+satisfies triangle inequalities:
+\end{minipage}
+%
+\begin{equation}
+w_{pij} \leq w_{pkj} + w_{kij} \qquad w'_{qji} \leq w'_{qki} + w'_{kji}
+\label{equ:triangle}
+\end{equation}
+%
+for all (appropriately typed) $p<k<i$, ~$q<k<j$.
+
+\begin{comment}
+\label{annex:more tactics} % make TeXlipse happy
+\end{comment}
+
+\medskip
+Starting from the specification in \eqref{lang:arbiter spec}, Richard applies Synth to turn
+$\fix (\theta\,i\,j\mapsto\square/\min\langle\cdots\rangle)$ into $\fix\theta\,i\,j\mapsto\min\langle\square,\cdots\rangle$.
+While not absolutely necessary, we will see that it makes some expressions easier to handle later
+on.
+
+Distributivity and Associativity (refer to \Cref{annex:more tactics}) are used to obtain the tactic parameter $f_1$;
+the proof is deferred until Synth is applied so that the prover can use the extra context.
+
+\begin{tacticbox}{Synth}
+  \begin{array}{@{} l @{} l @{} l @{}}
+       h_1=\theta\,i\,j\mapsto{}
+	      & \lspan2{0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0} ~\big/~} \\
+	      & \min\,\langle~ & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+       f_1=\theta\,i\,j\mapsto{}
+	      & \min\,\langle~ & 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}, \\
+	      & & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{\!\!\!}l@{}l@{}l@{}}
+    G ~=~ \fix \theta\,i\,j\mapsto{}
+	      & \min\,\langle~ & 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}, \\
+	      & & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle
+  \end{array}
+\end{equation}
+
+He then applies Let Insertion, followed by Stratify, to separate the base case and obtain a more general 
+form, similar to $\Ggen$ of \eqref{intro:Ggen}.
+
+\begin{tacticbox}{Let}
+  \begin{array}{l@{}l}
+   e[\square] ~=~ \theta\,i\,j\mapsto\min\langle~ & \square, \\
+      & \min p\mapsto\theta_{pj}+w_{pij}, \\
+      & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+   \lspan2{~~t ~=~
+      0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}}
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{}l@{}l@{}l@{}l@{}}
+    G ~=~ & \fix \big(\,& \lspan2{(\theta\,i\,j\mapsto 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0})\applt} \\
+	      & & z\,\theta\,i\,j \mapsto \min\,\langle~& z_{\theta ij}, \\
+	      & & & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle\,\big)
+  \end{array}
+\end{equation}
+
+\begin{tacticbox}{Stratify}
+  \begin{array}{l}
+       f ~=~ \theta\,i\,j\mapsto 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0} \\
+       g ~=~ z\,\theta\,i\,j\mapsto \min\langle z_{\theta ij},\cdots\rangle
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{}l@{}l@{}l@{}}
+    G ~=~ & \lspan2{\fix \big(\theta\,i\,j\mapsto
+	              0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}\big)\applt} \\
+	      & \psi\mapsto \fix \theta\,i\,j\mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle
+  \end{array}
+\end{equation}
+
+Setting the base case aside, let $A^{IJ}$ be the second term,
+where the superscript parameterizes the types of $i$, $j$ and $p$, $q$.
+
+\newcommand\vtyped[2]{\underset{\scriptscriptstyle ( #2 )}{ #1 }}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}l@{}l@{}c@{}c@{}l@{}l@{}}
+    A^{^{IJ}} ~=~ 
+	      & \psi\mapsto \fix \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I)}} & ^{^{(J)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle
+  \end{array}
+  \label{tactics:arbiter phase A}
+\end{equation}
+
+Vertical typeset was used to save some horizontal space, but $\vtyped v\T$
+should be read as just $v:\T$.
+
+\medskip
+This is exactly what Richard was after. $A^{IJ}$ constitutes the first phase
+of the divide-and-conquer formalization.
+
+\medskip
+\hrule
+\bigskip
+
+\subsection{Soundness}
+
+\renewenvironment{proof}{\noindent{\bf Proof.~}}{}
+
+\begin{theorem}
+Let $s=s'$ be an instance of one of the tactics introduced in this section.
+let $a_i=b_i$, $i=1..k$, be the proof obligations. If $\semp{a_i}=\semp{b_i}$
+for all interpretations of the free variables of $a_i$ and $b_i$, then
+$\semp{s}=\semp{s'}$ for all interpretations of the free variables of $s$ and $s'$.
+\end{theorem}
+
+\begin{proof}
+For the tactics with {\bf Obligations:} tactic, the theorem is trivial.
+
+\medskip
+For Stratify, let $f$, $g$ be partial functions such that
+\[\renewcommand\arraystretch{1.3}
+  \forall \theta,\zeta.\quad \begin{array}{l}f\,(g\,\zeta\,\theta) ~=~ f\,\zeta \\
+  g\,(f\,\theta)\,\theta ~=~ h\,\theta
+  \end{array}\quad\]
+  
+Assume that $\zeta = \fix f$ and $\theta = \fix (g\,\zeta)$. That is,
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l}
+    f\,\zeta = \zeta\\
+    g\,\zeta\,\theta = \theta
+  \end{array}\]
+  
+Then ---
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{}l}
+   h\,\theta & {}= g\,(f\,\theta)\,\theta = g\,(f\,(g\,\zeta\,\theta))\,\theta = \\
+             & {}= g\,(f\,\zeta)\,\theta = \theta
+  \end{array}\]
+  
+So $\theta = \fix h$. We get $\fix h = \fix \big(g \,(\fix f)\big)$, or, equivalently,
+\[\fix h = \fix f \applt \psi\mapsto\fix (g\,\psi)\]
+
+Now instantiate $h$, $f$, and $g$, with $f\applt g$, $f$, and $g'$ from \Cref{tactics:Stratify},
+and we obtain the equality in the tactic.
+
+\medskip
+For Synth, ({\it i}) assume
+\[\forall \overline\theta.\quad h\,(f\,\overline\theta)=f\,\overline\theta \quad\]
+%
+and let $\theta=\theta_{1..r}$ such that $\theta_i=\fix f_i$. So $f_i\,\theta_i=\theta_i$.
+Let $\theta=\theta_1::\T_1/\cdots/\theta_r::\T_r$.
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{}l}
+   f\,\overline\theta & {}= (f_1\,\theta_1)::\T_1 / \cdots / (f_r\,\theta_r)::\T_r =  \\
+     & {}= \theta_1::\T_1 / \cdots / \theta_r::\T_r = \theta \\[.5em]
+   h\,\theta & {}= h\,(f\,\overline\theta) = f\,\overline\theta = \theta
+   \end{array}\qquad\]
+   
+Then $\theta=\fix h$;\\
+We get $\fix h = (\fix f_1)::\T_1 / \cdots / (\fix f_r)::\T_r$,
+as required.
+
+({\it ii}) assume
+\[\renewcommand\arraystretch{1.3}
+  \forall\theta. \quad
+  \begin{array}{l}
+  \displaystyle
+    h\,\theta = \theta ~\limplies \bigwedge_{i=1..r}(f_i\,\theta)::\T_i = \theta::\T_i \\
+    \theta = \theta::\T_1 ~\big/~ \cdots ~\big/~ \theta::\T_r
+  \end{array}  
+\]
+%
+and let $\theta=\fix h$. So $h\,\theta=\theta$, therefore $(f_i\,\theta)::\T_i=\theta::\T_i$.
+Since we assume that $\fix f_i$, we get by induction that $(\fix f_i)::\T_i=\theta::\T_i$.
+Hence,
+\[(\fix f_1)::\T_1 / \cdots / (\fix f_r)::\T_r = \theta::\T_1 / \cdots / \theta::\T_r = \theta\]
+\end{proof}
+
+Our reliance on the termination of $\fix$ expressions may seem conspicuous, since some of these
+expressions are generated automatically by the system. However, a closer look reveals that whenever
+such a computation is introduced, the set of the recursive calls is makes is a subset of those made by the existing one.
+Therefore, if the original recurrence terminates, so does the new one. In any case, all the recurrences
+in our development have a trivial termination argument (the indexes $i$,$j$ change monotonically between calls),
+so practically, this should never become a problem.

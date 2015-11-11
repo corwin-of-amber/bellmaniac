@@ -1,0 +1,573 @@
+\documentclass{article}
+
+\usepackage{amssymb,amsmath}
+\usepackage[T1]{fontenc}
+
+
+\newcommand\newterm[1]{{\it #1}}
+\newcommand\R{\mathbb{R}}
+\newcommand\N{\mathbb{N}}
+\newcommand\B{\mathbb{B}}
+\newcommand\T{\mathcal{T}}
+
+\newcommand\semp[1]{[\![{#1}]\!]}
+\newcommand\parto{\rightharpoonup}
+
+\newcommand\limplies{\rightarrow}
+
+
+\begin{document}
+
+\begin{abstract}
+We present a language for specifying DP algorithms, and a calculus that facilitates
+gradual transformation of these specifications into efficient cache-oblivious
+parallel implementations using the Divide and Conquer technique.
+\end{abstract}
+
+\section{The Language}
+
+\subsection{Types}
+
+Our language involves a type system and some specialized operators to manipulate
+values. We define \newterm{raw types} to include:
+\begin{itemize}
+  \item The primitive types---$\N$ (natural numbers), $\R$ (real numbers), and $\B$ (Boolean truth values).
+  \item User-defined uninterpreted scalar types. By convention, we use capital letters for those, e.g. $J$, $K$, $L$.
+  \item Function types constructed using the type constructor $\to$. For $\T_1, \T_2$ types,
+    $\T_1\to\T_2$ is a function type.
+\end{itemize}
+
+
+Function types have the semantics of partial functions. So the interpretation of $f :: J\to\R$, for example, would be
+$\semp{f} : J\parto\R$. Since there are no tuple types, $(\T_1\times\T_2)\to\T_3$ is accepted as an alternative to
+$\T_1\to\T_2\to\T_3$.
+
+\medskip
+\newterm{Predicates} are defined using $\B$ as a function range. So $P :: J\to\B$ defines a unary predicate
+on $J$, and ${<} :: (J\times J)\to\B$ defines a binary relation.
+Predicates can be used to annotate types, forming \newterm{refined types} similar to the ones
+used in Liquid Types~\cite{PLDI08/Rondon}, but limited to the following subset:
+\begin{itemize}
+  \item $J\cap P$ is interpreted as $\{v:J\;|\;P(v)\}$. Since $J$ is the domain of $P$, it can be inferred;
+    so in this case it is enough to just write $P$, when understood from the context that it denotes a
+    type rather than an expression. E.g. $P\to\R$ is the same as $(J\cap P)\to\R$, both meaning
+    $\{v:J\;|\;P(v)\}\to\R$.
+  \item $((J\times J)\cap {<})\to\R$ is interpreted as $i:J\to\{v:J\;|\;i<v\}\to\R$. Due to the use of $\times$,
+    binary and higher-arity predicates can only be used in argument types, i.e., on the left side of a $\to$
+    constructor.
+  \item It is possible to combine several predicates in type annotations, with the semantics of a conjunction.
+    $J\cap P\cap Q$ (or just $P\cap Q$) means $\{v:J\;|\;P(v)\land Q(v)\}$.
+    $((P\times J)\cap{<})\to\R$ means $i:\{v:J\;|\;P(v)\}\to\{v:J\;|\;i<v\}\to\R$.
+    $((J\times P)\cap{<})\to\R$ means $i:J\to\{v:J\;|\;P(v)\land i<v\}\to\R$.
+\end{itemize}
+
+The $\to$ constructor is defined to be {\bf covariant} in {\bf both} arguments. So $K\to P$ is a subtype of $K\to J$
+--- we write $K\to P <: K\to J$, and also $P\to K <: J\to K$. 
+Note that this is different from type semantics used in OO
+languages.
+
+Given a type $\T$, the raw type obtained from $\T$ by removing all predicate annotations
+is called the \newterm{shape} of $\T$, denoted $\mathrm{shape}[\T]$.
+
+
+\subsection{Expressions}
+
+The language is basically simply-typed lambda calculus, where abstraction terms are written as
+$v::\T\mapsto e$, and application terms as $e_1\ e_2$. Infix notation is used as syntactic sugar
+for symbols such as $+$, $<$, so that we can write $e_1 + e_2$ instead of ${+}\ e_1\ e_2$.
+Thanks to type inference, type annotations may occasionally be omitted.
+
+The type checking rules dictate that if $e_1::\T_1\to\T_3$ and $e_2::\T_2$, then $e_1\,e_2::\T_3$
+is well-typed when $\mathrm{shape}[\T_1]=\mathrm{shape}[T_2]$. This is more permissive
+than traditional functional languages, where $\T_2<:\T_1$ is required. It is, however,
+natural in our setting where functions are treated as partial.
+
+A function $f :: P\to K$ simply gets the undefined value $\bot$ where $P$ does not hold.
+It is therefore also a function of type $J\to K$ (remember that $P$ is short for $J\cap P$).
+A function $g :: (J\to K)\to L$ can therefore take $f$ as its argument.
+Similarly, $h :: (Q\to K)\to L$, where $Q$ is another unary predicate on $J$, can also take $f$;
+any applications of it to argument not satisfying both $P$ and $Q$ will result in $\bot$.
+Effectively, $f$ is being ``cast down'' to $(P\cap Q)\to K$.
+
+\subsection{Operators}
+
+We will be using function types to represent $k$-dimensional arrays, in particular DP tables.
+To support addressing of regions, we define two operators:
+
+\begin{itemize}
+  \item The \newterm{restrict} operator, $\big|_-$, coerces a function value to a subtype. 
+    If $f::J\to K$, then $f\big|_P :: P\to K$
+    with the semantics
+    \[\semp{f\big|_P\ x} = \begin{cases}f\ x & \textrm{if}~P(x)\\ \bot & \textrm{o.w.}\end{cases}\]
+    This is easily lifted to $k$-ary functions via $\times$ and $\cap$.
+    As a special case, $\big|_-$ can be applied to scalar values (``nullary'' functions)
+    by supplying a Boolean expression.
+    \[\semp{y\big|_{i<j}} = \begin{cases}y & \textrm{if}~i<j \\ \bot & \textrm{o.w.}\end{cases}\]
+  \item The \newterm{combine} operator, $/$. It operates on two functions with the same shape.
+    \[\semp{f / g} = \overline{x}\mapsto\begin{cases}f\,\overline{x} & \textrm{if}~f\,\overline{x}\neq\bot \\ 
+                                                     g\,\overline{x} & \textrm{o.w.}\end{cases}\]
+    where $\overline{x}$ are $k$ fresh variables, $k$ being the arity of $f$ and $g$.
+\end{itemize}
+
+To express recursive computations, we employ fixed-point semantics.
+
+\newcommand\fix{\mathrm{fix}\,}
+
+\begin{itemize}
+  \item For $f :: \T\to\T$, define $f^\omega :: \T\to\T$ such that for every $\theta :: \T$ there exists some $n\in\N$,
+    \[f^\omega\,\theta = f^n\,\theta = f^{n+1}\,\theta\]
+  \item For $f :: \T\to\T$, define $\fix f :: \T = f^\omega\,\bot$.\\
+    If $\T$ is a function type, then $\bot$ is lifted to that type (e.g. $\bot :: X\to Y = x :: X \mapsto \bot :: Y$).
+\end{itemize}
+
+
+\newcommand\applt{\textsf{\guillemotright}}
+
+Finally, for sequential computations, we use $\applt$ for application from the left, 
+and $\,\cdot\,$ as ``left-to-right'' function composition. Both are left-associative.
+\begin{itemize}
+  \item $x\applt f ~=~ f\,x$
+  \item $f\cdot g ~=~ \theta\mapsto \theta \applt f \applt g$
+\end{itemize}
+
+
+\section{Library of Primitives}
+
+To express regular arithmetic and iteration, the ``prelude'' contains the following primitive
+values:
+
+\begin{itemize}
+  \item ${+}, {-} :: \forall A.~A\times A\to A$ --- polymorphic binary operators.
+  \item ${<} :: \forall A. ~A\times A\to\B$ --- a polymorphic order relation.
+  \item $\min, \max, \Sigma :: \forall A,B.~ (A\to B)\to B$ --- reduction operators
+    on ordered/unordered sequences. The sequence is represented by a function $f :: A\to B$,
+    so that e.g. \[\semp{\min f} = \min_v \{f\,v \;|\; f\,v\neq\bot\}\]
+    The sequences are expected to be finite.
+  \item $\mathrm{nil} :: \N\to A, \mathrm{cons} :: A \to (\N\to A)\to(\N\to A)$ --- list constructors.
+    Lists are represented as functions over $\N$. They are defined as
+    \[\begin{array}{l}\mathrm{nil}=i\mapsto\bot \\
+        \mathrm{cons}\,x\,xs = i\mapsto \big(x\big|_{i=0} ~\big/~ xs\,(i-1)\big)\end{array}\]
+    Notice that, unlike with most functions, $\mathrm{cons}\,x\,xs\,i$ may be defined even if $x$ is not.\\
+    We use the standard notation $\langle e_1,\cdots\,e_k\rangle$ for 
+    \[\mathrm{cons}\,e_1\,(\mathrm{cons}\, e_2\,\cdots(\mathrm{cons}\,e_k\,\mathrm{nil})\cdots)\]
+\end{itemize}
+
+
+\section{Refinement Strategy}
+
+\subsection{Tactics}
+
+Each tactic defines a scheme of equalities that can be used for rewriting.
+A valid application of a tactic is an instance of the scheme that is well-typed and logically valid
+(as a simply-typed lambda calculus ``formula'').
+When applied, any occurrence of the left-hand side is replaced by the right-hand side.
+
+\subsubsection{Slice}
+\[f ~=~ f\big|_{X_1} \Big/ f\big|_{X_2} \Big/ ~\cdots~ \Big/ f\big|_{X_r}\]
+
+This tactic breaks a function (array) into sub-regions. Clearly, the recombination expression is
+valid when $X_{1..r}$ ``cover'' all the defined points of $f$. We write this as 
+$\mathrm{supp}\,f \subseteq \bigcup X_i$, where $\mathrm{supp}\,f$ is the set of
+argument values for which $f$ is defined (the \newterm{support} of $f$).
+
+\subsubsection{Stratify}
+
+\[\mathrm{fix}\,(f\applt g) ~=~ \mathrm{fix}\,f ~\applt~ \psi\mapsto \mathrm{fix}\,(\dot\psi\applt g)\]
+%
+where $\dot\psi=\theta\mapsto\psi$. Both $\psi$ and $\theta$ are fresh variables.
+
+\medskip
+To prove this, we must show that
+\[\forall \theta\,\zeta.~ f\,\theta=\theta ~\land~ g\,\dot\theta\,\zeta=\zeta ~\limplies~
+          (f\applt g)\,\zeta = \zeta\]
+
+\medskip
+Alternatively, it is sometimes useful to assimilate $\psi$ with an existing variable,
+when the original $\mathrm{fix}$ term is contained in some abstraction $\psi\mapsto$.
+In this case it may be necessary to ``pad'' $f$ so that its return type is the same as
+the type of $\psi$. For example, if $f::(P\to K)\to(P\to K)$ and $\psi::J\to K$,
+we replace $f$ in the result by $f' = f\big/\big(\dot\psi\big|_{\_\times \overline{P}}\big)$.
+%
+\[\mathrm{fix}\,(f\applt g) ~=~ \mathrm{fix}\,f' ~\applt~ \psi\mapsto \mathrm{fix}\,(\dot\psi\applt g)\]
+
+Then the obligation becomes
+%
+\[\forall \psi\,\theta\,\zeta.~ f'\,\theta=\theta ~\land~ (\theta \applt \psi\mapsto g\,\dot\psi)\,\zeta=\zeta ~\limplies~
+          (f\applt g)\,\zeta = \zeta\]
+
+\subsubsection{Distributivity}
+
+Let $e$ be an expression with a hole, $e[\square] = (\cdots \square \cdots)$.
+
+\[e[f_1/\cdots/f_r] ~=~ e[f_1] / \cdots / e[f_r]\]
+
+Naturally, this is not true for just any $e$; so the equality remains as a proof obligation.
+As an example:
+\begin{itemize}
+  \item  $i \mapsto (f/g)\,i + a ~=~ (i \mapsto f\,i + a) \,\big/\, (i \mapsto g\,i + a)$
+\end{itemize}
+
+\bigskip\noindent
+Additionally, aggregations distribute over /.
+\[\mathrm{reduce}\,(f_1/\cdots/f_r) ~=~ \mathrm{reduce}\,\langle\mathrm{reduce}\,f_1, \,\cdots, \mathrm{reduce}\,f_r\rangle\]
+
+For this to hold, it is always sufficient to prove that the supports of $f_{1 .. r}$ are disjoint.
+
+With specific $\mathrm{reduce}$ functions, weaker obligation may be applicable:
+\begin{itemize}
+  \item For $\min$: $\forall i\,j\,x.~ (i<j ~\land~ f_i\,x, f_j\,x\neq\bot) ~\limplies~
+    f_i\,x\leq f_j\,x$
+  \item For $\max$: $\forall i\,j\,x.~ (i<j ~\land~ f_i\,x, f_j\,x\neq\bot) ~\limplies~
+    f_i\,x\geq f_j\,x$
+  \item For $\Sigma$: $\forall i\,j\,x.~ (i<j ~\land~ f_i\,x, f_j\,x\neq\bot) ~\limplies~
+    f_j\,x = 0$
+\end{itemize}
+
+A special case of distributivity occurs for scalars. If at most one of $x_{1..r}$
+is ever defined, then
+\begin{itemize}
+  \item $x_1 / \cdots / x_r ~=~ \mathrm{reduce}\,\langle x_1, \,\cdots, x_r\rangle$
+\end{itemize}
+
+This is because $\mathrm{reduce}\,x = x$ for any scalar $x$.
+
+
+\subsubsection{Associativity}
+
+\[\mathrm{reduce}\,(x {\scriptstyle\,++\,} y) ~=~ \mathrm{reduce}\,\langle \mathrm{reduce}\,x, \mathrm{reduce}\,y\rangle\]
+
+This allows to simplify e.g. $\min\langle \min\langle a,b\rangle, c\rangle$ to $\min\langle a,b,c\rangle$.
+Here we rely on $\mathrm{reduce}\,\langle x\rangle=x$ for scalar $x$.
+
+\subsubsection{Let Insertion}
+
+Let $e$ be an expression with a hole, $e[\square] = (\cdots x_1 \mapsto \cdots x_k\mapsto \cdots \square \cdots)$, 
+where $x_{1..k}\mapsto$ are abstraction terms enclosing $\square$. The bodies may contain arbitrary terms
+in addition to these abstractions. Let $t$ be some other term.
+
+\[e[t] ~=~ (\overline{x}\mapsto t) ~\applt~ z\mapsto e[z\,\overline{x}]\]
+%
+where $z$ is a fresh variable.
+
+\medskip
+This tactic can be thought of as the inverse of a $\beta$-reduction. Indeed, if one applies a
+$\beta$-reduction to the application on the right-hand side, the result would be the expression
+on the left.
+
+\medskip
+Combined with associativity, if $s = \mathrm{reduce}\langle\overline{a},\overline{b}\rangle$,
+we get the corollary
+%
+\[e[s] ~=~ (\overline{x}\mapsto \mathrm{reduce}\langle\overline a\rangle) ~\applt~ 
+  z\mapsto e[\mathrm{reduce}\langle z\,\overline{x}, \overline{b}\rangle]\]
+
+
+\subsubsection{Elimination}
+
+\[e[t] ~=~ e[\bot]\]
+
+If a sub-term is never defined, within a given context, then it can be replaced with $\bot$,
+provided that the above equality can be proven.
+\medskip
+Combined with associativity, if $s = \mathrm{reduce}\langle\overline{a},t,\overline{b}\rangle$,
+we get the corollary
+%
+\[e[s] ~=~ e[\mathrm{reduce}\langle\overline{a},t,\overline{b}\rangle]\]
+
+Because $\bot = \mathrm{reduce}\,\mathrm{nil}$.
+
+\subsection{Example}
+
+We demonstrate our approach using this recursion (the gap problem):
+
+\[
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l}
+G_{ij} ~=~  &
+  0\big|_{i=j=0} ~\big/~ w_{0j}\big|_{i=0} ~\big/~ w'_{0i}\big|_{j=0}
+  ~\big/~ \\
+  &
+  \begin{array}{@{}l@{~}l}
+    \min\langle & G_{(i-1)(j-1)} + c_{ij}, \\
+                & \min q\mapsto G_{iq} + w_{qj} \\
+                & \min p\mapsto G_{pj} + w'_{pi}~\rangle
+  \end{array}
+\end{array}
+\]
+%
+where
+\begin{itemize}
+  \item $G :: J\times K \to \R$
+  \item $w :: (K \times K)\cap{<} \to \R$
+  \item $w' :: (J \times J)\cap{<} \to \R$
+  \item $c :: J \times J \to \R$
+\end{itemize}
+
+We use $G_{ij}$ as an alternative, more readable typography for $G\,i\,j$.
+
+To simplify the example, assume that $w$ and $w'$ satisfy the triangle inequality:
+%
+\begin{equation}
+w_{ij} \leq w_{ik} + w_{kj} \qquad w'_{ij} \leq w'_{ik} + w'_{kj}
+\label{equ:triangle}
+\end{equation}
+
+(this makes sense, because $w_{ij}$ is the cost of deleting the elements indexed $[i,j)$.)
+
+\bigskip
+The first step would be to write $G$ as a fixed-point operation.
+
+\[
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l}
+G ~=~ \mathrm{fix}\, \theta\,i\,j \mapsto{} &
+  0\big|_{i=j=0} ~\big/~ w_{0j}\big|_{i=0} ~\big/~ w'_{0i}\big|_{j=0}
+  ~\big/~ \\
+  &
+  \begin{array}{@{}l@{~}l}
+    \min\langle & \theta_{(i-1)(j-1)} + c_{ij}, \\
+                & \min q\mapsto \theta_{iq} + w_{qj} \\
+                & \min q\mapsto \theta_{pj} + w'_{pi}~\rangle
+  \end{array}
+\end{array}
+\]
+
+With (\ref{equ:triangle}), $0\big|_{i=j=0} ~\big/~ w_{0j}\big|_{i=0} ~\big/~ w'_{0i}\big|_{j=0}$
+is always less than or equal to the $\min\langle\cdots\rangle$ term. Use the special case of distributivity
+to replace the rightmost $/$ with a $\min$ (this requires proof by induction).
+
+Reassociate the $\min$ and we get---
+
+\[
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{~}l}
+G ~=~ \mathrm{fix}\, \theta\,i\,j \mapsto \min\langle 
+                & 0\big|_{i=j=0} ~\big/~ w_{0j}\big|_{i=0} ~\big/~ w'_{0i}\big|_{j=0}, \\
+                & \theta_{(i-1)(j-1)} + c_{ij}, \\
+                & \min q\mapsto \theta_{iq} + w_{qj} \\
+                & \min q\mapsto \theta_{pj} + w'_{pi}~\rangle
+\end{array}
+\]
+
+Via let insertion, we separate the base case of the recurrence:
+
+\newcommand\lspan[2]{\multicolumn{#1}{@{}l}{#2}}
+
+
+\[
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l@{~}l}
+G ~=~ \mathrm{fix}\,\bigg(
+      & \lspan2{\Big( \theta\,i\,j \mapsto 0\big|_{i=j=0} ~\big/~ w_{0j}\big|_{i=0} ~\big/~ w'_{0i}\big|_{j=0} \Big) ~\applt } \\
+      & z\, \theta\,i\,j \mapsto \min\langle 
+                 & z_{\theta ij}, \\
+      &          & \theta_{(i-1)(j-1)} + c_{ij}, \\
+      &          & \min q\mapsto \theta_{iq} + w_{qj} \\
+      &          & \min q\mapsto \theta_{pj} + w'_{pi}~\rangle
+\end{array}
+\]
+
+\medskip
+Now Stratify the base case and the actual computation.
+
+\[
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{}l@{~}l}
+G ~=~ & \lspan2{\Big( i\,j \mapsto 0\big|_{i=j=0} ~\big/~ w_{0j}\big|_{i=0} ~\big/~ w'_{0i}\big|_{j=0} \Big) ~\applt } \\
+      & \psi\mapsto \mathrm{fix}\, \theta\,i\,j \mapsto \min\langle 
+                 & \psi_{ij}, \\
+      &          & \theta_{(i-1)(j-1)} + c_{ij}, \\
+      &          & \min q\mapsto \theta_{iq} + w_{qj} \\
+      &          & \min q\mapsto \theta_{pj} + w'_{pi}~\rangle
+\end{array}
+\]
+
+To make expressions a little more managable, let
+\begin{itemize}
+  \item $r ~=~ i\,j\mapsto 0\big|_{i=j=0} ~\big/~ w_{0j}\big|_{i=0} ~\big/~ w'_{0i}\big|_{j=0}$
+  \item $\begin{array}[t]{@{}l@{~}l}
+    f ~=~ \theta\,i\,j \mapsto \min\langle & \psi_{ij}, \\
+                & \theta_{(i-1)(j-1)} + c_{ij}, \\
+                & \min q\mapsto \theta_{iq} + w_{qj} \\
+                & \min p\mapsto \theta_{pj} + w'_{pi}~\rangle
+  \end{array}$
+  \item $A ~=~ \psi\mapsto \mathrm{fix}\,f$
+\end{itemize}
+
+So that $G = r\applt A$. We use Slice to split $f$ by quadrants.
+The type of $f$ is $(J\times K\to\R)\to(J\times K\to\R)$. We define $J_0,J_1\subset J$
+and $K_0,K_1\subset K$ such that $\forall j_0\in J0,j_1\in J_1.~j_0<j_1$, and
+similarly $\forall k_0\in K_0,k_1\in K_1.~k_0<k_1$. This constitutes a partitioning
+of the index space $J\times K$ into four disjoint quadrants, so we can rewrite
+%
+\[A ~=~ \psi\mapsto
+        \mathrm{fix}\,\Big( f\big|_{\_\times J_0\times K_0} ~\big/~ 
+							f\big|_{\_\times J_0\times K_1} ~\big/~
+							f\big|_{\_\times J_1\times K_0} ~\big/~
+							f\big|_{\_\times J_1\times K_1}
+  \Big)\]
+  
+The `\_' is a placeholder for the type of the $\theta$ argument of $f$.
+We will employ the following intuitive shorthand notation:
+\newcommand\quadrants[4]{
+  \renewcommand\arraystretch{1.5}
+   \begin{array}{c|c}
+     #1 & #2 \\ \hline
+     #3 & #4
+   \end{array}}
+%
+\[
+A ~=~ \psi\mapsto\mathrm{fix}\,\left(\quadrants{f}{f}{f}{f}\right)
+ \]
+
+Separate the top-left quadrant using let:
+
+\[
+A ~=~ \psi\mapsto\mathrm{fix}\, f\big|_{\_\times J_0\times K_0} ~\applt~ z\mapsto\left(\quadrants{z}{f}{f}{f}\right)
+ \]
+
+Stratify, reusing $\psi$ and padding $f\big|_{\_\times J_0\times K_0}$ with the other three quadrants.
+
+\[
+A ~=~  \psi\mapsto\mathrm{fix}\,\left( \quadrants{f}{\psi}{\psi}{\psi} \right)
+  ~\applt~ 
+  \psi\mapsto\mathrm{fix}\,\left( \quadrants{\psi}{f}{f}{f} \right)
+\]
+
+Repeating the process for the two other quadrants, the top-right and bottom-left:
+
+\[
+\renewcommand\arraystretch{3}
+\begin{array}{l@{}l}
+A ~=~ \psi\mapsto{} & \mathrm{fix}\,\left( \quadrants{f}{\psi}{\psi}{\psi} \right)
+        ~\applt~~ 
+        \psi\mapsto\mathrm{fix}\,\left( \quadrants{\psi}{f}{\psi}{\psi} \right)
+        ~\applt~ \\
+      & \psi\mapsto\mathrm{fix}\,\left( \quadrants{\psi}{\psi}{f}{\psi} \right)
+        ~\applt~~ 
+        \psi\mapsto\mathrm{fix}\,\left( \quadrants{\psi}{\psi}{\psi}{f} \right)
+\end{array}
+\]
+
+We now focus on the second term, labeling it $A_2$.
+%
+\[A_2 ~=~ \psi\mapsto \mathrm{fix}\,\left(\quadrants{\psi}{f}{\psi}{\psi}\right)\]
+\[\begin{array}{l@{}l}
+  f\big|_{\_\times J_0\times K_1} ~=~ \theta\,(i::J_0)\,(j::K_1)\mapsto\min\langle~
+    & \psi_{ij}, \\
+    & \theta_{(i-1)(j-1)} + c_{ij}, \\
+    & \min q\mapsto \theta_{iq} + w_{qj} \\
+    & \min p\mapsto \theta_{pj} + w'_{pi}~\rangle
+\end{array}\]
+
+Slice $\theta = \theta|_{J\times K_0} ~/~ \theta|_{J\times K_1}$.
+
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{\,}c@{\,}c@{}l@{}l}
+  ~=~ \theta & i & j & \mapsto\min\langle~
+        & \psi_{ij}, \\
+    & ^{(J_0)} & ^{(K_1)} & & [\theta|_{J\times K_0} / \theta|_{J\times K_1}]_{(i-1)(j-1)} + c_{ij}, \\
+    &          &          & & \min q\mapsto [\theta|_{J\times K_0} / \theta|_{J\times K_1}]_{iq} + w_{qj} \\
+    &          &          & & \min p\mapsto [\theta|_{J\times K_0} / \theta|_{J\times K_1}]_{pj} + w'_{pi}~\rangle
+\end{array}\]
+
+Now we apply distributivity and associativity rules, so that each of the elements containing 
+$\theta/\theta$ is expanded into two elements.
+
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{\,}c@{\,}c@{}l@{}l}
+  ~=~ \theta & i & j & \mapsto\min\langle~
+        & \psi_{ij}, \\
+    & ^{(J_0)} & ^{(K_1)} & & (\theta|_{J\times K_0})_{(i-1)(j-1)} + c_{ij}, \\
+    &          &          & & (\theta|_{J\times K_1})_{(i-1)(j-1)} + c_{ij}, \\
+    &          &          & & \min q\mapsto (\theta|_{J\times K_0})_{iq} + w_{qj} \\
+    &          &          & & \min q\mapsto (\theta|_{J\times K_1})_{iq} + w_{qj} \\
+    &          &          & & \min p\mapsto (\theta|_{J\times K_0})_{pj} + w'_{pi} \\
+    &          &          & & \min p\mapsto (\theta|_{J\times K_1})_{pj} + w'_{pi}~\rangle
+\end{array}\]
+
+The sixth element is now defunct due to the type of $j$, since $\theta|_{J\times K_0}::J\times K_0\to\R$
+and $j::K_1$, where $K_0\cap K_1=\varnothing$, and can be eliminated.
+
+
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{\,}c@{\,}c@{}l@{}l}
+  ~=~ \theta & i & j & \mapsto\min\langle~
+        & \psi_{ij}, \\
+    & ^{(J_0)} & ^{(K_1)} & & (\theta|_{J\times K_0})_{(i-1)(j-1)} + c_{ij}, \\
+    &          &          & & (\theta|_{J\times K_1})_{(i-1)(j-1)} + c_{ij}, \\
+    &          &          & & \min q\mapsto (\theta|_{J\times K_0})_{iq} + w_{qj} \\
+    &          &          & & \min q\mapsto (\theta|_{J\times K_1})_{iq} + w_{qj} \\
+    &          &          & & \min p\mapsto (\theta|_{J\times K_1})_{pj} + w'_{pi}~\rangle
+\end{array}\]
+
+We now separate the parts involving $\theta|_{J\times K_0}$ via let insertion.
+
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{}l@{\,}c@{\,}c@{}l@{}l}
+  ~=~ &\big(\theta & i & j & \mapsto\min\langle~
+        & \psi_{ij}, \\
+    & & ^{(J_0)} & ^{(K_1)} & & (\theta|_{J\times K_0})_{(i-1)(j-1)} + c_{ij}, \\
+    & &          &          & & \min q\mapsto (\theta|_{J\times K_0})_{iq} + w_{qj}~\rangle\big) ~\applt \\
+    & z\;\theta& i & j & \mapsto\min\langle~
+        & z_{\theta ij}, \\
+    & & ^{(J_0)} & ^{(K_1)} & & (\theta|_{J\times K_1})_{(i-1)(j-1)} + c_{ij}, \\
+    & &          &          & & \min q\mapsto (\theta|_{J\times K_1})_{iq} + w_{qj} \\
+    & &          &          & & \min p\mapsto (\theta|_{J\times K_1})_{pj} + w'_{pi}~\rangle
+\end{array}\]
+
+Stratify $A_2$, reusing $\psi$ again and padding.
+%
+\[A_2 = \psi\mapsto\mathrm{fix}\,\left(\quadrants{\psi}{f_1}{\psi}{\psi}\right) ~\applt~
+        \psi\mapsto\mathrm{fix}\,\left(\quadrants{\psi}{f_2}{\psi}{\psi}\right)
+ \]
+ %
+ where
+ \[\renewcommand\arraystretch{1.3}
+   \begin{array}{r@{}l@{}l}
+   f_1 ~=~ & \theta\,i\,j \mapsto \min\langle~
+        & \psi_{ij}, \\
+    & & (\theta|_{J\times K_0})_{(i-1)(j-1)} + c_{ij}, \\
+    & & \min q\mapsto (\theta|_{J\times K_0})_{iq} + w_{qj}~\rangle \\
+    f_2 ~=~ & \theta\,i\,j \mapsto\min\langle~
+        & \psi_{ij}, \\
+    & & (\theta|_{J\times K_1})_{(i-1)(j-1)} + c_{ij}, \\
+    & & \min q\mapsto (\theta|_{J\times K_1})_{iq} + w_{qj} \\
+    & & \min p\mapsto (\theta|_{J\times K_1})_{pj} + w'_{pi}~\rangle
+ \end{array}
+ \]
+%
+and \[f_1,f_2 :: (J\times K\to\R) \to (J_0\times K_1\to\R)\]
+
+\bigskip
+At this point we should note the following facts:
+\begin{itemize}
+  \item $\theta$ in $f_1$ is cast to $J\times K_0\to\R$ in all occurrences. 
+   It is therefore safe to type it as $f_1 :: (J\times K_0\to\R) \to (J_0\times K_1\to\R)$.
+  \item Similarly, $f_2 :: (J\times K_1\to\R) \to (J_0\times K_1\to\R)$.
+  \item $\theta$ is only ever applied to values smaller that $i$, in both terms. Remembering that $i :: J_0$,
+    proving this will allow us to obtain an even tighter type assignment:
+    \[\renewcommand\arraystretch{1.5}
+      \begin{array}{l}
+       f_1 :: (J_0\times K_0\to\R) \to (J_0\times K_1\to\R) \\
+       f_2 :: (J_0\times K_1\to\R) \to (J_0\times K_1\to\R)
+      \end{array}\]
+\end{itemize}
+
+\bigskip
+Next steps:
+\begin{itemize}
+  \item Show that $\mathrm{fix}\,\left(\quadrants{f}{\psi}{\psi}{\psi}\right)$
+    is equivalent to $\quadrants{\mathrm{fix}\,f|_{\_\times J_0\times K_0}}{\psi}{\psi}{\psi}$.
+  \item Show that $\mathrm{fix}\,f|_{\_\times J_0\times K_0} = A\,(\psi|_{J_0\times K_0})$.
+  \item Show that $\mathrm{fix}\,\left(\quadrants{\psi}{f_2}{\psi}{\psi}\right) = 
+                   \quadrants{\psi}{A\,(\psi|_{J_0\times K_1})}{\psi}{\psi}$.
+  \item Slice the $\min\langle\cdot\rangle$ terms in the other two quadrants
+    according to $J_0,J_1,K_0,K_1$, using the same approach.
+  \item Extract sub-computations $B$ and $C$, and express $A$ as a composition of $A$, $B$, and $C$.
+\end{itemize}
+
+\bibliography{writeup}
+\bibliographystyle{abbrv}
+
+\end{document}

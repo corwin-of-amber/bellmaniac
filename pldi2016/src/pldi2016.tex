@@ -1,0 +1,135 @@
+\documentclass[pldi,preprint]{sigplanconf-pldi16}
+
+\usepackage{amsmath,amssymb,amsopn,amsthm}
+\usepackage[T1]{fontenc}
+\usepackage{algorithmic,algorithm}
+\usepackage{multirow}
+\usepackage{cleveref}
+\usepackage{graphicx}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{verbatim}
+%\usepackage{stfloats}
+
+\usepackage{tikz}
+\usetikzlibrary{fit,positioning}
+%\usepackage{pgfplots}
+%\usepackage{pgfplotstable}
+%\pgfplotsset{compat=1.12} 
+
+\newcommand\newterm[1]{{\it #1}}
+\newcommand\R{\mathbb{R}}
+\newcommand\N{\mathbb{N}}
+\newcommand\B{\mathbb{B}}
+\newcommand\T{\mathcal{T}}
+\renewcommand\S{\mathcal{S}}
+
+\newcommand\lspan[2]{\multicolumn{#1}{@{}l}{#2}}
+\newcommand\cspan[2]{\multicolumn{#1}{@{}c}{#2}}
+
+\makeatletter
+\newcommand{\LeftEqNo}{\let\veqno\@@leqno}
+\makeatother
+
+\newcommand\limplies{\rightarrow}
+\newcommand\liff{\leftrightarrow}
+
+\newcommand\exampleTitle{
+\bigskip\noindent
+\begin{tikzpicture}
+  \draw (0,0) -- (5mm,0)
+    node(e)[draw,rectangle,rounded corners=.7em,right] {\bf Example};
+  \draw (e) -- (\columnwidth,0);
+\end{tikzpicture}%
+\medskip%
+}
+
+% author comment macros
+%\newcommand\authornote[3]{{\color{#2} \footnote{\color{#2} {#1}: {#3}}}}
+%\newcommand\todo[1]{{\color{NavyBlue} \footnote{\color{NavyBlue} TODO: {#1}}}}
+
+\newcommand\asolar[1]{\authornote{AS}{BrickRed}{#1}}  % Armando
+\newcommand\cel[1]{\authornote{CL}{OliveGreen}{#1}}   % Charles
+\newcommand\rch[1]{\authornote{RC}{RoyalPurple}{#1}}  % Rezaul
+\newcommand\pga[1]{\authornote{PG}{RawSienna}{#1}}    % Pramod
+\newcommand\coa[1]{\authornote{SI}{NavyBlue}{#1}}     % Shachar
+
+\include{macros}
+
+\begin{document}
+
+
+\special{papersize=8.5in,11in}
+\setlength{\pdfpageheight}{\paperheight}
+\setlength{\pdfpagewidth}{\paperwidth}
+
+%\conferenceinfo{CONF 'yy}{Month d--d, 20yy, City, ST, Country} 
+%\copyrightyear{20yy} 
+%\copyrightdata{978-1-nnnn-nnnn-n/yy/mm} 
+%\doi{nnnnnnn.nnnnnnn}
+
+%\titlebanner{banner above paper title}        % These are ignored unless
+%\preprintfooter{short description of paper}   % 'preprint' option specified.
+
+%\title{Bellmania: Deriving Implementations from Specifications by Transformation}
+%\title{Solver-Aided Transformational Synthesis of Divide-and-Conquer Dynamic Programming Algorithms}
+\title{Deriving Divide-and-Conquer Dynamic Programming Algorithms Using 
+  Solver-Aided Transformations}
+
+%\authorinfo{Shachar Itzhaky}
+%           {MIT CSAIL}
+%           {shachari@mit.edu}
+\authorinfo{Double-blind submission}
+           {}
+           {}
+
+\maketitle
+
+\begin{abstract}
+We introduce \newterm{solver-aided tactics} as a mechanism for transforming
+computational terms, expressed in a specialized form of $\lambda$-calculus,
+intro equivalent terms in the interest of deriving better, more efficient
+implementations. By stringing chains of transformations, a programmer can start
+with a compact specification of an algorithm and develop it towards concrete
+executable code, while addressing performance issues involved.
+
+Solver-aided tactics are unique in two ways: 
+(a) They combine symbolic pattern-matching
+with SMT technology to ensure a correct transformation; this means that a lot of the
+burden of proof is moved from the user of the system to automated solvers.
+(b) They make use of type annotations within program terms to maintain and utilize
+properties of those computations, in order to guide transformations and provide
+enough context for the automated proofs. For this purpose, we employ predicate
+abstraction as part of the type system.
+
+We present Bellmania, a framework that brings together novel techniques from both
+inductive and deductive synthesis disciplines.
+Bellmania comprises of a language for specifying dynamic programming algorithms as recurrences,
+and a calculus that facilitates gradual transformation of these 
+specifications into efficient implementations.
+In particular, it provides tactics that formalize the Divide-and-Conquer technique to derive
+parallel implementations that optimally utilize memory caches.
+\end{abstract}
+
+\category{D.1.2}{Programming Techniques}{Automatic Programming}
+\category{I.2.2}{Artificial Intelligence}{Automatic Programming}[Program synthesis]
+
+\keywords
+Synthesis; Dynamic Programming; SMT; Automated Reasoning; Transformational
+
+\input{01-intro}
+\input{02-lang}
+\input{03-tactics}
+\input{04-automated}
+\input{05-evaluation}
+\input{06-related}
+\input{07-conc}
+
+\appendix
+
+\input{A-more-tactics}
+
+\bibliographystyle{abbrvnat}
+\bibliography{pldi2016} % embed contents of pldi2016.bbl for source submission
+
+
+\end{document}
