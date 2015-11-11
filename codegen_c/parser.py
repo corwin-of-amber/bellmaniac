@@ -386,6 +386,7 @@ class bmTerm(bmRoot):
         self.consargs = retList 
     def getApplyCode(self,ctx):
         Assert(self.literal == u'@' and hasattr(self, "funct"), "All set for this @ node")
+        
         op = self.funct.literal
         if hasattr(self,u"guards"):
             #Assert(self.guards.literal != u"<","Caught you: " + self.__str__() + str(ctx))
@@ -447,17 +448,14 @@ class bmTerm(bmRoot):
             return rs
         elif op == MAX:
             #guard?expr:UNDEF
-            
-            if hasattr(self,u"guards"):
-                self.guards.setCode(ctx)
             Assert(len(self.largs) == 2,"Only two children allowed for max: " + self.__str__())
             self.largs[0].setCode(ctx)
             self.largs[1].setCode(ctx)
             exprCode = u"OMAX(" + self.largs[0].code + u"," + self.largs[1].code + u")"
-            if hasattr(self,u"guards"):
-                return u"(" + self.guards.code + u"?" + exprCode +u":UNDEF)"
-            else:
-                return exprCode
+            '''if hasattr(self,u"guards"):
+                return u"((" + self.guards.code + u")?(" + exprCode +u"):UNDEF)"
+            else:'''
+            return exprCode
         elif hasattr(self.funct, u"code") and len(self.largs) == 1 and self.largs[0].literal == PSI:
             return self.funct.code
         elif op == DELTA:
@@ -658,7 +656,11 @@ class bmTerm(bmRoot):
                 ctx["fvr"].remove((v,r))
             self.code = rs
         elif self.literal == APPLY:
+            if hasattr(self,u"guards"):
+                self.guards.setCode(ctx)
             self.code = self.getApplyCode(ctx)
+            if hasattr(self,u"guards"):
+                self.code = u"((" + self.guards.code + u")?(" + self.code +u"):UNDEF)"
         elif self.literal == FIX:
             # TODO: Get "read set": {J0xJ0, J0xJ1, J1xJ1}
             Assert(len(self.subtrees) == 1, "fix should be unary")

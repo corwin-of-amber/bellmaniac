@@ -79,20 +79,21 @@ struct interval {
 #define FOR_A_rec_9(i, I) FOR_FORWARD(i,I)
 #define FOR_A_rec_10(i, I) FOR_FORWARD(i,I)
 
-void funcA_loop(DEFINTERVALFUNC (I), DEFINTERVALFUNC (J)) {
+void funcA_loop(DEFINTERVALFUNC(I), DEFINTERVALFUNC(J)) {
 
-	FOR_A_loop_1(i, I)
+	FOR_A_loop_1(i,I)
 	{
-		FOR_A_loop_2(j, J)
+		FOR_A_loop_2(j,J)
 		{
 			dist[i][j] =
-					GETDEF(GETDEF(dist[i][j], dist[(i - 1)][(j - 1)] + 1),
-							((!DELTA(i, j)) ? OMAX(dist[i][(j - 1)], dist[(i - 1)][j]) : UNDEF));
+					GETDEF(
+							GETDEF(dist[i][j],((DELTA(i,j))?(dist[(i-1)][(j-1)]+1):UNDEF)),
+							(((!DELTA(i,j)))?(OMAX(dist[i][(j-1)],dist[(i-1)][j])):UNDEF));
 		}
 	}
 
 }
-void funcA_rec(DEFINTERVALFUNC (I), DEFINTERVALFUNC (J)) {
+void funcA_rec(DEFINTERVALFUNC(I), DEFINTERVALFUNC(J)) {
 	if (BASE_CONSTRAINT_A(I, J)) {
 		funcA_loop(PARAM(I), PARAM(J));
 		return;
@@ -111,56 +112,60 @@ void funcA_rec(DEFINTERVALFUNC (I), DEFINTERVALFUNC (J)) {
 	DEFEND(J1) = DEFEND(J);
 
 	funcA_rec(PARAM(I0), PARAM(J0));
-	FOR_A_rec_1(i, I0)
+	FOR_A_rec_1(i,I0)
 	{
-		FOR_A_rec_2(j, J1)
+		FOR_A_rec_2(j,J1)
 		{
 			dist[i][j] =
-					GETDEF(GETDEF(dist[i][j], dist[(i - 1)][(j - 1)] + 1),
-							((!DELTA(i, j)) && INSET((j - 1), J0) ? OMAX(dist[i][(j - 1)], dist[(i - 1)][j]) : UNDEF));
+					GETDEF(
+							GETDEF(dist[i][j],((DELTA(i,j) && INSET((j-1),J0))?(dist[(i-1)][(j-1)]+1):UNDEF)),
+							(((!DELTA(i,j)) && INSET((j-1),J0))?(OMAX(dist[i][(j-1)],dist[(i-1)][j])):UNDEF));
 		}
 	};
 	funcA_rec(PARAM(I0), PARAM(J1));
-	FOR_A_rec_3(i, I1)
+	FOR_A_rec_3(i,I1)
 	{
-		FOR_A_rec_4(j, J0)
+		FOR_A_rec_4(j,J0)
 		{
 			dist[i][j] =
-					GETDEF(GETDEF(dist[i][j], dist[(i - 1)][(j - 1)] + 1),
-							((!DELTA(i, j)) && INSET((i - 1), I0) ? OMAX(dist[i][(j - 1)], dist[(i - 1)][j]) : UNDEF));
+					GETDEF(
+							GETDEF(dist[i][j],((DELTA(i,j) && INSET((i-1),I0))?(dist[(i-1)][(j-1)]+1):UNDEF)),
+							(((!DELTA(i,j)) && INSET((i-1),I0))?(OMAX(dist[i][(j-1)],dist[(i-1)][j])):UNDEF));
 		}
 	};
 	funcA_rec(PARAM(I1), PARAM(J0));
-	FOR_A_rec_5(i, I1)
+	FOR_A_rec_5(i,I1)
 	{
-		FOR_A_rec_6(j, J1)
+		FOR_A_rec_6(j,J1)
 		{
 			dist[i][j] =
-					GETDEF(GETDEF(dist[i][j], dist[(i - 1)][(j - 1)] + 1),
-							((!DELTA(i, j)) && INSET((j - 1), J0) && INSET((i - 1), I0) ? OMAX(dist[i][(j - 1)], dist[(i - 1)][j]) : UNDEF));
+					GETDEF(
+							GETDEF(dist[i][j],((DELTA(i,j) && INSET((i-1),I0) && INSET((j-1),J0))?(dist[(i-1)][(j-1)]+1):UNDEF)),
+							(((!DELTA(i,j)) && INSET((j-1),J0) && INSET((i-1),I0))?(OMAX(dist[i][(j-1)],dist[(i-1)][j])):UNDEF));
 		}
 	};
-	FOR_A_rec_7(i, I1)
+	FOR_A_rec_7(i,I1)
 	{
-		FOR_A_rec_8(j, J1)
+		FOR_A_rec_8(j,J1)
 		{
 			dist[i][j] =
-					GETDEF(GETDEF(dist[i][j], dist[(i - 1)][(j - 1)] + 1),
-							((!DELTA(i, j)) && INSET((j - 1), J1) && INSET((i - 1), I0) ? OMAX(dist[i][(j - 1)], dist[(i - 1)][j]) : UNDEF));
+					GETDEF(
+							GETDEF(dist[i][j],((DELTA(i,j) && INSET((i-1),I0) && INSET((j-1),J1))?(dist[(i-1)][(j-1)]+1):UNDEF)),
+							(((!DELTA(i,j)) && INSET((j-1),J1) && INSET((i-1),I0))?(OMAX(dist[i][(j-1)],dist[(i-1)][j])):UNDEF));
 		}
 	};
-	FOR_A_rec_9(i, I1)
+	FOR_A_rec_9(i,I1)
 	{
-		FOR_A_rec_10(j, J1)
+		FOR_A_rec_10(j,J1)
 		{
 			dist[i][j] =
-					GETDEF(GETDEF(dist[i][j], dist[(i - 1)][(j - 1)] + 1),
-							((!DELTA(i, j)) && INSET((j - 1), J0) && INSET((i - 1), I1) ? OMAX(dist[i][(j - 1)], dist[(i - 1)][j]) : UNDEF));
+					GETDEF(
+							GETDEF(dist[i][j],((DELTA(i,j) && INSET((i-1),I1) && INSET((j-1),J0))?(dist[(i-1)][(j-1)]+1):UNDEF)),
+							(((!DELTA(i,j)) && INSET((j-1),J0) && INSET((i-1),I1))?(OMAX(dist[i][(j-1)],dist[(i-1)][j])):UNDEF));
 		}
 	};
 	funcA_rec(PARAM(I1), PARAM(J1));
 }
-
 
 /*
  * Testing Code
@@ -170,53 +175,64 @@ int Y[M]; //actual length of sequence is M-1 from index 1 to M-1
 int dloop[N][M];
 int dorig[N][M];
 int drec[N][M];
-void getRandSeq(){
+void getRandSeq() {
 	char a = 'A';
-	for(int i=0;i<N;i++) {
-		X[i] = rand()%4 + a;
+	cout << "X: ";
+	for (int i = 0; i < N; i++) {
+		X[i] = rand() % 4 + a;
+		cout << (char) X[i];
 	}
-	for(int i=0;i<M;i++) {
-		Y[i] = rand()%4 + a;
+	cout << endl;
+	cout << "Y: ";
+	for (int i = 0; i < M; i++) {
+		Y[i] = rand() % 4 + a;
+		cout << (char) Y[i];
 	}
+	cout << endl;
+
 }
 
-void fillDeltaAndDist(){
-	for(int i=0;i<N;i++) {
-		for(int j=0;j<M;j++) {
-			delta[i][j] = (X[i] != Y[j]);
+void fillDeltaAndDist() {
+	for (int i = 0; i < N; i++) {
+		for (int j = 0; j < M; j++) {
+			delta[i][j] = (X[i] == Y[j]);
 			dist[i][j] = UNDEF;
+			if (i == 1 || j == 1) {
+				dist[i][j] = 0;
+			}
 		}
 	}
-	dist[1][1] = 0;
+
 }
 
-
-
-void dcopy(int from[N][M],int to[N][M]){
-	for(int i=0;i<N;i++) {
-		for(int j=0;j<M;j++) {
+void dcopy(int from[N][M], int to[N][M]) {
+	for (int i = 0; i < N; i++) {
+		for (int j = 0; j < M; j++) {
 			to[i][j] = from[i][j];
 		}
 	}
 }
 
-void checkEq(int a[N][M],int b[N][M],string msg){
-	if (N<20 && M < 20)
-		cout<<"i\tj\tdloop\tdrec"<<endl;
-	for(int i=1;i<N;i++) {
-		for(int j=1;j<M;j++) {
-			if(a[i][j] != b[i][j]){
-				cout<<"ERROR: "<<msg<<" | Not the save values for ("<<i <<"," <<j<<"): "<<a[i][j]<<" "<<b[i][j]<<endl;
+void checkEq(int a[N][M], int b[N][M], string msg, bool debug) {
+	if (N < 20 && M < 20 && debug)
+		cout << "i\tj\tdloop\tdrec" << endl;
+	for (int i = 1; i < N; i++) {
+		for (int j = 1; j < M; j++) {
+			if (a[i][j] != b[i][j]) {
+				cout << "ERROR: " << msg << " | Not the save values for (" << i
+						<< "," << j << "): " << a[i][j] << " " << b[i][j]
+						<< endl;
 				exit(1);
 			}
-			cout<<i<<'\t'<<j<<'\t'<<a[i][j]<<'\t'<<b[i][j]<<endl;
+			if (N < 20 && M < 20 && debug)
+				cout << i << '\t' << j << '\t' << a[i][j] << '\t' << b[i][j]
+						<< endl;
 		}
 	}
 }
 
 int main() {
-	srand (time(NULL));
-	getRandSeq();
+	srand (time(NULL));getRandSeq();
 	fillDeltaAndDist();
 	dcopy(dist,dorig);
 	DEFINTERVALSTMT(I);
@@ -231,7 +247,8 @@ int main() {
 	dcopy(dorig,dist);
 	funcA_rec(PARAM(I),PARAM(J));
 	dcopy(dist,drec);
-	checkEq(dloop,drec,"loop-vs-rec");
+	checkEq(dloop,drec,"loop-vs-rec",false);
+	cout<<"LCS: "<<dist[N-1][M-1]<<endl;
 	return 0;
 }
 
