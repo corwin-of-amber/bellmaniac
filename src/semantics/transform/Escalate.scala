@@ -22,7 +22,7 @@ class Escalate(implicit scope: Scope) {
 
   def apply(t: Term): Term = (t, typeOf(t)) match {
     case (T(`/`, s), Some(typ)) if !typ.isLeaf =>
-      val (args, bodies) = distribAbs(targs(typ), t.split)
+      val (args, bodies) = distribAbs(targs(typ), t.split map apply)
       preserve(t, TI("↦")(args)(typed_/::(bodies, tret(typ)))>>)
     case _ =>
       preserve(t, T(t.root, t.subtrees map apply))

@@ -10,19 +10,24 @@ B `J₀ `J₁
 SaveAs (B `J₀ `J₁) "loop"
 
 Slice f ⟨`?×K₀×K₂, `?×K₀×K₃, `?×K₁×K₂, `?×K₁×K₃⟩
-StratifySlash (fixee 🄳) 🄳 (ctx 🄳 ψ)
-StratifySlash (fixee 🄲) 🄲 (ctx 🄲 ψ)
-StratifySlash (fixee 🄴) 🄴 (ctx 🄴 ψ)
+🄳 ↦ Stratify "/" (fixee .) . ψ
+🄲 ↦ Stratify "/" (fixee .) . ψ
+🄴 ↦ Stratify "/" (fixee .) . ψ
+
 ⟨Slice (find 🄰 (k ↦ ?)) ⟨`K₀, `K₁, `K₂, `K₃⟩,
  Slice (find 🄱 (k ↦ ?)) ⟨`K₁, `K₂, `K₃⟩,
  Slice (find 🄲 (k ↦ ?)) ⟨`K₀, `K₁, `K₂⟩⟩
+
 Distrib min
 Assoc min
-⟨StratifyReduce min (fixee 🄰) ⟨🄶, 🄹⟩ (ctx 🄰 ψ),
- StratifyReduce min (fixee 🄱) ⟨🄼, 🄾⟩ (ctx 🄱 ψ),
- StratifyReduce min (fixee 🄲) ⟨🅁, 🅃⟩ (ctx 🄲 ψ)⟩
-StratifyReduce min (fixee 🄰) ⟨🄸, 🄺⟩ (ctx 🄰 ψ)
+⟨Stratify min (fixee 🄰) ⟨🄶, 🄹⟩ ψ,
+ Stratify min (fixee 🄱) ⟨🄼, 🄾⟩ ψ,
+ Stratify min (fixee 🄲) ⟨🅁, 🅃⟩ ψ⟩
+Stratify min (fixee 🄰) ⟨🄸, 🄺⟩ ψ
 
+⟨🄸 🅂 🅉 🄶̲ ↦ SynthAuto (fixer .) . ... ψ,
+ 🄼 🄿 🅆 🄳̲ ↦ SynthAuto (fixer .) . C ψ ⟩
+/*
 ⟨Synth (fixee 🄸) 🄸 (B `K₀ `K₃) (ctx 🄸 ψ) ⟨`K₀×K₀,`K₀×K₃,`K₃×K₃⟩,
  Synth (fixee 🄼) 🄼 (C `K₀ `K₂ `K₃) (ctx 🄼 ψ) ⟨`K₀×K₀⟩,
  Synth (fixee 🄿) 🄿 (C `K₀ `K₁ `K₃) (ctx 🄿 ψ) ⟨`K₀×K₀⟩,
@@ -31,5 +36,5 @@ StratifyReduce min (fixee 🄰) ⟨🄸, 🄺⟩ (ctx 🄰 ψ)
  Synth (fixee 🅉) 🅉 (B `K₀ `K₂) (ctx 🅉 ψ) ⟨`K₀×K₀,`K₀×K₂,`K₂×K₂⟩,
  Synth (fixee 🄳̲) 🄳̲ (C `K₀ `K₁ `K₂) (ctx 🄳̲ ψ) ⟨`K₀×K₀⟩,
  Synth (fixee 🄶̲) 🄶̲ (B `K₁ `K₂) (ctx 🄶̲ ψ) ⟨`K₁×K₁,`K₁×K₂,`K₂×K₂⟩⟩
-
+*/
 SaveAs (B `J₀ `J₁) "rec"

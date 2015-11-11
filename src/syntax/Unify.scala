@@ -181,6 +181,12 @@ object Unify {
     uni.canonicalize
   }
 
+  def ?(x: Tree[Identifier], y: Tree[Identifier]) = {
+    val uni = new Unify
+    try { uni.makeMgu(x, y, List()); true }
+    catch { case _: CannotUnify => false }
+  }
+
   // does not canonicalize
   def mgu0(x: Map[Identifier, Tree[Identifier]], y: Map[Identifier, Tree[Identifier]], verbose: Boolean=false)(implicit resolve: Resolve) = {
     log.info(s"mgu   $x   ~   $y")

@@ -1,22 +1,21 @@
 package synth.tactics
 
 import java.io._
+import scala.collection.mutable.ListMap
+import scala.collection.JavaConversions._
 
 import com.mongodb.util.JSON
 import com.mongodb.{DBObject, BasicDBList}
-import report.data.{Cached, SerializationContainer}
+import report.data.Cached
 import synth.pods.Pod.TacticalError
-import scala.collection.JavaConversions._
 
 import semantics.TranslationError
 import semantics.TypeTranslation.TypingSugar
 import semantics.pattern.SimplePattern
 import synth.pods.{ConsPod, Pod}
 
-import scala.collection.immutable.HashSet
-
 import syntax.AstSugar._
-import syntax.{Formula, Strip, Identifier}
+import syntax.{Unify, Formula, Strip, Identifier}
 import syntax.Piping._
 import syntax.transform.{Extrude, Mnemonics}
 import semantics._
@@ -39,7 +38,7 @@ object Synth {
 
     import semantics.Prelude.{R, min, ?, fix}
     import examples.Paren.{J, J0, J1, K1, K2}
-    import examples.Paren.BreakDown.{APod, BPod}
+    import examples.Paren.BreakDown.{APod, BPod, CPod}
     import TypedTerm.typeOf_!
     import TypedLambdaCalculus.pullOut
 
@@ -60,16 +59,19 @@ object Synth {
         ($TV ↦ ψ) :: ((? x J0 x J1) -> R),
         ($TV ↦ ψ) :: ((? x J1 x J1) -> R)
       )) |> a.compile // APod(J).program.subtrees(0) |> a.compile
-      val AP = (APod(? ∩ TV("P")).program.subtrees(0) :: (? -> typeOf_!(A))) |> a.compile
-      val BP = BPod(J ∩ TV("P1"), J ∩ TV("P2")).program |> a.compile
+      //val AP = (APod(? ∩ TV("P")).program.subtrees(0) :: (? -> typeOf_!(A))) |> a.compile
+      //val BP = BPod(J ∩ TV("P1"), J ∩ TV("P2")).program |> a.compile
+      val AP = APod(? ∩ TV("P"))
+      val BP = BPod(J ∩ TV("P1"), J ∩ TV("P2"))
+      val CP = CPod(J ∩ TV("P1"), J ∩ TV("P2"), J ∩ TV("P3"))
 
       val X = J0 x J0
 
       report.console.Console.display(extrude(A))
-      report.console.Console.display(extrude(AP))
-      report.console.Console.display(extrude(BP))
+      report.console.Console.display(extrude(AP.program))
+      //report.console.Console.display(extrude(BP))
 
-      val solution = synthesizeFix(A, List(AP, BP), X -> R).run()
+      val solution = synthesizeFixPod(A, List(AP, BP, CP), X -> R).run()
 
       println(solution mapValues (_.toPretty))
     }
@@ -94,7 +96,7 @@ object Synth {
     import Sketch._
 
     val command =
-      Seq(SKETCH, "--slv-lightverif", "--fe-custom-codegen", CODEGEN, skfile.getName)
+      Seq(SKETCH, "--slv-lightverif", "--fe-inc", INCDIR, "--fe-custom-codegen", CODEGEN, skfile.getName)
 
     def run()(implicit scope: Scope) = {
       cached getOrElse (md5, {
@@ -103,23 +105,68 @@ object Synth {
         try {
           (new ReadSketchResults() apply command.lineStream) |-- save
         }
-        catch { case _: RuntimeException => throw new TacticalError("Internal error: Sketch failed") }
+        catch { case e: RuntimeException => throw new TacticalError(s"Sketch failed (${e})") }
       })
     }
 
     def md5 = { import scala.sys.process._ ; (Seq("md5", "-q", skfile.getName) !!).stripLineEnd }
-    def save(results: Map[String, Term]) = cached.save(md5, results)
+    def save(results: Map[String, Term]) = cached += md5 -> results
   }
 
   object Sketch {
     val SKETCH = "sketch"
+    val INCDIR = "src/synth/tactics/sketch"
     val CODEGEN = "ccg.jar"
 
     val cached = new Cached("cache.json")
   }
 
-  def synthesizeFixPodSubterm(term: Term, subterm: Term, pods: Iterable[Pod])(implicit scope: Scope) = {
+  def synthesizeFixPod(term: Term, pods: Iterable[Pod], quadrant: Term)(implicit scope: Scope) = {
     import Prelude.{fix,?}
+    import TypedLambdaCalculus.enclosure
+    import TypedTerm.typeOf_!
+    import TypePrimitives.shape
+    import synth.engine.TacticApplicationEngine.instapod
+
+    val intendedShape = shape(typeOf_!(term))
+
+    val instances = pods flatMap { pod =>
+      val shallow = TypeInference.inferShallow(pod.program)._2
+      findBodyWithType(shallow, intendedShape) map { body =>
+        val inputs = enclosure(shallow, body) get
+        val intendedType = (inputs :\ shape(typeOf_!(term)))((x,y) => ? -> y)
+        val retargeted = if (SimplePattern(fix(?)) findOne body isDefined) shallow else shallow.replaceDescendant((body, fix($TV ↦ body)))
+        (retargeted.untype match {
+          case T(Prelude.program.root, List(x)) => x case x => x
+        }) :: intendedType |> instapod
+      }
+    }
+
+    for (instance <- instances) {
+      extrude(instance) |-- report.console.Console.display
+    }
+
+    synthesizeFix(term, instances, quadrant)
+  }
+
+  def findBodyWithType(prog: Term, typ: Term): Option[Term] = {
+    import Prelude.program
+    val * = TI("*")
+    val ↦ = I("↦")
+    val `:` = I(":")
+
+    prog match {
+      case T(program.root, List(p)) => findBodyWithType(p, typ)
+      case typed: TypedTerm if Unify.?(typed.typ, typ) => Some(typed)
+      case T(`↦`, List(v, body)) => findBodyWithType(body, typ)
+      case T(`:`, List(l, term)) => findBodyWithType(term, typ)
+      case _ => None
+    }
+  }
+
+
+  def synthesizeFixPodSubterm(term: Term, subterm: Term, pods: Iterable[Pod])(implicit scope: Scope) = {
+    /*import Prelude.{program,fix,?}
     import TypedLambdaCalculus.enclosure
     import TypedTerm.typeOf_!
     import TypePrimitives.shape
@@ -140,16 +187,24 @@ object Synth {
     instances foreach (instance => report.console.Console.display(extrude(instance)))
     println(quadrant toPretty)
 
-    synthesizeFix(term, instances, quadrant)
+    synthesizeFix(term, instances, quadrant)*/
+    val quadrant = TypePrimitives.curry(TypedTerm.typeOf_!(subterm))._2
+
+    synthesizeFixPod(term, pods, quadrant)
   }
 
   def synthesizeFix(h: Term, hP: Iterable[Term], quadrant: Term)(implicit scope: Scope) = {
     import Prelude.{fix,?}
     import TypedLambdaCalculus.pullOut
+    import TypedTerm.typeOf_!
+    import TypePrimitives.shape
     val * = TI("*")
 
     val f = pullOut(h, (SimplePattern(fix(* :- ?)) find h).head(*)).get
-    val fP = hP map (hP => pullOut(hP, (SimplePattern(fix(* :- ?)) find hP).head(*)).get)
+    val fP = hP flatMap (hP => pullOut(hP, (SimplePattern(fix(* :- ?)) find hP).head(*))) filter
+                        (fP => shape(typeOf_!(f)) != shape(typeOf_!(fP)))
+
+    if (fP.isEmpty) throw new TacticalError("no suitable candidates for given type") at f :: typeOf_!(f)
 
     synthesizeFlat(f, fP, quadrant)
   }
@@ -221,10 +276,10 @@ object Synth {
     import synth.pods.ConsPod.`⟨ ⟩?`
     import CodeGen._
 
-    case class Context(vars: List[Term], innerFuncs: collection.mutable.Map[Identifier, (List[Term], Term)])
+    case class Context(vars: List[Term], innerFuncs: ListMap[Identifier, (List[Term], Term)])
 
     object Context {
-      def empty = Context(List(), collection.mutable.Map.empty)
+      def empty = Context(List(), ListMap.empty)
     }
 
     def apply(t: Term, sized: Boolean=true) = {
@@ -274,7 +329,7 @@ object Synth {
     }
 
     def abs(vars: List[Term], body: Term)(implicit ctx: Context) = {
-      val subctx = Context(ctx.vars ++ vars, collection.mutable.Map.empty)
+      val subctx = Context(ctx.vars ++ vars, ListMap.empty)
       val defn = expr(body)(subctx)
       val retType = typeOf_!(body)
       val f = TypedIdentifier($I("f", "function"), if (retType.isLeaf && retType != Prelude.B) scalar else retType)
@@ -397,7 +452,7 @@ object Synth {
 
     object InfixOp { def unapply(id: Identifier) = INFIX get id }
 
-    val REDUCT = HashSet(Prelude.min.root)
+    val REDUCT = Set(Prelude.min.root, Prelude.max.root)
 
     object Reduction { def unapply(id: Identifier) = if (REDUCT contains id) Some(id) else None }
 
@@ -420,10 +475,12 @@ object Synth {
     def apply(reader: BufferedReader): Map[String, Term] = apply(ui.CLI.getLines(reader))
     def apply(lines: Stream[String]) =
       {
-        for (line <- lines;
+        for (line <- tee(lines);
              mo <- re.findPrefixMatchOf(line))
           yield (mo.group(1), mo.group(2) |> parse |> conj)
       } toMap
+
+    def tee(lines: Stream[String]) = lines map { x => println(x) ; x }
 
     def parse(s: String) = JSON.parse(s) |> parseJson
 

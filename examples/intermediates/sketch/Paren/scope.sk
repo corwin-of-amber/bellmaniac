@@ -1,0 +1,87 @@
+
+@Sort("J")  bit J(int i) { return 1; }
+@Sort("J₀") bit J0(int i);
+@Sort("J₁") bit J1(int i);
+@Sort("K₀") @Leaf("0") bit K0(int i);
+@Sort("K₁") @Leaf("1") bit K1(int i);
+@Sort("K₂") @Leaf("2") bit K2(int i);
+@Sort("K₃") @Leaf("3") bit K3(int i);
+
+generator void Scope_facts(int n) {
+  for (int p = 0 ; p < n ; ++p) {
+    assume (J0(p) || J1(p));
+    assume ((K0(p) || K1(p)) == J0(p)); 
+    assume ((K2(p) || K3(p)) == J1(p)); 
+    for (int q = 0 ; q < n ; ++q) {
+      if (J0(p) && J1(q)) assume(p < q);
+      if (K0(p) && K1(q)) assume(p < q);
+      if (K2(p) && K3(q)) assume(p < q);
+    }
+  }
+}
+
+generator bit Scope_subsort(int t, int i) {
+  if (t == 0) return false;
+  else if (t == 1) return K0(i);
+  else if (t == 2) return K1(i);
+  else if (t == 3) return K2(i);
+  else if (t == 4) return K3(i);
+  else if (t == 5) return J0(i);
+  else if (t == 6) return J1(i);
+  else if (t == 7) return J(i);
+  else assert(false);
+}
+
+generator bit Scope_1d(bit[4] t, int i) {
+  return (t[0] && K0(i)) || (t[1] && K1(i)) || (t[2] && K2(i)) || (t[3] && K3(i));
+}
+
+generator bit Scope_leaf(int t, int i) {
+  if      (t == 0) return K0(i);
+  else if (t == 1) return K1(i);
+  else if (t == 2) return K2(i);
+  else if (t == 3) return K3(i);
+  else assert(false);
+}
+
+bit Scope_2d(bit[4][4] t, bit lt, int i, int j) {
+  bit acc = false;
+  /*
+  if (t[0][0]) acc = acc || ( Scope_leaf(0, i) && Scope_leaf(0,j) );
+  if (t[0][1]) acc = acc || ( Scope_leaf(0, i) && Scope_leaf(1,j) );
+  if (t[0][2]) acc = acc || ( Scope_leaf(0, i) && Scope_leaf(2,j) );
+  if (t[0][3]) acc = acc || ( Scope_leaf(0, i) && Scope_leaf(3,j) );
+  if (t[1][0]) acc = acc || ( Scope_leaf(1, i) && Scope_leaf(0,j) );
+  if (t[1][1]) acc = acc || ( Scope_leaf(1, i) && Scope_leaf(1,j) );
+  if (t[1][2]) acc = acc || ( Scope_leaf(1, i) && Scope_leaf(2,j) );
+  if (t[1][3]) acc = acc || ( Scope_leaf(1, i) && Scope_leaf(3,j) );
+  if (t[2][0]) acc = acc || ( Scope_leaf(2, i) && Scope_leaf(0,j) );
+  if (t[2][1]) acc = acc || ( Scope_leaf(2, i) && Scope_leaf(1,j) );
+  if (t[2][2]) acc = acc || ( Scope_leaf(2, i) && Scope_leaf(2,j) );
+  if (t[2][3]) acc = acc || ( Scope_leaf(2, i) && Scope_leaf(3,j) );
+  if (t[3][0]) acc = acc || ( Scope_leaf(3, i) && Scope_leaf(0,j) );
+  if (t[3][1]) acc = acc || ( Scope_leaf(3, i) && Scope_leaf(1,j) );
+  if (t[3][2]) acc = acc || ( Scope_leaf(3, i) && Scope_leaf(2,j) );
+  if (t[3][3]) acc = acc || ( Scope_leaf(3, i) && Scope_leaf(3,j) );
+  */
+  for (int p = 0; p < 4; ++p)
+    for (int q = 0; q < 4; ++q)
+      if (t[p][q])
+        acc = acc || ( Scope_leaf(p, i) && Scope_leaf(q, j) );
+  /*
+  for (int p = 0; p < 4; ++p)
+    for (int q = 0; q < 4; ++q)
+      if (t[p][q])
+        acc = acc || ((p==0)&&K0(i) || (p==1)&&K1(i) || (p==2)&&K2(i) || (p==3)&&K3(i)) &&
+                     ((q==0)&&K0(j) || (q==1)&&K1(j) || (q==2)&&K2(j) || (q==3)&&K3(j));
+  */
+  minimize(lt);
+  if (lt) acc = acc && (i < j);
+  return acc;
+}
+
+generator int minimal(int i) { minimize(i); return i; }
+
+generator bit[4] minimal_4(bit[4] a) { for (int i = 0; i < 4; ++i) minimize(a[i]); return a; }
+generator bit[4][4] minimal_4x4(bit[4][4] a) { 
+  for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j) minimize(a[i][j]); return a; }

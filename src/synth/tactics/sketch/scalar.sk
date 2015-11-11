@@ -1,0 +1,43 @@
+
+struct scalar { bit supp; int val; }
+
+|scalar| bot = |scalar|(supp=false, val=0);
+
+|scalar| some(int val) { return |scalar|(supp=true, val=val); }
+|scalar| when(bit guard, int val) { return |scalar|(supp=guard, val=guard?val:0); }
+|scalar| only(bit guard, |scalar| val) { return when(guard && val.supp, val.val); /* guard ? val : bot;*/ }
+|scalar| slash(|scalar| a, |scalar| b) { if (!a.supp) a = b; return a; }
+
+|scalar| apply(fun op, |scalar| a, |scalar| b) { return when(a.supp && b.supp, op(a.val, b.val)); }
+
+int plus(int a, int b) { return a + b; }
+
+/* minimum */
+
+|scalar| min2(|scalar| a, |scalar| b) {
+  //return ( a.supp && (!b.supp || a.val < b.val) ) ? a : b;  /* AssertionError! */
+  //if ( a.supp && (!b.supp || a.val < b.val) ) return a; else return b; /* this is slightly slower */
+  if ( b.supp && (!a.supp || b.val < a.val) ) a = b;
+  return a;
+}
+
+void minz2(ref |scalar| a, |scalar| b) {
+  if (b.supp && (!a.supp || (b.val < a.val))) a = b;
+}
+
+void minz(int n, ref |scalar| acc, fun fn) {
+  for (int k = 0; k < n; ++k) {
+    |scalar| item = fn(k);
+    //acc = min2(acc, item);   /* Bad type for NOT 2 2 */
+    minz2(acc, item);
+  }
+}
+
+|scalar| min_acc(|scalar| acc, int n, fun fn) {
+  minz(n, acc, fn);
+  return acc;
+}
+
+|scalar| min(int n, fun fn) {
+  return min_acc(bot, n, fn);
+}

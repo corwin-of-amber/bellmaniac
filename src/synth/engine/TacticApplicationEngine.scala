@@ -21,6 +21,7 @@ import syntax.Piping._
 import syntax.{Tree, Formula}
 import syntax.transform.{TreeSubstitution, ExtrudedTerms, Extrude}
 import synth.pods.ConsPod._
+import synth.pods.Pod.TacticalError
 import synth.pods._
 import synth.tactics.Rewrite._
 import synth.tactics.Synth
@@ -41,7 +42,8 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
    */
 
   def evalTerm(expr: Term)(implicit s: State): Term = {
-    if (expr.isLeaf) {
+    if (expr =~ (".", 0)) s.cursor
+    else if (expr.isLeaf) {
       val label = expr.root.literal
       try s.ex :/ label catch { case x: Exception => try s.program :/ label subtrees 1 catch { case x: Exception => expr } }
     } else LambdaCalculus.isApp(expr) match {
@@ -95,6 +97,8 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   }
 
   def pods(implicit s: State): PartialFunction[(Term, List[Term]), Pod] = PartialFunction.empty
+
+  val prototypes: Map[Term, Term] = Map.empty
 
   def encaps(t: Term) = LambdaCalculus.isApp(t) match {
     case Some((f,args)) => $TV(s"${f toPretty}[${args map (_.toPretty) mkString ","}]")
@@ -161,23 +165,8 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
     case Some((L("SynthAuto"), List(~(h), ~(subterm), `⟨⟩`(templates), ~(ψ_)))) =>
       val ψ = ctx_?(h, ψ_)
-      val ipods = templates map { template =>
-        LambdaCalculus.isApp(template) match {
-          case Some((name, args)) =>
-            pods(s).apply((name, args))  // note: do not typecheck yet
-          case _ => throw new Exception("invalid synth template")
-        }
-      }
-
-      val solution = Synth.synthesizeFixPodSubterm(h, subterm, ipods).run()
-      println(solution mapValues (_.toPretty))
-      val selected = solution("selected").root.literal.asInstanceOf[Int]
-      val synthed = new TreeSubstitution(solution map { case (k,v) => (TI("?") ∩ TI(k), v) } toList)(templates(selected))
-      println(synthed toPretty)
-      val quadrant = TypePrimitives.curry(TypedTerm.typeOf_!(subterm))._2
-      val areaTypes = TypePrimitives.dom(quadrant) :: evalList(solution("Q"))
-      println(areaTypes map (_ toPretty))
-      List(SynthPod(h.subtrees(0), subterm, encaps(synthed), evalTerm(synthed), ψ, areaTypes))
+      val (synthed, footprint) = invokeSynthesis(h, subterm, templates)
+      List(SynthPod(h.subtrees(0), subterm, encaps(synthed), evalTerm(synthed), ψ, footprint))
       //List()
 
     case Some((L("Distrib"), List(L("/"), ~(f)))) =>
@@ -214,18 +203,21 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   }
 
   def transform(s: State, command: Term) = {
-    implicit val st = s
     var cert = false
     var within = List(s.program)
-    def pods(command: Term): Iterable[Pod] =
+    def pods(command: Term)(implicit s: State): Iterable[Pod] =
       ConsPod.`⟨ ⟩?`(command) match {
         case Some(commands) => commands flatMap pods
-        case _ => command match {
-          case T(`@:`, List(T(`@:`, List(cmd, L("in"))), ~~(terms))) => within = terms ; pods(cmd)
-          case _ => this.command(command)
+        case _ => LambdaCalculus.isAbs(command) match {
+          case Some((locs, body)) => locs flatMap (loc => pods(body)(s -> evalTerm(loc)))
+          case _ => command match {
+            case T(`@:`, List(T(`@:`, List(cmd, L("in"))), ~~(terms))) => within = terms ; pods(cmd)
+            case _ => this.command(command)
+          }
         }
       }
 
+    implicit val st = s
     val derivatives = resolvePatterns(command) flatMap pods map instapod
 
     cert ||= derivatives exists (x => x.it.isInstanceOf[LetSynthPod] || x.it.isInstanceOf[SynthPod])
@@ -249,6 +241,35 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   def mkState(term: Term) = State(term, extrude(term))
 
   def invokeProver(pod: Pod) { }
+
+  def invokeSynthesis(h: Term, subterm: Term, templates: List[Term])(implicit s: State) = {
+
+    val expandedTemplates = templates flatMap { template =>
+      if (template =~ ("...", 0)) prototypes.values
+      else if (template.isLeaf)
+        Some(prototypes getOrElse (template, { throw new TacticalError("no such subprogram") at template }))
+      else Some(template)
+    }
+
+    val ipods = expandedTemplates flatMap { template =>
+      LambdaCalculus.isApp(template) match {
+        case Some((name, args)) => Some(pods apply (name, args))  // note: do not typecheck yet
+        case _ => throw new Exception("invalid synth template")
+      }
+    }
+
+    val ∩ = I("∩")
+
+    val solution = Synth.synthesizeFixPodSubterm(h, subterm, ipods).run()
+    println(solution)
+    val selected = expandedTemplates(solution("selected").root.literal.asInstanceOf[Int])
+    val synthed = selected.replaceDescendants(
+      selected.nodes collect { case n@T(`∩`, List(L("?"), L(k:String))) => (n, solution(k)) } toList)
+    val quadrant = TypePrimitives.curry(TypedTerm.typeOf_!(subterm))._2
+    val footprint = TypePrimitives.dom(quadrant) :: evalList(solution.getOrElse("Q", nil))
+
+    (synthed, footprint)
+  }
 
   /*
    * Output part
@@ -289,7 +310,9 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 }
 
 object TacticApplicationEngine {
-  case class State(program: Term, ex: ExtrudedTerms)
+  case class State(program: Term, ex: ExtrudedTerms, cursor: Term=program) {
+    def ->(loc: Term) = State(program, ex, loc)
+  }
   object State { val empty = State(program, new ExtrudedTerms(new Tree(program), Map.empty)) }
 
   object L { def unapply(t: Term) = if (t.isLeaf) Some(t.root.literal) else None }
@@ -302,5 +325,5 @@ object TacticApplicationEngine {
   def fixee(A: Term, q: Term) = fixer(A, q).subtrees(0)
   def ctx(A: Term, t: Term) = TypedLambdaCalculus.context(A, t)
 
-  def slasher(A: Term, q: Term) = A.nodes find (n => n.root == "/" && (n.split(I("/")) exists (_ eq q))) get
+  def slasher(A: Term, q: Term) = A.nodes find (n => n.root == "/" && (TypedTerm.split(n, I("/")) exists (_ eq q))) get
 }

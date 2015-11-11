@@ -333,6 +333,15 @@ object Paren {
         case (L("C"), List(~(j0), ~(j1), ~(j2))) => CPod(j0, j1, j2)
       }
 
+      val A = TV("A")
+      val B = TV("B")
+      val C = TV("C")
+      val P1 = TV("P1")
+      val P2 = TV("P2")
+      val P3 = TV("P3")
+      val ? = T(new Identifier("?", "type variable"))
+      override val prototypes = Map(A → (A:@(? ∩ P1)), B → (B:@(? ∩ P1, ? ∩ P2)), C → (C:@(? ∩ P1, ? ∩ P2, ? ∩ P3)))
+
       override def invokeProver(pod: Pod): Unit = {
         Paren.BreakDown.invokeProver(List(), pod.obligations.conjuncts, List(pod), logf)
       }

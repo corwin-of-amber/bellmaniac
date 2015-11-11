@@ -583,12 +583,22 @@ object TypeInference {
       synth.tactics.Rewrite.display(typed)(new TypeTranslation.Environment(scope, Map()))
     (vassign, typed)
   }
-  
-  def annotate(term: Term, tassign: Map[Id[Term], Term]): Term = {
-    if (term =~ ("::", 2))
-      annotate(term.subtrees(0), tassign)
+
+  def inferShallow(term: Term, preassign: Map[Identifier, Tree[Identifier]]=Map())(implicit scope: Scope) = {
+    val conservative = new ConservativeResolve(scope)
+    val coarse = new CoarseGrained(conservative)
+    val (rootvar, assign) = coarse.infer(term, preassign)
+    val (vassign, tassign) = (assign filter ((kv) => kv._1.ns ne coarse.ns),
+      { for ((k,v) <- coarse.ns; tpe <- assign get coarse.NV(k)) yield (v, tpe) } .toMap
+    )
+    (vassign, annotate(term, tassign, drop_:: = false))
+  }
+
+  def annotate(term: Term, tassign: Map[Id[Term], Term], drop_:: : Boolean=true): Term = {
+    if (term =~ ("::", 2) && drop_::)
+      annotate(term.subtrees(0), tassign, drop_::)
     else {
-      val clon = T(term.root, term.subtrees map (annotate(_, tassign)))
+      val clon = T(term.root, term.subtrees map (annotate(_, tassign, drop_::)))
       tassign get term match {
         case Some(typ) => TypedTerm(clon, typ)
         case _ => term match {
