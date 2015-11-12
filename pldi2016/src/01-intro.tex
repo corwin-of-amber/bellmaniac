@@ -7,12 +7,13 @@
 \newcommand{\xw}[1]{w_{#1}}
 \newcommand{\yw}[1]{w'_{#1}}
 
-Software synthesis techniques can be broadly classified into two categories: \emph{inductive} approaches, which generalize from concrete values or execution traces, and \emph{deductive} approaches, which derive an implementation from a specification through deductive reasoning steps. Inductive synthesis techniques have been the focus of significant renewed interest thanks to two important developments: (a) the discovery of techniques that leverage SAT/SMT solvers to symbolically represent and search very large spaces of possible programs~\cite{APLAS09/Solar-Lezama, PLDI11/Gulwani, Onward13/Torlak}, and (b) the use of counterexample-guided inductive synthesis (CEGIS), which allows one to leverage inductive techniques to find programs that satisfy more general specifications as long as one has access to an oracle that can check whether a given candidate solution satisfies the specification~\cite{APLAS09/Solar-Lezama}. Deductive techniques, however, still hold some important advantages over inductive approaches; in particular, their scalability is not limited by the power of a checking oracle, because the correctness of the implementation is guaranteed by construction.
+Software synthesis techniques can be broadly classified into two categories: \emph{inductive} approaches, which generalize from concrete values or execution traces, and \emph{deductive} approaches, which derive an implementation from a specification through deductive reasoning steps. Inductive synthesis techniques have been the focus of significant renewed interest thanks to two important developments: (a) the discovery of techniques that leverage SAT/SMT solvers to symbolically represent and search very large spaces of possible programs~\cite{APLAS09/Solar-Lezama, PLDI11/Gulwani, Onward13/Torlak}, and (b) the use of counterexample-guided inductive synthesis (CEGIS), which allows one to leverage inductive techniques to find programs that satisfy more general specifications as long as one has access to an oracle to check that a candidate solution satisfies the specification~\cite{APLAS09/Solar-Lezama}. Deductive techniques, however, still hold some important advantages over inductive approaches; in particular, their scalability is not limited by the power of a checking oracle, because the correctness of the implementation is guaranteed by construction.
 
-In this paper, we present a new approach to deductive synthesis based on \emph{solver-aided tactics} that preserves the benefits of deductive synthesis techniques but reduces the burden on the user by relying heavily on the ability of SMT solvers to reason about the validity of transformations and lift the level of abstraction of deductive transformation rules. 
+In this paper, we present a new approach to deductive synthesis based on \emph{solver-aided tactics} that preserves the benefits of deductive synthesis techniques but reduces the burden on the user by relying on two important innovations: (a) the use of inductive synthesis to discover important details of the low-level steps needed by the transformation, (b) the use of a type system based on predicate abstraction (liquid types) that associates semantic information with program terms, enabling automated verification of the validity of a transformation. Both of these innovations rely on aggressive use of SMT solvers to discharge complex proof obligations that would otherwise have to be discharged interactively with significant manual effort. 
+
 We believe the approach has the potential to be generally applicable to a variety of synthesis problems, but in this paper, we focus on a particular domain of \emph{divide-and-conquer dynamic programming} algorithms. Specifically, we have developed a system called \emph{Bellmania} that uses solver-aided tactics specialized for this domain to help an algorithm designer derive divide-and-conquer dynamic programming algorithms from a high-level specification. As we illustrate in the next section, this domain is challenging not just as a synthesis target, but also for human experts. Therefore, in addition to serving as a test bed for a new synthesis approach, the development of Bellmania is a significant achievement in itself.
 
-Our work on solver-aided tactics builds on prior work on the StreamBit project~\cite{PLDI05/Solar-Lezama}, which introduced the idea of transformation rules with missing details that can be inferred by a symbolic search procedure, as well as the pioneering work on the Leon synthesizer, which has explored the use of deductive techniques to improve the scalability of inductive synthesis. However, our approach is unique in the way it leverages the SMT solver in the context of deductive synthesis: (a) the solver can directly check that a program term is equivalent to another term, thus merging branches and reducing repetitive manual labor, (b) The solver can prove validity of side conditions that ensure the soundness of each individual transformation, (c) the tactics can leverage infomation from logically qualified types in the program in order to guide the transformation. The flexibility of being able to rely on the solver to check the validity of transformations means that we don not have to compute a priori the set of all conditions under which a transformaiton can be applied. Even a transformation that is only sometimes correct can be useful as long as we check the validity of every application. 
+Our work on solver-aided tactics builds on prior work on the StreamBit project~\cite{PLDI05/Solar-Lezama}, which introduced the idea of transformation rules with missing details that can be inferred by a symbolic search procedure, as well as the pioneering work on the Leon synthesizer, which has explored the use of deductive techniques to improve the scalability of inductive synthesis. However, our approach is unique in the way it leverages inductive synthesis and liquid types in the context of deductive synthesis: (a) the solver can use inductive synthesis to search for the detailed steps required for a transformation and use the solver to directly check that the resulting program term is equivalent to another term, (b) The solver can prove validity of side conditions that ensure the soundness of each individual transformation, (c) the tactics can leverage information from logically qualified types in the program in order to guide the transformation. The flexibility of being able to rely on the solver to check the validity of transformations means that we do not have to compute a priori the set of all conditions under which a transformation can be applied. Even a transformation that is only sometimes correct can be useful as long as we check the validity of every application. 
 
 
 Overall, we make the following contributions.
@@ -299,7 +300,7 @@ In the following sections, we describe the different components of Bellmania.
 The system utilizes \newterm{solver-aided tactics} to generate provably correct pseudo-code; 
 this approach is demonstrated by engineering specialized tactics for the domain of divide-and-conquer DP.
 
-
+\begin{comment}
 \begin{figure}
 \centering
 \begin{tikzpicture}[>=latex,x=6mm,y=6mm,
@@ -342,14 +343,11 @@ this approach is demonstrated by engineering specialized tactics for the domain 
   \fill[block] (0,0) |- (.85,1) to[out=0,in=-90] (1,1.15) |- (2,2) |- (1.15,1) to[out=180,in=90] (1,.85) |- cycle;
   \coordinate (s) at (.8,0);
   \node[inner sep=0 ] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
-
   \tikzset{xshift=\dx};
-
   \draw (0,0) grid (2,2);
   \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
   \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
-  \draw (s.south) edge[->,out=-30,in=-150] (4);
- 
+  \draw (s.south) edge[->,out=-30,in=-150] (4); 
 \end{tikzpicture}
 %\includegraphics[width=.47\textwidth]{img/gap-stratify1}
 \caption[caption]{\label{intro:chain}
@@ -357,5 +355,6 @@ this approach is demonstrated by engineering specialized tactics for the domain 
   The array is initially empty; 
   shaded areas indicate the region that is read at each step. }
 \end{figure}
+\end{comment}
 
 

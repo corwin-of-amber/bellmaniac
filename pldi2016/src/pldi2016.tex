@@ -86,35 +86,21 @@
 
 \begin{abstract}
 We introduce \newterm{solver-aided tactics} as a mechanism for transforming
-computational terms, expressed in a specialized form of $\lambda$-calculus,
-intro equivalent terms in the interest of deriving better, more efficient
-implementations. By stringing chains of transformations, a programmer can start
-with a compact specification of an algorithm and develop it towards concrete
-executable code, while addressing performance issues involved.
+computational terms 
+in the interest of deriving better, more efficient
+implementations. 
+Solver-aided tactics allow us to combine deductive and constraint-based synthesis to generate provably correct efficient implementations from a very high-level specification of an algorithm by chaining together a small number of high-level transformation steps. Our solver-aided tactics also leverage a type system, which incorporates predicate abstraction to associate semantic information with program terms, to guide transformations and provide enough context for automated proofs. 
 
-Solver-aided tactics are unique in two ways: 
-(a) They combine symbolic pattern-matching
-with SMT technology to ensure a correct transformation; this means that a lot of the
-burden of proof is moved from the user of the system to automated solvers.
-(b) They make use of type annotations within program terms to maintain and utilize
-properties of those computations, in order to guide transformations and provide
-enough context for the automated proofs. For this purpose, we employ predicate
-abstraction as part of the type system.
 
-We present Bellmania, a framework that brings together novel techniques from both
-inductive and deductive synthesis disciplines.
-Bellmania comprises of a language for specifying dynamic programming algorithms as recurrences,
-and a calculus that facilitates gradual transformation of these 
-specifications into efficient implementations.
-In particular, it provides tactics that formalize the Divide-and-Conquer technique to derive
-parallel implementations that optimally utilize memory caches.
+In this paper, we develop the technique in the context of a system called Bellmania that uses solver-aided tactics to derive parallel divide-and-conquer implementations of dynamic programming algorithms that have better locality and are significantly more efficient than traditional loop-based implementations. Bellmania includes a high-level language for specifying dynamic programming algorithms and a calculus that facilitates gradual transformation of these specifications into efficient implementations. In particular, it provides solver-aided tactics that formalize the divide-and-conquer technique and a visualization interface to help users to interactively guide the transformation process. 
+We have used the system to generate provably correct implementations of several algorithms including some important algorithms from computational biology, and show that the performance is comparable to that of the best manually optimized code.
 \end{abstract}
 
 \category{D.1.2}{Programming Techniques}{Automatic Programming}
-\category{I.2.2}{Artificial Intelligence}{Automatic Programming}[Program synthesis]
-
+% \category{I.2.2}{Artificial Intelligence}{Automatic Programming}[Program synthesis]
+%
 \keywords
-Synthesis; Dynamic Programming; SMT; Automated Reasoning; Transformational
+Synthesis; Dynamic Programming 
 
 \input{01-intro}
 \input{02-lang}
