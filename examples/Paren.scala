@@ -99,7 +99,7 @@ object Paren {
       
       A :- fix( 
         TI("↦")(
-          θ :: ∩(J x J, <) ->: R , i , j ,
+          θ :: ((J x J) ∩ <) ->: R , i , j ,
   
           (@:(x, i) |! ((i+_1) =:= j)) /:
           (min:@(k ↦
@@ -311,10 +311,9 @@ object Paren {
       val A = TV("A")
       val B = TV("B")
       val C = TV("C")
-      val P1 = TV("P1")
-      val P2 = TV("P2")
-      val P3 = TV("P3")
-      val ? = T(new Identifier("?", "type variable"))
+      val P1 = TV("P₁")
+      val P2 = TV("P₂")
+      val P3 = TV("P₃")
       override val prototypes = Map(A → (A:@(? ∩ P1)), B → (B:@(? ∩ P1, ? ∩ P2)), C → (C:@(? ∩ P1, ? ∩ P2, ? ∩ P3)))
 
       override def invokeProver(pod: Pod): Unit = {

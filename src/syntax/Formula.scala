@@ -104,7 +104,7 @@ object Formula {
 
   def M(ops: InfixOperator*) = ops map (x => (x.literal, x)) toMap
 
-  val INFIX = M(O("->", 1, Assoc.Right), O("<->", 1), O("&", 1), O("|", 1), O("<", 1), O("=", 1), O("↦", 1, Assoc.Right),
+  val INFIX = M(O("->", 1, Assoc.Right), O("<->", 1), O("∧", 1), O("∨", 1), O("<", 1), O("=", 1), O("↦", 1, Assoc.Right),
     O(":", 1), O("::", 1), O("/", 1), O("|_", 1), O("|!", 1), O("∩", 1), O("×", 1),
     O("+", 1), O("-", 1), O("⨁", 1), O("⨀", 1)) ++
     Map("@" -> new AppOperator("", 1, Assoc.Left))

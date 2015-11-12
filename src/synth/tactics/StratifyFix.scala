@@ -52,7 +52,7 @@ object StratifyFix {
   
   
   class APod(val J: Term) {
-    import Prelude.{fix,∩,R,min,?,cons,nil}
+    import Prelude.{fix,R,min,?,cons,nil}
     import examples.Paren.{<,θ,i,j,k,x,w,_1,f}
     
     val A = $TV("A")

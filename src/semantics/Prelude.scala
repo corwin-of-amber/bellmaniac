@@ -16,7 +16,6 @@ object Prelude {
   val TRUE = TI(true)
   val FALSE = TI(false)
 
-  val ∩ = TI("∩")
   def min = TI("min")
   def max = TI("max")
   val fix = TI("fix")

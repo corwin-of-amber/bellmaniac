@@ -257,7 +257,7 @@ object TypeInference {
         val σ = (Map(freshvar -> B, children.last._1 -> B) +: (children map (_._2))) reduce ((x, y) => mgu(x,y))
         (freshvar, σ)
       }
-      else if (expr.root == "<->" || expr.root == "¬" || expr.root == "|" || expr.root == "&" || expr.root == "->") {
+      else if (expr.root.kind == "connective" || expr.root == "<->" || expr.root == "->") {
         val children = expr.subtrees map (infer0(_, literal=true)) map { case (x,y) => y + (x -> B) }
         //implicit val join = resolve.join
         val σ = (Map(freshvar -> B) +: children) reduce ((x, y) => mgu(x,y))

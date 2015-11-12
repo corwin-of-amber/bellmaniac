@@ -1,10 +1,10 @@
 
 @Param("P")  bit P(int i)  { return Scope_subsort(minimal(??), i); }
-@Param("P1") bit P1(int i) { return Scope_subsort(minimal(??), i); }
-@Param("P2") bit P2(int i) { return Scope_subsort(minimal(??), i); }
-@Param("P3") bit P3(int i) { return Scope_subsort(minimal(??), i); }
+@Param("P₁") bit P1(int i) { return Scope_subsort(minimal(??), i); }
+@Param("P₂") bit P2(int i) { return Scope_subsort(minimal(??), i); }
+@Param("P₃") bit P3(int i) { return Scope_subsort(minimal(??), i); }
 
-@Inv("Q") bit Q(int i, int j) { return (Scope_2d(/*minimal_4x4*/(??), ??, i, j) || X(i,j)); }
+@Inv("Q") bit Q(int i, int j) { return (Scope_2d(/*minimal_4x4*/(??), minimal_1(??), i, j) || X(i,j)); }
 
 
 generator |scalar| Context_JJR(int i, int j) { return psi(i,j); }

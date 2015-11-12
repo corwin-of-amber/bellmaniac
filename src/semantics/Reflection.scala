@@ -353,7 +353,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term])(impl
     
     val fo_goals = goals map { case Compound(definitions, proposition) => 
       (e(definitions) map_/ (reflect(_)(Role.Definition)),
-       e(List(proposition)) map_/ reflect) // flatMap (_.split(new Identifier("&", "connective")))
+       e(List(proposition)) map_/ reflect)
     }
 
     def preludeFor(goal: (Trench[Term], Trench[Term])) = {

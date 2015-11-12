@@ -11,6 +11,7 @@ object AstSugar {
   type Term = Tree[Identifier]
   
   def I(a: Any) = new Identifier(a)
+  def I(a: Any, k: String) = new Identifier(a, k)
   def S(a: Any) = new Identifier(a, "set")
   def V(a: Any) = new Identifier(a, "variable")
   object T {
@@ -38,7 +39,12 @@ object AstSugar {
   // --------
   
   val @: = TI("@")
-  
+  val ∩ = I("∩", "operator")
+  val ↦ = I("↦", "operator")
+  val ∧ = I("∧", "connective")
+  val ∨ = I("∨", "connective")
+  val ¬ = I("¬", "connective")
+
   def ∀(vars: Term*)(body: Term): Term = ∀(vars.toList)(body)
   def ∀(vars: List[Term])(body: Term) = TI("∀")(vars)(body).foldRight
 
@@ -51,15 +57,15 @@ object AstSugar {
     def /:(that: Term) = TI("/")(that, term)
     def ->(that: Term) = TI("->")(term, that)
     def ->:(that: Term) = TI("->")(that, term)
-    def ↦(that: Term) = TI("↦")(term, that)
-    def ↦:(that: Term) = TI("↦")(that, term)>>
-    def ↦:(args: List[Term]) = TI("↦")(args :+ term)>>
-    def &(that: Term) = TI("&")(term, that)
-    def |(that: Term) = TI("|")(term, that)
+    def ↦(that: Term) = T(AstSugar.↦)(term, that)
+    def ↦:(that: Term) = T(AstSugar.↦)(that, term)
+    def ↦:(args: List[Term]) = T(AstSugar.↦)(args :+ term)>>
+    def &(that: Term) = T(∧)(term, that)
+    def |(that: Term) = T(∨)(term, that)
     def <->(that: Term) = TI("<->")(term, that)
-    def unary_~ = TI("¬")(term)
+    def unary_~ = T(¬)(term)
     def x(that: Term) = TI("×")(term, that)
-    def ∩(that: Term) = TI("∩")(term, that)
+    def ∩(that: Term) = T(AstSugar.∩)(term, that)
     def +(that: Term) = TI("+"):@(term, that)
     def -(that: Term) = TI("-"):@(term, that)
     def *(that: Term) = TI("⋅"):@(term, that)
@@ -70,7 +76,7 @@ object AstSugar {
     def :@(that: Term*) = @:(term)(that:_*).foldLeft
     def :@(these: List[Term]) = @:(term)(these:_*).foldLeft
 
-    def conjuncts = term split I("&")
+    def conjuncts = term split I("∧")
 
     def |!!(that: List[Term]) = if (that.isEmpty) term else this |! &&(that)
 
@@ -106,10 +112,10 @@ object AstSugar {
   }
   
   def &&(conjuncts: Term*): Term = &&(conjuncts.toList)
-  def &&(conjuncts: List[Term]) = if (conjuncts.isEmpty) Prelude.TRUE else TI("&")(conjuncts)<<
+  def &&(conjuncts: List[Term]) = if (conjuncts.isEmpty) Prelude.TRUE else T(∧)(conjuncts)<<
 
   def ||(disjuncts: Term*): Term = ||(disjuncts.toList)
-  def ||(disjuncts: List[Term]) = if (disjuncts.isEmpty) Prelude.FALSE else TI("|")(disjuncts)<<
+  def ||(disjuncts: List[Term]) = if (disjuncts.isEmpty) Prelude.FALSE else T(∨)(disjuncts)<<
 
   def /::(parts: Term*): Term = /::(parts.toList)
   def /::(parts: List[Term]) = TI("/")(parts)>>

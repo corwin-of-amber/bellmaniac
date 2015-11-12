@@ -82,6 +82,7 @@ bit Scope_2d(bit[4][4] t, bit lt, int i, int j) {
 
 generator int minimal(int i) { minimize(i); return i; }
 
+generator bit minimal_1(bit b) { minimize(b); return b; }
 generator bit[4] minimal_4(bit[4] a) { for (int i = 0; i < 4; ++i) minimize(a[i]); return a; }
 generator bit[4][4] minimal_4x4(bit[4][4] a) { 
   for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j) minimize(a[i][j]); return a; }

@@ -466,7 +466,7 @@ object FolSimplify {
   
   def simplify(phi: Term): Term = {
     val sub = phi.subtrees map simplify
-    if (phi.root == "&") {
+    if (phi.root == "∧") {
       val nontrue = sub filter (_ != TRUE)
       nontrue match {
         case Nil => TRUE
@@ -474,7 +474,7 @@ object FolSimplify {
         case _ => T(phi.root, nontrue)
       }
     }
-    else if (phi.root == "|") {
+    else if (phi.root == "∨") {
       val nonfalse = sub filter (_ != FALSE)
       nonfalse match {
         case Nil => FALSE
@@ -500,8 +500,6 @@ object FolSimplify {
     else if (phi.root == "∀") {
       val body = sub.last
       if (body == TRUE) TRUE
-      //else if (body.root == "&" && (body.unfold.subtrees forall (n => n =~ ("=", 2) || n =~ ("<->", 2) || n.root == "∀")))
-      //  &&(body.unfold.subtrees map (t => T(phi.root)((sub dropRight 1) :+ t)))
       else T(phi.root, sub)
     }
     else T(phi.root, sub)
@@ -513,7 +511,7 @@ object FolSimplify {
   
   def expandTrivials(theory: Iterable[Term]) = {
     def collect(phi: Term)(implicit vars: List[Term]): Map[Identifier, Trivial] = {
-      if (phi.root == "&") phi.subtrees flatMap collect toMap
+      if (phi.root == "∧") phi.subtrees flatMap collect toMap
       else if (phi =~ ("=", 2) || phi =~ ("<->", 2)) {
         val List(lhs, rhs) = phi.subtrees
         if (lhs.subtrees == vars) {

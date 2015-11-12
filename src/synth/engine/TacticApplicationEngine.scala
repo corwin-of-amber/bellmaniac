@@ -260,11 +260,9 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       }
     }
 
-    val ∩ = I("∩")
-
     val solution = (if (fix) Synth.synthesizeFixPodSubterm(h, subterm, ipods)
                         else Synth.synthesizeFlatPodSubterm(h, subterm, ipods)).run()
-    println(solution)
+    println(solution mapValues (_.toPretty))
     val selected = expandedTemplates(solution("selected").root.literal.asInstanceOf[Int])
     val synthed = selected.replaceDescendants(
       selected.nodes collect { case n@T(`∩`, List(L("?"), L(k:String))) => (n, solution(k)) } toList)

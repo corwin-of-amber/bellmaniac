@@ -64,8 +64,8 @@ object LCS {
     }
 
     val A = TV("A")
-    val P1 = TV("P1")
-    val P2 = TV("P2")
+    val P1 = TV("P₁")
+    val P2 = TV("P₂")
     override val prototypes = Map(A → (A:@(? ∩ P1, ? ∩ P2)))
 
     override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }

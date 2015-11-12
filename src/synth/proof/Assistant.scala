@@ -119,7 +119,7 @@ class Assistant(implicit env: Environment) {
   }
   
   def mergeConds(condA: Term, condB: Term) = {
-    val a = condA.split(I("&"))
-    && (a ++ (condB.split(I("&")) filterNot a.contains))
+    val a = condA.split(I("∧"))
+    && (a ++ (condB.split(I("∧")) filterNot a.contains))
   }
 }

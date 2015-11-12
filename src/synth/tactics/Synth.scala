@@ -327,7 +327,7 @@ object Synth {
         assert(typeOf_!(t).isLeaf)
         TypedTerm(slash(t.subtrees map expr), scalar)
       }
-      else if (t.root == "¬" || t.root == "&" || t.root == "|") TypedTerm(T(t.root, t.subtrees map expr), B)
+      else if (t.root.kind == "connective") TypedTerm(T(t.root, t.subtrees map expr), B)
       else if (t.root.kind == "set" || t.root.kind == "variable") app(TypedTerm(T(t.root), B), t.subtrees) /* assume it's a predicate */
       else isApp(t) match {
         case Some((f, args)) =>
@@ -484,7 +484,7 @@ object Synth {
       s"""${prologue map apply mkString "\n\n"}\n\ninclude "harness.sk";\n"""
     }
 
-    val INFIX = Map(I("+") -> "+", /*I("-") -> "-",*/ I("=") -> "==", I("<") -> "<", I(">") -> ">", I("&") -> "&&", I("|") -> "||")
+    val INFIX = Map(I("+") -> "+", I("=") -> "==", I("<") -> "<", I(">") -> ">", I("∧") -> "&&", I("∨") -> "||")
     val PREFIX = Map(I("¬") -> "!")
 
     object InfixOp { def unapply(id: Identifier) = INFIX get id }

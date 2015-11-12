@@ -5,7 +5,6 @@ import semantics._
 import semantics.Prelude._
 import semantics.TypeTranslation.Declaration
 import semantics.TypedScheme.TermWithHole
-import synth.pods.Pod.TacticalError
 
 
 /**
