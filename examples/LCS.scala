@@ -50,8 +50,9 @@ object LCS {
 
 
   def main(args: Array[String]): Unit = {
-    implicit val scope = env.scope
-    new Interpreter().executeFile("/tmp/synopsis.json")
+    val filename = args.lift(0) getOrElse "/tmp/synopsis.json"
+
+    new Interpreter().executeFile(filename)
   }
 
 
@@ -61,6 +62,11 @@ object LCS {
     override def pods(implicit s: State) = {
       case (L("A"), List(~(i), ~(j))) => APod(i, j)
     }
+
+    val A = TV("A")
+    val P1 = TV("P1")
+    val P2 = TV("P2")
+    override val prototypes = Map(A → (A:@(? ∩ P1, ? ∩ P2)))
 
     override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
     def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {

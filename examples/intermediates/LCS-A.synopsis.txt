@@ -29,9 +29,11 @@ Stratify "/" (fixee 🄰) 🄰 ψ
 Stratify "/" (fixee 🄰) ⟨🄷,🄸,🄼⟩ ψ
 Stratify "/" (fixee 🄰) ⟨🄸,🄹,🄻⟩ ψ
 
+🄸 🄶 🄴 🄰 ↦ SynthAuto (fixer .) . ... ψ
+/*
 ⟨Synth (fixee 🄸) 🄸 (A `I₀ `J₀) ψ ⟨`I₀×J₀⟩,
  Synth (fixee 🄶) 🄶 (A `I₀ `J₁) ψ ⟨`I₀×J₁⟩,
  Synth (fixee 🄴) 🄴 (A `I₁ `J₀) ψ ⟨`I₁×J₀⟩,
  Synth (fixee 🄰) 🄰 (A `I₁ `J₁) ψ ⟨`I₁×J₁⟩⟩
-
+*/
 SaveAs (A `I `J) "rec"

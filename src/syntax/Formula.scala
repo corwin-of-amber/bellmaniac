@@ -4,6 +4,7 @@ import com.mongodb.{BasicDBList, DBObject, BasicDBObject}
 import report.data._
 import Nullable._
 import semantics.TypedTerm
+import syntax.AstSugar.Uid
 
 
 /**
@@ -46,7 +47,8 @@ object Identifier {
     // TODO typed identifier, ns
     new Identifier(
       literal = json.get("literal") orElse { throw new SerializationError("'literal' missing", json); },
-      kind = json.get("kind") andThen (_.toString, "?")
+      kind = json.get("kind") andThen (_.toString, "?"),
+      ns = if (json.get("ns") == "*") new Uid else null
     )
   }
 }

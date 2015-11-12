@@ -10,25 +10,25 @@ import scala.collection.mutable.ListMap
 import scala.collection.JavaConversions._
 
 import com.mongodb.util.JSON
-import com.mongodb.{DBObject, BasicDBList}
-import report.data.Cached
-import synth.pods.Pod.TacticalError
+import com.mongodb.BasicDBList
 
 import semantics.TranslationError
 import semantics.TypeTranslation.TypingSugar
 import semantics.pattern.SimplePattern
-import synth.pods.{ConsPod, Pod}
 
 import syntax.AstSugar._
-import syntax.{Unify, Formula, Strip, Identifier}
+import syntax.{Unify, Strip, Identifier}
 import syntax.Piping._
 import syntax.transform.{Extrude, Mnemonics}
 import semantics._
 import semantics.TypeTranslation.TypingSugar._
 import semantics.transform.{Escalate, Explicate}
 import synth.proof.Assistant
+import synth.pods.{ConsPod, Pod}
+import synth.pods.TacticalError
 
-//import scala.sys.process.ProcessIO
+import report.data.Cached
+
 
 
 object Synth {
@@ -175,7 +175,7 @@ object Synth {
     val :: = I("::")
 
     def refit(pod: Pod, shape: Term, reshape: Term, hack: (Term, Term) => Term)(implicit scope: Scope) = {
-      val shallow = TypeInference.inferShallow(pod.program)._2
+      val shallow = TypeInference.inferShallow(Binding.prebind(pod.program))._2
       findBodyWithType(shallow, shape) map { body =>
         val inputs = enclosure(shallow, body) get
         val intendedType = (inputs :\ reshape)((x,y) => ? -> y)
@@ -188,7 +188,8 @@ object Synth {
       case T(program.root, List(p)) => findBodyWithType(p, typ)
       case typed: TypedTerm if Unify.?(typed.typ, typ) => Some(typed)
       case T(`↦`, List(v, body)) => findBodyWithType(body, typ)
-      case T(`:`, List(l, term)) => findBodyWithType(term, typ)
+      case T(`:`, List(_, term)) => findBodyWithType(term, typ)
+      case T(`::`, List(term, _)) => findBodyWithType(term, typ)
       case _ => None
     }
 
@@ -217,15 +218,13 @@ object Synth {
 
   def synthesizeFix(h: Term, hP: Iterable[Term], quadrant: Term)(implicit scope: Scope) = {
     import Prelude.{fix,?}
-    import TypedLambdaCalculus.pullOut
-    import TypedTerm.typeOf_!
-    import TypePrimitives.shape
     val * = TI("*")
+    val `fix(?)` = SimplePattern(fix(* :- ?))
 
-    val f = try pullOut(h, (SimplePattern(fix(* :- ?)) find h).head(*)) get
+    val f = try pullOut(h, (`fix(?)` find h).head(*)) get
             catch { case _: NoSuchElementException => throw new TacticalError("not a recursive term") at h }
-    val fP = hP flatMap (hP => pullOut(hP, (SimplePattern(fix(* :- ?)) find hP).head(*))) filter
-                        (fP => shape(typeOf_!(f)) != shape(typeOf_!(fP)))
+    val fP = hP flatMap (hP => pullOut(hP, (`fix(?)` find hP).head(*))) filter
+                        (fP => shape(typeOf_!(fP)).nodes contains shape(typeOf_!(f)))
 
     if (fP.isEmpty) throw new TacticalError("no suitable candidates for given type") at f :: typeOf_!(f)
 
@@ -264,7 +263,7 @@ object Synth {
     val outf = new FileWriter("synth-autogened.sk")
     def fprintln(s: String) = outf.write(s + "\n");
 
-    fprintln("#include \"scalar.sk\"\n#include \"scope.sk\"\n\n")
+    fprintln(s"""include "scalar.skh";\ninclude "scope.sk";\n\n""")
     fprintln(sketch(code0))
     code1 foreach (code1 => fprintln(sketch(code1)))
 
@@ -315,17 +314,21 @@ object Synth {
 
     def expr(t: Term)(implicit ctx: Context): Term = {
       if (t.isLeaf) {
-        if (!typeOf_!(t).isLeaf || (ctx.vars contains t)) t else TypedTerm(t, scalar)
+        if (!typeOf_!(t).isLeaf || (ctx.vars contains t) || t.root.literal.isInstanceOf[Int]) t
+        else TypedTerm(t, scalar)
       }
       else if (t =~ ("|!", 2)) {
         val v = expr(t.subtrees(0))
-        TypedTerm((if (typeOf_!(v) == scalar) only else when)(t.subtrees(1), v), scalar)
+        val cond = expr(t.subtrees(1))
+        TypedTerm((if (typeOf_!(v) == scalar) only else when)(cond, v), scalar)
       }
       else if (t =~ (":", 2)) expr(t.subtrees(1))
       else if (t =~ ("/", 2)) {
         assert(typeOf_!(t).isLeaf)
         TypedTerm(slash(t.subtrees map expr), scalar)
       }
+      else if (t.root == "¬" || t.root == "&" || t.root == "|") TypedTerm(T(t.root, t.subtrees map expr), B)
+      else if (t.root.kind == "set" || t.root.kind == "variable") app(TypedTerm(T(t.root), B), t.subtrees) /* assume it's a predicate */
       else isApp(t) match {
         case Some((f, args)) =>
           if (!typeOf_!(t).isLeaf) throw new TranslationError(s"high-order return value for '${f}'") at t
@@ -336,19 +339,21 @@ object Synth {
           isAbs(t) match {
             case Some((vars, body)) => preserve(t, abs(vars, body))
             case _ =>
-              if (t.root.kind == "set" || t.root == "&") t
-              else
-                throw new TranslationError(s"don't quite know what to do with '${t.root}'") at t
+              throw new TranslationError(s"don't quite know what to do with '${t.root}'") at t
           }
       }
     }
 
     def app(f: Term, args: List[Term])(implicit ctx: Context) = {
       val vals = args map expr
-      if (vals forall (x => typeOf_!(x) != scalar))
+      val retval = tret(typeOf_!(f))
+      if (vals forall (x => typeOf_!(x) != scalar)) {
+        //if (f.root == "-") TypedTerm(f(vals), tret(typeOf_!(f)))
         TypedTerm(f(vals), scalar)
+      }
       else
-        TypedTerm(@:(f)(vals), scalar)
+        TypedTerm(@:(f)(vals map (x => if (typeOf_!(x) == scalar) x else some(x))),
+          if (retval == B) retval else scalar)
     }
 
     def abs(vars: List[Term], body: Term)(implicit ctx: Context) = {
@@ -372,18 +377,23 @@ object Synth {
     def defn(entry: (Identifier, (List[Term], Term))): Term = entry match { case (f, (vars, body)) => defn(T(f), vars, body) }
 
     def decl(vars: List[Term]) = vars map { va =>
-      val typ =shape(typeOf_!(va))(new Scope)  // scope is irrelevant
+      val typ = shape(typeOf_!(va))(new Scope)  // scope is irrelevant
       val args = targs(typ)
       if (args.isEmpty)
         def_(va)
       else {
         val vars = qvars(args, Strip.lower)
-        val (f_val, f_supp) = ($TV(s"${va.root.literal}_val"),$TV(s"${va.root.literal}_supp"))
-        `;`(
-          def_(TypedTerm(f_val, tret(typ)), `()`(vars)),
-          def_(TypedTerm(f_supp, Prelude.B), `()`(vars)),
-          def_(TypedTerm(va, scalar), `()`(vars), ret(when(f_supp(vars), f_val(vars))))
-        )
+        val retval = tret(typ)
+        if (retval == Prelude.B)
+          def_(TypedTerm(va, retval), `()`(vars))
+        else {
+          val (f_val, f_supp) = ($TV(s"${va.root.literal}_val"),$TV(s"${va.root.literal}_supp"))
+          `;`(
+            def_(TypedTerm(f_val, retval), `()`(vars)),
+            def_(TypedTerm(f_supp, Prelude.B), `()`(vars)),
+            def_(TypedTerm(va, scalar), `()`(vars), ret(when(f_supp(vars), f_val(vars))))
+          )
+        }
       }
     }
 
@@ -418,6 +428,7 @@ object Synth {
 
   object CodeGen {
     val scalar = TS("scalar")
+    val some = TI("some")
     val when = TI("when")
     val only = TI("only")
     val slash = TI("slash")
@@ -451,10 +462,12 @@ object Synth {
         try s"${typ(typeOf_!(f))} ${mne(f)}(${params map param mkString ", "});"
         finally mnemonics release (params map (_.leaf))
       case T(`;`.root, stmts) => stmts map apply mkString "\n"
-      case T(@:.root, f :: args) => s"apply(${mne(f)}, ${args map apply mkString ", "})"
+      case T(@:.root, f :: args) => s"apply${if (typeOf_!(code) == B) "b" else ""}(${mne(f)}, ${args map apply mkString ", "})"
       case T(ret.root, List(r)) => s"return ${apply(r)};"
+      case T(IntConst(n), Nil) => s"$n"
       case T(v, Nil) => s"${mne(v)}"
       case T(InfixOp(op), List(a, b)) => s"(${apply(a)} $op ${apply(b)})"
+      case T(PrefixOp(op), List(a)) => s"($op${apply(a)})"
       case T(Reduction(f), args) => args match {
           case List(T(fn, Nil)) => s"$f(n, ${mne(fn)})"
           case List(T(`f`, List(T(fn, Nil))), b) => s"${f}_acc(${apply(b)}, n, ${mne(fn)})"  // this is an
@@ -468,12 +481,15 @@ object Synth {
     def harness(decl: Iterable[Term]) = {
       val (prologue, proto) = decl partition { case T(def_.root, List(v)) => false case _ => true }
       //val main = def_(TypedTerm($TV("main"), $TV("void")), `()`(proto flatMap (_.subtrees) toList))
-      (prologue map apply mkString "\n\n") + "\n\n#include \"harness.sk\"\n"
+      s"""${prologue map apply mkString "\n\n"}\n\ninclude "harness.sk";\n"""
     }
 
-    val INFIX = Map(I("+") -> "+", I("-") -> "-", I("=") -> "==", I("<") -> "<", I(">") -> ">", I("&") -> "&&")
+    val INFIX = Map(I("+") -> "+", /*I("-") -> "-",*/ I("=") -> "==", I("<") -> "<", I(">") -> ">", I("&") -> "&&", I("|") -> "||")
+    val PREFIX = Map(I("¬") -> "!")
 
     object InfixOp { def unapply(id: Identifier) = INFIX get id }
+    object PrefixOp { def unapply(id: Identifier) = PREFIX get id }
+    object IntConst { def unapply(id: Identifier) = id.literal match { case x: Int => Some(x) case _ => None } }
 
     val REDUCT = Set(Prelude.min.root, Prelude.max.root)
 

@@ -5,7 +5,6 @@ import java.io.{BufferedReader, FileReader}
 
 import com.mongodb.{BasicDBList, DBObject, BasicDBObject}
 import com.mongodb.util.JSON
-import examples.Gap.BreakDown.Instantiated
 import report.{AppendLog, DevNull, FileLog}
 import report.data.{SerializationContainer, Rich, DisplayContainer}
 import semantics.TypedScheme.TermWithHole
@@ -284,7 +283,7 @@ object Paren {
     val * = TI("*")
     
     def main(args: Array[String]): Unit = {
-      val filename = if (args.length > 0) args(0) else "/tmp/synopsis.json"
+      val filename = args.lift(0) getOrElse "/tmp/synopsis.json"
 
       new Interpreter()(scope, env).executeFile(filename)
     }
@@ -321,10 +320,6 @@ object Paren {
       override def invokeProver(pod: Pod): Unit = {
         Paren.BreakDown.invokeProver(List(), pod.obligations.conjuncts, List(pod), logf)
       }
-    }
-
-    def followRecipe(implicit env: Environment, scope: Scope) {
-      new Interpreter().executeFile("/tmp/synopsis.json")
     }
 
     def emit(term: Term)(implicit scope: Scope) = Explicate.explicateHoist(term)

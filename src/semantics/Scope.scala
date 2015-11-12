@@ -86,7 +86,9 @@ class Domains {
       case List(x) => x
       case multi => throw new TypingException(s"ambiguous top-level sort for '$sort': $multi")
     }
-  
+
+  def isMaster(sort: Identifier) = masters exists (_.root == sort)
+
   def supers(sort: Identifier) = {
     def f(t: Tree[Identifier]): List[Identifier] = 
       if (t.root == sort) List(t.root)

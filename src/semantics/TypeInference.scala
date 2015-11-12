@@ -158,7 +158,7 @@ object TypeInference {
     
     import Prelude.B
 
-    def infer0(expr: Tree[Identifier]): (Identifier, Map[Identifier, Tree[Identifier]]) = {
+    def infer0(expr: Tree[Identifier], literal: Boolean=false): (Identifier, Map[Identifier, Tree[Identifier]]) = {
       val freshvar = new Identifier(ns.declare(expr), "variable", ns)
       implicit val resolve = Resolve.NULL
       def mgu(x: Map[Identifier, Term], y: Map[Identifier, Term]) =
@@ -179,7 +179,7 @@ object TypeInference {
         (freshvar, σ)
       }
       else if (expr.root == "@") {
-        val children = expr.subtrees map infer0
+        val children = expr.subtrees map (infer0(_))
         /**/ assume(children.length == 2) /**/
         val (f, a) = (children get 0, children get 1)
         val t1 = a._1; val t2 = freshvar
@@ -189,7 +189,7 @@ object TypeInference {
         (t2, σ)
       }
       else if (expr.root == "↦") {
-        val children = expr.subtrees map infer0
+        val children = expr.subtrees map (infer0(_))
         /**/ assume(children.length == 2) /**/
         val List(v, e) = children
         val t1 = v._1; val t2 = e._1
@@ -227,7 +227,8 @@ object TypeInference {
       else if (expr.root == "|!") {
         /**/ assume(expr.subtrees.length == 2) /**/
         val va = infer0(expr.subtrees(0))  /* ignore condition for now */
-        (freshvar, va._2 + (freshvar -> T(va._1)))
+        val cond = infer0(expr.subtrees(1), literal=true)
+        (freshvar, mgu(va._2 + (freshvar -> T(va._1)), cond._2 + (cond._1 -> B)))
       }
       else if (expr.root == "fix") {
         /**/ assume(expr.subtrees.length == 1) /**/
@@ -244,33 +245,37 @@ object TypeInference {
       }
       else if (expr.root == "=") {
         val tp = $v
-        val children = expr.subtrees map infer0 map { case (x,y) => y + (tp -> T(x)) }
+        val children = expr.subtrees map (infer0(_)) map { case (x,y) => y + (tp -> T(x)) }
         //implicit val join = resolve.join;
         val σ = (Map(freshvar -> B) +: children) reduce ((x, y) => mgu(x,y))
         (freshvar, σ)
       }
       else if (expr.root == "∀") {
-        val children = expr.subtrees map infer0
+        val children = expr.subtrees map (infer0(_))
         /**/ assume(expr.subtrees.length >= 1) /**/
         //implicit val join = resolve.join
         val σ = (Map(freshvar -> B, children.last._1 -> B) +: (children map (_._2))) reduce ((x, y) => mgu(x,y))
         (freshvar, σ)
       }
-      else if (expr.root == "<->" || expr.root == "~" || expr.root == "|" || expr.root == "&" || expr.root == "->") {
-        val children = expr.subtrees map infer0 map { case (x,y) => y + (x -> B) }
+      else if (expr.root == "<->" || expr.root == "¬" || expr.root == "|" || expr.root == "&" || expr.root == "->") {
+        val children = expr.subtrees map (infer0(_, literal=true)) map { case (x,y) => y + (x -> B) }
         //implicit val join = resolve.join
         val σ = (Map(freshvar -> B) +: children) reduce ((x, y) => mgu(x,y))
         (freshvar, σ)
       }
       else if (expr.root == "↓") {
-        val children = expr.subtrees map infer0 map (_._2)
+        val children = expr.subtrees map (infer0(_)) map (_._2)
         //implicit val join = resolve.join
         val σ = (Map(freshvar -> B) +: children) reduce ((x, y) => mgu(x,y))
         (freshvar, σ)
       }
-      else if (expr.root.kind == "set") {
-        /**/ assume(expr.subtrees.length == 1) /**/
-        (freshvar, Map(freshvar -> B) ++ infer0(expr.subtrees(0))._2)
+      else if (expr.root.kind == "set" || (literal && expr.root.kind == "variable")) {
+        ///**/ assume(expr.subtrees.length == 1) /**/
+        //(freshvar, Map(freshvar -> B) ++ infer0(expr.subtrees(0))._2)
+        val children = expr.subtrees map (infer0(_)) map (_._2)
+        //implicit val join = resolve.join
+        val σ = (Map(freshvar -> B) +: children) reduce ((x, y) => mgu(x,y))
+        (freshvar, σ)
       }
       else if (expr.root == "<" && !expr.isLeaf)  { /* mighty hack */ (freshvar, Map(freshvar ->B)) }
       else

@@ -14,9 +14,9 @@ trait Pod {
   val obligations = Prelude.program
 }
 
-object Pod {
-  class TacticalError(msg: String) extends TraceableException(msg) {}
-}
+
+class TacticalError(msg: String) extends TraceableException(msg) {}
+
 
 
 object NatPod extends Pod {

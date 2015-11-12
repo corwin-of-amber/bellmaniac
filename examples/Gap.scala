@@ -136,20 +136,11 @@ object Gap {
     import syntax.transform.Extrude
     import semantics.pattern.SimplePattern 
     import synth.tactics.Rewrite.{Rewrite,instantiate}
-    import synth.pods.{SlicePod,StratifyPod,StratifyReducePod,ReduceDistribPod,ReduceAssocPod}
-    import semantics.TypedLambdaCalculus.{simplify,pullOut}
+    import synth.pods.{SlicePod,StratifyReducePod,ReduceDistribPod,ReduceAssocPod}
     import syntax.Piping._
     import report.console.Console.display
 
-    def instapod(it: Term)(implicit scope: Scope) = instantiate(it)._2
-    def instapod(it: Pod)(implicit scope: Scope) = new Instantiated(it) // instantiate(it.program)._2
-//    def instapod[A <: Pod](it: A)(implicit scope: Scope) = new Instantiated[A](it) // instantiate(it.program)._2
-
-    class Instantiated[RawPod <: Pod](val it: RawPod)(implicit scope: Scope) extends Pod {
-      override val program = instantiate(it.program)._2
-      override val obligations = if (it.obligations == semantics.Prelude.program) program else instantiate(it.obligations)._2
-      override val decl = it.decl
-    }
+    import TacticApplicationEngine.{instapod, fixer, fixee, ctx}
 
     val * = TI("*")
     val j = TV("j")
@@ -160,21 +151,15 @@ object Gap {
       val f = new FileLog(new java.io.File("/tmp/bell.json"), new DisplayContainer)
       val extrude = new Extrude(Set(I("/"), cons.root))
 
-      def fixer(A: Term, q: Term) = SimplePattern(fix(?)) find A map (_.subterm) filter (_.hasDescendant(q)) head
-      def fixee(A: Term, q: Term) = fixer(A, q).subtrees(0)
-      def ctx(A: Term, t: Term) = TypedLambdaCalculus.enclosure(A, t).get map (x => (x.leaf.literal, x)) toMap
-
       val A = instantiate(APod(J, K).program, instantiate(program)._1)._2
       val ex = extrude(A) |-- display
       f += Rich.display(ex.terms)
-      //return
       // Slice  f  [ J₀, J₁ ] x [ K₀, K₁ ]
       val slicef = SlicePod(A :/ "f" subtrees 1, List(J0 x K0, J0 x K1, J1 x K0, J1 x K1) map (? x _)) |> instapod
       f += slicef.obligations
       for (A <- Rewrite(slicef)(A)) {
         val ex = extrude(A) |-- display
         f += Rich.display(List(ex.terms))
-        //return
         // Stratify  🄰
         val strat = StratifySlashPod(fixee(A, ex :/ "🄰"), ex :/ "🄰", ctx(A, ex :/ "🄰")("ψ"))  |> instapod
         for (A <- Rewrite(strat)(A)) {
@@ -261,81 +246,6 @@ object Gap {
           }
         }
       }
-        /*
-        // Stratify  🄰
-        val strat = StratifyPod(fixer(A, ex :/ "🄰") subtrees 0, ex :/ "🄰", List(? x J0 x K0)) |> instapod
-        for (A <- Rewrite(strat)(A)) {
-          val ex = extrude(A) |-- display
-          // Stratify  🄰
-          val strat = StratifyPod(fixer(A, ex :/ "🄰") subtrees 0, ex :/ "🄰", List(? x J0 x K0)) |> instapod
-          for (A <- Rewrite(strat)(A)) {
-            val ex = extrude(A) |-- display
-            // Stratify  🄰
-            val strat = StratifyPod(fixer(A, ex :/ "🄰") subtrees 0, ex :/ "🄰", List(? x J0 x K0)) |> instapod
-            for (A <- Rewrite(strat)(A) map simplify) {
-              val ex = extrude(A) |-- display
-              // Slice  🄰 ... q ↦ ?  [ K₀, K₁ ]
-              //               p ↦ ?  [ J₀, J₁ ]
-              //               θ      [ J₀, J₁ ] x [ K₀, K₁ ]
-              // Slice  🄱 ... p ↦ ?  [ J₀, J₁ ]
-              //               θ      [ J₀, J₁ ] x ?
-              // Slice  🄲 ... q ↦ ?  [ K₀, K₁ ]
-              //               θ      ? x [ K₀, K₁ ]
-              val slicea = (SimplePattern(q ↦ ?) find ex :/ "🄰" map (x => SlicePod(x.subterm, List(K0, K1)))) ++
-                           (SimplePattern(p ↦ ?) find ex :/ "🄰" map (x => SlicePod(x.subterm, List(J0, J1)))) :+
-                           (SlicePod((ex :/ "🄰") ? "θ", List(J0 x K0, J0 x K1, J1 x K0, J1 x K1)))
-              val sliceb = (SimplePattern(p ↦ ?) find ex :/ "🄱" map (x => SlicePod(x.subterm, List(J0, J1)))) :+
-                           (SlicePod((ex :/ "🄱") ? "θ", List(J0, J1) map (_ x ?)))
-              val slicec = (SimplePattern(q ↦ ?) find ex :/ "🄲" map (x => SlicePod(x.subterm, List(K0, K1)))) :+
-                           (SlicePod((ex :/ "🄲") ? "θ", List(K0, K1) map (? x _)))
-              val slice = (slicea ++ sliceb ++ slicec) |>> instapod
-              for (A <- Rewrite(slice)(A, SimplePattern(j ↦ (* :- ?)) find A map (_(*)))) {
-                val ex = extrude(A) |-- display
-                // SlashDistrib  ?⃞  ?⃞ ... /(...) :@ ?
-                val dist = (ex.terminals flatMap (x => SimplePattern((* :- /::(`...`)) :@ ?) find x map (x → _(*))) map
-                            { case (x, y) => SlashDistribPod(x, y) }) |>> instapod
-                for (A <- Rewrite(dist)(A)) {
-                  val ex = extrude(A) |-- display
-                  // SlashToReduce  cons(/({...}), ?)  [min]
-                  val s2m = (SimplePattern(cons:@(* :- /::(`...`))) find A map (x => SlashToReducePod(x(*).split(I("/")), min))) |>> instapod
-                  for (A <- Rewrite(s2m)(A)) {
-                    // MinDistrib
-                    val mindist = (SimplePattern(min :@ (* :- /::(`...`))) find A map 
-                                   (x => MinDistribPod(x(*).split))) |>> instapod
-                    for (A <- Rewrite(mindist)(A)) {
-                      // MinAssoc
-                      val minassoc = (SimplePattern(min :@ (* :- ?)) find A flatMap (_(*) |> MinAssocPod.`⟨ ⟩?`) map
-                                      (MinAssocPod(_)) filter (x => x.subtrees(0) != x.subtrees(1))) |>> instapod
-                      for (A <- Rewrite(minassoc)(A)) {
-                        val ex = extrude(A) |-- display
-                        // Stratify  🄾, 🅁, 🅃  in  🄱
-                        //           🅅, 🅇, 🄰̱  in  🄲
-                        //           🄴, 🄼      in  🄰
-                        val strat = List(StratifyReducePod(ex :/ "🄱" subtrees 0, List("🄾", "🅁", "🅃") map (ex :/ _)),
-                                         StratifyReducePod(ex :/ "🄲" subtrees 0, List("🅅", "🅇", "🄰̱") map (ex :/ _)),
-                                         StratifyReducePod(fixer(A, ex :/ "🄰") subtrees 0, List("🄴", "🄼") map (ex :/ _))) |>> instapod
-                        for (A <- Rewrite(strat)(A)) {
-                          val ex = extrude(A) |-- display
-                          // Stratify  🄵, 🄸, 🄼  in  🄰
-                          val strat = StratifyReducePod(fixer(A, ex :/ "🄰") subtrees 0, List("🄵", "🄸", "🄼") map (ex :/ _)) |> instapod
-                          for (A <- Rewrite(strat)(A)) {
-                            val ex = extrude(A) |-- display
-                            // Stratify  🄶, 🄹, 🄻  in  🄰
-                            val strat = StratifyReducePod(fixer(A, ex :/ "🄰") subtrees 0, List("🄶", "🄹", "🄻") map (ex :/ _)) |> instapod
-                            for (A <- Rewrite(strat)(A) map simplify) {
-                              val ex = extrude(A) |-- display
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }    
-          }    
-        }
-      }*/
     }
     
   }

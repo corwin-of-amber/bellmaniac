@@ -8,7 +8,6 @@ import semantics.Prelude
 import semantics.TypedTerm
 import semantics.TypedLambdaCalculus
 import syntax.Identifier
-import synth.pods.Pod.TacticalError
 
 
 /**
@@ -119,7 +118,7 @@ object StratifyPod {
         ω(g))
       ω(box) =:= θ ↦ ((θ /: strata)((x, y) => y :@ x))
     }
-    else throw new Pod.TacticalError(s"'${quadrant toPretty}' is not a component of '${box toPretty}'")
+    else throw new TacticalError(s"'${quadrant toPretty}' is not a component of '${box toPretty}'")
   }
 }
 

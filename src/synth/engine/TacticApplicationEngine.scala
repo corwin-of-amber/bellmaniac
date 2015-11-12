@@ -5,7 +5,6 @@ import java.io.{File, FileReader, BufferedReader}
 import com.mongodb.util.JSON
 import com.mongodb.{BasicDBList, DBObject}
 
-import examples.Gap.BreakDown.Instantiated
 import report.FileLog
 import report.console.Console._
 import report.console.Console.display
@@ -19,9 +18,9 @@ import semantics.TypeTranslation.Environment
 import syntax.AstSugar._
 import syntax.Piping._
 import syntax.{Tree, Formula}
-import syntax.transform.{TreeSubstitution, ExtrudedTerms, Extrude}
+import syntax.transform.{ExtrudedTerms, Extrude}
 import synth.pods.ConsPod._
-import synth.pods.Pod.TacticalError
+import synth.pods.TacticalError
 import synth.pods._
 import synth.tactics.Rewrite._
 import synth.tactics.Synth
@@ -321,10 +320,16 @@ object TacticApplicationEngine {
 
   object L { def unapply(t: Term) = if (t.isLeaf) Some(t.root.literal) else None }
 
-  /* navigator functions */
+  /* Pod instantiation */
+  class Instantiated[RawPod <: Pod](val it: RawPod)(implicit scope: Scope) extends Pod {
+    override val program = instantiate(it.program)._2
+    override val obligations = if (it.obligations == semantics.Prelude.program) program else instantiate(it.obligations)._2
+    override val decl = it.decl
+  }
   def instapod(it: Term)(implicit scope: Scope) = instantiate(it)._2
   def instapod(it: Pod)(implicit scope: Scope) = new Instantiated(it)
 
+  /* navigator functions */
   def fixer(A: Term, q: Term) = SimplePattern(fix(?)) find A map (_.subterm) filter (_.hasDescendant(q)) head
   def fixee(A: Term, q: Term) = fixer(A, q).subtrees(0)
   def ctx(A: Term, t: Term) = TypedLambdaCalculus.context(A, t)

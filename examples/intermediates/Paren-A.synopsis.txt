@@ -8,7 +8,7 @@ SaveAs (A `J) "loop"
 Slice (find (θ ↦ ?)) (`? ⟨`J₀×J₀, `J₀×J₁, `J₁×J₁⟩)
 Stratify "/" (fixee 🄰) 🄰 ψ
 Stratify "/" (fixee 🄱) 🄱 ψ
-🄰 🄱 🄲 ↦ SynthAuto (fixer ".") "." "..." ψ
+🄰 🄱 🄲 ↦ SynthAuto (fixer .) . ... ψ
 /*
 ⟨Synth (fixee 🄰) 🄰 (B `J₀ `J₁) ψ ⟨`J×J∩<⟩,
  Synth (fixee 🄱) 🄱 (A `J₁) ψ ⟨`J₁×J₁⟩,

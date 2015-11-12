@@ -8,9 +8,11 @@ struct scalar { bit supp; int val; }
 |scalar| only(bit guard, |scalar| val) { return when(guard && val.supp, val.val); /* guard ? val : bot;*/ }
 |scalar| slash(|scalar| a, |scalar| b) { if (!a.supp) a = b; return a; }
 
-|scalar| apply(fun op, |scalar| a, |scalar| b) { return when(a.supp && b.supp, op(a.val, b.val)); }
+|scalar| apply(fun op, |scalar| a, |scalar| b) { return only(a.supp && b.supp, op(a.val, b.val)); }
+bit      applyb(fun op, |scalar| a) { return a.supp && op(a.val); }
 
-int plus(int a, int b) { return a + b; }
+|scalar| plus(int a, int b) { return some(a + b); }
+|scalar| minus(int a, int b) { return when(a>=b, a - b); }
 
 /* minimum */
 
