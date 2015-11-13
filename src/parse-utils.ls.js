@@ -23,7 +23,8 @@
     return {
       $: 'Identifier',
       literal: literal,
-      kind: kind
+      kind: kind,
+      ns: /^\?/.exec(literal) ? "*" : undefined
     };
   };
   root.operator = function(literal){

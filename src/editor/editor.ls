@@ -28,6 +28,8 @@ hintWords =
 	* text: "ω", displayText: "\\omega"
 	* text: "×", displayText: "\\times"
 	* text: "∩", displayText: "\\cap"
+	* text: "∵", displayText: "\\because"
+	* text: "∎", displayText: "\\qed"
 
 # these words autoreplace without any hint required
 autoWords =

@@ -16,6 +16,7 @@ root.identifier = (literal, kind) ->
 	$: \Identifier,
 	literal: literal,
 	kind: kind
+	ns: if literal is /^\?/ then "*" else undefined
 
 root.operator = (literal) -> identifier(literal, \operator)
 

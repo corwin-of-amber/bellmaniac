@@ -81,6 +81,12 @@
     }, {
       text: "∩",
       displayText: "\\cap"
+    }, {
+      text: "∵",
+      displayText: "\\because"
+    }, {
+      text: "∎",
+      displayText: "\\qed"
     }
   ];
   autoWords = [
