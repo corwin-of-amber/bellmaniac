@@ -184,11 +184,17 @@ class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val impl: Term
 
   val indexDomain = shape(area.head)
   val Q = $TyTV("Q", rawtype(scope, area.head ->: B))
+  val emp = $TyTV("emp", rawtype(scope, area.head ->: R))
 
   val areaChecks = {
     val vars = qvars(args(typeOf_!(Q)))
     ∀(vars)(Q(vars) <->
       ||(area map (a => &&(TypeTranslation.checks(scope, a -> B, vars)))))
+  }
+
+  val emptiness = {
+    val vars = qvars(args(typeOf_!(emp)))
+    ∀(vars)(~ ↓(emp(vars)))
   }
 
   def equivQuadrant(lhs: Term, rhs: Term) = {
@@ -200,9 +206,9 @@ class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val impl: Term
   }
 
   def stableQuadrant(lhs: Term, rhs: Term) = {
-    val θ = $TV("θ")
+    val θ = emp //$TV("θ")
     val y = (indexDomain ∩ Q) -> ?
-    ((lhs:@(lhs:@θ)) :: y) =:= (rhs :: y)
+    ((lhs:@((lhs:@θ) :: y)) :: y) =:= (rhs :: y)
   }
 
   override val obligations =
@@ -220,7 +226,7 @@ class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val impl: Term
     }
   }
 
-  override val decl = new Declaration(Q) where areaChecks
+  override val decl = new Declaration(Q, emp) where (areaChecks, emptiness)
 }
 
 object SynthPod {

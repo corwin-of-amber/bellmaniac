@@ -23,7 +23,7 @@ import synth.pods.ConsPod._
 import synth.pods.TacticalError
 import synth.pods._
 import synth.tactics.Rewrite._
-import synth.tactics.Synth
+import synth.tactics.{SliceAndDicePod, SlicePod, Synth}
 import ui.CLI
 
 
@@ -83,6 +83,9 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       ctx(s.program, subterm) getOrElse (expr.root.literal, throw new Exception(s"undefined variable ${expr}"))//expr)
     else expr
 
+  def subterm_?(term: Term, expr: Term) =
+    if (term.nodes exists (_ eq expr)) expr else (new SimplePattern(expr) findOne_! term).subterm
+
   def resolvePatterns(command: Term)(implicit s: State) = {
     command.nodes map (c => (c, LambdaCalculus.isAppOf(c, TI("findAll")))) find (_._2.isDefined) match {
       case Some((node, Some(List(pat)))) => SimplePattern(pat) find s.program map { mo =>
@@ -120,6 +123,10 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   def command(command: Term)(implicit s: State): Iterable[Pod] = LambdaCalculus.isApp(command) match {
     case Some((L("Slice"), List(~(f), ~~(domains)))) =>
       List(SlicePod(f, domains))
+
+    case Some((L("Slice"), List(~(h), ~(θ), ~~(domains), ++(reduce)))) =>
+      val f = subterm_?(h, θ)
+      List(SliceAndDicePod(h, f, domains, (l: Iterable[Term]) => reduce:@`⟨ ⟩`(l)))
 
     /* deprecated */
     case Some((L("StratifySlash"), List(~(h), ~(quadrant), ~(ψ_)))) =>
@@ -222,16 +229,17 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     implicit val st = s
     val derivatives = resolvePatterns(command) flatMap pods map instapod
 
-    cert ||= derivatives exists (x => x.it.isInstanceOf[LetSynthPod] || x.it.isInstanceOf[SynthPod])
-    //cert ||= derivatives exists (x => x.it.isInstanceOf[StratifySlashPod] || x.it.isInstanceOf[StratifyReducePod])
-
-    val tacticf = new FileLog(new File("/tmp/tactic.json"))
-    tacticf += Map("tactic" -> command, "term" -> s.program)
-    tacticf.out.close()
+    def cert_?(p: Pod) = p match {
+      case _: LetSynthPod | _: SynthPod => true
+      //case _: StratifySlashPod | _: StratifySlash2Pod => true
+      //case _: StratifyReducePod => true
+      //case _: SliceAndDicePod => true
+      case _ => false
+    }
 
     if (derivatives.isEmpty) s
     else {
-      if (cert) derivatives filter (_.obligations != TRUE) foreach invokeProver
+      derivatives filter (_.it |> cert_?) filter (_.obligations != TRUE) foreach invokeProver
 
       Rewrite(derivatives)(s.program, within) match {
         case Some(rw) => mkState(rw)

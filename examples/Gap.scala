@@ -5,9 +5,8 @@ import syntax.AstSugar._
 import syntax.Identifier
 import syntax.transform.Extrude
 
-import semantics.Prelude
+import semantics._
 import semantics.Prelude._
-import semantics.{TypeTranslation, Scope, TypedLambdaCalculus, Trench}
 import semantics.TypeTranslation.Environment
 import semantics.TypedScheme.TermWithHole
 import synth.engine.TacticApplicationEngine
@@ -16,7 +15,7 @@ import synth.pods._
 import synth.pods.ConsPod.{`⟨ ⟩`, `⟨ ⟩?`}
 
 import report.FileLog
-
+import synth.proof.{Prover, Assistant}
 
 
 object Gap {
@@ -62,8 +61,8 @@ object Gap {
             `⟨ ⟩`(
               ψ:@(i,j),
               (θ:@(i-_1, j-_1)) + (S:@(i,j)),
-              min :@ (q ↦ ((θ:@(i,q)) + (w:@(q,j)))),
-              min :@ (p ↦ ((θ:@(p,j)) + (`w'`:@(p,i))))
+              min :@ (q ↦ ((θ:@(i,q)) + ((w :: ((K x K) ∩ K_<) ->: ?):@(q,j)))),
+              min :@ (p ↦ ((θ:@(p,j)) + ((`w'` :: ((J x J) ∩ J_<) -> ?):@(p,i))))
             )
           )) -: f
         ))
@@ -84,7 +83,7 @@ object Gap {
             ψ :: ((J x K0) -> R),
             (i ↦: j ↦: (min :@ `⟨ ⟩`(
               ψ:@(i,j),
-              (ψ:@(i-_1, (j-_1)::K0)) + (S:@(i,j)),
+              (ψ:@((i-_1)::J, (j-_1)::K0)) + (S:@(i,j)),
               min :@ ((q::K0) ↦ ((ψ:@(i,q)) + (w:@(q,j))))
             ))) :: ((J x K1) -> R)
           )
@@ -93,6 +92,27 @@ object Gap {
   
   object BPod {
     def apply(J: Term, K0: Term, K1: Term) = new BPod(J, K0, K1)
+  }
+
+  class CPod(val J0: Term, val J1: Term, val K: Term) extends Pod {
+    val C = TI("C")
+    val (ψ, θ, i, j, p, q) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), $TV("p"), $TV("q"))
+
+    override val program = Prelude.program(
+      C :- ψ ↦
+          /::(
+            ψ :: ((J0 x K) -> R),
+            (i ↦: j ↦: (min :@ `⟨ ⟩`(
+              ψ:@(i,j),
+              (ψ:@((i-_1)::J0, (j-_1)::K)) + (S:@(i,j)),
+              min :@ ((p::J0) ↦ ((ψ:@(p,j)) + (`w'`:@(p,i))))
+            ))) :: ((J1 x K) -> R)
+          )
+    )
+  }
+
+  object CPod {
+    def apply(J0: Term, J1: Term, K: Term) = new CPod(J0, J1, K)
   }
 
 
@@ -129,6 +149,52 @@ object Gap {
       override def pods(implicit s: State) = {
         case (L("A"), List(~(j), ~(k))) => APod(j, k)
         case (L("B"), List(~(j), ~(k0), ~(k1))) => BPod(j, k0, k1)
+        case (L("C"), List(~(j0), ~(j1), ~(k))) => CPod(j0, j1, k)
+      }
+
+      override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
+      def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
+        import synth.pods._
+        import syntax.Piping._
+
+        for (goal <- goals) extrude(goal) |> {
+          ex => logf += Map("term" -> goal, "display" -> Rich.display(ex))
+        }
+            //report.console.Console.display
+
+        println("· " * 25)
+
+        val a = new Assistant
+
+        val toR = TotalOrderPod(R)
+        val toJ = TotalOrderPod(J, J_<)
+        val toK = TotalOrderPod(K, K_<)
+        val idxJ = IndexArithPod(J, toJ.<)
+        val idxK = IndexArithPod(K, toK.<)
+        val partJ = PartitionPod(J, toJ.<, J0, J1)
+        val partK = PartitionPod(K, toK.<, K0, K1)
+        val minJR = MinPod(J, R, toR.<)
+        val minKR = MinPod(K, R, toR.<)
+        val minNR = MinPod(N, R, toR.<)
+
+        val p = new Prover(List(NatPod, TuplePod, toR, toJ, toK, idxJ, idxK, partJ, partK, minJR, minKR, minNR) ++ pods, Prover.Verbosity.ResultsOnly)
+
+        val commits =
+          for (goals <- goals map (List(_))) yield {
+            //for (goals <- List(goals)) yield {
+            val igoals = goals map a.intros
+            import semantics.pattern.SimplePattern
+            val t = new p.Transaction
+            val switch = t.commonSwitch(new p.CommonSubexpressionElimination(igoals, new SimplePattern(min :@ ?)))
+
+            t.commit(assumptions map a.simplify map t.prop, igoals map (switch(_)) map a.simplify map t.goal)
+          }
+
+        val results = commits reduce (_ ++ _)
+
+        if (!(results.toList forall (_.root == "valid"))) System.exit(1)
+
+        println("=" * 80)  // QED!
       }
     }
 
@@ -136,7 +202,8 @@ object Gap {
     import syntax.transform.Extrude
     import semantics.pattern.SimplePattern 
     import synth.tactics.Rewrite.{Rewrite,instantiate}
-    import synth.pods.{SlicePod,StratifyReducePod,ReduceDistribPod,ReduceAssocPod}
+    import synth.pods.{StratifyReducePod,ReduceDistribPod,ReduceAssocPod}
+    import synth.tactics.SlicePod
     import syntax.Piping._
     import report.console.Console.display
 
@@ -227,7 +294,7 @@ object Gap {
                             for (A <- Rewrite(strat)(A)) {
                               val ex = extrude(A) |-- display
                               // Synth  fix(... 🄰 ...)
-                              import SlicePod.slices
+                              def slices(t: Term) = TypedTerm.split(t, I("/"))
                               val synth = (SimplePattern(fix(* :- /::(`...`))) find fixer(A, ex :/ "🄸")) |>>
                                            (x => SynthSlashPod(slices(x(*)), slices(x(*)))) |>> instapod
                               for (A <- Rewrite(synth)(A)) {

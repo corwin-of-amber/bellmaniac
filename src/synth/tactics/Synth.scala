@@ -102,7 +102,7 @@ object Synth {
     import Sketch._
 
     val command =
-      Seq(SKETCH, "--slv-lightverif", "--fe-inc", INCDIR, "--fe-custom-codegen", CODEGEN, skfile.getName)
+      Seq(SKETCH, "--slv-lightverif", "--fe-inc", INCDIR, "--fe-custom-codegen", CODEGEN, skfile.getPath)
 
     def run()(implicit scope: Scope) = {
       cached getOrElse (md5, {

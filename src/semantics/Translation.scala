@@ -1,9 +1,10 @@
 package semantics
 
+import com.microsoft.z3.BoolExpr
 import syntax.{Tree,Identifier,AstSugar,Scheme}
 import syntax.transform.TreeSubstitution
 import scala.collection.mutable.ArrayBuffer
-import semantics.smt.Z3Gate
+import semantics.smt.{CVC4Gate, Z3Gate}
 
 
 
@@ -353,11 +354,12 @@ object TypeTranslation {
   // -----------
   // Z3Gate part
   // -----------
-  
-  def toSmt(env: List[Environment]) = {
+
+  def toSmt(env: List[Environment]): (Z3Gate, List[BoolExpr]) = toSmt(new Z3Gate, env)
+
+  def toSmt(smt: Z3Gate, env: List[Environment]) = {
     import semantics.smt.SmtNotFirstOrder
     
-    val smt = new Z3Gate
     for (e <- env; d <- e.decl.values; s <- d.symbols)
       try smt.declare(s.untype, s.typ)
       catch { case _: SmtNotFirstOrder =>  }

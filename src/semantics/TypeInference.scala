@@ -269,7 +269,7 @@ object TypeInference {
         val σ = (Map(freshvar -> B) +: children) reduce ((x, y) => mgu(x,y))
         (freshvar, σ)
       }
-      else if (expr.root.kind == "set" || (literal && expr.root.kind == "variable")) {
+      else if (expr.root.kind == "set" || expr.root.kind == "predicate" || (literal && expr.root.kind == "variable")) {
         ///**/ assume(expr.subtrees.length == 1) /**/
         //(freshvar, Map(freshvar -> B) ++ infer0(expr.subtrees(0))._2)
         val children = expr.subtrees map (infer0(_)) map (_._2)

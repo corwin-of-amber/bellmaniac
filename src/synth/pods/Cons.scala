@@ -12,7 +12,7 @@ import semantics.pattern.MacroMap
 
 
 
-class NilPod(val domain: Term, val range: Term)(implicit env: Environment) extends Pod {
+class NilPod(val domain: Term, val range: Term)(implicit scope: Scope) extends Pod {
   
   import Prelude.↓
   
@@ -20,12 +20,12 @@ class NilPod(val domain: Term, val range: Term)(implicit env: Environment) exten
   override val decl = 
       new Declaration(nil) where ∀:(domain, i => ~(↓(nil :@ i)))
       
-  val NILPAT = SimpleTypedPattern(TypedTerm(Prelude.nil, typeOf_!(nil)))(env.scope)
+  val NILPAT = SimpleTypedPattern(TypedTerm(Prelude.nil, typeOf_!(nil)))
   override val macros = MacroMap(Prelude.nil ~> { x => NILPAT(x) map (m => nil) })
 }
 
 object NilPod {
-  def apply(domain: Term, range: Term)(implicit env: Environment) = new NilPod(domain, range)
+  def apply(domain: Term, range: Term)(implicit scope: Scope) = new NilPod(domain, range)
 }
 
 /**
@@ -58,7 +58,7 @@ object ConsPod {
   
   def apply(range: Term)(implicit env: Environment) = new ConsPod(range)
   
-  def `⟨ ⟩`(elements: List[Term]): Term = `⟨ ⟩`(elements:_*)
+  def `⟨ ⟩`(elements: Iterable[Term]): Term = `⟨ ⟩`(elements.toSeq:_*)
     
   def `⟨ ⟩`(elements: Term*) = 
     (elements :\ nil)(cons :@ _ :@ _)
@@ -106,43 +106,11 @@ object TuplePod extends Pod {
     `⟨ ⟩?`(x.term)(x.was) map (x => tuple(x))
   })
 
-
-  def tuple(x: Term) = {
-    import NatPod.{_0}
-    val ι = $TyTV("ι", N)
-    ι ↦ (x |! (ι =:= _0))
-  }
-
-  def tuple(x: Term, y: Term) = {
-    import NatPod.{_0,_1}
-    val ι = $TyTV("ι", N)
-    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1))
-  }
-
-  def tuple(x: Term, y: Term, z: Term) = {
-    import NatPod.{_0,_1,_2}
-    val ι = $TyTV("ι", N)
-    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1), z |! (ι =:= _2))
-  }
-
-  def tuple(x: Term, y: Term, z: Term, w: Term) = {
-    import NatPod.{_0,_1,_2,_3}
-    val ι = $TyTV("ι", N)
-    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1), z |! (ι =:= _2), w |! (ι =:= _3))
-  }
-
-  def tuple(x: Term, y: Term, z: Term, w: Term, v: Term) = {
-    import NatPod.{_0,_1,_2,_3,_4}
-    val ι = $TyTV("ι", N)
-    ι ↦ /::(x |! (ι =:= _0), y |! (ι =:= _1), z |! (ι =:= _2), w |! (ι =:= _3), v |! (ι =:= _4))
-  }
-
-  def tuple(xs: List[Term]): Term = xs match {
-    case List(x) => tuple(x)
-    case List(x,y) => tuple(x,y)
-    case List(x,y,z) => tuple(x,y,z)
-    case List(x,y,z,w) => tuple(x,y,z,w)
-    case List(x,y,z,w,v) => tuple(x,y,z,w,v)
-    case _ => throw new Exception(s"list too long: ${xs map (_.toPretty)}") /* not enough Nats? */
-  }
+  def tuple(xs: List[Term]): Term =
+    if (xs.length > NatPod.nats.length)
+      throw new Exception(s"list too long: ${xs map (_.toPretty)}") /* not enough Nats? */
+    else {
+      val ι = $TyTV("ι", N)
+      ι ↦ /::(xs zip NatPod.nats map {case (x,i) => x |! (ι =:= i)})
+    }
 }

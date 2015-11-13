@@ -21,9 +21,10 @@ class TacticalError(msg: String) extends TraceableException(msg) {}
 
 object NatPod extends Pod {
   import Prelude.{N,B,↓}
-  
-  val _0 = TyTV("0", N)
-  val _1 = TyTV("1", N)
+
+  val nats = 0 to 8 map (n => TyTV(s"$n", N)) toList
+  val _0 = nats(0)
+  val _1 = nats(1)
   val _2 = TyTV("2", N)
   val _3 = TyTV("3", N)
   val _4 = TyTV("4", N)
@@ -35,9 +36,11 @@ object NatPod extends Pod {
   private val i = $TyTV("i", N)
   
   override val decl = new Declaration(_0, _1, z, nz, s, p) where (
-      ↓(_0) & ↓(_1) & ↓(_2) & ↓(_3) & ↓(_4) &
+      &&(nats map (↓(_))),
+      &&(nats.zipWithIndex flatMap {case (n,i) => nats drop (i+1) map (m => ~(n =:= m))}),
+      /*↓(_0) & ↓(_1) & ↓(_2) & ↓(_3) & ↓(_4) &
       ~(_0 =:= _1) & ~(_0 =:= _2) & ~(_1 =:= _2) & ~(_0 =:= _3) & ~(_1 =:= _3) & ~(_2 =:= _3),
-      ~(_0 =:= _4) & ~(_1 =:= _4) & ~(_2 =:= _4) & ~(_3 =:= _4),
+      ~(_0 =:= _4) & ~(_1 =:= _4) & ~(_2 =:= _4) & ~(_3 =:= _4),*/
       TypedTerm(s :@ _0, N) =:= _1,
       z <-> TypedTerm(i ↦ (i =:= _0), N -> B),
       nz <-> TypedTerm(i ↦ ~(z :@ i), N -> B),
@@ -92,7 +95,7 @@ class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: S
 
   override val macros = MacroMap(
     I("-") -> { x => MINUS1PAT(x) map (_(X)) match {
-      case Some(x) => Some(TypedTerm((predJ:@x) |! (succJ:@(predJ:@x,x)), J))
+      case Some(x) => Some(TypedTerm((predJ:@x) |! (<(_0J,x) & (succJ:@(predJ:@x,x))), J))
       case None => MINUSPAT(x) match {
         case Some(mo) => Some(TypedTerm(subJ:@(mo(X), mo(Y)), J))
         case None => None

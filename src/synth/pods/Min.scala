@@ -2,8 +2,7 @@ package synth.pods
 
 import syntax.AstSugar._
 import semantics.TypeTranslation.TypingSugar._
-import semantics.Prelude
-import semantics.TypedTerm
+import semantics.{Scope, Prelude, TypedTerm}
 import semantics.pattern.SimpleTypedPattern
 import semantics.pattern.MacroMap
 import semantics.TypeTranslation.Declaration
@@ -11,7 +10,7 @@ import semantics.TypeTranslation.Environment
 
 
 
-class MinPod(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implicit env: Environment) extends Pod {
+class MinPod(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implicit scope: Scope) extends Pod {
   import Prelude.{B,↓}
   
   val D = domain
@@ -21,8 +20,8 @@ class MinPod(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implici
   val min2 = $TyTV(s"min[2].$R", R -> (R -> R))
 
   private val X = V("x")
-  val MINPAT = SimpleTypedPattern(TypedTerm(Prelude.min, (D -> R) -> R))(env.scope)
-  val MIN2PAT = SimpleTypedPattern(TypedTerm(Prelude.min, R -> (R -> R)))(env.scope)
+  val MINPAT = SimpleTypedPattern(TypedTerm(Prelude.min, (D -> R) -> R))(scope)
+  val MIN2PAT = SimpleTypedPattern(TypedTerm(Prelude.min, R -> (R -> R)))(scope)
   
   override val macros = MacroMap(Prelude.min ~> {
     x => MINPAT(x) map (_ => min)
@@ -38,7 +37,7 @@ class MinPod(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implici
 }
 
 object MinPod {
-  def apply(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implicit env: Environment) = new MinPod(domain, range, <, opaque)
+  def apply(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implicit scope: Scope) = new MinPod(domain, range, <, opaque)
 }
 
 class ReduceDistribPod(val reduce: Term, val fs: List[Term]) extends Pod {

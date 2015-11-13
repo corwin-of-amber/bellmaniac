@@ -1,49 +1,41 @@
-J : set
-K : set
-J₀ : set
-J₁ : set
-K₀ : set
-K₁ : set
+J K : set
+J₀ J₁ K₀ K₁ : set
 
 A `J `K
 
+SaveAs (A `J `K) "loop"
+
 Slice (find (θ ↦ ?)) ⟨`?×J₀×K₀, `?×J₀×K₁, `?×J₁×K₀, `?×J₁×K₁⟩
 
-StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
-StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
-StratifySlash (fixee 🄰) 🄰 (ctx 🄰 ψ)
+Stratify "/" (fixee 🄰) 🄰 ψ
+Stratify "/" (fixee 🄰) 🄰 ψ
+Stratify "/" (fixee 🄰) 🄰 ψ
 
 ⟨Slice (find 🄰 (q ↦ ?)) ⟨`K₀, `K₁⟩,
  Slice (find 🄰 (p ↦ ?)) ⟨`J₀, `J₁⟩,
- Slice (find 🄵 θ) (⟨`J₀,`J₁⟩ ⟨`K₀,`K₁⟩), 
+ Slice 🄵 θ (⟨`J₀,`J₁⟩ ⟨`K₀,`K₁⟩) min,
  Slice (find 🄱 (p ↦ ?)) ⟨`J₀, `J₁⟩,
- Slice (find 🄹 θ) (⟨`J₀,`J₁⟩ ⟨`?⟩), 
+ Slice 🄹 θ (⟨`J₀,`J₁⟩ ⟨`?⟩) min,
  Slice (find 🄲 (q ↦ ?)) ⟨`K₀, `K₁⟩,
- Slice (find 🄽 θ) (⟨`?⟩ ⟨`K₀,`K₁⟩)⟩
-
-⟨Distrib "/" 🄵 (find 🄵 (θ / ?)),
- Distrib "/" 🄽 (find 🄽 (θ / ?)),
- Distrib "/" 🅃 (find 🅃 (θ / ?))⟩
-
-⟨SlashToReduce min ⟨🄵,🄶,🄷,🄸⟩,
- SlashToReduce min ⟨🅀,🅁⟩,
- SlashToReduce min ⟨🅇,🅈⟩⟩
+ Slice 🄽 θ (⟨`?⟩ ⟨`K₀,`K₁⟩) min⟩
 
 Distrib min
 Assoc min
 
-⟨StratifyReduce min (fixee 🄰) ⟨🄴,🄵⟩ (ctx 🄰 ψ),
- StratifyReduce min (fixee 🄱) ⟨🄽,🄾,🅁⟩ (ctx 🄱 ψ),
- StratifyReduce min (fixee 🄲) ⟨🅃,🅄,🅆⟩ (ctx 🄲 ψ)⟩
+⟨Stratify min (fixee 🄰) ⟨🄴,🄵⟩ ψ,
+ Stratify min (fixee 🄱) ⟨🄽,🄾,🅁⟩ ψ,
+ Stratify min (fixee 🄲) ⟨🅃,🅄,🅆⟩ ψ⟩
 
-StratifyReduce min (fixee 🄰) ⟨🄷,🄸,🄻⟩ (ctx 🄰 ψ)
-StratifyReduce min (fixee 🄰) ⟨🄸,🄹,🄼⟩ (ctx 🄰 ψ)
+Stratify min (fixee 🄰) ⟨🄷,🄸,🄽⟩ ψ
+Stratify min (fixee 🄰) ⟨🄸,🄹,🄻⟩ ψ
 
-⟨Synth (fixee 🄰) 🄰 (A `J₁ `K₁) (ctx 🄰 ψ),
- Synth (fixee 🄱) 🄱 (C `J₀ `J₁ `K₁) (ctx 🄱 ψ),
- Synth (fixee 🄲) 🄲 (B `J₁ `K₀ `K₁) (ctx 🄲 ψ),
- Synth (fixee 🄴) 🄴 (A `J₁ `K₀) (ctx 🄳 ψ),
- Synth (fixee 🄵) 🄵 (C `J₀ `J₁ `K₀) (ctx 🄵 ψ),
- Synth (fixee 🄶) 🄶 (A `J₀ `K₁) (ctx 🄶 ψ),
- Synth (fixee 🄷) 🄷 (B `J₀ `K₀ `K₁) (ctx 🄷 ψ),
- Synth (fixee 🄸) 🄸 (A `J₀ `K₀) (ctx 🄸 ψ)⟩
+⟨Synth (fixee 🄰) 🄰 (A `J₁ `K₁)     ψ ⟨`J₁×K₁⟩,
+ Synth (fixee 🄱) 🄱 (B `J₁ `K₀ `K₁) ψ ⟨`J₁×K⟩,
+ Synth (fixee 🄲) 🄲 (C `J₀ `J₁ `K₁) ψ ⟨`J×K₁⟩,
+ Synth (fixee 🄴) 🄴 (A `J₁ `K₀)     ψ ⟨`J₁×K₀⟩,
+ Synth (fixee 🄵) 🄵 (C `J₀ `J₁ `K₀) ψ ⟨`J×K₀⟩,
+ Synth (fixee 🄶) 🄶 (A `J₀ `K₁)     ψ ⟨`J₀×K₁⟩,
+ Synth (fixee 🄷) 🄷 (B `J₀ `K₀ `K₁) ψ ⟨`J₀×K⟩,
+ Synth (fixee 🄸) 🄸 (A `J₀ `K₀)     ψ ⟨`J₀×K₀⟩⟩
+
+SaveAs (A `J `K) "rec"

@@ -292,7 +292,8 @@ object Paren {
     import syntax.transform.Extrude
     import semantics.pattern.SimplePattern 
     import synth.tactics.Rewrite.{Rewrite,instantiate}
-    import synth.pods.{SlicePod,StratifyReducePod,ReduceDistribPod,ReduceAssocPod}
+    import synth.pods.{StratifyReducePod,ReduceDistribPod,ReduceAssocPod}
+    import synth.tactics.SlicePod
     import semantics.TypedLambdaCalculus.{pullOut}
     import report.console.Console.{display,sdisplay}
     import syntax.Piping._

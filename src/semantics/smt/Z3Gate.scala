@@ -1,22 +1,24 @@
 
 package semantics.smt
 
+import java.io.File
 import java.util.regex.Pattern
 import scala.collection.mutable.HashMap
+import scala.util.Either
 
 import com.microsoft.z3.Expr
 import com.microsoft.z3.Sort
+import com.microsoft.z3.FuncDecl
+import com.microsoft.z3.BoolExpr
+import com.microsoft.z3.Z3Exception
+import com.microsoft.z3.Status
+import com.microsoft.z3.Solver
 
 import syntax.Identifier
 import syntax.AstSugar
 import syntax.transform.Mnemonics
-import com.microsoft.z3.FuncDecl
+import syntax.Piping._
 import semantics.TypedIdentifier
-import com.microsoft.z3.BoolExpr
-import com.microsoft.z3.Z3Exception
-import scala.util.Either
-import com.microsoft.z3.Status
-import com.microsoft.z3.Solver
 
 
 
@@ -198,7 +200,7 @@ object Z3Gate {
     val s = ctx mkSolver()
     val p = ctx mkParams()
     //p.add("soft_timeout", 1000)
-    p.add("smt.macro_finder", true)
+    //p.add("smt.macro_finder", true)
     s.setParameters(p)
     s
   }
@@ -207,12 +209,16 @@ object Z3Gate {
     type ProverStatus = Value
     val VALID, INVALID, UNKNOWN = Value
 
-    def fromStatus(status: Status) = {
-      status match {
-        case Status.UNSATISFIABLE => VALID 
-        case Status.SATISFIABLE => INVALID
-        case Status.UNKNOWN => UNKNOWN
-      }
+    def fromStatus(status: Status) = status match {
+      case Status.UNSATISFIABLE => VALID
+      case Status.SATISFIABLE => INVALID
+      case Status.UNKNOWN => UNKNOWN
+    }
+
+    def fromResult(status: String) = status.trim match {
+      case "unsat" => VALID
+      case "sat" => INVALID
+      case _ => UNKNOWN
     }
     
     def toPretty(status: Value) = status.toString.toLowerCase
@@ -224,7 +230,7 @@ object Z3Gate {
   
   import ProverStatus._
 
-  case class Sequent(val negative: List[BoolExpr], val positive: BoolExpr)
+  case class Sequent(negative: List[BoolExpr], positive: BoolExpr)
   
   def solve(assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
     val s = mkSolver
@@ -305,28 +311,29 @@ object Z3Gate {
   // Benchmark Part
   // --------------
       
-  import syntax.Piping._
+  var benchmarkCounter = 0
+  def benchmarkNext(nparts: Int) = {
+    0 until nparts map (i => new File(s"/tmp/benchmark$benchmarkCounter-$i.smt2"))
+  } |-- { _ => benchmarkCounter += 1 }
 
-  var benchmarkCounter = 0;
-  
-  def save(assumptions: List[BoolExpr], goals: List[BoolExpr]) {
+  def zipWithBench[A](l: Iterable[A]) = l zip benchmarkNext(l.size)
+
+  def save(assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
     import java.io._
-    goals.zipWithIndex foreach { case(goal, i) =>
-      val f = new PrintWriter(new File(s"/tmp/benchmark${benchmarkCounter}-${i}.txt"))
+    zipWithBench(goals) |-- (_ foreach { case(goal, benchf) =>
+      val f = new PrintWriter(benchf)
       f write ctx.benchmarkToSMTString("bellmania", "", "unknown", "", assumptions toArray, ~goal) |> standardize
-      f close
-    }
-    benchmarkCounter = benchmarkCounter + 1
+      f.close()
+    })
   }
   
-  def save(assumptions: List[BoolExpr], goals: Iterable[Sequent])(implicit d: DummyImplicit)  {
+  def save(assumptions: List[BoolExpr], goals: Iterable[Sequent])(implicit d: DummyImplicit) = {
     import java.io._
-    goals.zipWithIndex foreach { case(goal, i) =>
-      val f = new PrintWriter(new File(s"/tmp/benchmark${benchmarkCounter}-${i}.txt"))
+    zipWithBench(goals) |-- (_ foreach { case(goal, benchf) =>
+      val f = new PrintWriter(benchf)
       f write ctx.benchmarkToSMTString("bellmania", "", "unknown", "", (assumptions ++ goal.negative) toArray, ~goal.positive) |> standardize
-      f close
-    }
-    benchmarkCounter = benchmarkCounter + 1
+      f.close()
+    })
   }
   
   def standardize(smt: String) = {

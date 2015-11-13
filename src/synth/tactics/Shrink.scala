@@ -75,7 +75,7 @@ object Shrink {
   }
   
   class APod(val J: Term, val J0: Term) {
-    import Prelude.{ω,∩,R,min,?,cons,nil}
+    import Prelude.{ω,R,min,?,cons,nil}
     import examples.Paren.{<,θ,i,j,k,x,w,_1,f}
     
     val A = $TV("A")

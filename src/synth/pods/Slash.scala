@@ -31,31 +31,7 @@ object PartitionPod {
   def apply(J: Term, < : Term, J0: Term, J1: Term)(implicit scope: Scope) = new PartitionPod(J, <, J0, J1)
 }
 
-class SlicePod(val f: Term, val subdomains: List[Term]) extends Pod {
-  import Prelude.?
 
-  val slices = subdomains map (_ -> ?)
-  override val program =
-    f =:= /::(slices map (f :: _))
-
-  override val obligations = {
-    val fabs = $TyTV("f", TypedTerm.typeOf_!(f))
-    fabs =:= /::(slices map (fabs :: _))
-  }
-
-}
-
-object SlicePod {
-
-  def apply(f: Term, subdomains: List[Term]) = new SlicePod(f, subdomains)
-
-  def splitSkip(term: Term, sep: Identifier): List[Term] =
-    if (term =~ (":", 2)) splitSkip(term.subtrees(1), sep)
-    else if (term.root == sep) term.subtrees flatMap (splitSkip(_, sep))
-    else List(term)
-
-  def slices(term: Term) = splitSkip(term, I("/"))
-}
 
 
 class PadPod(f: Term, padding: List[Term]) extends Pod {
@@ -100,7 +76,6 @@ object SlashDistribPod {
 object StratifyPod {
   import Prelude.{ω,ℐ,?}
   import TypedTerm.{replaceDescendant,replaceDescendants}
-  import SlicePod.splitSkip
 
   /*
    * TODO obligations
@@ -109,7 +84,7 @@ object StratifyPod {
    */
   
   def apply(box: Term, quadrant: Term, sideburns: List[Term]=List())(implicit scope: Scope) = {
-    val quadrants = splitSkip(box, I("/"))
+    val quadrants = TypedTerm.split(box, I("/"))
     if (quadrants exists (_ eq quadrant)) {
       val θ = $TV("θ")
       val q = /::(quadrant +: (sideburns map (__ => ℐ :: (__ -> ?))))
