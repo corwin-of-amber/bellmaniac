@@ -1,5 +1,6 @@
 /*
  * g++ -O3 -D N=2000 -D B=16 -o parena paren-a.cpp  && ./parena standard A-rec-debug
+ * g++ -O3 -D INTINTERVAL -D N=2000 -D B=16 -o parena paren-a.cpp  && ./parena random A-rec-debug
  *
  */
 #include <cstdio>
@@ -60,20 +61,20 @@ struct interval {
 //#define FOR_DIAG_I_LT_J_FWD_FWD(i,j,I,J,ZZ) FOR_VAR_FWD(of,0,SIZE(I)){FOR_VAR_FWD(ci,0,SIZE(J)-of){TYPE i = ci+DEFBEGIN(I); TYPE j = DEFBEGIN(J)+ci+of; ZZ}}
 
 //#define FOR_A_loop_2(i,j,I,J,ZZ) FOR_BWD_FWD(i,j,I,J,ZZ)
-#define FOR_A_loop_1(i,K) FOR_FORWARD(i,K)
-#define FOR_A_loop_2(i,K) FOR_BACKWARD(i,K)
-#define FOR_A_loop_3(i,K) FOR_FORWARD(i,K)
+#define FOR_A_loop_1(i,n,m) FOR_VAR_FWD(i,n,m)
+#define FOR_A_loop_2(i,n,m) FOR_VAR_BWD(i,n,m)
+#define FOR_A_loop_3(i,n,m) FOR_VAR_FWD(i,n,m)
 
-#define FOR_B_loop_1(i,K) FOR_BACKWARD(i,K)
-#define FOR_B_loop_2(i,K) FOR_FORWARD(i,K)
+#define FOR_B_loop_1(i,n,m) FOR_VAR_BWD(i,n,m)
+#define FOR_B_loop_2(i,n,m) FOR_VAR_FWD(i,n,m)
 //#define FOR_B_loop_1(i,j,I,J,ZZ) FOR_BWD_FWD(i,j,I,J,ZZ)
 
-#define FOR_C_loop_1(i,K) FOR_FORWARD(i,K)
-#define FOR_C_loop_2(i,K) FOR_FORWARD(i,K)
-#define FOR_C_loop_3(i,K) FOR_FORWARD(i,K)
+#define FOR_C_loop_1(i,n,m) FOR_VAR_FWD(i,n,m)
+#define FOR_C_loop_2(i,n,m) FOR_VAR_FWD(i,n,m)
+#define FOR_C_loop_3(i,n,m) FOR_VAR_FWD(i,n,m)
 //#define FOR_C_loop_2(i,j,I,J,ZZ) FOR_FWD_FWD(i,j,I,J,ZZ)
 
-#define FORUNION(i,K,L,ZZ) FOR_FORWARD(i,K){ZZ};FOR_FORWARD(i,L){ZZ}
+#define FORUNION(i,nK,mK,nL,mL,ZZ) FOR_VAR_FWD(i,nK,mK){ZZ};FOR_VAR_FWD(i,nL,mL){ZZ}
 
 #define BASE_CONSTRAINT_A(a) ((DEFEND(a)-DEFBEGIN(a)) <= B)
 #define BASE_CONSTRAINT_B(a,b) (BASE_CONSTRAINT_A(a) || BASE_CONSTRAINT_A(b))
@@ -82,14 +83,24 @@ string distType = "";
 string runType = "";
 /*
  * Auto-generated Code
-
+ */
+/*
  void funcC_loop(DEFINTERVALFUNC(K0), DEFINTERVALFUNC(K1), DEFINTERVALFUNC(K2)) {
 
- FOR_C_loop_2(i, j, K0, K2,
+ FOR_C_loop_2(i, K0)
+ {
+ FOR_C_loop_3(j, K2)
+ {
 
- TYPE t310= MAXVAL; FOR_C_loop_1(k,K1){ if (i<k && k<j){ t310 = min(t310,dist[i][k]+dist[k][j]+w(i,k,j)); } }
+ TYPE t14 = MAXVAL;
+ FOR_C_loop_1(k,K1)
+ {
+ t14 = min(t14, dist[i][k]+dist[k][j]+w(i,k,j));
+ }
 
- dist[i][j] = min(t310,dist[i][j]);)
+ dist[i][j] = min(t14, dist[i][j]);
+ }
+ }
 
  }
  void funcC_rec(DEFINTERVALFUNC(K0), DEFINTERVALFUNC(K1), DEFINTERVALFUNC(K2)) {
@@ -128,11 +139,18 @@ string runType = "";
 
  void funcB_loop(DEFINTERVALFUNC(J0), DEFINTERVALFUNC(J1)) {
 
- FOR_B_loop_1(i, j, J0, J1,
+ FOR_B_loop_1(i, J0)
+ {
+ FOR_B_loop_2(j, J1)
+ {
 
- TYPE t21= MAXVAL; FORUNION(k,J0,J1, if (i<k && k<j){ t21 = min(t21,dist[i][k]+dist[k][j]+w(i,k,j)); } )
+ TYPE t21 = MAXVAL;
+ FORUNION(k, J0, J1,
+ if (i<k && k<j){ t21 = min(t21,dist[i][k]+dist[k][j]+w(i,k,j)); })
 
- dist[i][j] = min(t21,dist[i][j]);)
+ dist[i][j] = min(t21, dist[i][j]);
+ }
+ }
 
  }
  void funcB_rec(DEFINTERVALFUNC(J0), DEFINTERVALFUNC(J1)) {
@@ -165,11 +183,24 @@ string runType = "";
 
  void funcA_loop(DEFINTERVALFUNC(J)) {
 
- FOR_A_loop_2(i, j, J, J,
+ FOR_A_loop_2(i, J)
+ {
+ FOR_A_loop_3(j,J)
+ {
+ if (i < j) {
 
- TYPE t504= MAXVAL; FOR_A_loop_1(k,J){ if (i<k && k<j){ t504 = min(t504,dist[i][k]+dist[k][j]+w(i,k,j)); } }
+ TYPE t16 = MAXVAL;
+ FOR_A_loop_1(k,J)
+ {
+ if (i < k && k < j) {
+ t16 = min(t16, dist[i][k]+dist[k][j]+w(i,k,j));
+ }
+ }
 
- dist[i][j] = min(t504,dist[i][j]);)
+ dist[i][j] = min(t16, dist[i][j]);
+ }
+ }
+ }
 
  }
  void funcA_rec(DEFINTERVALFUNC(J)) {
@@ -190,20 +221,18 @@ string runType = "";
  }
  */
 
-void funcC_loop(DEFINTERVALFUNC(K0), DEFINTERVALFUNC(K1), DEFINTERVALFUNC(K2)) {
+inline void funcC_loop(DEFINTERVALFUNC(K0), DEFINTERVALFUNC(K1),
+DEFINTERVALFUNC(K2)) {
 
-	FOR_C_loop_2(i, K0)
+	FOR_C_loop_2(i,DEFBEGIN(K0),DEFEND(K0))
 	{
-		FOR_C_loop_3(j, K2)
+		FOR_C_loop_3(j,DEFBEGIN(K2),DEFEND(K2))
 		{
-
-			TYPE t14 = MAXVAL;
-			FOR_C_loop_1(k,K1)
+			FOR_C_loop_1(k,DEFBEGIN(K1),DEFEND(K1))
 			{
-				t14 = min(t14, dist[i][k]+dist[k][j]+w(i,k,j));
+				dist[i][j] = min(dist[i][j], dist[i][k]+dist[k][j]+w(i,k,j));
 			}
 
-			dist[i][j] = min(t14, dist[i][j]);
 		}
 	}
 
@@ -242,18 +271,14 @@ void funcC_rec(DEFINTERVALFUNC(K0), DEFINTERVALFUNC(K1), DEFINTERVALFUNC(K2)) {
 	funcC_rec(PARAM(L1), PARAM(L3), PARAM(L5));
 }
 
-void funcB_loop(DEFINTERVALFUNC(J0), DEFINTERVALFUNC(J1)) {
+inline void funcB_loop(DEFINTERVALFUNC(J0), DEFINTERVALFUNC(J1)) {
 
-	FOR_B_loop_1(i, J0)
+	FOR_B_loop_1(i,DEFBEGIN(J0),DEFEND(J0))
 	{
-		FOR_B_loop_2(j, J1)
+		FOR_B_loop_2(j,DEFBEGIN(J1),DEFEND(J1))
 		{
-
-			TYPE t21 = MAXVAL;
-			FORUNION(k, J0, J1,
-					if (i<k && k<j){ t21 = min(t21,dist[i][k]+dist[k][j]+w(i,k,j)); })
-
-			dist[i][j] = min(t21, dist[i][j]);
+			FORUNION(k, i + 1, DEFEND(J0), DEFBEGIN(J1), j,
+					dist[i][j] = min(dist[i][j],dist[i][k]+dist[k][j]+w(i,k,j)););
 		}
 	}
 
@@ -286,24 +311,17 @@ void funcB_rec(DEFINTERVALFUNC(J0), DEFINTERVALFUNC(J1)) {
 	funcB_rec(PARAM(K0), PARAM(K3));
 }
 
-void funcA_loop(DEFINTERVALFUNC(J)) {
+inline void funcA_loop(DEFINTERVALFUNC(J)) {
 
-	FOR_A_loop_2(i, J)
+	FOR_A_loop_2(i,DEFBEGIN(J),DEFEND(J))
 	{
-		FOR_A_loop_3(j,J)
+		FOR_A_loop_3(j,i+1,DEFEND(J))
 		{
-			if (i < j) {
-
-				TYPE t16 = MAXVAL;
-				FOR_A_loop_1(k,J)
-				{
-					if (i < k && k < j) {
-						t16 = min(t16, dist[i][k]+dist[k][j]+w(i,k,j));
-					}
-				}
-
-				dist[i][j] = min(t16, dist[i][j]);
+			FOR_A_loop_1(k,i+1,j)
+			{
+				dist[i][j] = min(dist[i][j], dist[i][k]+dist[k][j]+w(i,k,j));
 			}
+
 		}
 	}
 
@@ -393,7 +411,7 @@ void checkLoopRec(string func) {
 		}
 	}
 	cout << func << " " << ctr << " values updated correctly." << endl;
-	//cout << "DONE" << endl;
+//cout << "DONE" << endl;
 }
 
 void testC() {

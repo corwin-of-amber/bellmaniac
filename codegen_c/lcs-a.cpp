@@ -1,6 +1,6 @@
 /*
- * g++ -o lcs -D N=15 -D M=15 -D B=4 -O3 lcs-a.cpp  && ./lcs
- *
+ * g++ -o lcs -D N=5000 -D M=1000^C-D B=16 -O3 lcs-a.cpp  && ./lcs
+ * g++ -o lcs -D N=7000 -D M=12000 -D B=256 -O3 lcs-a.cpp  && ./lcs
  */
 #include <cstdio>
 #include <cstdlib>
@@ -27,15 +27,17 @@ using namespace std;
 #define PARAM(I) I
 #endif
 #define MAXVAL 100000
-#define UNDEF (-MAXVAL)
-#define IS_UNDEF(a) (a < -50000)
+#define UNDEF -1
+#define IS_UNDEF(a) (a == UNDEF)
 /* Min Max and Weight Function */
 #define min(a,b) (a<b?a:b)
 #define max(a,b) (a>b?a:b)
-#define OMAX(a,b) ((IS_UNDEF(a) || IS_UNDEF(b))?UNDEF:max(a,b))
+#define OMAX(a,b) max(a,b)
+//#define OMAX(a,b) ((IS_UNDEF(a) || IS_UNDEF(b))?UNDEF:max(a,b))
 #define w(i, j, k) (((i*j*k)&7)) //weight function
 #define INSET(i,I) (i >= DEFBEGIN(I) && i < DEFEND(I))
 #define GETDEF(a,b) ((!IS_UNDEF(a))?a:b)
+#define LET(i,v) TYPE i = v
 
 #ifndef N
 #define N 100
@@ -66,29 +68,27 @@ struct interval {
 #define BASE_CONSTRAINT(a) ((DEFEND(a)-DEFBEGIN(a)) <= B)
 #define BASE_CONSTRAINT_A(a,b) (BASE_CONSTRAINT(a) || BASE_CONSTRAINT(b))
 
-#define FOR_A_loop_1(i, I) FOR_FORWARD(i,I)
-#define FOR_A_loop_2(i, I) FOR_FORWARD(i,I)
-#define FOR_A_rec_1(i, I) FOR_FORWARD(i,I)
-#define FOR_A_rec_2(i, I) FOR_FORWARD(i,I)
-#define FOR_A_rec_3(i, I) FOR_FORWARD(i,I)
-#define FOR_A_rec_4(i, I) FOR_FORWARD(i,I)
-#define FOR_A_rec_5(i, I) FOR_FORWARD(i,I)
-#define FOR_A_rec_6(i, I) FOR_FORWARD(i,I)
-#define FOR_A_rec_7(i, I) FOR_FORWARD(i,I)
-#define FOR_A_rec_8(i, I) FOR_FORWARD(i,I)
-#define FOR_A_rec_9(i, I) FOR_FORWARD(i,I)
-#define FOR_A_rec_10(i, I) FOR_FORWARD(i,I)
+#define FOR_A_loop_1(i,n,m) FOR_VAR_FWD(i,n,m)
+#define FOR_A_loop_2(i,n,m) FOR_VAR_FWD(i,n,m)
+#define FOR_A_rec_1(i,n,m) FOR_VAR_FWD(i,n,m)
+#define FOR_A_rec_2(i,n,m) FOR_VAR_FWD(i,n,m)
+#define FOR_A_rec_3(i,n,m) FOR_VAR_FWD(i,n,m)
+#define FOR_A_rec_4(i,n,m) FOR_VAR_FWD(i,n,m)
 
 void funcA_loop(DEFINTERVALFUNC(I), DEFINTERVALFUNC(J)) {
 
-	FOR_A_loop_1(i,I)
+	FOR_A_loop_1(i,DEFBEGIN(I),DEFEND(I))
 	{
-		FOR_A_loop_2(j,J)
+		FOR_A_loop_2(j,DEFBEGIN(J),DEFEND(J))
 		{
-			dist[i][j] =
-					GETDEF(
-							GETDEF(dist[i][j],((DELTA(i,j))?(dist[(i-1)][(j-1)]+1):UNDEF)),
-							(((!DELTA(i,j)))?(OMAX(dist[i][(j-1)],dist[(i-1)][j])):UNDEF));
+			if (IS_UNDEF(dist[i][j])) {
+				if (DELTA(i, j)) {
+					dist[i][j] = dist[(i - 1)][(j - 1)] + 1;
+				}
+				if ((!DELTA(i, j))) {
+					dist[i][j] = OMAX(dist[i][(j - 1)], dist[(i - 1)][j]);
+				}
+			}
 		}
 	}
 
@@ -112,64 +112,104 @@ void funcA_rec(DEFINTERVALFUNC(I), DEFINTERVALFUNC(J)) {
 	DEFEND(J1) = DEFEND(J);
 
 	funcA_rec(PARAM(I0), PARAM(J0));
-	FOR_A_rec_1(i,I0)
+	FOR_A_rec_1(i,DEFBEGIN(I0),DEFEND(I0))
 	{
-		FOR_A_rec_2(j,J1)
 		{
-			dist[i][j] =
-					GETDEF(
-							GETDEF(dist[i][j],((DELTA(i,j) && INSET((j-1),J0))?(dist[(i-1)][(j-1)]+1):UNDEF)),
-							(((!DELTA(i,j)) && INSET((j-1),J0))?(OMAX(dist[i][(j-1)],dist[(i-1)][j])):UNDEF));
+			LET(j, DEFBEGIN(J1));
+			if (IS_UNDEF(dist[i][j])) {
+				if (DELTA(i, j)) {
+					dist[i][j] = dist[(i - 1)][(j - 1)] + 1;
+				}
+				if ((!DELTA(i, j))) {
+					dist[i][j] = OMAX(dist[i][(j - 1)], dist[(i - 1)][j]);
+				}
+			}
 		}
-	};
+	}
 	funcA_rec(PARAM(I0), PARAM(J1));
-	FOR_A_rec_3(i,I1)
 	{
-		FOR_A_rec_4(j,J0)
+		LET(i, DEFBEGIN(I1));
+		FOR_A_rec_2(j,DEFBEGIN(J0),DEFEND(J0))
 		{
-			dist[i][j] =
-					GETDEF(
-							GETDEF(dist[i][j],((DELTA(i,j) && INSET((i-1),I0))?(dist[(i-1)][(j-1)]+1):UNDEF)),
-							(((!DELTA(i,j)) && INSET((i-1),I0))?(OMAX(dist[i][(j-1)],dist[(i-1)][j])):UNDEF));
+			if (IS_UNDEF(dist[i][j])) {
+				if (DELTA(i, j)) {
+					dist[i][j] = dist[(i - 1)][(j - 1)] + 1;
+				}
+				if ((!DELTA(i, j))) {
+					dist[i][j] = OMAX(dist[i][(j - 1)], dist[(i - 1)][j]);
+				}
+			}
 		}
-	};
+	}
 	funcA_rec(PARAM(I1), PARAM(J0));
-	FOR_A_rec_5(i,I1)
 	{
-		FOR_A_rec_6(j,J1)
+		LET(i, DEFBEGIN(I1));
 		{
-			dist[i][j] =
-					GETDEF(
-							GETDEF(dist[i][j],((DELTA(i,j) && INSET((i-1),I0) && INSET((j-1),J0))?(dist[(i-1)][(j-1)]+1):UNDEF)),
-							(((!DELTA(i,j)) && INSET((j-1),J0) && INSET((i-1),I0))?(OMAX(dist[i][(j-1)],dist[(i-1)][j])):UNDEF));
+			LET(j, DEFBEGIN(J1));
+			if (IS_UNDEF(dist[i][j])) {
+				if (DELTA(i, j)) {
+					dist[i][j] = dist[(i - 1)][(j - 1)] + 1;
+				}
+				if ((!DELTA(i, j))) {
+					dist[i][j] = OMAX(dist[i][(j - 1)], dist[(i - 1)][j]);
+				}
+			}
 		}
-	};
-	FOR_A_rec_7(i,I1)
+	}
 	{
-		FOR_A_rec_8(j,J1)
+		LET(i, DEFBEGIN(I1));
+		FOR_A_rec_3(j,DEFBEGIN(J1)+1,DEFEND(J1))
 		{
-			dist[i][j] =
-					GETDEF(
-							GETDEF(dist[i][j],((DELTA(i,j) && INSET((i-1),I0) && INSET((j-1),J1))?(dist[(i-1)][(j-1)]+1):UNDEF)),
-							(((!DELTA(i,j)) && INSET((j-1),J1) && INSET((i-1),I0))?(OMAX(dist[i][(j-1)],dist[(i-1)][j])):UNDEF));
+			if (IS_UNDEF(dist[i][j])) {
+				if (DELTA(i, j)) {
+					dist[i][j] = dist[(i - 1)][(j - 1)] + 1;
+				}
+				if ((!DELTA(i, j))) {
+					dist[i][j] = OMAX(dist[i][(j - 1)], dist[(i - 1)][j]);
+				}
+			}
 		}
-	};
-	FOR_A_rec_9(i,I1)
+	}
+	FOR_A_rec_4(i,DEFBEGIN(I1)+1,DEFEND(I1))
 	{
-		FOR_A_rec_10(j,J1)
 		{
-			dist[i][j] =
-					GETDEF(
-							GETDEF(dist[i][j],((DELTA(i,j) && INSET((i-1),I1) && INSET((j-1),J0))?(dist[(i-1)][(j-1)]+1):UNDEF)),
-							(((!DELTA(i,j)) && INSET((j-1),J0) && INSET((i-1),I1))?(OMAX(dist[i][(j-1)],dist[(i-1)][j])):UNDEF));
+			LET(j, DEFBEGIN(J1));
+			if (IS_UNDEF(dist[i][j])) {
+				if (DELTA(i, j)) {
+					dist[i][j] = dist[(i - 1)][(j - 1)] + 1;
+				}
+				if ((!DELTA(i, j))) {
+					dist[i][j] = OMAX(dist[i][(j - 1)], dist[(i - 1)][j]);
+				}
+			}
 		}
-	};
+	}
 	funcA_rec(PARAM(I1), PARAM(J1));
 }
 
 /*
  * Testing Code
  */
+
+void LCS_orig(DEFINTERVALFUNC(I), DEFINTERVALFUNC(J)) {
+
+	FOR_VAR_FWD(i,DEFBEGIN(I),DEFEND(I))
+	{
+		FOR_VAR_FWD(j,DEFBEGIN(J),DEFEND(J))
+		{
+			if (IS_UNDEF(dist[i][j])) {
+				if (DELTA(i, j)) {
+					dist[i][j] = dist[(i - 1)][(j - 1)] + 1;
+				}
+				else {
+					dist[i][j] = max(dist[i][(j - 1)], dist[(i - 1)][j]);
+				}
+			}
+		}
+	}
+
+}
+
 int X[N];
 int Y[M]; //actual length of sequence is M-1 from index 1 to M-1
 int dloop[N][M];
@@ -241,11 +281,22 @@ int main() {
 	DEFINTERVALSTMT(J);
 	DEFBEGIN(J) = 1;
 	DEFEND(J) = M;
-
-	funcA_loop(PARAM(I),PARAM(J));
+	{
+		timerclass tc;
+		tc.start();
+		LCS_orig(PARAM(I),PARAM(J));
+		tc.stop();
+		tc.print("loop");
+	}
 	dcopy(dist,dloop);
 	dcopy(dorig,dist);
-	funcA_rec(PARAM(I),PARAM(J));
+	{
+		timerclass tc;
+		tc.start();
+		funcA_rec(PARAM(I),PARAM(J));
+		tc.stop();
+		tc.print("rec");
+	}
 	dcopy(dist,drec);
 	checkEq(dloop,drec,"loop-vs-rec",false);
 	cout<<"LCS: "<<dist[N-1][M-1]<<endl;
