@@ -85,7 +85,7 @@ object ConsPod {
 
 
 /**
- * Converts lists up to length 4 (currently) into "tuples".
+ * Converts lists up to size NatPod.nats.length into "tuples".
  * A tuple is a function term of the form
  * ι ↦ x|ι=0 / y|ι=1 / z|ι=2 / ...
  */
