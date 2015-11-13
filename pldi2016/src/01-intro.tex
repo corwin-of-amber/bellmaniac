@@ -50,7 +50,7 @@ partition the space of subproblems into smaller subspaces (see, e.g., \cite{IPDP
 
 Before diving into the details of how solver-aided tactics can be used to derive divide-and-conquer dynamic programming, it is important to explain how an algorithms expert---we will call him Richard---would go about designing such an implementation by hand.
 As a motivating example, we consider the Simplified Arbiter problem.
-Two processes $x$ and $y$ are scheduled to run $|x|$ and $|y|$ time slots,
+Two processes $x$ and $y$ are scheduled to run $|x|=n$ and $|y|=m$ time slots,
 respectively. Execution starts at $t=0$, and the length of each time slot is
 one time unit. The cost for scheduling the slots $[a..b)$ of $x$ at $t=a+c$
 is given by $\xw{abc}$, and the cost for schedulting the slots $[a..b)$ of $y$
@@ -119,46 +119,114 @@ Therefore, considering $G$ as a two-dimensional array, it can be filled in a sin
 to bottom.
 \end{paragraph}
 
-\newcommand\FORLINE[1]{\STATE\algorithmicfor~{#1} \algorithmicdo~}
+\newcommand\FORLINE[1]{\State\algorithmicfor~{#1} \algorithmicdo~}
+\newcommand\Head[1]{\Comment{ {\it #1} ~~}}
 
 \begin{algorithm}
 \renewcommand\arraystretch{1.3}
 \begin{algorithmic}
-  \STATE $G_{00} := 0$
-  \FORLINE{$j=1..|y|$}  $G_{0j} := \yw{0j0}$  
-  \FOR{$i=1..|x|$}
-    \STATE $G_{i0} := \xw{0i0}$
-    \FOR{$j=1..|y|$}
-      \STATE $G_{ij} :=
+  \State $G_{00} := 0$    \Head{Initialize}
+  \FORLINE{$i=1..n$}  $G_{i0} := \xw{0i0}$
+  \FORLINE{$j=1..m$}  $G_{0j} := \yw{0j0}$  
+  \For{$i=1..n$}          \Head{Compute}
+    \For{$j=1..m$}
+      \State $G_{ij} :=
         \begin{array}[t]{@{}l@{~}l} 
-          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
+          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
+                      & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
         \end{array}$
-    \ENDFOR
-  \ENDFOR
+    \EndFor
+  \EndFor
 \end{algorithmic}
 \caption{\label{intro:iterative}
    Iterative Simplified Arbiter}
 \end{algorithm}
 
 
-\newcommand\qbox[1]{\fbox{\scriptsize#1}}
+
+\newcommand\qbox[1]{\fbox{\rm\scriptsize#1}}
 
 \begin{paragraph}{Divide-and-Conquer Algorithm.}
+
+\begin{algorithm}
+\renewcommand\arraystretch{1.3}
+\begin{algorithmic}
+  \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox1}
+    \For{$j=1..\frac{m}{2}$} 
+      \State $G_{ij} :=
+        \begin{array}[t]{@{}l@{~}l} 
+          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
+                      & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
+        \end{array}$
+    \EndFor
+  \EndFor
+  \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox2}
+    \For{$j=\frac{m}{2}..m$}
+      \State $G_{ij} :=
+        \begin{array}[t]{@{}l@{~}l} 
+          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
+                      & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
+        \end{array}$
+    \EndFor
+  \EndFor
+\end{algorithmic}
+\caption{\label{intro:recursive 1,2}
+   Simplified Arbiter --- Recursive Breakdown}
+\end{algorithm}
+
+
+\begin{algorithm}
+\renewcommand\arraystretch{1.3}
+\begin{algorithmic}
+  \For{$i=1..\frac{n}{2}$}    \Comment{Compute \qbox1}
+    \For{$j=1..\frac{m}{2}$}
+      \State $G_{ij} :=
+        \begin{array}[t]{@{}l@{~}l} 
+          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
+                      & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
+        \end{array}$
+    \EndFor
+  \EndFor
+  \For{$i=1..\frac{n}{2}$}    \Comment{Compute \qbox2}
+    \For{$j=\frac{m}{2}..m$}
+      \State $G_{ij} :=
+        \begin{array}[t]{@{}l@{~}l} 
+          \min\langle & \underset{0\leq q<\frac{m}{2}}\min ~ G_{iq} + \yw{qji}~\rangle \\         
+        \end{array}$
+          \Comment{(left)}
+    \EndFor
+  \EndFor
+  \For{$i=1..\frac{n}{2}$}
+    \For{$j=\frac{m}{2}..m$}
+      \State $G_{ij} :=
+        \begin{array}[t]{@{}l@{~}l} 
+          \min\langle G_{ij}, & \underset{\frac{m}{2}\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
+                      & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
+        \end{array}$
+          \Comment{(right)}
+    \EndFor
+  \EndFor
+\end{algorithmic}
+\caption{\label{intro:recursive 1,2}
+   Simplified Arbiter --- Recursive Breakdown}
+\end{algorithm}
+
 
 \begin{figure}
 \centering
 \begin{tabular}{c@{\hspace{.5in}}c}
-$
-\renewcommand\arraystretch{2}
-\begin{array}[b]{c|c|c|c|}
-  \multicolumn{2}{c}{} & \multicolumn{2}{c}{J} \\ \cline{3-4}
-  \multicolumn{2}{c}{} & \multicolumn{1}{c}{J_0}  & \multicolumn{1}{c}{J_1}\\ \cline{3-4}
-  \multirow{2}{*}{$I$} & I_0 & 1 & 2 \\ \cline{3-4}
-    & I_1 & 3 & 4 \\ \cline{3-4}
-\end{array}
-$
+\begin{tikzpicture}[baseline=(base), q/.style={font=\relsize{1.3}}]
+  \draw (0,0) grid (2,2);
+  \node[q] at (.5,1.5) {1};   \node[q] at (1.5,1.5) {2};
+  \node[q] at (.5, .5) {3};   \node[q] at (1.5, .5) {4};
+  \node[above left] at (0,2) {$0$};
+  \node[above] at (1,2) {$\frac{n}{2}$};
+  \node[above] at (2,2) {$n$};
+  \node(base)[left] at (0,1) {$\frac{m}{2}$};
+  \node[left] at (0,0) {$m$};
+\end{tikzpicture}
 & 
-$\begin{array}[b]{l}\qbox1 \rightsquigarrow \qbox2 \\ 
+$\begin{array}{l}\qbox1 \rightsquigarrow \qbox2 \\ 
 \qbox1 \rightsquigarrow \qbox3 \\ \qbox2\rightsquigarrow \qbox4 \\ \qbox3 \rightsquigarrow \qbox4\end{array}$
 \end{tabular}
 \vspace{5pt}
@@ -181,10 +249,10 @@ and that the computation of \qbox4 depends on \qbox2 and \qbox3.
 He \emph{stratifies} the computations on these quadrants into the following
 four steps:
 \begin{algorithmic}[1]
-  \STATE Compute \qbox1 (using only input data $w,w'$).
-  \STATE Compute \qbox2 using data from \qbox1.
-  \STATE Compute \qbox3 using data from \qbox1.
-  \STATE Compute \qbox4 using data from \qbox2 and \qbox3.
+  \State Compute \qbox1 (using only input data $w,w'$).
+  \State Compute \qbox2 using data from \qbox1.
+  \State Compute \qbox3 using data from \qbox1.
+  \State Compute \qbox4 using data from \qbox2 and \qbox3.
 \end{algorithmic}
 
 Each step depends only on a subset of the steps that came before it, 
