@@ -1,0 +1,41 @@
+J : set
+K : set
+J₀ J₁ K₀ K₁ : set
+L₀ L₁ L₂ L₃ : set
+
+C `J₀ `J₁ `K
+∵
+SaveAs (C `J₀ `J₁ `K) "loop"
+
+Slice 🄰 (⟨`L₂, `L₃⟩ ⟨`K₀, `K₁⟩)
+Let "/" (slasher 🄰) 🄰 ψ
+Let "/" (slasher 🄰) 🄰 ψ
+Let "/" (slasher 🄰) 🄰 ψ
+
+⟨Slice 🄵 ψ (⟨`L₀, `L₁⟩ ⟨`K₀, `K₁⟩) min,
+ Slice 🄸 ψ (⟨`L₀, `L₁⟩ ⟨`?⟩) min,
+ Slice 🄻 ψ (⟨`L₀, `L₁⟩ ⟨`K₀, `K₁⟩) min,
+ Slice 🄾 ψ (⟨`L₀, `L₁⟩ ⟨`?⟩) min,
+ Slice (findAll (p ↦ ?)) ⟨`L₀, `L₁⟩⟩
+
+Distrib min
+Assoc min
+
+⟨Let min (slasher 🄰) ⟨🄴,🄵,🄷⟩ ψ,
+ Let min (slasher 🄲) ⟨🅀,🅁,🅃⟩ ψ⟩
+
+⟨Let min (slasher 🄰) ⟨🄶,🄷,🄹⟩ ψ,
+ Let min (slasher 🄲) ⟨🄾,🄿,🅁⟩ ψ,
+ Let min (slasher 🄳) ⟨🅃,🅄,🅆⟩ ψ,
+ Let min (slasher 🄵) ⟨🄱̲,🄲̲,🄴̲⟩ ψ⟩
+
+⟨Synth 🄰 (C `L₁ `L₃ `K₁) ψ,
+ Synth 🄱 (C `L₀ `L₃ `K₁) ψ,
+ Synth 🄳 (C `L₁ `L₃ `K₀) ψ,
+ Synth 🄴 (C `L₀ `L₃ `K₀) ψ,
+ Synth 🄵 (C `L₁ `L₂ `K₁) ψ,
+ Synth 🄶 (C `L₀ `L₂ `K₁) ψ,
+ Synth 🄸 (C `L₁ `L₂ `K₀) ψ,
+ Synth 🄹 (C `L₀ `L₂ `K₀) ψ⟩
+
+SaveAs (C `J₀ `J₁ `K) "rec"

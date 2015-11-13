@@ -116,21 +116,14 @@ object Gap {
   }
 
 
-  implicit val env = {
-    import semantics.Domains._
-    val scope = new Scope
+  import semantics.Domains._
 
-    List(R, N, J, K) foreach scope.sorts.declare
+  implicit val scope = new Scope(R, N, J, K)(
+    J0 :<: J, J1 :<: J, K0 :<: K, K1 :<: K,
+    L0 :<: J0, L1 :<: J0, L2 :<: J1, L3 :<: J1,
+    M0 :<: K0, M1 :<: K0, M2 :<: K1, M3 :<: K1)
 
-    List(J0 :<: J, J1 :<: J, K0 :<: K, K1 :<: K,
-         L0 :<: J0, L1 :<: J0, L2 :<: J1, L3 :<: J1,
-         M0 :<: K0, M1 :<: K0, M2 :<: K1, M3 :<: K1) foreach scope.sorts.declare
-
-    scope.sorts.cork()
-
-    TypeTranslation.subsorts(scope) where
-      (compl(J)(J0, J1), compl(K)(K0, K1))
-  }
+  implicit val env = TypeTranslation.subsorts(scope)
 
   def main(args: Array[String]) = BreakDown.main(args)
 
@@ -138,9 +131,8 @@ object Gap {
   object BreakDown {
     
     def main(args: Array[String]): Unit = {
-      implicit val scope = env.scope
-      //rewriteA
-      new Interpreter().executeFile("/tmp/synopsis.json")
+      val filename = args.headOption getOrElse "/tmp/synopsis.json"
+      new Interpreter().executeFile(filename)
     }
 
     class Interpreter(implicit scope: Scope) extends TacticApplicationEngine {
@@ -157,10 +149,9 @@ object Gap {
         import synth.pods._
         import syntax.Piping._
 
-        for (goal <- goals) extrude(goal) |> {
-          ex => logf += Map("term" -> goal, "display" -> Rich.display(ex))
+        for (goal <- goals) extrude(goal) |> { report.console.Console.display
+          //ex => logf += Map("term" -> goal, "display" -> Rich.display(ex))
         }
-            //report.console.Console.display
 
         println("· " * 25)
 

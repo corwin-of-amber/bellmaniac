@@ -2,7 +2,7 @@ J K : set
 J₀ J₁ K₀ K₁ : set
 
 A `J `K
-
+∵
 SaveAs (A `J `K) "loop"
 
 Slice (find (θ ↦ ?)) ⟨`?×J₀×K₀, `?×J₀×K₁, `?×J₁×K₀, `?×J₁×K₁⟩

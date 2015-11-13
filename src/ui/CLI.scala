@@ -35,36 +35,6 @@ object CLI {
     TypeInference.infer(term)
   }
 
-  def invokeProver(goals: List[Term]): Unit = {
-
-    implicit val env = Gap.env
-    implicit val scope = env.scope
-
-    val a = new Assistant
-
-    val assumptions = List()
-
-    val toR = TotalOrderPod(R)
-    val toJ = TotalOrderPod(J)
-    val idxJ = IndexArithPod(J, toJ.<)
-    val partJ = PartitionPod(J, toJ.<, J0, J1)
-    val nilNR = NilPod(N, R)
-    val consR = ConsPod(R)
-    val minJR = MinPod(J, R, toR.<) //, opaque=true)
-    val minNR = MinPod(N, R, toR.<) //, opaque=true)
-
-    val p = new Prover(List(NatPod, TuplePod, toJ, idxJ, partJ, toR, minJR, minNR, consR, nilNR))
-
-    val t = new p.Transaction
-    val switch = t.commonSwitch(new p.CommonSubexpressionElimination(goals, new SimplePattern(min :@ ?)))
-
-    val results =
-      t.commit(assumptions map a.simplify map t.prop, goals map (switch(_)) map a.simplify map t.goal)
-
-    println("=" * 80)
-    Trench.display(results, "◦")
-  }
-
   def getLines(f: BufferedReader): Stream[String] = {
     val line = f.readLine()
     if (line == null) Stream.empty else line #:: getLines(f)
@@ -98,10 +68,12 @@ object CLI {
                        "display" -> Rich.display(extrude(result))))
           case _ => json.get("tactic") match {
             case tactic: DBObject =>
-              val term = json.get("term") andThen (_.asInstanceOf[DBObject] |> Formula.fromJson, { throw new SerializationError("tactic: missing 'term' key", json) })
+              val term = json.get("term") andThen_ (Formula.fromJson, TI("dry-run"))
+                  //{ throw new SerializationError("tactic: missing 'term' key", json) })
               val command = tactic |> Formula.fromJson
               val tae = new TacticApplicationEngine()
-              val result = tae.transform(tae.initial(term), command)
+              val result = if (term == TI("dry-run")) tae.mkState(command)
+                else tae.transform(tae.initial(term), command)
               cc.map(Map("term" -> result.program,
                          "display" -> Rich.display(result.ex)))
             case _ =>
@@ -125,22 +97,13 @@ object CLI {
           println("""{"error": "failed to parse JSON element"}""")
         }
 
-        println("\n")
-
-        /*&& json.get("$") == "Tree") {
-
-          //println(s"Term: ${term.toPretty}")
-
-          //val ex = extrude(term) |-- display
-
-          //invokeProver(List(term))
-        }*/
+        println()
       }
     }
   }
 
   def main(args: Array[String]) {
-    val filename = if (args.length > 0) args(0) else "-"
+    val filename = args.headOption getOrElse "-"
     try {
       val f = new BufferedReader(
         if (filename == "-") new InputStreamReader(System.in) else new FileReader(filename))

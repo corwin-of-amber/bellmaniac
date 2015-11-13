@@ -299,11 +299,11 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
   def transform(s: State, json: DBObject)(implicit sc: SerializationContainer): State = json match {
     case l: BasicDBList =>  (s /: (l map (_.asInstanceOf[DBObject])))(transform)
-    case _ => json.get("check") andThen ({ check =>
-      transform(s, Formula.fromJson(check.asInstanceOf[DBObject])) |-- {
-        new_s => if (new_s ne s) { display(new_s.ex) ; logf += Map("term" -> new_s.program, "display" -> Rich.display(new_s.ex)) }
+    case _ => json.get("check") orElse json.get("tactic") andThen_ (
+      (_:DBObject) |> Formula.fromJson |> (transform(s, _)) |-- {
+        `s'` => if (`s'` ne s) { display(`s'`.ex) ; logf += Map("term" -> `s'`.program, "display" -> Rich.display(`s'`.ex)) }
       }
-    }, s)
+    , s)
   }
 
   def execute(reader: BufferedReader)(implicit sc: SerializationContainer=new DisplayContainer) {

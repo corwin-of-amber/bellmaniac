@@ -165,7 +165,9 @@ object Nullable {
   implicit class OrElse[A](val o: A) extends AnyVal {
     def orElse(ow: => A) = if (o == null) ow else o
     def andThen[B](op: A => B, ow: => B): B = if (o == null) ow else op(o)
+    def andThen_[X,B](op: X => B, ow: => B): B = if (o == null) ow else op(o.asInstanceOf[X])
     def opt = andThen(Some(_), None)
+    def opt_[X] = andThen_[X,Option[X]](Some(_), None)
   }
 }
 

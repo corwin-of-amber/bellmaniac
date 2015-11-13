@@ -1,8 +1,8 @@
-J  : set
+J : set
 J₀ J₁ : set
 
 A `J
-
+∵
 SaveAs (A `J) "loop"
 
 Slice (find (θ ↦ ?)) (`? ⟨`J₀×J₀, `J₀×J₁, `J₁×J₁⟩)
