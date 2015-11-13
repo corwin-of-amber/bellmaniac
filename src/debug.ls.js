@@ -49,7 +49,8 @@
         return $timeout(function(){
           $scope.errorMsg = err.message;
           $scope.cm.currentOverlay = errorOverlay($scope.cm.getLine(err.line - 1), err.offset + 1);
-          return $scope.cm.addOverlay($scope.cm.currentOverlay);
+          $scope.cm.addOverlay($scope.cm.currentOverlay);
+          return $scope.parsed = output.fromNearley;
         });
       };
       bellmaniaParse({

@@ -14,6 +14,20 @@ splitTextToBlocks = (input) ->
     _.reduce blocks, ((x,y) -> y.line = x ; x + countLines(y.text)), 1
     blocks .filter (.text == /\S/)
 
+readResponseBlocks = (output, parsedInputs) ->
+    for block, blockIdx in output.split(/\n\n+(?=\S)/)
+        try
+            outputBlock = JSON.parse(block)
+            if (outputBlock.error)
+                throw outputBlock
+            {value: outputBlock}
+        catch err
+            # add line number from input before re-throwing
+            # so that correct line can be highlighted
+            parsedInputs[blockIdx]
+              err.line = (..check ? ..tactic)?.line
+            throw err
+    
 # input is of form
 #     {isTactic: bool,
 #      text: string from codemirror
@@ -39,27 +53,18 @@ root.bellmaniaParse = (input, success, error) ->
 
         jar.stdout.on \end, !->
             try
-                for block, blockIdx in buffer.join("").split(/\n\n+(?=\S)/)
-                    try
-                        outputBlock = JSON.parse(block)
-                        if (outputBlock.error)
-                            throw outputBlock
-                        output.fromJar.push({value: outputBlock})
-                    catch err
-                        # add block index to error before re-throwing
-                        # so that correct line can be highlighted
-                        err.line = blockIdx + setDeclarations + 1
-                        throw err
+                output.fromJar = readResponseBlocks buffer.join(""), output.fromNearley
                 success(output)
             catch err
-                error(err)
+                error(err, output)
 
         jar.stderr.on \data, (data) !->
             error(data)
 
         # reset global list of sets to empty
         root.scope = []
-        setDeclarations = 0
+        
+        mode = "check"
 
         output.fromNearley = _.chain(blocks)
         .map((block) ->
@@ -70,20 +75,17 @@ root.bellmaniaParse = (input, success, error) ->
                 results = _.compact parsed.results
                 if results.length == 0 then throw {message: "No possible parse of input found."}
                 assert results.length == 1, JSON.stringify(results) + " is not a unique parse."
-                results[0]
+                results[0] <<< {mode, block.line}
+                  if ..set-mode? then mode := ..set-mode
             catch err
                 err.line = block.line
                 throw err
-        ).filter((block) ->
+        ).filter((block) -> block.kind != \set && !(block.set-mode?)
             # only take the expressions that aren't set declarations
             # nearley has already pushed set declarations to root.scope
-            if (block.kind == \set)
-                setDeclarations += 1
-                return false
-            return true
         ).map((block) ->
             # wrap each expression in another layer that includes scope
-            check: block
+            (block.mode): block
             scope: window.scope
         ).value!
 
@@ -91,7 +93,7 @@ root.bellmaniaParse = (input, success, error) ->
             if input.isTactic
                 for parsedBlock in output.fromNearley
                     if (input.termJson.root.literal != \program)
-                        term = tree(identifier(\program, \variable), [input.termJson])
+                        term = tree(identifier(\program, '?'), [input.termJson])
                     else
                         term = input.termJson
                     tacticBlock = {

@@ -5,6 +5,7 @@ function id(x) {return x[0]; }
 var grammar = {
     ParserRules: [
     {"name": "term", "symbols": ["_", "expression", "_"], "postprocess": take(1)},
+    {"name": "expression", "symbols": ["setMode"], "postprocess": id},
     {"name": "expression", "symbols": ["setDeclaration"], "postprocess": id},
     {"name": "expression", "symbols": ["untypedExpression", "expression$ebnf$1"], "postprocess":  function(d) {
         if (d[1] === null) {
@@ -13,8 +14,10 @@ var grammar = {
         	d[0].type = d[1][3];
         	return d[0].type && d[0];
         } } },
+    {"name": "setMode", "symbols": [{"literal":"∵"}], "postprocess": function() { return {setMode: "tactic"}; }},
+    {"name": "setMode", "symbols": [{"literal":"∎"}], "postprocess": function() { return {setMode: "tactic"}; }},
     {"name": "setDeclaration$string$1", "symbols": [{"literal":"s"}, {"literal":"e"}, {"literal":"t"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "setDeclaration", "symbols": ["identifier", "setDeclaration$ebnf$1", "_", "colon", "_", "setDeclaration$string$1"], "postprocess": 
+    {"name": "setDeclaration", "symbols": ["variable", "setDeclaration$ebnf$1", "_", "colon", "_", "setDeclaration$string$1"], "postprocess": 
         function(d, loc, reject) { return declareSets(d[0], d[1].map(take(1))) || reject; } },
     {"name": "untypedExpression", "symbols": ["applicationExpression"], "postprocess": id},
     {"name": "untypedExpression", "symbols": ["lambdaExpression"], "postprocess": id},
@@ -135,7 +138,7 @@ var grammar = {
     {"name": "__$ebnf$1", "symbols": [/[\s]/]},
     {"name": "__$ebnf$1", "symbols": [/[\s]/, "__$ebnf$1"], "postprocess": function arrconcat(d) {return [d[0]].concat(d[1]);}},
     {"name": "expression$ebnf$1$subexpression$1", "symbols": ["_", "colon", "_", "type"]},
-    {"name": "setDeclaration$ebnf$1$subexpression$1", "symbols": ["__", "identifier"]},
+    {"name": "setDeclaration$ebnf$1$subexpression$1", "symbols": ["__", "variable"]},
     {"name": "listExpression$ebnf$1$subexpression$1", "symbols": ["_", "comma", "_", "expression"]},
     {"name": "lambdaExpression$ebnf$1$subexpression$1", "symbols": ["possiblyTypedLambdaParameter", "__"]},
     {"name": "lambdaExpression$ebnf$1$subexpression$2", "symbols": ["possiblyTypedLambdaParameter", "__"]}

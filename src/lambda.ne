@@ -4,7 +4,8 @@
 
 term -> _ expression _ {% take(1) %}
 
-expression 	-> setDeclaration {% id %}
+expression 	-> setMode {% id %}
+    | setDeclaration {% id %}
 	| untypedExpression (_ colon _ type):? {% function(d) {
 		if (d[1] === null) {
 			return d[0];
@@ -13,11 +14,19 @@ expression 	-> setDeclaration {% id %}
 			return d[0].type && d[0];
 		} } %}
 
+###########################
+####### MODE SWITCH #######
+###########################
+
+setMode -> 
+    "∵" {% function() { return {setMode: "tactic"}; } %}
+  | "∎" {% function() { return {setMode: "tactic"}; } %}
+
 ###############################
 ####### SET DECLARATION #######
 ###############################
 
-setDeclaration -> identifier (__ identifier):* _ colon _ "set" {%
+setDeclaration -> variable (__ variable):* _ colon _ "set" {%
   function(d, loc, reject) { return declareSets(d[0], d[1].map(take(1))) || reject; } %}
 
 ###########################################

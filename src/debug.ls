@@ -46,6 +46,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 $scope.errorMsg = err.message
                 $scope.cm.currentOverlay = errorOverlay($scope.cm.getLine(err.line - 1), err.offset + 1)
                 $scope.cm.addOverlay($scope.cm.currentOverlay)
+                $scope.parsed = output.fromNearley
             )
 
         bellmaniaParse({isTactic: false, text: $scope.code}, success, error)
