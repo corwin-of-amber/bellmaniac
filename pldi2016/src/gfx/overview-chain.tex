@@ -1,0 +1,50 @@
+\begin{tikzpicture}[>=latex,x=6mm,y=6mm,
+    every path/.style={step=1},
+    every node/.style={inner sep=.5pt},
+    init data/.style={pattern=north west lines, pattern color=green!50!black},
+    block/.style={rectangle,draw,very thick,fill=Orange, fill opacity=0.2, inner sep=0}]
+    
+  \def\dx{1.75cm}
+    
+  \fill[init data] (0,0) rectangle ++(.2,2);
+  \fill[init data] (0,2) rectangle ++(2,-.2);
+  \draw (0,0) grid (2,2);
+  \node(s)[block,fit={(0,1) (1,2)}] {};
+  %\node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  %\node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
+
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {1};   %\node(2) at (1.5,1.5) {2};
+  %\node(3) at (.5,.5) {3};         \node(4) at (1.5,.5) {4};
+  \draw (s.70) edge[->,out=20] (1);
+  \node(s)[block,fit={(0,1) (2,2)}] {};
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {1};  \node(2) at (1.5,1.5) {2};
+  %\node(3) at (.5,.5) {3};        \node(4) at (1.5,.5) {4};
+  \draw (s.70) edge[->,out=20] (2);
+  \node(s)[block,fit={(0,0) (1,2)}] {};
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5,.5) {3};%    \node(4) at (1.5,.5) {4};
+  \draw (s.south) edge[->,out=-40,in=-150] (3.250);
+  \fill[block] (0,0) |- (.85,1) to[out=0,in=-90] (1,1.15) |- (2,2) |- (1.15,1) to[out=180,in=90] (1,.85) |- cycle;
+  \coordinate (s) at (.8,0);
+  \node[inner sep=0 ] at (2.5,1) {\steparrow};
+  \tikzset{xshift=\dx};
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
+  \draw (s.south) edge[->,out=-30,in=-150] (4); 
+\end{tikzpicture}

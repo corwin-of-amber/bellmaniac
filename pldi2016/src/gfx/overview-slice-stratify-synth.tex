@@ -1,0 +1,198 @@
+\begin{tikzpicture}[>=latex,x=6mm,y=6mm,
+    every path/.style={step=1},
+    every node/.style={inner sep=.5pt},
+    init data/.style={pattern=north west lines, pattern color=green!50!black},
+    block/.style={rectangle,draw,very thick,fill=Orange, fill opacity=0.2, inner sep=0},
+    knob/.style={midway,draw,fill=white,midway,inner sep=1.25pt}]
+    
+  \def\dx{1.75cm}
+  \def\dy{1.75cm}
+  
+  % -------------------------------------------------------
+
+  \draw (0,0) rectangle (2,2);
+  \node(s)[block,fit={(0,0) (2,2)}] {};
+  \node[inner sep=3mm](0) at (1,1) {0};
+
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+
+  \draw (0,0) rectangle (2,2);
+  \node[inner sep=3mm](0) at (1,1) {0$'$};
+  \draw (s.70) edge[->,out=20] (0);
+
+  \applytacticnode{Slice ~~ $i : \langle I_0|I_1\rangle$ ~~ $j : \langle J_0|J_1\rangle$};
+
+  \tikzset{yshift=-\dy,xshift=-\dx}
+    
+  % -------------------------------------------------------
+
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5, .5) {3};   \node(4) at (1.5, .5) {4};
+  \node(s)[block,fit={(0,0) (2,2)}] {};
+
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};   \node(2) at (1.5,1.5) {\primeocd 2};
+  \node(3) at (.5, .5) {\primeocd 3};   \node(4) at (1.5, .5) {\primeocd 4};
+  \draw (s.70) edge[->,out=20] (1);
+  \draw (s.70) edge[->,out=20] (2);
+  \draw (s.70) edge[->,out=20] (3);
+  \draw (s.70) edge[->,out=20] (4);
+
+  \applytacticnode{Stratify \qbox1};
+
+  % -------------------------------------------------------
+  \setlength\baselineskip{16pt}  
+  \setlength\parskip{18pt}  
+
+  \tikzset{yshift=-\dy,xshift=-\dx}
+
+  \draw (0,0) grid (2,2);
+  \node(s)[block,fit={(0,1) (1,2)}] {};
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5, .5) {3};   \node(4) at (1.5, .5) {4};
+
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5, .5) {3};             \node(4) at (1.5,.5) {4};
+  \draw (s.70) edge[->,out=20] node[knob,circle] {} (1);
+  \node(s)[block,fit={(0,0) (2,2)}] {};
+  
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};   \node(2) at (1.5,1.5) {\primeocd 2};
+  \node(3) at (.5, .5) {\primeocd 3};   \node(4) at (1.5, .5) {\primeocd 4};
+  \draw (s.70) edge[->,out=20] (2);
+  \draw (s.70) edge[->,out=20] (3);
+  \draw (s.70) edge[->,out=20] (4);
+  
+  \applytacticnode{Synth $\circ ~~ \dashrightarrow A^{I_0J_0}$ \\ 
+      \applytactic{Stratify \qbox2}};
+  
+  \tikzset{yshift=-\dy,xshift=-2*\dx}
+
+  % -------------------------------------------------------
+
+  \draw (0,0) grid (2,2);
+  \node(s)[block,fit={(0,1) (1,2)}] {};
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5, .5) {3};   \node(4) at (1.5, .5) {4};
+
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5, .5) {3};   \node(4) at (1.5, .5) {4};
+  \draw (s.70) edge[->,out=20] node[knob,circle] {} (1);
+  \node(s)[block,fit={(0,1) (2,2)}] {};
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};  \node(2) at (1.5,1.5) {\primeocd 2};
+  \node(3) at (.5,.5) {3};             \node(4) at (1.5,.5) {4};
+  \draw (s.70) edge[->,out=20] (2);
+  \node[inner sep=0] at (2.8,1) {$\cdots$};
+
+  \tikzset{xshift=.25*\dx}
+
+  \node[right,align=left] at (3,1) {\applytactic{Slice \qbox2 \\ \quad $p : \langle J_0|J_1\rangle$}};
+
+  \tikzset{yshift=-\dy,xshift=-2.25*\dx}
+
+  % -------------------------------------------------------
+
+  \draw (0,0) grid (2,2);
+  \node(s)[block,fit={(0,1) (1,2)}] {};
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5, .5) {3};   \node(4) at (1.5, .5) {4};
+
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5, .5) {3};   \node(4) at (1.5, .5) {4};
+  \draw (s.70) edge[->,out=20] node[knob,circle] {} (1);
+  \node(s1)[block,fit={(0,1) (1,2)}] {};
+  \node(s2)[block,fit={(1,1) (2,2)}] {};
+  
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};  \node(2) at (1.5,1.5) {\primeocd 2};
+  \node(3) at (.5,.5) {3};             \node(4) at (1.5,.5) {4};
+  \draw (s1.70) edge[->,out=20] (2);
+  \draw (s2.70) edge[->,out=20] (2);
+  \node[inner sep=0] at (2.8,1) {$\cdots$};
+
+  \tikzset{xshift=.25*\dx}
+
+  \node[right,align=left] at (3,1) {\applytactic{Stratify \qbox2$^{\# 1}$}};
+
+  \tikzset{yshift=-\dy,xshift=-2.25*\dx}
+
+  % -------------------------------------------------------
+
+  \draw (0,0) grid (2,2);
+  \node(s)[block,fit={(0,1) (1,2)}] {};
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5, .5) {3};   \node(4) at (1.5, .5) {4};
+
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5, .5) {3};   \node(4) at (1.5, .5) {4};
+  \draw (s.70) edge[->,out=20] node[knob,circle] {} (1);
+  \node(s)[block,fit={(0,1) (1,2)}] {};
+  
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};  \node(2) at (1.5,1.5) {\primeocd 2};
+  \node(3) at (.5,.5) {3};             \node(4) at (1.5,.5) {4};
+  \draw (s.70) edge[->,out=20] node[knob,isosceles triangle,rotate=90] {} (2);
+  \node(s)[block,fit={(1,1) (2,2)}] {};
+
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};  \node(2) at (1.5,1.5) {\doubleprimeocd 2};
+  \node(3) at (.5,.5) {3};             \node(4) at (1.5,.5) {4};
+  \draw (s.70) edge[->,out=20] node[knob,diamond] {} (2);
+  \node[inner sep=0] at (2.8,1) {$\cdots$};
+
+  \tikzset{xshift=-1.25*\dx,yshift=-.75*\dy}
+
+  \applytacticnode{Synth {\tikz\node[knob,isosceles triangle,rotate=90] {};} $~~ \dashrightarrow B^{I_0J_0J_1}$ \\ 
+      \applytactic{Synth $\diamond$} $~~ \dashrightarrow A^{I_0J_1}$};
+
+  \tikzset{yshift=-\dy,xshift=-2*\dx}
+
+\end{tikzpicture}
