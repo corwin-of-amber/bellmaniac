@@ -10,10 +10,11 @@
 \usepackage[usenames,dvipsnames]{xcolor}
 \usepackage{verbatim}
 \usepackage{relsize}
+\usepackage{ifluatex}
 %\usepackage{stfloats}
 
 \usepackage{tikz}
-\usetikzlibrary{fit,positioning}
+\usetikzlibrary{fit,positioning,patterns}
 %\usepackage{pgfplots}
 %\usepackage{pgfplotstable}
 %\pgfplotsset{compat=1.12} 
@@ -54,6 +55,21 @@
 \newcommand\rch[1]{\authornote{RC}{RoyalPurple}{#1}}  % Rezaul
 \newcommand\pga[1]{\authornote{PG}{RawSienna}{#1}}    % Pramod
 \newcommand\coa[1]{\authornote{SI}{NavyBlue}{#1}}     % Shachar
+
+% Armando hack
+\newif\ifarmando
+
+\ifluatex
+\directlua{
+    if not (arg == nil) then
+      for i,v in pairs(arg) do
+        if (v == "armando") then
+          tex.print("\string\\armandotrue")
+        end
+      end
+    end
+  }
+\fi
 
 \include{macros}
 

@@ -169,25 +169,18 @@ to bottom.
         \end{array}$
     \EndFor
   \EndFor
+  \State $\vdots$ \Head{Compute \qbox3}
 \end{algorithmic}
-\caption{\label{intro:recursive 1,2}
-   Simplified Arbiter --- Recursive Breakdown}
+\caption{\label{intro:breakdown}
+   Simplified Arbiter --- Sliced}
 \end{algorithm}
 
 
 \begin{algorithm}
 \renewcommand\arraystretch{1.3}
 \begin{algorithmic}
-  \For{$i=1..\frac{n}{2}$}    \Comment{Compute \qbox1}
-    \For{$j=1..\frac{m}{2}$}
-      \State $G_{ij} :=
-        \begin{array}[t]{@{}l@{~}l} 
-          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
-                      & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
-        \end{array}$
-    \EndFor
-  \EndFor
-  \For{$i=1..\frac{n}{2}$}    \Comment{Compute \qbox2}
+  \State A\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}$\big] \Head{Compute \qbox1}
+  \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox2}
     \For{$j=\frac{m}{2}..m$}
       \State $G_{ij} :=
         \begin{array}[t]{@{}l@{~}l} 
@@ -206,9 +199,10 @@ to bottom.
           \Comment{(right)}
     \EndFor
   \EndFor
+  \State $\vdots$
 \end{algorithmic}
-\caption{\label{intro:recursive 1,2}
-   Simplified Arbiter --- Recursive Breakdown}
+\caption{\label{intro:further-breakdown}
+   Simplified Arbiter --- Sliced Even More}
 \end{algorithm}
 
 
@@ -236,10 +230,12 @@ $\begin{array}{l}\qbox1 \rightsquigarrow \qbox2 \\
 
 Divide-and-conquer is a common algorithm development pattern (\cite{09/CLRS}, chapter 4) that has recently
 been applied to DP (\cite{SODA06/Chowdhury,SPAA08/Chowdhury,TOCS10/Chowdhury,TCBB10/Chowdhury}).
-The DP table is partitioned into regions, and each region is expressed as a sub-problem
+This approach has the benefit of yielding cache-oblivious implementations by
+increasing memory locality while preserving parallelism. With divide-and-conquer,
+the DP table is partitioned into regions, and each region is expressed as a sub-problem
 to be solved.
 
-For the running example Richard takes the two-dimensional array $G$ and partitions it into
+For the running example, Richard takes the two-di\-men\-sio\-nal array $G$ and partitions it into
 quadrants, as illustrated in \Cref{intro:quadrants}. He then applies the same reasoning
 as in the iterative case, concluding that the computations of \qbox2 and \qbox3 depend on \qbox1,
 and that the computation of \qbox4 depends on \qbox2 and \qbox3.
@@ -249,137 +245,101 @@ and that the computation of \qbox4 depends on \qbox2 and \qbox3.
 He \emph{stratifies} the computations on these quadrants into the following
 four steps:
 \begin{algorithmic}[1]
-  \State Compute \qbox1 (using only input data $w,w'$).
+  \State Compute \qbox1.
   \State Compute \qbox2 using data from \qbox1.
   \State Compute \qbox3 using data from \qbox1.
   \State Compute \qbox4 using data from \qbox2 and \qbox3.
 \end{algorithmic}
 
+The result can be seen in \Cref{intro:breakdown} (only the first two steps are shown, remaining steps are analogous).
 Each step depends only on a subset of the steps that came before it, 
-as illustrated by \Cref{intro:chain}. However, this is not yet a divide-and-conquer algorithm: 
-of the four steps, only step \qbox1{} is an instance of the original problem; all the other steps
-look somewhat different from the original problem and lack significant locality. With some algebraic manipulation, however, 
-it is possible to define each of the four steps above recursively, leading to a true divide-and-conquer algorithm with very high locality 
-and significantly improved performance relative to the iterative algorithm.
+as illustrated by \Cref{intro:chain}. 
+At this point, Richard notices that {\it Compute \qbox1} is just a smaller version of
+the original {\it Compute}; so he replaces it by a recursive call with
+the sub-matrix $G_{(0..\frac{n}{2})(0..\frac{m}{2})}$
 
-To illustrate how Richard can perform this transformation, we first introduce a small amount of notation. 
-We define $I$ and $J$ to be the index sets for the rows and columns, respectively.
-We then define partitions $I=I_0\cup I_1$ and $J=J_0\cup J_1$ as in \Cref{intro:quadrants}.
-$G$ is now parameterized on those index sets;
+This is not yet a divide-and-conquer algorithm: 
+apart from \qbox1, the other steps
+look somewhat different from the original problem and lack significant locality. 
+To achieve the desired properties of high memory locality and improved
+performance would require some further algebraic manipulation.
 
-\begin{equation}
-\begin{array}{l@{}l}
-	G^{^{\widehat I \widehat J}}_{(i:\widehat I)\,(j:\widehat J)} ~=~  \\
-	\qquad
-	\begin{cases}
-		0                         & i=j=0 \\
-		w_{0j0}                   & i=0, j>0 \\
-		w'_{0i0}                  & i>0, j=0 \\
-		\begin{array}{@{}l@{~}l}
-		  \min\langle & \underset{q\in \widehat J\cap[0,j)}\min ~ G^{^{\widehat I \widehat J}}_{iq} + \yw{qji}, \\
-		              & \underset{p\in \widehat I\cap[0,i)}\min ~ G^{^{\widehat I \widehat J}}_{pj} + \xw{pij}~\rangle
-		\end{array}              & i,j>0
-	\end{cases}
-\end{array}
-\end{equation}
+To illustrate how Richard can perform this transformation, 
+we observe the computation of \qbox2, which is {\bf not} equivalent to
+A\big[$G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$], 
+because when $\frac{m}{2} \leq j < m$, the range of $0\leq q < j$ leads to
+some of the access $G_{iq}$ lying outside of \qbox2.
 
-The computation of \qbox1 corresponds to the value of $G^{IJ}$ within the sub-domain 
-$I_0\times J_0$, and it also corresponds exactly to $G^{I_0J_0}$. 
-This is due to the fact that for $j\in J_0$, ~$J\cap[0,j)=J_0\cap[0,j)$, and for $i\in I_0$, ~$I\cap[0,i)=I_0\cap[0,i)$, so
-for those $i$ and $j$, $G^{I_0J_0}=G^{IJ}$.
+Richard addressed this problem by splitting the range of $q$, breaking
+the original loop into two loops, one where $0\leq q < \frac{m}{2}$,
+and one where $\frac{m}{2}\leq q < j$. He obtains the version seen in
+\Cref{intro:further-breakdown}. It is important to notice that the first
+loop only reads from \qbox1, while the second loop only reads from \qbox2.
+Also note, that both loops write to the same area, namely \qbox2; hence
+the second loop should take into account the results of the first loop,
+to avoid blind overwriting that would lead to loss of computed data elements.
 
-On the other hand, the computation of \qbox2 is {\bf not} equivalent to $G^{I_0J_1}$, 
-because the range when $j\in J_1$, $J\cap[0,j)\neq J_1\cap[0,j)$. The problem stems from the fact that
-some of the recursive references to $G_{iq}$ are outside of \qbox2.
+The computation of \qbox2:(right) is now a true copy of {\it Compute},
+with sub-matrix $G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$ (with the small caveat,
+that A has to be changed to include the term $G_{ij}$ in the $\min\langle~\rangle$ expression).
+\qbox2:(left) is a new computation, to which Richard gives the name B. After repeating
+the same reasoning steps to {\it Compute \qbox3} and {\it Compute \qbox4},
+he finally has the version in \Cref{intro:recursive-A}.
 
-Richard addressed this problem by splitting the range $J$, adding yet range another parameter to $G$.
+\begin{algorithm}
+\renewcommand\arraystretch{1.3}
+\begin{algorithmic}
+  \State A\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}$\big] \Head{Compute \qbox1}
+  \State B\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}, 
+                G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$\big]    \Head{Compute \qbox2}
+  \State A\big[$G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$\big]
+  \State C\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}, 
+                G_{(\frac{n}{2}..n)(0..\frac{m}{2})}$\big]    \Head{Compute \qbox3}
+  \State A\big[$G_{(\frac{n}{2}..n)(0..\frac{m}{2})}$\big]
+  \State B\big[$G_{(\frac{n}{2}..n)(0..\frac{m}{2})}, 
+                G_{(\frac{n}{2}..n)(\frac{m}{2}..m)}$\big]    \Head{Compute \qbox4}
+  \State C\big[$G_{(0..\frac{n}{2})(\frac{m}{2}..m)}, 
+                G_{(\frac{n}{2}..n)(\frac{m}{2}..m)}$\big]
+  \State A\big[$G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$\big]
+\end{algorithmic}
+\caption{\label{intro:recursive-A}
+   Simplified Arbiter --- Recursive Breakdown}
+\end{algorithm}
 
-\begin{equation}\LeftEqNo
-\begin{array}{l@{}l}
-	G^{^{\widehat I \widehat J \widehat J'}}_{(i:\widehat I)\,(j:\widehat J)} ~=~  \\
-	\qquad
-	\begin{cases}
-		0                         & i=j=0 \\
-		w_{0j0}                   & i=0, j>0 \\
-		w'_{0i0}                  & i>0, j=0 \\
-		\begin{array}{@{}l@{~}l}
-		  \min\langle & \underset{~q\in \widehat J'~}\min ~ G^{^{\widehat I \widehat J'\!\widehat J'}}_{iq} + \yw{qji}, \\
-		              & \underset{q\in \widehat J\cap[0,j)}\min ~ G^{^{\widehat I \widehat J \widehat J'}}_{iq} + \yw{qji}, \\
-		              & \underset{p\in \widehat I\cap[0,i)}\min ~ G^{^{\widehat I \widehat J \widehat J'}}_{pj} + \xw{pij}~\rangle
-		\end{array}              & i,j>0
-	\end{cases}
-\end{array}
-\end{equation}
 
-The computation of \qbox2 is now a copy of $G^{I_0J_1J_0}$. ~$G$ can be further generalized in the following
-way:
+Richard must then use the same strategy to further break down and
+transform the sub-computation B and C, each into four recursive sub-computations, 
+further improving the locality of the resulting algorithm.
+Eventually, through this kind of transformations, he can succeed in breaking the computation of $G$ into recursive sub-computations leading to a true divide-and-conquer algorithm. 
+As is well illustrated by the example, this line of reasoning can get quite complicated for most dynamic programming algorithms, 
+and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered the technique. 
 
-\newcommand{\Ggen}{H}
-
-\begin{equation}\LeftEqNo
-\begin{array}{l@{}l}
-	\Ggen^{^{\widehat I \widehat J \widehat J'}}_{(i:\widehat I)\,(j:\widehat J)\,\psi} ~=~  \\
-	\qquad
-	\begin{cases}
-		0                         & i=j=0 \\
-		w_{0j0}                   & i=0, j>0 \\
-		w'_{0i0}                  & i>0, j=0 \\
-		\begin{array}{@{}l@{~}l}
-		  \min\langle & \psi_{ij}, \\
-		              & \!\underset{q\in \widehat J\cap[0,j)}\min ~ G^{^{\widehat I\widehat J\widehat J'}}_{iq} + \yw{qji}, \\
-		              & \!\underset{p\in \widehat I\cap[0,i)}\min ~ G^{^{\widehat I\widehat J\widehat J'}}_{pj} + \xw{pij}~\rangle
-		\end{array}              & i,j>0
-	\end{cases}
-\end{array}
-\label{intro:Ggen}
-\end{equation}
-
-Richard immediately sees that both $G$ and \qbox1 can be expressed in terms of $\Ggen^{IJJ}$, $\Ggen^{I_0\!J_0\!J_0}$ by making $\psi_{ij}=\infty$, 
-but more importantly, that \qbox2 can now also be expressed in terms of $\Ggen^{I_0J_1J_0}$ by making 
-$\psi_{ij} =  \underset{q\in J_0}\min ~ G^{I_0J_0J_0}_{iq} + \yw{qji}$.
-Moreover, he replaces the calls to $G$ inside $\Ggen$ with recursive calls to $\Ggen$ itself,
-so that the extra parameter $\widehat J'$ is no longer needed:
-%
-\begin{equation}\LeftEqNo
-\begin{array}{l@{}l}
-	\Ggen^{^{\widehat I\widehat J}}_{(i:\widehat I)\,(j:\widehat J)\,\psi} ~=~  \\
-	\qquad
-	\begin{cases}
-		0                         & i=j=0 \\
-		w_{0j0}                   & i=0, j>0 \\
-		w'_{0i0}                  & i>0, j=0 \\
-		\begin{array}{@{}l@{~}l}
-		  \min\langle & \psi_{ij}, \\
-		              & \!\underset{q\in \widehat J\cap[0,j)}\min ~ H^{^{\widehat I\widehat J}}_{iq\psi} + \yw{qji}, \\
-		              & \!\underset{p\in \widehat I\cap[0,i)}\min ~ H^{^{\widehat I\widehat J}}_{pj\psi} + \xw{pij}~\rangle
-		\end{array}              & i,j>0
-	\end{cases}
-\end{array}
-\end{equation}
-
-Richard must then use the same strategy to further generalize $\Ggen^{\widehat I\widehat J}$ so that it can also be used for \qbox3 and \qbox4.
-He will also transform the sub-computation of $\psi$  into four recursive sub-computations, further improving the locality of the resulting algorithm.
-Eventually, through this kind of transformations, he can succeed in breaking the computation of $G$ into recursive sub-computations leading to a true divide-and-conquer algorithm. Unfortunately, this line of reasoning can get quite complicated for most dynamic programming algorithms, and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered the technique. 
-
-Fortunately, these are the steps that are mechanized in Bellmania, allowing an algorithm designer like Richard to produce a provably
-correct implementation of this algorithm through a series of high-level commands. Once a divide and conquer algorithm is found, generating an optimal implementation still requires some additional work, such as finding the right point at which to switch to an iterative algorithm to leverage SIMD parallelism as well as low-level tuning and compiler optimization, but those steps can be performed by more traditional compiler optimization techniques that are outside the scope of this paper.
+Fortunately, these steps are mechanized in Bellmania, which is a system that allows
+Richard and other algorithm designers to produce a provably
+correct implementation of this algorithm through a series of high-level commands. 
+Once a divide-and-conquer algorithm is found, generating an optimal implementation still requires some additional work, such as finding the right point at which to switch to an iterative algorithm to leverage SIMD parallelism as well as low-level tuning and compiler optimization, but those steps can be performed by more traditional compiler optimization techniques that are outside the scope of this paper.
 
 In the following sections, we describe the different components of Bellmania. 
 The system utilizes \newterm{solver-aided tactics} to generate provably correct pseudo-code; 
 this approach is demonstrated by engineering specialized tactics for the domain of divide-and-conquer DP.
 
-\begin{comment}
+\ifarmando
+\else
 \begin{figure}
 \centering
 \begin{tikzpicture}[>=latex,x=6mm,y=6mm,
     every path/.style={step=1},
     every node/.style={inner sep=.5pt},
-    block/.style={rectangle,draw,thick,fill=Orange, fill opacity=0.2, inner sep=0}]
+    init data/.style={pattern=north west lines, pattern color=blue},
+    block/.style={rectangle,draw,very thick,fill=Orange, fill opacity=0.2, inner sep=0}]
     
   \def\dx{1.75cm}
   \def\w{3mm}
     
+  \fill[init data] (0,0) rectangle ++(.2,2);
+  \fill[init data] (0,2) rectangle ++(2,-.2);
   \draw (0,0) grid (2,2);
+  \node(s)[block,fit={(0,1) (1,2)}] {};
   %\node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
   %\node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
 
@@ -390,7 +350,8 @@ this approach is demonstrated by engineering specialized tactics for the domain 
   \draw (0,0) grid (2,2);
   \node(1) at (.5,1.5) {1};   %\node(2) at (1.5,1.5) {2};
   %\node(3) at (.5,.5) {3};         \node(4) at (1.5,.5) {4};
-  \node(s)[block,fit={(0,1) (1,2)}] {};
+  \draw (s.70) edge[->,out=20] (1);
+  \node(s)[block,fit={(0,1) (2,2)}] {};
   \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
 
   \tikzset{xshift=\dx}
@@ -399,7 +360,7 @@ this approach is demonstrated by engineering specialized tactics for the domain 
   \node(1) at (.5,1.5) {1};  \node(2) at (1.5,1.5) {2};
   %\node(3) at (.5,.5) {3};        \node(4) at (1.5,.5) {4};
   \draw (s.70) edge[->,out=20] (2);
-  \node(s)[block,fit={(0,1) (1,2)}] {};
+  \node(s)[block,fit={(0,) (1,2)}] {};
   \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
 
   \tikzset{xshift=\dx}
@@ -420,9 +381,10 @@ this approach is demonstrated by engineering specialized tactics for the domain 
 %\includegraphics[width=.47\textwidth]{img/gap-stratify1}
 \caption[caption]{\label{intro:chain}
   Stratified computation for Simplified Arbiter. \\[.2em]
-  The array is initially empty; 
-  shaded areas indicate the region that is read at each step. }
+  The array is initially empty except for the hatched area that is
+  filled by {\it Initialize}.
+  Shaded areas indicate the region that is read at each step. }
 \end{figure}
-\end{comment}
+\fi
 
 
