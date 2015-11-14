@@ -205,7 +205,7 @@ object Paren {
               ψ:@(i, j)
             )
             
-          ) -: f :: (? ->: ((? x ?) ∩ <) ->: ?) )
+          ) -: f :: (? ->: ((J x J) ∩ <) ->: ?) )
         )
       )
     }
@@ -316,6 +316,8 @@ object Paren {
       val P2 = TV("P₂")
       val P3 = TV("P₃")
       override val prototypes = Map(A → (A:@(? ∩ P1)), B → (B:@(? ∩ P1, ? ∩ P2)), C → (C:@(? ∩ P1, ? ∩ P2, ? ∩ P3)))
+
+      override lazy val prover = Paren.BreakDown.prover
 
       override def invokeProver(pod: Pod): Unit = {
         Paren.BreakDown.invokeProver(List(), pod.obligations.conjuncts, List(pod), logf)
@@ -584,6 +586,28 @@ object Paren {
     }
 
 
+    val prover = {
+      import synth.proof._
+
+      implicit val env = Paren.env
+      implicit val scope = env.scope
+
+      val toR = TotalOrderPod(R)
+      val toJ = TotalOrderPod(J, <)
+      val idxJ = new IndexArithPod(J, toJ.<, succ)
+      val partJ = PartitionPod(J, <, J0, J1)
+      val partJ0 = PartitionPod(J0, <, K0, K1)
+      val partJ1 = PartitionPod(J1, <, K2, K3)
+      val partK0 = PartitionPod(K0, <, L0, L1)
+      val partK1 = PartitionPod(K1, <, L2, L3)
+      val partK2 = PartitionPod(K2, <, L4, L5)
+      val nilNR = NilPod(N, R)
+      val minJR = MinPod(J, R, toR.<)
+      val minNR = MinPod(N, R, toR.<)
+
+      new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, partK0, partK1, partK2, minJR, minNR, nilNR), verbose = Prover.Verbosity.ResultsOnly)
+    }
+
     def invokeProver(assumptions: Iterable[Term], goals: Iterable[Term], pods: Iterable[Pod]=List(), logf: AppendLog=DevNull): Unit = {
       import synth.proof._
       import synth.pods._
@@ -609,8 +633,8 @@ object Paren {
       val partK1 = PartitionPod(K1, <, L2, L3)
       val partK2 = PartitionPod(K2, <, L4, L5)
       val nilNR = NilPod(N, R)
-      val minJR = MinPod(J, R, toR.<) //, opaque=true)
-      val minNR = MinPod(N, R, toR.<) //, opaque=true)
+      val minJR = MinPod(J, R, toR.<)
+      val minNR = MinPod(N, R, toR.<)
 
       val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, partK0, partK1, partK2, minJR, minNR, nilNR) ++ pods, verbose = Prover.Verbosity.ResultsOnly)
 

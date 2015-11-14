@@ -82,10 +82,11 @@ class Assistant(implicit env: Environment) {
     else (List(), goal)
   }
   
-  
-  def simplify(term: Term)(implicit scope: Scope): Term = {
+
+  def simplify(term: Term)(implicit argpat: Term=>Boolean=_=>true): Term = {
     val sub = term.subtrees map simplify
-    if (term =~ ("@", 2) && sub(0) =~ ("↦", 2)) simplify(TypedLambdaCalculus.beta(typeGuard(sub(0)), sub(1)))
+    if (term =~ ("@", 2) && sub(0) =~ ("↦", 2) && argpat(sub(1)))
+      simplify(TypedLambdaCalculus.beta(typeGuard(sub(0)), sub(1)))
     else if (term =~ ("@", 2) && sub(0).root == "/") TypedTerm.preserve(term, TI("/")(sub(0).subtrees map (x => 
       simplify(TypedTerm.preserve( term, TypedTerm.preserveBoth(sub(0), x) :@ sub(1) )))))
     else if (term =~ ("|!", 2)) {

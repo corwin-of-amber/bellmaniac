@@ -29,7 +29,7 @@ import semantics.Trench
  * Carries out automatic proofs employing macro expansion, term translation,
  * and reflection.
  */
-class Prover(val pods: List[Pod], verbose: Prover.Verbosity=Prover.Verbosity.All)(implicit env: Environment) {
+class Prover(val pods: List[Pod], verbose: Prover.Verbosity=Prover.Verbosity.All)(implicit val env: Environment) {
 
   import TypeTranslation.TypingSugar._
   import TypedTerm.typeOf_!
@@ -119,7 +119,7 @@ class Prover(val pods: List[Pod], verbose: Prover.Verbosity=Prover.Verbosity.All
       commit(assumptions, goals map (Compound(_)))
     }
     
-    def commit(assumptions: Iterable[Term], goals: Iterable[Compound]) = {
+    def commit(assumptions: Iterable[Term], goals: Iterable[Compound]) = if (goals.isEmpty) Trench.empty[Term] else {
       val (lassumptions, lgoals) = (assumptions.toList, goals.toList) // prevent laziness
       val symbols = typedecl.keys ++ (pods flatMap (_.decl.symbols)) ++ termb.intermediates ++ locals
       val env1 = (env /: termlings) { case (env, (env1, _)) => env ++ env1 }

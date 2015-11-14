@@ -14,5 +14,6 @@ Stratify "/" (fixee 🄱) 🄱 ψ
  Synth (fixee 🄱) 🄱 (A `J₁) ψ ⟨`J₁×J₁⟩,
  Synth (fixee 🄲) 🄲 (A `J₀) ψ ⟨`J₀×J₀⟩⟩
 */
+Opt
 
 SaveAs (A `J) "rec"

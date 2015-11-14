@@ -5,7 +5,7 @@ import java.io.{File, FileReader, BufferedReader}
 import com.mongodb.util.JSON
 import com.mongodb.{BasicDBList, DBObject}
 
-import report.FileLog
+import report.{AppendLog, FileLog}
 import report.console.Console._
 import report.console.Console.display
 import report.data.{Rich, SerializationContainer, DisplayContainer}
@@ -19,9 +19,11 @@ import syntax.AstSugar._
 import syntax.Piping._
 import syntax.{Tree, Formula}
 import syntax.transform.{ExtrudedTerms, Extrude}
+import synth.engine.OptimizationPass.DependencyAnalysis
 import synth.pods.ConsPod._
 import synth.pods.TacticalError
 import synth.pods._
+import synth.proof.Prover
 import synth.tactics.Rewrite._
 import synth.tactics.{SliceAndDicePod, SlicePod, Synth}
 import ui.CLI
@@ -33,8 +35,9 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
   val extrude = Extrude(Set(I("/"), cons.root))
 
-  val outf = new FileLog(new java.io.File("/tmp/prog.json"), new DisplayContainer)
-  val logf = new FileLog(new java.io.File("/tmp/bell.json"), new DisplayContainer)
+  // Override to redirect
+  lazy val outf: AppendLog = new FileLog(new File("/tmp/prog.json"), new DisplayContainer)
+  lazy val logf: AppendLog = new FileLog(new File("/tmp/bell.json"), new DisplayContainer)
 
   /*
    * Eval part
@@ -120,7 +123,10 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   val @: = I("@")
   val * = TI("*")
 
-  def command(command: Term)(implicit s: State): Iterable[Pod] = LambdaCalculus.isApp(command) match {
+  def commandArgs(command: Term) =
+    if (command.isLeaf) Some(command, List()) else LambdaCalculus.isApp(command)
+
+  def command(command: Term)(implicit s: State): Iterable[Pod] = commandArgs(command) match {
     case Some((L("Slice"), List(~(f), ~~(domains)))) =>
       List(SlicePod(f, domains))
 
@@ -157,7 +163,9 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
         StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
     case Some((L("Synth"), List(~(h), ~(subterm), synthed, ~(ψ_), ~~(areaTypes)))) =>
       val ψ = ctx_?(subterm, ψ_)
-      List(SynthPod(h, subterm, encaps(synthed), evalTerm(synthed), ψ, areaTypes))
+      //List(SynthPod(h, subterm, encaps(synthed), evalTerm(synthed), ψ, areaTypes))
+      val impl = Synth.Alignment.stripProg(evalTerm(synthed))
+      List(SynthPod(h, subterm, encaps(synthed) :- impl, impl, ψ, areaTypes))
     case Some((L("Let"), List(L("/"), ~(h), ~(quadrant), ~(ψ_)))) =>
       val ψ = ctx_?(quadrant, ψ_)
       List(LetSlashPod(h, quadrant, ψ))
@@ -167,16 +175,19 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
         LetReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
     case Some((L("Synth"), List(~(h), synthed, ~(ψ_)))) =>
       val ψ = ctx_?(h, ψ_)
-      List(LetSynthPod(h, encaps(synthed), evalTerm(synthed), ψ))
+      val impl = Synth.Alignment.stripProg(evalTerm(synthed))
+      List(LetSynthPod(h, encaps(synthed) :- impl, impl, ψ))
 
     case Some((L("SynthAuto"), List(~(h), ~(subterm), `⟨⟩`(templates), ~(ψ_)))) =>
       val ψ = ctx_?(h, ψ_)
       val (synthed, footprint) = invokeSynthesis(h, subterm, templates, fix=true)
-      List(SynthPod(h.subtrees(0), subterm, encaps(synthed), evalTerm(synthed), ψ, footprint))
+      val impl = Synth.Alignment.stripProg(evalTerm(synthed))
+      List(SynthPod(h.subtrees(0), subterm, encaps(synthed) :- impl, impl, ψ, footprint))
     case Some((L("SynthAuto"), List(~(h), `⟨⟩`(templates), ~(ψ_)))) =>
       val ψ = ctx_?(h, ψ_)
       val (synthed, _) = invokeSynthesis(h, h, templates, fix=false)
-      List(LetSynthPod(h, encaps(synthed), evalTerm(synthed), ψ))
+      val impl = Synth.Alignment.stripProg(evalTerm(synthed))
+      List(LetSynthPod(h, encaps(synthed) :- impl, impl, ψ))
 
     case Some((L("Distrib"), List(L("/"), ~(f)))) =>
       val box = SimplePattern(? /: ?) findOne_! f
@@ -197,6 +208,10 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       outf += Map("program" -> encaps(prog).toString, "style" -> style.toString, "text" -> sdisplay(sout.ex), "term" -> sout.program)
       List()
 
+    case Some((L("Opt"), Nil)) =>
+      // TODO move call to invokeOptimize in here somehow
+      List()
+
     case Some((cmd, l)) => throw new TranslationError(s"unknown command '${cmd}' (with ${l.length} arguments)") at command
     case _ =>
       throw new TranslationError("not a valid command syntax") at command
@@ -211,8 +226,10 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     State(A, extrude(A) |-- display)
   }
 
-  def transform(s: State, command: Term) = {
-    var cert = false
+  def transform(s: State, command: Term): State = {
+
+    if (command =~ ("Opt", 0)) return invokeOptimize(s) |> mkState
+
     var within = List(s.program)
     def pods(command: Term)(implicit s: State): Iterable[Pod] =
       ConsPod.`⟨ ⟩?`(command) match {
@@ -230,7 +247,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     val derivatives = resolvePatterns(command) flatMap pods map instapod
 
     def cert_?(p: Pod) = p match {
-      case _: LetSynthPod | _: SynthPod => true
+      //case _: LetSynthPod | _: SynthPod => true
       //case _: StratifySlashPod | _: StratifySlash2Pod => true
       //case _: StratifyReducePod => true
       //case _: SliceAndDicePod => true
@@ -249,6 +266,12 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   }
 
   def mkState(term: Term) = State(term, extrude(term))
+
+  /*
+   * Services part
+   */
+
+  lazy val prover: Prover = new Prover(List.empty)(Environment.empty)
 
   def invokeProver(pod: Pod) { }
 
@@ -278,6 +301,11 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     val footprint = TypePrimitives.dom(quadrant) :: evalList(solution.getOrElse("Q", nil))
 
     (synthed, footprint)
+  }
+
+  def invokeOptimize(implicit s: State) = {
+    val rec = new OptimizationPass.Recorder()(prover.env)
+    (new DependencyAnalysis()(rec, prover) apply s.program) |> OptimizationPass.foldAll
   }
 
   /*

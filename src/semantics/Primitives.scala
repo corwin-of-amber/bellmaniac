@@ -259,13 +259,15 @@ object TypedLambdaCalculus {
     else preserve(body, T(body.root, body.subtrees map (x => beta(va, x, arg, retype))))
   }
   
-  def beta(fun: Term, arg: Term): Term = {
-    assume(fun =~ ("↦", 2))
-    getDeclaredVariable(fun.subtrees(0)) match {
-      case Some(va) => beta(va, fun.subtrees(1), arg)
-      case _ => throw new Scope.TypingException(s"not an argument declaration: '${fun.subtrees(0) toPretty}'")
+  def beta(fun: Term, arg: Term): Term =
+    if (fun =~ (":", 2)) beta(fun.subtrees(1), arg)
+    else {
+      assume(fun =~ ("↦", 2))
+      getDeclaredVariable(fun.subtrees(0)) match {
+        case Some(va) => beta(va, fun.subtrees(1), arg)
+        case _ => throw new Scope.TypingException(s"not an argument declaration: '${fun.subtrees(0) toPretty}'")
+      }
     }
-  }
 
   def getDeclaredVariable(t: Term): Option[Identifier] = {
     if (t.isLeaf) Some(t.root)
@@ -279,7 +281,13 @@ object TypedLambdaCalculus {
     else if (term =~ (":", 2)) sub(1) // TODO only throw away labels when necessary?
     else preserveBoth(term, T(term.root, sub))
   }
-  
+
+  def simplify0(term: Term)(implicit scope: Scope): Term = {
+    val sub = term.subtrees
+    if (term =~ ("@", 2) && LambdaCalculus.isApp(sub(0)).isDefined) beta(sub(0), sub(1))
+    else if (term =~ (":", 2)) preserve(term, sub(0) :- simplify0(sub(1)))
+    else term
+  }
 
   def enclosure(term: Term, subterm: Term): Option[List[Term]] = {
     if (term eq subterm) Some(List())
@@ -578,6 +586,8 @@ class Trench[T](val el: List[Tree[T]]) {
 object Trench {
   
   import AstSugar._
+
+  def empty[T] = new Trench[T](List.empty[T])
 
   def display(tr: Trench[Term], ● : String = "•", indent: String = "  ", level: String = " ") = {
     val fmta = new NestedListTextFormat[Term](●, indent)((_.untype.toPretty))
