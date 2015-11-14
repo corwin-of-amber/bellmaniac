@@ -105,12 +105,12 @@ object OptimizationPass {
                   ("~>", Id(t1), Id(t2), rd2 -> ~wr1) )
         } toList
 
-      val respect = new prover.Transaction().commit(List(), queries map (_._4))
+      val respect = new prover.Transaction(Prover.Verbosity.None).commit(List(), queries map (_._4))
           .toList map (_.root == "valid")
 
       new Dag(vertices = rw map (x => Id(x._1)),
          !! = queries zip respect collect { case (("!!", u, v, _), false) => (u, v) },
-         ~> = queries zip respect collect { case (("~>", u, v, _), false) => (u, v) } )
+         ~> = queries zip respect collect { case (("~>", u, v, _), false) => (u, v) } ) |-- (_.toPretty |> println)
     }
 
     def readWriteSets(chain: ListMap[Id[Term], List[Term]]) = {
@@ -194,8 +194,12 @@ object OptimizationPass {
           (nxt, unused filterNot nxt.contains)
         }
 
-      lazy val layers = gen drop 1 map (_._1) takeWhile (_.nonEmpty)
+      lazy val layers = gen drop 1 map (_._1) takeWhile (_.nonEmpty) toIterable
 
+      def toPretty =
+        layers flatMap (s =>
+          List(" " * (40 - s.length) + " ▢" * s.length,
+               " " * 41 + (if (s.length > 1) "┬" else "│"))) dropRight 1 mkString "\n"
     }
 
     val bazinga = TI("bazinga")

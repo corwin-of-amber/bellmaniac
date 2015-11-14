@@ -176,7 +176,7 @@ object Synth {
 
     def refit(pod: Pod, shape: Term, reshape: Term, hack: (Term, Term) => Term)(implicit scope: Scope) = {
       val shallow = TypeInference.inferShallow(Binding.prebind(pod.program))._2
-      findBodyWithType(shallow, shape) map { body =>
+      findBodyWithType(stripProg(shallow), shape) map { body =>
         val inputs = enclosure(shallow, body) get
         val intendedType = (inputs :\ reshape)((x,y) => ? -> y)
         val refitted = hack(shallow, body)
@@ -185,7 +185,6 @@ object Synth {
     }
 
     def findBodyWithType(prog: Term, typ: Term): Option[Term] = prog match {
-      case T(program.root, List(p)) => findBodyWithType(p, typ)
       case typed: TypedTerm if Unify.?(typed.typ, typ) => Some(typed)
       case T(`↦`, List(v, body)) => findBodyWithType(body, typ)
       case T(`:`, List(_, term)) => findBodyWithType(term, typ)

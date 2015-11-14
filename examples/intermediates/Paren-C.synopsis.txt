@@ -2,7 +2,7 @@ K₀ K₁ K₂ : set
 L₀ L₁ L₂ L₃ L₄ L₅ : set
 
 C `K₀ `K₁ `K₂
-
+∵
 SaveAs (C `K₀ `K₁ `K₂) "loop"
 
 Slice (find (i ↦ ?)) ⟨`L₀×L₄, `L₀×L₅, `L₁×L₄, `L₁×L₅⟩
@@ -28,4 +28,6 @@ Assoc min
  Synth 🄶 (C `L₀ `L₃ `L₄) ψ,
  Synth 🄷 (C `L₀ `L₂ `L₄) ψ ⟩
 */
+Opt
+
 SaveAs (C `K₀ `K₁ `K₂) "rec"
