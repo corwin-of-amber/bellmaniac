@@ -247,7 +247,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     val derivatives = resolvePatterns(command) flatMap pods map instapod
 
     def cert_?(p: Pod) = p match {
-      //case _: LetSynthPod | _: SynthPod => true
+      case _: LetSynthPod | _: SynthPod => true
       //case _: StratifySlashPod | _: StratifySlash2Pod => true
       //case _: StratifyReducePod => true
       //case _: SliceAndDicePod => true

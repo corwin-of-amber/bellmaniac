@@ -12,19 +12,17 @@ import sketch.compiler.ast.core.Annotation;
 import sketch.compiler.ast.core.FieldDecl;
 import sketch.compiler.ast.core.Function;
 import sketch.compiler.ast.core.Function.LibraryFcnType;
-import sketch.compiler.ast.core.Function.PrintFcnType;
 import sketch.compiler.ast.core.Package;
 import sketch.compiler.ast.core.exprs.ExprFunCall;
 import sketch.compiler.ast.core.stmts.*;
 import sketch.compiler.ast.core.typs.StructDef;
 import sketch.compiler.ast.core.typs.StructDef.StructFieldEnt;
-import sketch.compiler.ast.cuda.stmts.CudaSyncthreads;
-import sketch.compiler.ast.promela.stmts.StmtFork;
 import sketch.compiler.ast.spmd.stmts.SpmdBarrier;
 import sketch.compiler.ast.spmd.stmts.StmtSpmdfork;
 import sketch.util.annot.CodeGenerator;
 
 import static synth.tactics.sketch.NanoJson.toJson;
+
 
 
 @CodeGenerator
@@ -193,19 +191,16 @@ public class SynthSCP extends FEReplacer
 
         //The name resolver is used to find functions and structs matching a particular name.
         nres.setPackage(spec);
-        printLine("/* BEGIN PACKAGE (custom) " + spec.getName() + "*/");
+        printLine("/* BEGIN PACKAGE " + spec.getName() + " */");
 
         for (StructDef tsOrig : spec.getStructs()) {
-            StructDef ts = (StructDef) tsOrig.accept(this);
+            tsOrig.accept(this);
         }
 
-        for (Iterator iter = spec.getVars().iterator(); iter.hasNext(); )
+        for (FieldDecl field : spec.getVars())
         {
-            FieldDecl oldVar = (FieldDecl)iter.next();
-            FieldDecl newVar = (FieldDecl)oldVar.accept(this);
-
+            field.accept(this);
         }
-        int nonNull = 0;
 
         TreeSet<Function> orderedFuncs = new TreeSet<Function>(new Comparator<Function>()
         {
@@ -220,7 +215,7 @@ public class SynthSCP extends FEReplacer
 
         for (Function oldFunc : orderedFuncs) {
             if (oldFunc.getInfo().libraryType != LibraryFcnType.Library || printLibraryFunctions) {
-                Function newFunc = (Function) oldFunc.accept(this);
+                oldFunc.accept(this);
             }
         }
         printLine("/* END PACKAGE " + spec.getName() + "*/");
@@ -292,14 +287,6 @@ public class SynthSCP extends FEReplacer
     	printIndentedStatement(stmt.getBody());
 		return stmt;
 	}
-	@Override
-	public Object visitStmtFork(StmtFork stmt)
-	{
-		if(outtags && stmt.getTag() != null){ out.println("T="+stmt.getTag()); }
-    	printLine("fork(" +  stmt.getLoopVarDecl() + "; "  + stmt.getIter() + ")");
-    	printIndentedStatement(stmt.getBody());
-		return stmt;
-	}
 
 	@Override
 	public Object visitStmtBlock(StmtBlock stmt)
@@ -340,20 +327,6 @@ public class SynthSCP extends FEReplacer
 		return super.visitStmtAssign(stmt);
 	}
 
-
-	@Override
-	public Object visitStmtBreak(StmtBreak stmt)
-	{
-		printLine(stmt.toString());
-		return super.visitStmtBreak(stmt);
-	}
-
-	@Override
-	public Object visitStmtContinue(StmtContinue stmt)
-	{
-		printLine(stmt.toString());
-		return super.visitStmtContinue(stmt);
-	}
 
 	@Override
 	public Object visitStmtEmpty(StmtEmpty stmt)
@@ -428,16 +401,6 @@ public class SynthSCP extends FEReplacer
 		return sib;
 	}
 
-	public Object visitStmtAtomicBlock(StmtAtomicBlock block){
-		if(outtags && block.getTag() != null){ out.println("T="+block.getTag()); }
-		if(block.isCond()){
-			printLine("atomic(" + block.getCond().accept(this) + ")");
-		}else{
-			printLine("atomic");
-		}
-		visitStmtBlock (block.getBlock());
-		return block;
-	}
 
 	@Override
 	public Object visitStructDef(StructDef ts) {
@@ -468,9 +431,4 @@ public class SynthSCP extends FEReplacer
         return stmtMinimize;
     }
 
-    @Override
-    public Object visitCudaSyncthreads(CudaSyncthreads cudaSyncthreads) {
-        printLine("__syncthreads();");
-        return cudaSyncthreads;
-    }
 }

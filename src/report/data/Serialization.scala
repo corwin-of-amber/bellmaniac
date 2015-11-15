@@ -1,8 +1,5 @@
 package report.data
 
-import semantics.TypedTerm
-import syntax.Formula
-
 import collection.JavaConversions._
 import com.mongodb.{BasicDBObject, BasicDBList, DBObject}
 
@@ -50,16 +47,17 @@ trait Numerator {
 
 class DisplayContainer extends SerializationContainer with Numerator {
   import syntax.AstSugar._
-  import semantics.Id
+  import syntax.Formula
+  import semantics.{TypedTerm, Id}
 
   override def any(value: Any): Any = value match {
     case t: Formula.TermTag => termTag(t)
-    case t: Term => withRefid(t.get.asJson(this), new Id(t))
+    case Term_:(t) => withRefid(t.get.asJson(this), new Id(t))
     case _ => super.any(value)
   }
 
   override def anyRef(value: AnyRef): AnyRef = value match {
-    case t: Term => withRefid(t.get.asJson(this), new Id(t))
+    case Term_:(t) => withRefid(t.get.asJson(this), new Id(t))
     case _ => super.anyRef(value)
   }
 

@@ -9,6 +9,9 @@ import semantics.{TypedTerm, Prelude}
 object AstSugar {
 
   type Term = Tree[Identifier]
+  object Term_: {
+    def unapply[A](t: Tree[A]) = if (t.root.isInstanceOf[Identifier]) Some(t.asInstanceOf[Term]) else None
+  }
   
   def I(a: Any) = new Identifier(a)
   def I(a: Any, k: String) = new Identifier(a, k)

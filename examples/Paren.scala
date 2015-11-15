@@ -327,7 +327,7 @@ object Paren {
     def emit(term: Term)(implicit scope: Scope) = Explicate.explicateHoist(term)
 
     def preformat(doc: Map[String, AnyRef], extrude: Extrude) = doc get "term" match {
-      case Some(term: Term) => doc - "term" + ("text" -> sdisplay(extrude(term))) + ("term" -> term)
+      case Some(Term_:(term)) => doc - "term" + ("text" -> sdisplay(extrude(term))) + ("term" -> term)
       case _ => doc
     }
 
