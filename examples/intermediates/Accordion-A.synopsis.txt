@@ -1,0 +1,27 @@
+J : set
+J₀ J₁ : set
+
+A `J
+∵
+SaveAs (A `J) "loop"
+
+Slice (find (θ ↦ ?)) (`? ⟨`J₀×J₀,`J₀×J₁,`J₁×J₁⟩)
+Stratify "/" (fixee 🄲) 🄲 ψ
+Stratify "/" (fixee 🄱) 🄱 ψ
+
+Slice (find 🄰 (k ↦ ?)) ⟨`J₀,`J₁⟩
+Slice 🄶 θ (⟨`J₀,`J₁⟩ `?) 
+
+Distrib max
+Assoc max
+
+Stratify max (fixee 🄰) ⟨🄳,🄵⟩ ψ
+Stratify max (fixee 🄰) ⟨🄴,🄶⟩ ψ
+
+⟨Synth (fixee 🄰) 🄰 (A `J₀) ψ ⟨`J₀×J₀⟩,
+ Synth (fixee 🄲) 🄲 (C `J₀ `J₁) ψ ⟨`J₀×J⟩,
+ Synth (fixee 🄳) 🄳 (B `J₀ `J₁) ψ ⟨`J×J₁⟩,
+ Synth (fixee 🄴) 🄴 (A `J₁) ψ ⟨`J₁×J₁⟩ ⟩
+Opt
+
+SaveAs (A `J) "rec"

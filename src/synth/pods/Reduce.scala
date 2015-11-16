@@ -30,7 +30,7 @@ class MinPod(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implici
   
   override val decl = new Declaration(min, argmin) where (if (opaque) List() else List(
       min =:= { val g = $TyTV("g", D -> R) ; TypedTerm(g ↦ (g :@ TypedTerm(argmin :@ g, D)), (D->R) -> R) },
-      ∀:(D->R, D, (g, i) => ↓(g :@ i) -> (↓(min :@ g) & ~(< :@ (g :@ i) :@ (min :@ g))) )/*,
+      ∀:(D->R, D, (g, i) => ↓(g :@ i) -> (↓(min :@ g) & ~(< :@ (g :@ i, min :@ g))) )/*,
       ∀:(R, R, (a,b) => ((min2:@(a,b)) =:= a) | ((min2:@(a,b)) =:= b)) */
     ))
   
@@ -40,6 +40,36 @@ object MinPod {
   def apply(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implicit scope: Scope) = new MinPod(domain, range, <, opaque)
 }
 
+class MaxPod(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implicit scope: Scope) extends Pod {
+  import Prelude.{B,↓}
+  
+  val D = domain
+  val R = range
+  val max = $TyTV(s"max.$D", (D -> R) -> R)
+  val argmax = $TyTV(s"argmax.$D", (D -> R) -> D)
+  val max2 = $TyTV(s"max[2].$R", R -> (R -> R))
+
+  private val X = V("x")
+  val MAXPAT = SimpleTypedPattern(TypedTerm(Prelude.max, (D -> R) -> R))(scope)
+  val MAX2PAT = SimpleTypedPattern(TypedTerm(Prelude.max, R -> (R -> R)))(scope)
+  
+  override val macros = MacroMap(Prelude.max ~> {
+    x => MAXPAT(x) map (_ => max)
+    }) ++
+    MacroMap(Prelude.max ~> { x => MAX2PAT(x) map (_ => max2) })
+  
+  override val decl = new Declaration(max, argmax) where (if (opaque) List() else List(
+      max =:= { val g = $TyTV("g", D -> R) ; TypedTerm(g ↦ (g :@ TypedTerm(argmax :@ g, D)), (D->R) -> R) },
+      ∀:(D->R, D, (g, i) => ↓(g :@ i) -> (↓(max :@ g) & ~(< :@ (max :@ g, g :@ i))) )
+    ))
+  
+}
+
+object MaxPod {
+  def apply(domain: Term, range: Term, < : Term, opaque: Boolean=false)(implicit scope: Scope) = new MaxPod(domain, range, <, opaque)
+}
+
+
 class ReduceDistribPod(val reduce: Term, val fs: List[Term]) extends Pod {
   import Prelude.min
   import ConsPod.`⟨ ⟩`
@@ -47,7 +77,7 @@ class ReduceDistribPod(val reduce: Term, val fs: List[Term]) extends Pod {
   assert(reduce.isLeaf)
 
   override val program =
-    (reduce :@ /::(fs)) =:= (reduce :@ `⟨ ⟩`(fs map (min :@ _)))
+    (reduce :@ /::(fs)) =:= (reduce :@ `⟨ ⟩`(fs map (reduce :@ _)))
 }
 
 object ReduceDistribPod {

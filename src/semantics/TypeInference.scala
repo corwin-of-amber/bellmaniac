@@ -115,10 +115,11 @@ object TypeInference {
   }
     
   val POLYMORPHIC = {
-    import Prelude.{min,cons,nil,N,B}
+    import Prelude.{min,max,cons,nil,N,B}
     def ? = T($v)
     def __[A](gen: => A) = (() => gen)
     Map(min ~>  __ { val b = ?; (? -> b) -> b },                    // min :: ('a -> 'b) -> 'b
+        max ~>  __ { val b = ?; (? -> b) -> b },                    // max :: ('a -> 'b) -> 'b
         cons ~> __ { val b = ?; b -> ((N -> b) -> (N -> b)) },      // cons :: 'b -> (N -> 'b) -> N -> 'b
         nil ~>  __ { ? -> ? },                                      // nil :: 'a -> 'b
         V("=") -> __ { val a = ?; a -> (a -> B) },                  // = :: 'a -> 'a ->

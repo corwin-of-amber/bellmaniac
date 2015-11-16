@@ -130,6 +130,9 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     case Some((L("Slice"), List(~(f), ~~(domains)))) =>
       List(SlicePod(f, domains))
 
+    case Some((L("Slice"), List(~(h), ~(θ), ~~(domains)))) =>
+      val f = subterm_?(h, θ)
+      List(SliceAndDicePod(h, f, domains, (l: Iterable[Term]) => /::(l.toList)))
     case Some((L("Slice"), List(~(h), ~(θ), ~~(domains), ++(reduce)))) =>
       val f = subterm_?(h, θ)
       List(SliceAndDicePod(h, f, domains, (l: Iterable[Term]) => reduce:@`⟨ ⟩`(l)))
@@ -243,8 +246,8 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
         }
       }
 
-    implicit val st = s
-    val derivatives = resolvePatterns(command) flatMap pods map instapod
+    
+    val derivatives = resolvePatterns(command)(s) flatMap (pods(_)(s)) map instapod
 
     def cert_?(p: Pod) = p match {
       case _: LetSynthPod | _: SynthPod => true

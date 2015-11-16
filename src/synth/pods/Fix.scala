@@ -206,9 +206,9 @@ class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val impl: Term
   }
 
   def stableQuadrant(lhs: Term, rhs: Term) = {
-    val θ = emp //$TV("θ")
+    val θ = $TV("θ")
     val y = (indexDomain ∩ Q) -> ?
-    ((lhs:@((lhs:@θ) :: y)) :: y) =:= (rhs :: y)
+    ((lhs:@(lhs:@θ)) :: y) =:= (rhs :: y)
   }
 
   override val obligations =
@@ -226,7 +226,7 @@ class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val impl: Term
     }
   }
 
-  override val decl = new Declaration(Q, emp) where (areaChecks, emptiness)
+  override val decl = new Declaration(Q) where (areaChecks)
 }
 
 object SynthPod {

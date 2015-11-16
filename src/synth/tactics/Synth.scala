@@ -102,10 +102,10 @@ object Synth {
     import Sketch._
 
     val command =
-      Seq(SKETCH, "--slv-lightverif", "--fe-inc", INCDIR, "--fe-custom-codegen", CODEGEN, skfile.getPath)
+      Seq(SKETCH, "--slv-lightverif", "--fe-inc", ".", "--fe-inc", INCDIR, "--fe-custom-codegen", CODEGEN, skfile.getPath)
 
     def run()(implicit scope: Scope) = {
-      cached getOrElse (md5, {
+      cached getOrElse (hash, {
         import scala.sys.process._
         println("# Sketch...")
         try {
@@ -115,8 +115,8 @@ object Synth {
       })
     }
 
-    def md5 = { import scala.sys.process._ ; (Seq("md5", "-q", skfile.getName) !!).stripLineEnd }
-    def save(results: Map[String, Term]) = cached += md5 -> results
+    def hash = { import scala.sys.process._ ; (Seq("md5", "-q", skfile.getPath) !!).stripLineEnd }
+    def save(results: Map[String, Term]) = cached += hash -> results
   }
 
   object Sketch {
@@ -125,6 +125,14 @@ object Synth {
     val CODEGEN = "ccg.jar"
 
     val cached = new Cached("cache.json")
+    
+    // --------------
+    // Benchmark part
+    // --------------
+    var benchmarkCounter = 0
+    def benchmarkNext = 
+      new File(s"/tmp/synth-autogened-$benchmarkCounter.sk") |-- { _ => benchmarkCounter += 1 }
+    
   }
 
   def synthesizeFixPod(term: Term, pods: Iterable[Pod], quadrant: Term)(implicit scope: Scope) = {
@@ -259,8 +267,9 @@ object Synth {
     /* Sketch file generation */
     val sketch = new SketchOutput
 
-    val outf = new FileWriter("synth-autogened.sk")
-    def fprintln(s: String) = outf.write(s + "\n");
+    val outf = Sketch.benchmarkNext
+    val outfw = new FileWriter(outf)
+    def fprintln(s: String) = outfw.write(s + "\n");
 
     fprintln(s"""include "scalar.skh";\ninclude "scope.sk";\n\n""")
     fprintln(sketch(code0))
@@ -281,9 +290,9 @@ object Synth {
     fprintln("\n/* -- harness -- */\n")
     fprintln(sketch.harness(decl))
 
-    outf.close()
+    outfw.close()
 
-    new Sketch(new File("synth-autogened.sk"))
+    new Sketch(outf)
   }
 
 

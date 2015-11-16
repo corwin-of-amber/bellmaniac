@@ -1,0 +1,8 @@
+J : set
+J₀ J₁ : set
+
+B `J₀ `J₁
+∵
+SaveAs (B `J₀ `J₁) "loop"
+
+Slice (find (θ ↦ ?)) (`? ⟨`J₀,`J₁⟩ ⟨`J₀,`J₁⟩)
