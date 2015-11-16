@@ -33,10 +33,10 @@ The core is augmented with the following intrinsic operators:
   we assume that recurrences given in specifications are well-defined, 
   such that $\semp f$ has a single fixed point.
   In other words, we ignore nonterminating computations.
-  \item A conditional operator $\,\big|_{\scriptscriptstyle\square}\,$, which comes in two flavors:
+  \item A guard operator $[\,]_{_\square}\,$, which comes in two flavors:
   \[\begin{array}{l}
-      x|_{\mathit{cond}} = \begin{cases}x & \mathit{cond} \\ \bot & \lnot\mathit{cond}\end{cases} \\
-      f|_{P_1\times P_2\times \cdots P_n} = \overline{x} \mapsto f(\overline{x})\big|_{\bigwedge P_i(x_i)}
+      [x]_{\mathit{cond}} = \begin{cases}x & \mathit{cond} \\ \bot & \lnot\mathit{cond}\end{cases} \\
+      {}[f]_{P_1\times P_2\times \cdots P_n} = \overline{x} \mapsto [f\,\overline{x}]_{\bigwedge P_i(x_i)}
     \end{array}\]
   where $\overline{x} = x_1 \cdots x_n$. This second form can be used to
   refer to quadrants of an array; for example, in \Cref{overview:quadrants-abstract}, $\qbox2 \equiv G\big|_{J_0\times J_1}$.
@@ -47,7 +47,7 @@ The core is augmented with the following intrinsic operators:
       \mbox{For $f,g:\T_1\to\T_2$} & f/g = (v:\T_1)\mapsto (f\,v)/(g\,v)
     \end{array}\]
   This operator is typically used to combine computations done on
-  parts of the array. For example, \[\psi\mapsto (f\,\psi)\big|_{I_0} ~ \Big/ ~ (g\,\psi)\big|_{I_1}\]
+  parts of the array. For example, \[\psi\mapsto \big[f\,\psi\big]_{I_0} ~ \Big/ ~ \big[g\,\psi\big]_{I_1}\]
   combines a result of $f$ in the lower indices of a (one-dimensional) array
   with a result of $g$ in the higher indices ($I_0$ and $I_1$, respectively, are the index subsets).
   In our concrete syntax, $\big|$ take precedence over $/$,
@@ -65,6 +65,11 @@ Contradictory to the general use of refinement types, the purpose of these quali
 check a program for safety and reject ill-typed program, but rather to serve as annotations for
 tactics, to convey information to the solver for use in the proof, and later to help the compiler
 to properly schedule parallel computations.
+
+More specifically, typing $f : \{v:\T_1 \,|\, P(v)\}\to\T_2$ would mean that $f\,x$
+can only be defined where $P(x)$ is true; otherwise, $f\,x=\bot$. 
+It {\bf does not} mean that $x$ has to have the qualifier $P$ at compile time for the term $f\,x$
+to be well-typed.
 
 As such, we define a Bellmania program to be well-typed iff it is well-typed
 without the annotations (in its \newterm{raw form}). Qualifiers are processed
@@ -121,7 +126,7 @@ specifying that some schedules are impossible!
 \[
 \begin{array}{lcll}
   d       & ::= & e^1 \quad |\quad e^k\to d \\
-  e^1     & ::= & \T & \mbox{\it\small for base type $\T$} \\
+  e^1     & ::= & \T & \mbox{\it\small for scalar type $\T$} \\
   e^{k+l} & ::= & e^k \times e^l \\
   e^k     & ::= & e^k \cap P & \mbox{\it\small for $k$-ary predicate symbol $P$} 
 \end{array}
@@ -316,7 +321,7 @@ The specification of the Simplified Gap (\Cref{intro:arbiter spec}) will be writ
     \lspan3{w : ((I\times I)\cap{<})\to J\to\R} \\
     \lspan3{w' : ((J\times J)\cap{<})\to I\to\R} \\
     G ~=~ \fix \theta\,i\,j\mapsto{}
-      & \lspan2{0\big|_{i=0\land j=0} ~\Big/~ w'_{0j0}\big|_{i=0} ~\Big/~ w_{0i0}\big|_{j=0} ~\Big/~} \\
+      & \lspan2{\big[0\big]_{i=j=0} \,\Big/~ \big[w'_{0j0}\big]_{i=0} \,\Big/~ \big[w_{0i0}\big]_{j=0} \,\Big/} \\
       & \min~\langle~ & \min p\mapsto\theta_{pj}+w_{pij}, \\
       & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle
   \end{array}
