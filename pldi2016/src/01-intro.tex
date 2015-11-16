@@ -370,7 +370,18 @@ partitions the ranges of $i$ and $j$, each into two partitions, labeled
 $I_0,I_1$ and $J_0,J_1$, respectively (\Cref{overview:quadrants-abstract}). The index arithmetic considerations of
 the concrete implementation are abstracted away, and the only recorded information
 is that $I_0,I_1$ are contiguous disjoint intervals covering a set of indices $I$
-(and, analogously, for $J_0,J_1$).
+(and, analogously, for $J_0,J_1$). He will continue by invoking {\sf Stratify},
+a tactic that breaks a piece of the computation into a separate step.
+When doing so, dependencies are checked so that the reorganization indeed
+preserves the semantics of the program. The {\sf Synth} tactic will then figure
+out that this sub-computation is equivalent to $A^{I_0J_0}$, which is the
+abstract equivalent of {A{\relsize{1}[}$G_{(0..\frac{n}{2})(0..\frac{m}{2})}${\relsize{1}]}}.
+When {\sf Synth} cannot find an equivalent subroutine, it generates a new one,
+using the current program fragment as its specification.
+
+By guiding Bellmania through a sequence of these tactic applications, the system
+generates a divide-and-conquer version of the original recurrence $G$, which is
+provably equivalent to the na\"ive computation.
 
 \begin{figure}
 \centering
@@ -392,7 +403,8 @@ is that $I_0,I_1$ are contiguous disjoint intervals covering a set of indices $I
   Slicing the array with abstract index sets.}
 \end{figure}
 
-Once a divide-and-conquer algorithm is found, generating an optimal implementation still requires some additional work, such as finding the right point at which to switch to an iterative algorithm to leverage SIMD parallelism as well as low-level tuning and compiler optimization, but those steps can be performed by more traditional compiler optimization techniques that are outside the scope of this paper.
+Once a divide-and-conquer algorithm is found, generating an optimal implementation still requires some additional work, such as finding the right point at which to switch to an iterative algorithm to leverage SIMD parallelism as well as low-level tuning and compiler optimization;
+these steps can be performed by more traditional compiler optimization techniques and are not discussed in this paper.
 
 In the following sections, we describe the different components of Bellmania. 
 The system utilizes \newterm{solver-aided tactics} to generate provably correct pseudo-code; 
