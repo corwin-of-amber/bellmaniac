@@ -77,7 +77,8 @@ class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: S
   import Prelude.{↓,B}
   import IndexArithPod.{_0,_1}
 
-  private val succJ = $TyTI("+1", "predicate", J ->: J ->: B)
+  private val issuccJ = $TyTI("+1", "predicate", J ->: J ->: B)
+  private val succJ = $TyTI("+1", "function", J ->: J)
   private val predJ = $TyTI("-1", "function", J -> J)
   private val subJ = $TyTI("-", "function", J ->: J ->: J)
   private val _0J = $TyTV("0.J", J)
@@ -90,6 +91,7 @@ class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: S
 
   val MINUSPAT = SimpleTypedPattern((X :- J_?) - (Y :- J_?))
   val MINUS1PAT = SimpleTypedPattern((X :- J_?) - _1)
+  val PLUS1PAT = SimpleTypedPattern((X :- J_?) + _1)
   val SUCCPAT = SimpleTypedPattern(succ:@(X :- J_?, Y :- J_?))
   val ZEROPAT = SimpleTypedPattern(TypedTerm(_0, J))
 
@@ -101,15 +103,16 @@ class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: S
         case None => None
       }
     } },
-    succ ~> { x => SUCCPAT(x) map (m => TypedTerm(succJ:@(m(X), m(Y)), J)) },
+    I("+") -> { x => PLUS1PAT(x) map (_(X)) map (x => TypedTerm((succJ:@x) |! (issuccJ:@(x,succJ:@x)), J)) },
+    succ ~> { x => SUCCPAT(x) map (m => TypedTerm(issuccJ:@(m(X), m(Y)), J)) },
     _0 ~> { x => ZEROPAT(x) map (x => _0J)})
 
-  override val decl = new Declaration(_0J, succJ, predJ, subJ) where (
+  override val decl = new Declaration(_0J, issuccJ, succJ, predJ, subJ) where (
     ↓(_0J),
     ∀:( J, x => ~ <(x,_0J) ),
     ∀:( J, (x,y) => ~ <(x, subJ:@(x, y)) ),
     ∀:( J, (x,y) => <(_0J,x) -> <(subJ:@(x, y), x) ),
-    ∀:( J, (x,y,z) => succJ(x,z) -> (<(x,z) & ~(<(x,y) & <(y,z))) )
+    ∀:( J, (x,y,z) => issuccJ(x,z) -> (<(x,z) & ~(<(x,y) & <(y,z))) )
   )
 }
 

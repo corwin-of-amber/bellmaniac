@@ -1,39 +1,28 @@
 package ui
 
 import java.io.{InputStreamReader, BufferedReader, FileReader}
-
 import com.mongodb.{BasicDBObject, DBObject}
 import com.mongodb.util.JSON
-
 import syntax.AstSugar._
 import syntax.Formula
 import syntax.transform.Extrude
 import syntax.Nullable._
 import syntax.Piping._
-
 import semantics.Scope
 import semantics.Trench
 import semantics.TypeInference
 import semantics.Prelude._
 import semantics.pattern.SimplePattern
-
 import examples.Gap
 import examples.Gap._
 import synth.engine.TacticApplicationEngine
 import synth.pods._
 import synth.proof.{Assistant, Prover}
-
 import report.data.{SerializationError, Rich, DisplayContainer}
 
 
 
 object CLI {
-
-  def invokeTypecheck(term: Term) = {
-     val env = Gap.env
-    implicit val scope = env.scope
-    TypeInference.infer(term)
-  }
 
   def getLines(f: BufferedReader): Stream[String] = {
     val line = f.readLine()
@@ -103,7 +92,14 @@ object CLI {
   }
 
   def main(args: Array[String]) {
-    val filename = args.headOption getOrElse "-"
+    import org.rogach.scallop._
+    
+    object Conf extends ScallopConf(args toList) {
+      val prover: ScallopOption[String] = opt[String]("prover", default=Some("z3"))
+      val filename = trailArg[String](default=Some("-"))
+    }
+    
+    val filename = Conf.filename()
     try {
       val f = new BufferedReader(
         if (filename == "-") new InputStreamReader(System.in) else new FileReader(filename))

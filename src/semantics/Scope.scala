@@ -187,16 +187,7 @@ object Scope {
 
   import syntax.AstSugar._
 
-  class TypingException(msg: String) extends Exception(msg) {
-
-    var formula: Term = null;
-    def at(formula: Term): TypingException = {
-      this.formula = formula; this
-    }
-    
-    override def getMessage = if (formula == null) super.getMessage 
-      else s"$msg\n\tin: ${formula.toPretty}"
-  }
+  class TypingException(msg: String) extends TraceableException(msg)
 
   import com.mongodb.{DBObject, BasicDBList}
   import report.data.SerializationContainer

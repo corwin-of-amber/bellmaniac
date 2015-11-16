@@ -247,7 +247,8 @@ object TypeTranslation {
         x => (x, try Some(emit(scope, x, dir))
                  catch { case _: Scope.TypingException => None }) } partition (_._2.isDefined)
       if (subemit.isEmpty) 
-        throw new Scope.TypingException(s"non of '${term.subtrees mkString "' '"}' is a type")
+        try emit(scope, term.subtrees.head, dir)
+        catch { case e: TraceableException => throw e at term }
       //val (_, Some(x)) = subemit.head
       val x = TypePrimitives.intersection(subemit map (_._2.get))(scope)
       val arity = dir match { case InOut.IN => x count { case In(_) => true case _ => false } case InOut.OUT => 1 }
