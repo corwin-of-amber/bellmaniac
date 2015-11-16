@@ -55,7 +55,7 @@ class Explicate(includePreconditions: Boolean=true)(implicit scope: Scope) {
   }
 
   def hoist(t: Term): Term = t match {
-    case T(`@:`, sub) =>
+    case T(`@:`, sub@(f::_)) if f != Prelude.cons /* @@@ cons is special */ =>
       val guarded = sub map hoist map {
         case T(`|!`, List(expr, cond)) => (expr, Some(cond))
         case expr => (expr, None)

@@ -144,9 +144,31 @@ object Gap {
         case (L("C"), List(~(j0), ~(j1), ~(k))) => CPod(j0, j1, k)
       }
 
+      def prover(pods: List[Pod]) = {
+        import synth.pods._
+        
+        val toR = TotalOrderPod(R)
+        val toJ = TotalOrderPod(J, J_<)
+        val toK = TotalOrderPod(K, K_<)
+        val idxJ = IndexArithPod(J, toJ.<)
+        val idxK = IndexArithPod(K, toK.<)
+        val partJ = PartitionPod(J, toJ.<, J0, J1)
+        val partK = PartitionPod(K, toK.<, K0, K1)
+        val partJ0 = PartitionPod(J0, toJ.<, L0, L1)
+        val partJ1 = PartitionPod(J1, toJ.<, L2, L3)
+        val partK0 = PartitionPod(K0, toK.<, M0, M1)
+        val partK1 = PartitionPod(K1, toK.<, M2, M3)
+        val minJR = MinPod(J, R, toR.<)
+        val minKR = MinPod(K, R, toR.<)
+        val minNR = MinPod(N, R, toR.<)
+
+        new Prover(List(NatPod, TuplePod, toR, toJ, toK, idxJ, idxK, partJ, partK, partJ0, partJ1, partK0, partK1, minJR, minKR, minNR), Prover.Verbosity.ResultsOnly)
+      }
+
+      override lazy val prover: Prover = prover(List())
+      
       override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
       def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
-        import synth.pods._
         import syntax.Piping._
 
         for (goal <- goals) extrude(goal) |> { report.console.Console.display
@@ -157,19 +179,8 @@ object Gap {
 
         val a = new Assistant
 
-        val toR = TotalOrderPod(R)
-        val toJ = TotalOrderPod(J, J_<)
-        val toK = TotalOrderPod(K, K_<)
-        val idxJ = IndexArithPod(J, toJ.<)
-        val idxK = IndexArithPod(K, toK.<)
-        val partJ = PartitionPod(J, toJ.<, J0, J1)
-        val partK = PartitionPod(K, toK.<, K0, K1)
-        val minJR = MinPod(J, R, toR.<)
-        val minKR = MinPod(K, R, toR.<)
-        val minNR = MinPod(N, R, toR.<)
-
-        val p = new Prover(List(NatPod, TuplePod, toR, toJ, toK, idxJ, idxK, partJ, partK, minJR, minKR, minNR) ++ pods, Prover.Verbosity.ResultsOnly)
-
+        val p = prover(pods)
+        
         val commits =
           for (goals <- goals map (List(_))) yield {
             //for (goals <- List(goals)) yield {

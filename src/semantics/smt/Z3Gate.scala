@@ -182,7 +182,7 @@ class Z3Gate {
       
   def solveAndPrint(assumptions: List[BoolExpr], goals: List[BoolExpr]) = solve(assumptions, goals, true)
   
-  def solve(assumptions: List[BoolExpr], goal: Iterable[Z3Gate.Sequent]) = Z3Gate.solve(assumptions, goal)
+  def solve(assumptions: List[BoolExpr], goal: Iterable[Sequent]) = Z3Gate.solve(assumptions, goal)
 }
 
 
@@ -230,8 +230,6 @@ object Z3Gate {
   
   import ProverStatus._
 
-  case class Sequent(negative: List[BoolExpr], positive: BoolExpr)
-  
   def solve(assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
     val s = mkSolver
     save(assumptions, goals)
@@ -342,6 +340,10 @@ object Z3Gate {
     smt |> declare_sort |> implies
   }
 }
+
+
+case class Sequent(negative: List[BoolExpr], positive: BoolExpr)
+  
 
 
 class SmtException(msg: String) extends Exception(msg) { 

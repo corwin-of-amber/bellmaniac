@@ -1,18 +1,20 @@
 package semantics
 
-import syntax.AstSugar
+import java.util.logging.{Logger, Level}
+import java.io.StringWriter
+import java.io.ByteArrayOutputStream
+
+import syntax.AstSugar._
 import syntax.Identifier
+
 import TypeTranslation.Environment
 import TypeTranslation.Declaration
 import Scope.TypingException
-import AstSugar._
-import java.util.logging.Logger
-import java.util.logging.Level
-import report.console.NestedListTextFormat
+import smt.Sequent
+
 import synth.tactics.Rewrite
-import com.sun.org.apache.xalan.internal.xsltc.runtime.output.StringOutputBuffer
-import java.io.StringWriter
-import java.io.ByteArrayOutputStream
+
+import report.console.NestedListTextFormat
 
 
 
@@ -384,8 +386,6 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term])(impl
     
     val (z3g, fo_base) = TypeTranslation toSmt List(env)
 
-    import semantics.smt.Z3Gate
-    
     val start = System.currentTimeMillis
     def finish = System.currentTimeMillis - start
     
@@ -396,7 +396,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term])(impl
         }),
         fo_goals.toStream flatMap { case g@(d,ps) => 
           ps.toList map (p =>
-            Z3Gate.Sequent((d ++ preludeFor(g)).toList map z3g.formula, p |> z3g.formula)) 
+            Sequent((d ++ preludeFor(g)).toList map z3g.formula, p |> z3g.formula)) 
         })
             //z3g.formula map (g => Z3Gate.Sequent(List(), g)))
         

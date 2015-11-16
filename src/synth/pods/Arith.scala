@@ -97,7 +97,7 @@ class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: S
 
   override val macros = MacroMap(
     I("-") -> { x => MINUS1PAT(x) map (_(X)) match {
-      case Some(x) => Some(TypedTerm((predJ:@x) |! (<(_0J,x) & (succJ:@(predJ:@x,x))), J))
+      case Some(x) => Some(TypedTerm((predJ:@x) |! (<(_0J,x) & (issuccJ:@(predJ:@x,x))), J))
       case None => MINUSPAT(x) match {
         case Some(mo) => Some(TypedTerm(subJ:@(mo(X), mo(Y)), J))
         case None => None

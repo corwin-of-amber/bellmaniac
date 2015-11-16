@@ -1,8 +1,30 @@
 J : set
 J₀ J₁ : set
+K₀ K₁ K₂ K₃ : set
 
 B `J₀ `J₁
 ∵
 SaveAs (B `J₀ `J₁) "loop"
 
-Slice (find (θ ↦ ?)) (`? ⟨`J₀,`J₁⟩ ⟨`J₀,`J₁⟩)
+Slice (find (i ↦ ?)) (⟨`K₀,`K₁⟩ ⟨`K₂,`K₃⟩)
+Let "/" (slasher 🄰) 🄰 ψ
+Let "/" (slasher 🄰) 🄰 ψ
+Let "/" (slasher 🄰) 🄰 ψ
+
+🄷 🄻 ↦ Slice . (find . ψ) ⟨`K₂×K₂,`K₂×K₃,`K₃×K₃⟩ max
+Assoc max
+
+⟨Let max (slasher 🄱) ⟨🄶,🄷⟩ ψ,
+ Let max (slasher 🄳) ⟨🄼,🄽⟩ ψ⟩
+⟨Let max (slasher 🄱) ⟨🄸,🄹⟩ ψ,
+ Let max (slasher 🄴) ⟨🄿,🅀⟩ ψ⟩
+
+⟨Synth 🄰 (B `K₁ `K₃) ψ,
+ Synth 🄲 (D `K₁ `K₂ `K₃) ψ,
+ Synth 🄳 (B `K₁ `K₂) ψ,
+ Synth 🄴 (B `K₀ `K₃) ψ,
+ Synth 🄶 (D `K₀ `K₂ `K₃) ψ,
+ Synth 🄷 (B `K₀ `K₂) ψ⟩
+Opt
+
+SaveAs (B `J₀ `J₁) "rec"

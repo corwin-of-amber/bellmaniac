@@ -270,6 +270,12 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
   def mkState(term: Term) = State(term, extrude(term))
 
+  def display(program: Term) { display(extrude(program)) }
+  def display(ex: ExtrudedTerms) { report.console.Console.display(ex) }
+  def display(s: State) {
+    display(s.ex) ; logf += Map("term" -> s.program, "display" -> Rich.display(s.ex))
+  }
+  
   /*
    * Services part
    */
@@ -308,14 +314,14 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
   def invokeOptimize(implicit s: State) = {
     val rec = new OptimizationPass.Recorder()(prover.env)
-    (new DependencyAnalysis()(rec, prover) apply s.program) |> OptimizationPass.foldAll
+    (new DependencyAnalysis()(rec, prover) apply s.program)
   }
 
   /*
    * Output part
    */
 
-  def emit(s: State) = mkState(Explicate.explicateHoist(s.program, includePreconditions=true))
+  def emit(s: State) = mkState(Explicate.explicateHoist(s.program |> OptimizationPass.foldAll, includePreconditions=true))
 
   /*
    * JSON part
@@ -332,15 +338,21 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     case l: BasicDBList =>  (s /: (l map (_.asInstanceOf[DBObject])))(transform)
     case _ => json.get("check") orElse json.get("tactic") andThen_ (
       (_:DBObject) |> Formula.fromJson |> (transform(s, _)) |-- {
-        `s'` => if (`s'` ne s) { display(`s'`.ex) ; logf += Map("term" -> `s'`.program, "display" -> Rich.display(`s'`.ex)) }
+        `s'` => if (`s'` ne s) { display(`s'`) }
       }
     , s)
   }
-
+  
   def execute(reader: BufferedReader)(implicit sc: SerializationContainer=new DisplayContainer) {
     val head #:: blocks = sc.flatten(CLI.getBlocks(reader) map
         JSON.parse map (_.asInstanceOf[DBObject]))
-    (initial(head) /: blocks) { (s, json) => transform(s, json) }
+    val finalState =
+      (initial(head) /: blocks) { (s, json) => transform(s, json) }
+    val finalProgram = finalState.program |> OptimizationPass.foldAll
+    if (finalProgram != finalState.program) {
+      println("=" * 80)
+      display(finalProgram)
+    }
   }
 
   def executeFile(filename: String)(implicit sc: SerializationContainer=new DisplayContainer) {

@@ -12,6 +12,7 @@ import synth.proof.{Prover, Assistant}
 import synth.pods.ConsPod.`⟨ ⟩`
 import synth.pods.IndexArithPod
 import synth.pods.TotalOrderPod
+import report.data.Rich
 
 
 
@@ -20,6 +21,16 @@ object Accordion {
   val J = TS("J")
   val J0 = TS("J₀")
   val J1 = TS("J₁")
+  val K0 = TS("K₀")
+  val K1 = TS("K₁")
+  val K2 = TS("K₂")
+  val K3 = TS("K₃")
+  val L0 = TS("L₀")
+  val L1 = TS("L₁")
+  val L2 = TS("L₂")
+  val L3 = TS("L₃")
+  val L4 = TS("L₄")
+  val L5 = TS("L₅")
   
   val δ = TyTV("δ", J ->: J ->: J ->: R)
   
@@ -49,7 +60,7 @@ object Accordion {
             (i ↦: j ↦: (
               max:@ `⟨ ⟩`(
                   ψ:@(i,j),
-                  max:@(k ↦ ((ψ:@(j+_1,k)) + (δ:@(i,j,k))))
+                  max:@(k ↦ (((ψ :: (J1 x J1) ->: ?):@(j+_1,k)) + (δ:@(i,j,k))))
               ))) :: ((J0 x J1) ∩ <) ->: R,
             ψ :: ((J1 x J1) ∩ <) ->: R
         )
@@ -72,10 +83,28 @@ object Accordion {
     )
   }
 
+  case class DPod(val J0: Term, val J1: Term, val J2: Term) extends Pod {
+
+    val (ψ, i, j, k) = ($TV("ψ"), $TV("i"), $TV("j"), $TV("k"))
+    
+    override val program = Prelude.program(
+        ψ ↦ /::(
+            ψ :: (J1 x J2) ->: R,
+            (i ↦: j ↦: (
+              max:@ `⟨ ⟩`(
+                  ψ:@(i,j),
+                  max:@(k ↦ (((ψ::(J1 x J2) ->: ?):@(j+_1,k)) + (δ:@(i,j,k))))
+              ))) :: (J0 x J1) ->: R
+        )
+    )
+  }
+
 
   import semantics.TypedTerm.typeOf_!
 
-  implicit val scope = new Scope(R, N, J)(J0 :<: J, J1 :<: J)
+  implicit val scope = new Scope(R, N, J)(J0 :<: J, J1 :<: J,
+      K0 :<: J0, K1 :<: J0, K2 :<: J1, K3 :<: J1, 
+      L0 :<: K0, L1 :<: K0, L2 :<: K1, L3 :<: K1, L4 :<: K2, L5 :<: K2)
 
   implicit val env = TypeTranslation.subsorts(scope) ++
       TypeTranslation.decl(scope, Map(δ ~> typeOf_!(δ)))
@@ -96,6 +125,7 @@ object Accordion {
       case (L("A"), List(~(j))) => APod(j)
       case (L("B"), List(~(j0), ~(j1))) => BPod(j0, j1)
       case (L("C"), List(~(j0), ~(j1))) => CPod(j0, j1)
+      case (L("D"), List(~(j0), ~(j1), ~(j2))) => DPod(j0, j1, j2)
     }
 
     val A = TV("A")
@@ -110,10 +140,12 @@ object Accordion {
       val toJ = TotalOrderPod(J, <)
       val idxJ = IndexArithPod(J, toJ.<)
       val partJ = PartitionPod(J, toJ.<, J0, J1)
+      val partJ0 = PartitionPod(J0, toJ.<, K0, K1)
+      val partJ1 = PartitionPod(J1, toJ.<, K2, K3)
       val maxJR = MaxPod(J, R, toR.<)
       val maxNR = MaxPod(N, R, toR.<)
 
-      new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, maxJR, maxNR), Prover.Verbosity.ResultsOnly)
+      new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, maxJR, maxNR), Prover.Verbosity.ResultsOnly)
     }
     
     override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
@@ -122,6 +154,9 @@ object Accordion {
       import syntax.Piping._
 
       for (goal <- goals) extrude(goal) |> report.console.Console.display
+      for (goal <- goals)
+        logf += Map("term" -> goal,
+          "display" -> Rich.display(extrude(goal) |-- report.console.Console.display))
 
       println("· " * 25)
 
@@ -131,10 +166,12 @@ object Accordion {
       val toJ = TotalOrderPod(J, <)
       val idxJ = IndexArithPod(J, toJ.<)
       val partJ = PartitionPod(J, toJ.<, J0, J1)
+      val partJ0 = PartitionPod(J0, toJ.<, K0, K1)
+      val partJ1 = PartitionPod(J1, toJ.<, K2, K3)
       val maxJR = MaxPod(J, R, toR.<)
       val maxNR = MaxPod(N, R, toR.<)
 
-      val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, maxJR, maxNR) ++ pods, Prover.Verbosity.ResultsOnly)
+      val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, maxJR, maxNR) ++ pods, Prover.Verbosity.ResultsOnly)
 
       val commits =
         for (goals <- goals map (List(_))) yield {
