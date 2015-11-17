@@ -3,14 +3,34 @@ import codecs
 import json
 import argparse
 import re
+import os
 from string import Template
-from mercurial.pvec import ctxpvec
 VALIDFNAMES = [u'A', u'B', u'C']  # TODO: generate automatically based on input files
 DEBUG = False
 GUARD = u'|!'
 SPACE = u' '
 PNAME = None
+keepTempInMin = True
+isGap = False
+problem = ""
 
+def isLeft(M,K,superset):
+    Assert(superset[M] == K,"Must be a subset-superset pair M \in K")
+    extraSubsets = filter(lambda (J0,J): J0 != M and J == K,superset.iteritems())
+    #print "eSubs:",extraSubsets, M, K, superset
+    Assert(len(extraSubsets) == 1, K + " should have exactly 2 partitions!")
+    Mp = extraSubsets[0][0]
+    return M < Mp
+
+def topSuperset(M,superset,params):
+    if M not in superset or M in params:
+        return M
+    else:
+        return topSuperset(superset[M],superset)
+
+        
+        
+            
 def getDecl(name, newparams, intv, impl):
     if type(intv) is str or type(intv) is unicode:
         return "func" + name + "_" + impl + "(" + ",".join([intv + x for x in newparams]) + ")"
@@ -24,7 +44,7 @@ def isSet(string):
      
 def Assert(cond, msg):
     if not cond:
-        print u"ERROR: " + msg
+        print (u"ERROR: " + msg).encode('utf-8')
         raise Exception(msg)
         sys.exit(1)
 bmProg = {}
@@ -45,7 +65,7 @@ def defineInSet(i,I):
 APPLY = u'@'
 FIX = u'fix'
 MIN = u'min'
-AND = u'&'
+AND = u'\u2227'
 PSI = u"\u03C8"
 PLUS = u'+'
 SLASH = u'/'
@@ -57,6 +77,7 @@ MAX=u'\u2a01'
 DELTA=u'\u03b4'
 NEG = u'\u00ac'
 STMTEND=[u"}",u";"]
+PARLEVEL = u"PARLEVEL"
 def endStmt(s):
     if s != u"" and s[-1] not in STMTEND and (not (s[-1]==u"\n" and s[-2] in STMTEND)):
         return s + u";"
@@ -68,8 +89,9 @@ SUBNUMS = {u"\u2080":0,
            u"\u2083":3,
            u"\u2084":4,
            u"\u2085":5,
-           u"\u2086":6}
-VARS = [u'i', u'j', u'k', QMARK, PSI, THETA]
+           u"\u2086":6,
+           u"w'":u"w_prime"}
+VARS = [u'i', u'j', u'k', QMARK, PSI, THETA, u'p',u'q']
 
 
 
@@ -86,7 +108,11 @@ def parseJsons(files):
         x = f.read()
         x = sanitizeSubs(x)
         Assert(u'\u2080' not in x, u"Can't have subscripted unicode letter")
-        ljsons = x.split(u"\n\n")
+        #print "OS",os.name
+        if os.name == 'nt':
+            ljsons = x.split(u"\n\n")
+        else:
+            ljsons = x.split(u"\n\n")
         for j in ljsons:
             if len(j) >= 2 and u"vbox" not in j:  # Ignore jsons with no program and extreneous key "vbox"  
                 form = json.loads(j)
@@ -95,15 +121,16 @@ def parseJsons(files):
                     prgs[form[u'program']] = dict()
                 prgs[form[u'program']][form[u'style']] = form
     return prgs
-
-def arrayAccessStr(funct, largs):
-    return funct + u'[' + u']['.join(largs) + u']'
-            
-def arrayAccess(funct, largs, ctx):
+    
+def arrayAccessStr(prg,funct, largs):
+    #return funct + u'[' + u']['.join(largs) + u']'
+    return u"D" + prg.preDist() + funct + u'(' + u','.join(largs) + u')'
+def arrayAccess(prg,funct, largs, ctx):
     for x in largs:
         x.setCode(ctx)
-    return funct + u'[' + u']['.join([x.code for x in largs]) + u']'
-
+    #return funct + u'[' + u']['.join([x.code for x in largs]) + u']'
+    return u"D" + prg.preDist() + funct + u'(' + u','.join([x.code for x in largs]) + u')'
+    
 def funCall(funct, largs, ctx):
     for x in largs:
         x.setCode(ctx)
@@ -228,7 +255,8 @@ class bmType(bmRoot):
         # first char of sets is a caps
         if self.kind == 'set':
             Assert(self.literal[0].isupper(), "First char of set in TypeTree must be caps: " + self.literal) 
-        Assert(self.ns is None, "ns value is always None in rootType nodes")
+        if self.literal != "<":
+            Assert(self.ns is None, "ns value is always None in rootType nodes: lit=" + self.literal + ", ns=" + unicode(self.ns))
         
         Assert(typ[u'$'] == 'Tree', "$ value != identifier in bmType: " + typ[u'$'])
         self.subtrees = []
@@ -296,6 +324,9 @@ class bmTerm(bmRoot):
         Assert(u'root' in trm and u'subtrees' in trm, u"root and subtrees \
         should be in trm used for initialization")
         Assert(trm[u'$'] == 'Tree', "$ value not Identifier in " + str(trm["$"]))
+        if trm[u'root'][u'literal'] == ":" and trm["subtrees"][0]["root"]["literal"] ==u"bazinga":
+            Assert(len(trm["subtrees"][0]["subtrees"]) == 1,"Bazinga can have only one node")
+            self.pardep = trm["subtrees"][0]["subtrees"][0]["root"]["literal"]
         if trm[u'root'][u'literal'] == ":":
             # just treat it as subtrees[1]
             self.__init__(trm[u'subtrees'][1], parent, prg)
@@ -330,8 +361,10 @@ class bmTerm(bmRoot):
                 if c.literal == PLUS:
                     Assert(p.literal == u'@' and self.literal == u'@', u"PLUS evaluation they are always left of (@)left of (@) isn't valid!")
         
-    def strTemp(self):
+    def strTemp(self,ctx):
         self.tempMade = True
+        if "use_tmp" in ctx:
+            return ctx["use_tmp"]
         return u"t" + unicode(self.id)
     
     
@@ -405,44 +438,56 @@ class bmTerm(bmRoot):
             #Assert(self.guards.literal != u"<","Caught you: " + self.__str__() + str(ctx))
             Assert(op in [MAX,MIN,PLUS],"Only MAX, APPLY can have guards: " + op)
         if op in [PSI, THETA]:
-            return arrayAccess(u"dist", self.largs,ctx)
+            return arrayAccess(self.prg,u"dist", self.largs,ctx)
         elif op == MINUS:
             Assert(len(self.largs) == 2,u"MINUS is binary! ")
             for t in self.largs:
                 t.setCode(ctx)
             return u"(" + self.largs[0].code + u"-" + self.largs[1].code + u")" 
-        elif op in [u'w']:
+        elif op in [u"w",u"w_prime",u"w'",u"S"]:
             return funCall(op, self.largs, ctx)
         elif op == MIN:
             Assert(len(self.largs) == 1, u"min is unary!")
             child = self.largs[0]
+            
             if child.literal == MAPSTO:
                 # minimize over a range denoted by free variables
-                if "minevar" in ctx and ctx["minevar"]:
+                if (not keepTempInMin) and "minevar" in ctx and ctx["minevar"]:
                     tmpVar = ""
                 else:
-                    tmpVar = self.strTemp()
+                    tmpVar = self.strTemp(ctx)
                 rs = self.buildForLoop(child.fvranges, child.boundExpr, MIN, tmpVar,ctx)
                 return rs 
             elif child.isConsNode():
+                if "common_guards" in ctx:
+                    for g in ctx["common_guards"]:
+                        if hasattr(child, "guardCompStrs") and g in child.guardCompStrs:
+                            child.guardCompStrs.remove(g)
+                            print "REMOVING GUARD: " + g
                 # minimize over a list in consargs
                 #Assert(not hasattr(self, "guards"),"no guards here for cons node!")
-                Assert(len(child.consargs) == 2 , "Min should be Binaryyyy")
-                minEvar = False
-                c0 = child.consargs[0] #MIN
-                c1 = child.consargs[1] #PSI           
-                if c1.literal == APPLY and c1.funct.literal in [THETA,PSI] and c0.literal == APPLY and c0.funct.literal == MIN:
-                    ctx["minevar"] = True
-                    minEvar = True
-                c0.setCode(ctx)
-                if not minEvar:
-                    c1.setCode(ctx)
-                if "minevar" in ctx:
-                    Assert(ctx["minevar"] == False,"Should be falsed by now")
-                if minEvar:
-                    return c0.code
+                Assert(len(child.consargs) in [2,3,4] , "Min should be Binary or Ternary or Quarternary")
+                psiargs = filter(lambda x: x.literal == APPLY and x.funct.literal in [THETA,PSI],child.consargs)
+                minargs = filter(lambda x: x.literal == APPLY and x.funct.literal ==MIN,child.consargs)
+                if not psiargs or not minargs:
+                    #usual min 
+                    for c in child.consargs:
+                        c.setCode(ctx)
+                    return reduce(lambda a,b: "min(" + a + "," + b + ")" if a != b else a,map(lambda x: x.code,child.consargs))        
+                elif len(psiargs) == 1:
+                    #find all sub-mins and set minEvar to true for them
+                    for c in child.consargs:
+                        if c not in psiargs and c not in minargs:
+                            c.setCode(ctx)
+                    for c in minargs:
+                        ctx["minevar"] = True
+                        c.setCode(ctx)
+                        Assert(ctx["minevar"] == False,"Should be falsed by now")
+                    argsExceptPsi = filter(lambda x: x.literal != APPLY or x.funct.literal not in [PSI,THETA],child.consargs)
+                    argsCodeExceptPsi = map(lambda x: x.code, argsExceptPsi)
+                    return reduce(lambda a,b: "min(" + a + "," + b + ")" if a != b else a,argsCodeExceptPsi)
                 else:
-                    return u"min(" + u",".join(x.code for x in child.consargs) + u")"
+                    Assert(False,"can't have more than one psi in a min expression")
             else:
                 Assert(False, u"min should have only MAPSTO or cons as children: " + child.literal)
         elif op == PLUS:
@@ -478,6 +523,7 @@ class bmTerm(bmRoot):
             exprCode = u"OMAX(" + self.largs[0].code + u"," + self.largs[1].code + u")"
             return exprCode
         elif hasattr(self.funct, u"code") and len(self.largs) == 1 and self.largs[0].literal == PSI:
+            self.funct.setCode(ctx)
             return self.funct.code
         elif op == DELTA:
             Assert(len(self.largs) == 2,"must have two arguments")
@@ -528,14 +574,22 @@ class bmTerm(bmRoot):
             if v in VARS and v not in [PSI, THETA]:
                 rs += u"[" + v + u" in " + r.__str__() + u"]"
         return rs
+    def isMin(self):
+        return self.literal == APPLY and self.funct.literal == MIN
     def getCommonGuards(self,comps):
         if "" not in comps:
             comps[""] = 0
-        if self.literal == SLASH:
-            for x in self.subtrees:
-                if x.literal == APPLY and (x.funct.literal == THETA or x.funct.literal == PSI):
+        
+        if self.literal == SLASH or self.isConsNode() :
+            iterateOver = self.subtrees
+            if self.isConsNode():
+                iterateOver = self.consargs
+                #print "cons", len(iterateOver), [x.literal if x.literal != APPLY else x.funct.literal for x in iterateOver]
+            
+            for x in iterateOver:
+                if (x.literal == APPLY and x.funct.literal in [PSI,THETA]) or (self.isConsNode() and x.literal in [PSI,THETA]):
                     continue
-                elif x.literal == SLASH:
+                elif x.literal == SLASH or x.isConsNode():
                     x.getCommonGuards(comps)
                 else:
                     #print x.__str__()
@@ -578,17 +632,41 @@ class bmTerm(bmRoot):
                     if exp.find("-") > 0:
                         [x,c] = exp.split("-")
                         Assert(c=="1","Only constant 1 supported for now: expression i-1 or j-1")
+                        #print "guard->loop: ", x, vtypes[x].literal,exp, se, self.prg.superset
                         if x in vars and vtypes[x].literal != u"U" and isSet(vtypes[x].literal):
                             sx = vtypes[x].literal
-                            if se != sx and sx != u"U" and isSet(sx) and self.prg.superset[se] == self.prg.superset[sx] and se < sx:
-                                #x-1 \in se, x \in sx and se is before sx as an interval
-                                #x has to be start of se
-                                loopEndPoints[x] = (loopEndPoints[x][0],None)
-                                toRemove.append(g) 
+                            if se != sx and sx != u"U" and isSet(sx):
+                                se_sup = self.prg.superset[se]
+                                sx_sup = self.prg.superset[sx]
+                                if (se_sup == sx_sup and se < sx):
+                                    #x-1 \in se, x \in sx and se is before sx as an interval
+                                    #x has to be start of se
+                                    loopEndPoints[x] = (loopEndPoints[x][0],None)
+                                    toRemove.append(g) 
+                                elif (se_sup == sx_sup and se > sx):
+                                    #x-1 \in se, x \in sx and se is after sx as an interval
+                                    #x has to be empty
+                                    loopEndPoints[x] = (None,None)
+                                    toRemove.append(g) 
+                                if (sx_sup in self.prg.superset and self.prg.superset[sx_sup] == se_sup):
+                                    # x : sx < sx_sup < J and x-1 : se < J 
+                                    if se < sx_sup:
+                                        #se _ sx_sup = [ sx? | sx?] 
+                                        #print "sx,sx_sup: ",sx,sx_sup,self.prg.superset, isLeft(sx,sx_sup,self.prg.superset)
+                                        if isLeft(sx,sx_sup,self.prg.superset):
+                                            loopEndPoints[x] = (loopEndPoints[x][0],None)
+                                        else:
+                                            loopEndPoints[x] = (None,None)
+                                    else:
+                                        #empty set
+                                        loopEndPoints[x] = (None,None)
+                                    toRemove.append(g)
                             if se == sx:
                                 #x-1 and x both are in sx so x ranges from [sx.begin+1,sx.end)
                                 loopEndPoints[x] = (loopEndPoints[x][0]+u"+1",loopEndPoints[x][1])
                                 toRemove.append(g)
+                        if not g in toRemove:
+                            print "NOT RESOLVED."
                 if g.find("<") > 0:
                     pos = g.find("<")
                     x=g[:pos]
@@ -652,10 +730,17 @@ class bmTerm(bmRoot):
                 inSetvr = defineInSet(v,r.literal)
                 Assert(inSetvr not in ctx["elim_guards"], "can't have this INSET already in elim_guards")
                 ctx["elim_guards"].append(inSetvr)
-        #(2) take common guards of all SLASH expressions and pull it up to loop
+        #(2) take common guards of all SLASH expressions and pull it up to loop, Generalized for MIN expressions too
         compDict = {}
         commomcomps = []
-        boundExpr.getCommonGuards(compDict)
+        if boundExpr.isMin():
+            Assert(len(boundExpr.largs) == 1, "minsubtree should be unary: " + boundExpr.__str__()) 
+            if boundExpr.largs[0].isConsNode():
+                boundExpr.largs[0].getCommonGuards(compDict)
+            #print "MINcomps: ",compDict, boundExpr.largs[0].__str__().encode('utf-8')
+        else:
+            boundExpr.getCommonGuards(compDict)
+        
         #print "compDict: ",compDict
         if "" in compDict and compDict[""] > 0:
             for g in compDict:
@@ -681,31 +766,86 @@ class bmTerm(bmRoot):
         rs = u""
         lsargs = []
         ctx["noguards"] = True
+        guardedNode = None
+        tVar = None
+        guardLocal = None
+        if boundExpr.isMin() and boundExpr.largs[0].isConsNode() and len(boundExpr.largs[0].consargs) >= 2:
+            guardedNodeList = (filter(lambda c: hasattr(c,"guardCompStrs"),boundExpr.largs[0].consargs))
+            #print "GNL: ",guardedNodeList
+            if len(guardedNodeList) == 1:
+                guardedNode = guardedNodeList[0]
+                if "common_guards" in ctx:
+                    for g in ctx["common_guards"]:
+                        if g in guardedNode.guardCompStrs:
+                            guardedNode.guardCompStrs.remove(g)
+                if len(guardedNode.guardCompStrs) == 0:
+                    guardedNode = None
+                else:
+                    guardLocal = guardedNode.getGuardExpr()
+                    guardedNode.guardCompStrs = []
+                    #single guarded node!
+                    tVar = guardedNode.strTemp(ctx)
+                    ctx["use_tmp"] = tVar
+                #print "GN:",guardedNode.guardCompStrs, tmpVar
         boundExpr.setCode(ctx)
-        
+        if guardedNode and tVar and guardLocal:
+            loclsargs = [v for (v,r) in filter(lambda (v, r): v not in [THETA, QMARK, PSI], ctx['fvr'])]
+            initVar = arrayAccessStr(self.prg,u"dist", loclsargs)
+            guardedNode.preCode = u"TYPE " + tVar + " = " + initVar + ";\nif("+guardLocal+"){\n" + tVar + " = min(" + tVar + "," + guardedNode.preCode +");\n}\n"
+            del ctx["use_tmp"]
         ctx["common_guards"] = oldCommonGuards
         
         for (v,r) in fvrUp:
             if isSet(r.literal):
                 ctx["elim_guards"].remove(defineInSet(v,r.literal))
         
+        inlineUnion = len(fvrUp) == 1 and fvrUp[0][1].literal == u"U" and isSet(fvrUp[0][1].subtrees[0]) and isSet(fvrUp[0][1].subtrees[1]) and mode == MIN
         Assert("noguards" not in ctx, "must have been deleted")
         #guardExpr = boundExpr.getGuards(fvranges,ctx)
         guardExpr = u""
         if hasattr(boundExpr, "guardCompStrs"):
             guardExpr = boundExpr.getGuardExpr()
+        
         if mode == MIN and not minEvar:
             rs += u"\nTYPE " + tmpVar + u"= MAXVAL;\n"
-        
+        elif mode == MIN and minEvar and keepTempInMin and not "use_tmp" in ctx:
+            ls = [v for (v,r) in filter(lambda (v, r): v not in [THETA, QMARK, PSI], ctx['fvr'])]
+            rs += u"\nTYPE " + tmpVar + u"= "+arrayAccessStr(self.prg,u"dist", ls)+";\n"
         forDiag = False
-        
+        if inlineUnion:
+            v = fvrUp[0][0]
+            loopBounds1 = loopEndPoints[v][0][0] + u"," + loopEndPoints[v][0][1]
+            loopBounds2 = loopEndPoints[v][1][0] + u"," + loopEndPoints[v][1][1]
+            rs += self.prg.forPre() + u"(" + v + u"," + loopBounds1 + u"){\n"
+            
+            if guardExpr != u"":
+                rs += u"if (" + guardExpr + u"){\n"
+            rs += tmpVar + u" = min(" + tmpVar + u"," + boundExpr.code + u");\n"
+            if guardExpr != u"":
+                rs += u"}\n"
+            rs +=u"\n}\n"
+            
+            rs += self.prg.forPre() + u"(" + v + u"," + loopBounds2 + u"){\n"
+            
+            if guardExpr != u"":
+                rs += u"if (" + guardExpr + u"){\n"
+            rs += tmpVar + u" = min(" + tmpVar + u"," + boundExpr.code + u");\n"
+            if guardExpr != u"":
+                rs += u"}\n"
+            rs +=u"\n}\n"
+            return rs
+            #RTODO
+        ignoreLoop = {}
         for v, r in fvrUp:
             letStmt = False
+            ignoreLoop[v] = False
             Assert(v in VARS and v not in [PSI, THETA], u"Can't have PSI/THETA inside MAPSTO")
             Assert(r.literal != MAPSTO, u"this variable must be INT SET/UNION type")
             Assert(isSet(r.literal) or r.literal == u'U', u"No other loopVarTypes supported: " + r.__str__())
             if v in loopEndPoints and r.literal != u"U":
-                if loopEndPoints[v][1] is None:
+                if loopEndPoints[v][0] is None and loopEndPoints[v][1] is None:
+                    ignoreLoop[v] = True
+                elif loopEndPoints[v][1] is None:
                     letStmt = True
                     loopBounds = loopEndPoints[v][0]
                 else:
@@ -716,6 +856,9 @@ class bmTerm(bmRoot):
                 loopBounds = r.getSetEnds()
             if r.literal == u"U":
                 rs += u"FORUNION(" + v + u"," + loopBounds + u",\n"
+            elif ignoreLoop[v]:
+                return u"NOP;" #loop doesn't do anything
+                rs += u"IGNORE("
             elif letStmt:
                 rs += u"{\nLET(" + v + u"," + loopBounds + u");\n"
             else:
@@ -736,31 +879,37 @@ class bmTerm(bmRoot):
         if "fix" in ctx and ctx["fix"] and "slashes" in ctx:
             eVar = u""
             del ctx["slashes"]
-        elif minEvar:
+        elif minEvar and not keepTempInMin:
             lsargs = [v for (v,r) in filter(lambda (v, r): v not in [THETA, QMARK, PSI], ctx['fvr'])]
-            tmpVar = arrayAccessStr(u"dist", lsargs)
-        elif boundExpr.literal == APPLY and boundExpr.funct.literal == MIN and "minevar" in ctx:
-            eVar = ""
+            tmpVar = arrayAccessStr(self.prg,u"dist", lsargs)
+        elif boundExpr.isMin() and "minevar" in ctx:
+            if keepTempInMin:
+                eVar = arrayAccessStr(self.prg,u"dist", lsargs) + u" = "
+            else:
+                eVar = ""
         else:
-            eVar = arrayAccessStr(u"dist", lsargs) + u" = "
+            eVar = arrayAccessStr(self.prg,u"dist", lsargs) + u" = "
             
         if mode == MIN:
             rs += tmpVar + u" = min(" + tmpVar + u"," + boundExpr.code + u")"
-        elif mode == FIX or mode == SLASH:
-            rs += eVar  + boundExpr.code
+        elif (mode == FIX or mode == SLASH):
+            if eVar != u"":
+                rs += eVar  + boundExpr.code
         else:
             Assert(False, u"mode not defined: " + mode)
         rs=endStmt(rs) + u"\n"
         if guardExpr != u"":
             rs += u"}\n"
-        
+       
         if forDiag:
             rs += u")\n"
         else:
             for v, r in fvrUp:
                 if v in [QMARK, THETA]:
                     continue
-                if r.literal == u"U":
+                if ignoreLoop[v]:
+                    rs += u")\n"
+                elif r.literal == u"U":
                     rs += u")\n"
                 else:
                     rs += u"}\n"
@@ -778,7 +927,14 @@ class bmTerm(bmRoot):
         return u" && ".join(self.guardCompStrs)
     def setCode(self, ctx):
         if hasattr(self, "code"):
+            if isRecCall(self.literal) and "curpardep" in ctx:
+                Assert(ctx["curpardep"] != -1, "Can't have two recursive calls under same bazinga!")
+                self.code = u"/* "+PARLEVEL+u" "+ unicode(ctx["curpardep"]) +u" */" +self.code 
+                ctx["curpardep"] = -1
             return
+        if hasattr(self,"pardep"):
+            Assert("curpardep" not in ctx, "Can't have a bazinga inside a parent bazinga!")
+            ctx["curpardep"] = self.pardep
         if hasattr(self,u"guards"):
             Assert(hasattr(self.guards, "code"),"guards should have code already")
             Assert(hasattr(self, "guardCompStrs"),"guardCompStrs should have initialized already")
@@ -823,7 +979,7 @@ class bmTerm(bmRoot):
         elif self.literal == APPLY:
             
             self.code = self.getApplyCode(ctx)
-            if hasattr(self,u"guards") and guardsAllowed:
+            if hasattr(self,u"guards") and guardsAllowed and self.getGuardExpr() != u"":
                 if self.parent is not None and self.parent.literal == SLASH and "evar" in ctx and ctx["evar"] != u"":
                     self.code = u"if(" + self.getGuardExpr() + u"){\n" + ctx["evar"] + u"=" + self.code +u";}\n"
                 else:
@@ -843,7 +999,7 @@ class bmTerm(bmRoot):
             # binary infix operators
             Assert(len(self.subtrees) == 2, "binary infix operators")
             op = self.literal
-            if op == AND:
+            if op == AND: 
                 op = u' && '
             self.code = opInfix(op, self.subtrees, ctx)
         elif isSet(self.literal):
@@ -876,7 +1032,7 @@ class bmTerm(bmRoot):
                 fvrs = filter(lambda (v,r): isSet(r.literal) or r.literal==u"U",ctx["fvr"]) 
                 fvstrs = [v for (v,r) in fvrs]
                 #remove "slash" the moment you get into the SLASH
-                ctx["evar"] = arrayAccessStr("dist", fvstrs)
+                ctx["evar"] = arrayAccessStr(self.prg,"dist", fvstrs)
                 ctx["slashes"] = []
             
             for x in self.subtrees:                
@@ -947,13 +1103,18 @@ class bmTerm(bmRoot):
 
         if self.tempMade:
             self.preCode = self.code
-            self.code = self.strTemp()
+            self.code = self.strTemp(ctx)
         
         if self.parent is not None and hasattr(self.parent, "guards") and  self.parent.guards == self:
             comps = []
             getComponents(self, comps)
             self.parent.guardCompStrs = [g.code for g in comps]
         
+        if hasattr(self,"pardep"):
+            Assert("curpardep" in ctx, "Can't have been removed by another bazinga!")
+            del ctx["curpardep"]
+            #self.code = u"PAR[" + unicode(self.pardep) + u"]{" +self.code + u"}\n" 
+
         
         
     def getDebug(self):
@@ -1028,11 +1189,19 @@ class bmProgram(object):
         self.term = bmTerm(prg["term"]["subtrees"][0], None, self)
         self.superset = {}
         self.addStateVars(self.term)
+        self.recCallMap = {}
         self.computeSupersets(self.term)
         if DEBUG:
             print self.name, self.impl, "superset: ", self.superset
         self.addStateVarsSecond(self.term)
         
+        
+            
+    def preDist(self):
+        if self.impl == "loop":
+            return self.name + "L"
+        else:
+            return ""
             
     def addStateVars(self, trm):
         if trm.literal == MAPSTO:
@@ -1062,14 +1231,20 @@ class bmProgram(object):
         if not hasattr(self, "forCtr"):
             self.forCtr = 0
         self.forCtr += 1
+        #return u"#pragma ivdep\nFOR_" + self.name + u"_" + self.impl + u"_" + str(self.forCtr)
         return u"FOR_" + self.name + u"_" + self.impl + u"_" + str(self.forCtr)
-        
     def tempDefCode(self):
         # go over the superset entries and divide the supersets equally!
         # collect supersets
+        if self.impl == u"loop":
+            return u""
         lefts = {}
         retStr = u""
         for i in sorted(self.superset.keys()):
+            #print "SS: ", self.superset
+            if i in self.params or topSuperset(self.superset[i],self.superset,self.params) not in self.params:
+                #print "IGNORING: ",i, self.superset[i]
+                continue
             if self.superset[i] not in lefts:
                 lefts[self.superset[i]] = []
             lefts[self.superset[i]].append(i)
@@ -1115,6 +1290,50 @@ class bmProgram(object):
         retStr += u"return;\n"
         retStr += u"}"
         return retStr 
+    def postProcessPar(self,code):
+        #get each line of code and look for comment 
+        lines = code.split("\n")
+        ctr = 0
+        parlevs = []
+        parlines = []
+        for line in lines:
+            if PARLEVEL in line:
+                words = line.split(" ")
+                parlines.append(ctr)
+                parlevs.append((ctr,int(words[words.index(PARLEVEL) + 1])))
+            ctr += 1
+        #parlevs has line number , parallel dependency levels
+        sortedlevels = sorted(parlevs,key=lambda x:x[1])
+        #print "SORTED LEVELS",sortedlevels
+        parCounts = {}
+        for (lnum,lvl) in sortedlevels:
+            if lvl not in parCounts:
+                parCounts[lvl] = [lnum]
+            else:
+                parCounts[lvl].append(lnum)
+        
+       
+        ctr = 0
+        parctr = 0
+        output = []
+        for line in lines:
+            if ctr not in parlines:
+                output.append(line)
+            else:
+                lnum = sortedlevels[parctr][0]
+                lvl = sortedlevels[parctr][1]
+                added_code = lines[lnum]
+                if len(parCounts[lvl]) >= 2 and parCounts[lvl][-1] == lnum:
+                    #for last one add cilk_sync
+                    added_code = added_code + "\ncilk_sync;"
+                elif len(parCounts[lvl]) >= 2 and parCounts[lvl][-1] != lnum:
+                    Assert(lnum in parCounts[lvl], "Must be accounted for in parCounts")
+                    #add cilk_spawn before it 
+                    added_code = "cilk_spawn " + added_code
+                output.append(added_code)
+                parctr += 1
+            ctr+=1
+        return u"\n".join(output)
     def printCode(self):
         # print "#define FOR_FORWARD(i,s,e) for(int i=s;i<e;i++)"
         # print "#define FOR_BACKWARD(i,s,e) for(int i=e-1;i>=s;i--)"
@@ -1125,7 +1344,7 @@ class bmProgram(object):
         if self.impl == u"rec":
             print self.getBaseCase()
         print self.tempDefCode()
-        print self.term.code
+        print self.postProcessPar(self.term.code)
         print u"}"
     def __str__(self):
         retStr = self.name + u"[" 
@@ -1185,10 +1404,12 @@ def getUsedVars(trm,uvars):
 
 def getBmProgram(filenames):
     a = []
+    pdict = {}
     prgs = parseJsons(filenames)
     # print prgs.keys()
-    for prg in prgs:
+    for prg in sorted(prgs.keys(),reverse=True):
         # print prg
+        pdict[prg] ={}
         implList = []
         if u'loop' in prgs[prg]:
             implList.append(u'loop')
@@ -1197,8 +1418,10 @@ def getBmProgram(filenames):
         
         for impl in implList:
             # print prg,impl
-            a.append(bmProgram(prgs[prg][impl]))
-    return a        
+            cur_bmprog = bmProgram(prgs[prg][impl])
+            pdict[prg][impl] = cur_bmprog
+            a.append(cur_bmprog)
+    return (pdict,a)        
 
 def findUniqueVals(l, keys):
     s = set()
@@ -1229,25 +1452,38 @@ def main():
     parser.add_argument("--debug", action='store_true')
     parser.add_argument("files", metavar="F", type=str, nargs='+', help="All JSON files")
     args = parser.parse_args()
-    prgs = getBmProgram(args.files)
+    if "Gap" in args.files[0]:
+        problem = "Gap"
+    elif "Paren" in args.files[0]:
+        problem = "Paren"
+    else:
+        Assert(False, "problem name not expected/defined")
+    (pdict,prgs) = getBmProgram(args.files)
+    #For each loop,rec pair - take superset from rec and put it in loop
     
+    
+    for name in pdict:
+        #print "PRG: ", name, pdict[name]["rec"].superset
+        if problem != "Paren":
+            if u"J0" not in pdict[name]["rec"].superset:
+                pdict[name]["rec"].superset[u"J0"] = u"J"
+            if u"J1" not in pdict[name]["rec"].superset:
+                pdict[name]["rec"].superset[u"J1"] = u"J"
+            if u"K0" not in pdict[name]["rec"].superset:
+                pdict[name]["rec"].superset[u"K0"] = u"K"
+            if u"K1" not in pdict[name]["rec"].superset:
+                pdict[name]["rec"].superset[u"K1"] = u"K"
+        
+        pdict[name]["loop"].superset = pdict[name]["rec"].superset
+        
     if args.debug:
         for prg in prgs:
-            print prg.text
-            print prg.__str__()
+            print prg.text.encode('utf-8')
+            print prg.__str__().encode('utf-8')
      
     for prg in prgs:
-        superset = {}
-        # print "PANEM: ",PNAME
-        # print prg.text
         prg.printCode()
         
-    
-       
-    # print superset
-    
-    # printSlashes() 
-      
 
 
 if __name__ == "__main__": main()
