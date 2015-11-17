@@ -33,8 +33,8 @@
 	<div class="container">
 
 		<div ng-app="app" ng-controller="Ctrl">
-			<h3>Input</h3>
-
+			<h3>Input <select style="float: right" ng-model="filename" ng-change="open()" ng-options="e group by prefix(e) for e in examples"></select></h3>
+          
 			<textarea ui-codemirror="{ onLoad : loaded, indentWithTabs : true }" ui-codemirror-opts="cmOptions" ng-model="code" id="code"></textarea>
 			<br>
 			<button class="btn btn-default" ng-click="parseAndDisplay()" id="submit">Parse!</button>

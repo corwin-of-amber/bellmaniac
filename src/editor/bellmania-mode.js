@@ -120,6 +120,9 @@ CodeMirror.defineMode("bellmania", function () {
                     if (ch == "\"") { // enter string parsing mode
                         state.mode = "string";
                         returnType = STRING;
+                    } else if (ch == ".") {
+                        stream.eatWhile(/\./);
+                        returnType = STRING;
                     } else if (ch == "`") { // everything from backtick to whitespace/separator is an atom
                         stream.eatWhile(/[^\s()\[\]⟨⟩,]/);
                         returnType = ATOM;

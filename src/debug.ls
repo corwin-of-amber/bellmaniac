@@ -1,5 +1,9 @@
 _ = require \lodash
+fs = require \fs
+path = require \path
 LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*$/
+
+EXAMPLES_DIR = "../Bellmaniac/examples/intermediates"
 
 angular.module 'app', [\RecursionHelper, \ui.codemirror]
   ..controller "Ctrl" ($scope, $timeout) !->
@@ -18,6 +22,15 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
     $scope.loaded = initEditor((cm) -> , (cm) ->
       $scope.cm = cm)
 
+    $scope.prefix = (s) -> s.match(/(.*?)-/)[1] || s
+    $scope.examples = ["Paren-A", "Paren-B", "Paren-C", "LCS-A", "Gap-A", "Gap-B"]
+    $scope.open = !->
+      if $scope.filename == null
+        $scope.code = ""
+      else
+        filename = path.join(EXAMPLES_DIR, "#{$scope.filename}.synopsis.txt")
+        $scope.code = fs.readFileSync filename, "utf-8"
+    
     $scope.parseAndDisplay = !->
 
         initState()
@@ -33,6 +46,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
                 $scope.errorMsg = err.message
                 $scope.cm.currentOverlay = errorOverlay($scope.cm.getLine(err.line - 1), err.offset + 1)
                 $scope.cm.addOverlay($scope.cm.currentOverlay)
+                $scope.parsed = output.fromNearley
             )
 
         bellmaniaParse({isTactic: false, text: $scope.code}, success, error)

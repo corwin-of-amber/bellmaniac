@@ -4,7 +4,8 @@
 
 term -> _ expression _ {% take(1) %}
 
-expression 	-> setDeclaration {% id %}
+expression 	-> setMode {% id %}
+    | setDeclaration {% id %}
 	| untypedExpression (_ colon _ type):? {% function(d) {
 		if (d[1] === null) {
 			return d[0];
@@ -13,11 +14,19 @@ expression 	-> setDeclaration {% id %}
 			return d[0].type && d[0];
 		} } %}
 
+###########################
+####### MODE SWITCH #######
+###########################
+
+setMode -> 
+    "∵" {% function() { return {setMode: "tactic"}; } %}
+  | "∎" {% function() { return {setMode: "tactic"}; } %}
+
 ###############################
 ####### SET DECLARATION #######
 ###############################
 
-setDeclaration -> identifier (__ identifier):* _ colon _ "set" {%
+setDeclaration -> variable (__ variable):* _ colon _ "set" {%
   function(d, loc, reject) { return declareSets(d[0], d[1].map(take(1))) || reject; } %}
 
 ###########################################
@@ -106,11 +115,11 @@ defaultInfixOperator -> "/" {% function(d) {return operator(d[0]); } %}
 type -> typeWithOperations _ typeArrow _ type {% function(d) {return functionType(d[0], d[4]); } %}
 	| typeWithOperations {% id %}
 
-## assume type operators (\, * and ∩) are left associative
-typeWithOperations -> typeWithOperations _ typeOperator _ rootType {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
+## type operators (× and ∩) are right associative
+typeWithOperations -> 
+      typeWithOperations _ "×" _ rootType {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
+    | typeWithOperations _ "∩" _ variable {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
 	| rootType {% id %}
-
-typeOperator -> [×∩] {% id %}
 
 rootType -> leftparen type rightparen {% function(d) {return d[1];} %}
 	| typeVariable {% id %}
@@ -123,6 +132,7 @@ typeVariable -> identifier {% function(d, loc, reject) {return typeVariable(d[0]
 
 identifier -> letter idrest {% function(d) {return d[0].concat(d[1]); } %}
 	| op {% id %}
+    | ".":+ {% function(d) {return d[0].join(""); } %}
 
 idrest -> letterOrDigit:* {% function(d) {return d[0].join(""); } %}
 	| letterOrDigit:* underscore op {% function(d) {return d[0].join("").concat("_").concat(d[2]);} %}

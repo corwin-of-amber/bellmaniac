@@ -8,14 +8,15 @@ root.keywords = ["set", "fix", "/", "+", "×", "∩", "-", "*"]
 ## combinators
 
 root.tree = (root, subtrees) ->
-	$: \Tree,
-	root: root,
+	$: \Tree
+	root: root
 	subtrees: subtrees
 
 root.identifier = (literal, kind) ->
-	$: \Identifier,
-	literal: literal,
+	$: \Identifier
+	literal: literal
 	kind: kind
+	ns: if literal is /^\?/ then "*" else undefined
 
 root.operator = (literal) -> identifier(literal, \operator)
 
@@ -25,18 +26,18 @@ root.genericIdentifier = (literal) -> identifier(literal, \?)
 
 root.declareSet = (literal) ->
 	if root.keywords.indexOf(literal) == -1
-		newSet = identifier(literal, \set)
-		root.scope.push newSet
-		newSet
+		identifier(literal, \set)
+			root.scope.push ..
 	else
 		# console.error <| "Literal " + literal + " is reserved."
 		false
 
 root.declareSets = (head, tail) ->
-	for literal in [head] ++ tail
-		if !(newSet = root.declareSet(literal))
-			return false
-	newSet # returns last set?
+	kind: \set
+	multiple:
+		for v in [head, ...tail]
+			identifier(v.root.literal, \set)
+				root.scope.push ..
 
 root.typeVariable = (literal) ->
 	if root.keywords.indexOf(literal) > -1
@@ -51,9 +52,7 @@ root.typeVariable = (literal) ->
 		tree(identifier(literal, "type variable"), [])
 
 root.variable = (literal) ->
-	if root.keywords.indexOf(literal) == -1 && root.scope.filter((set) ->
-		set.literal == literal
-	).length == 0
+	if literal not in root.keywords && !root.scope.some((.literal == literal))
 		tree(identifier(literal, \variable), [])
 	else
 		# console.error <| "Literal " + literal + " is reserved or has been declared as a set."
