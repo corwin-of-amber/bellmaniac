@@ -188,9 +188,16 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       List(SynthPod(h.subtrees(0), subterm, encaps(synthed) :- impl, impl, ψ, footprint))
     case Some((L("SynthAuto"), List(~(h), `⟨⟩`(templates), ~(ψ_)))) =>
       val ψ = ctx_?(h, ψ_)
-      val (synthed, _) = invokeSynthesis(h, h, templates, fix=false)
-      val impl = Synth.Alignment.stripProg(evalTerm(synthed))
-      List(LetSynthPod(h, encaps(synthed) :- impl, impl, ψ))
+      fixer_?(s.program, h) match {
+        case Some(fx) =>  // @@@ repeating code from previous case...
+          val (synthed, footprint) = invokeSynthesis(fx, h, templates, fix=true)
+          val impl = Synth.Alignment.stripProg(evalTerm(synthed))
+          List(SynthPod(fx.subtrees(0), h, encaps(synthed) :- impl, impl, ψ, footprint))
+        case _ =>
+          val (synthed, _) = invokeSynthesis(h, h, templates, fix=false)
+          val impl = Synth.Alignment.stripProg(evalTerm(synthed))
+          List(LetSynthPod(h, encaps(synthed) :- impl, impl, ψ))
+      }
 
     case Some((L("Distrib"), List(L("/"), ~(f)))) =>
       val box = SimplePattern(? /: ?) findOne_! f
@@ -388,7 +395,9 @@ object TacticApplicationEngine {
   def instapod(it: Pod)(implicit scope: Scope) = new Instantiated(it)
 
   /* navigator functions */
-  def fixer(A: Term, q: Term) = SimplePattern(fix(?)) find A map (_.subterm) filter (_.hasDescendant(q)) head
+  def fixer_?(A: Term, q: Term) = SimplePattern(fix(?)) find A map (_.subterm) filter (_.hasDescendant(q)) headOption
+
+  def fixer(A: Term, q: Term) = fixer_?(A, q) getOrElse { throw new TacticalError("no surrounding fix() found") at q }
   def fixee(A: Term, q: Term) = fixer(A, q).subtrees(0)
   def ctx(A: Term, t: Term) = TypedLambdaCalculus.context(A, t)
 

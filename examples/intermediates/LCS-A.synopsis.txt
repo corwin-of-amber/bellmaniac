@@ -3,7 +3,7 @@ J : set
 J₀ J₁ I₀ I₁ : set
 
 A `I `J
-
+∵
 SaveAs (A `I `J) "loop"
 
 Slice (find (θ ↦ ?)) (⟨`?⟩ ⟨`I₀, `I₁⟩ ⟨`J₀, `J₁⟩)
@@ -29,7 +29,7 @@ Stratify "/" (fixee 🄰) 🄰 ψ
 Stratify "/" (fixee 🄰) ⟨🄷,🄸,🄼⟩ ψ
 Stratify "/" (fixee 🄰) ⟨🄸,🄹,🄻⟩ ψ
 
-🄸 🄶 🄴 🄰 ↦ SynthAuto (fixer .) . ... ψ
+🄸 🄶 🄴 🄰 ↦ SynthAuto . ... ψ
 /*
 ⟨Synth (fixee 🄸) 🄸 (A `I₀ `J₀) ψ ⟨`I₀×J₀⟩,
  Synth (fixee 🄶) 🄶 (A `I₀ `J₁) ψ ⟨`I₀×J₁⟩,

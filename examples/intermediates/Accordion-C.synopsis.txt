@@ -19,12 +19,15 @@ Let max (slasher 🄲) ⟨🄹,🄼⟩ ψ
  Let max (slasher 🄱) ⟨🄷,🄸⟩ ψ,
  Let max (slasher 🄲) ⟨🄺,🄻⟩ ψ⟩
 
+🄲 🄳 ↦ SynthAuto . D ψ
+🄰 🄱 🄴 🄵 ↦ SynthAuto . ... ψ
+/*
 ⟨Synth 🄰 (C `K₁ `K₃) ψ,
  Synth 🄱 (C `K₁ `K₂) ψ,
  Synth 🄲 (D `K₀ `K₁ `K₃) ψ,
  Synth 🄳 (D `K₀ `K₁ `K₂) ψ,
  Synth 🄴 (C `K₀ `K₃) ψ,
- Synth 🄵 (C `K₀ `K₂) ψ⟩
+ Synth 🄵 (C `K₀ `K₂) ψ⟩*/
 Opt
 
 SaveAs (C `J₀ `J₁) "rec"

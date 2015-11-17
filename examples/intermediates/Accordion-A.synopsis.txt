@@ -18,7 +18,7 @@ Assoc max
 Stratify max (fixee 🄰) ⟨🄳,🄵⟩ ψ
 Stratify max (fixee 🄰) ⟨🄴,🄶⟩ ψ
 
-🄰 🄲 🄳 🄴 ↦ SynthAuto (fixer .) . ... ψ
+🄰 🄲 🄳 🄴 ↦ SynthAuto . ... ψ
 /*
 ⟨Synth (fixee 🄰) 🄰 (A `J₀) ψ ⟨`J₀×J₀⟩,
  Synth (fixee 🄲) 🄲 (C `J₀ `J₁) ψ ⟨`J₀×J⟩,

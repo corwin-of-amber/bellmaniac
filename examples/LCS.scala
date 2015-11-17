@@ -50,9 +50,8 @@ object LCS {
 
 
   def main(args: Array[String]): Unit = {
-    val filename = args.lift(0) getOrElse "/tmp/synopsis.json"
-
-    new Interpreter().executeFile(filename)
+    ui.Config.tae(args)
+    new Interpreter().executeFile(ui.Config.config.filename())
   }
 
 

@@ -26,7 +26,7 @@ Assoc max
  Synth 🄳 (B `K₁ `K₂) ψ,
  Synth 🄴 (B `K₀ `K₃) ψ,
  Synth 🄶 (D `K₀ `K₂ `K₃) ψ,
- Synth 🄷 (B `K₀ `K₂) ψ⟩
+ Synth 🄷 (B `K₀ `K₂) ψ⟩*/
 Opt
 
-SaveAs (B `J₀ `J₁) "rec"*/
+SaveAs (B `J₀ `J₁) "rec"
