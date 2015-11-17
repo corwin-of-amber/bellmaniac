@@ -37,5 +37,6 @@ Stratify min (fixee 🄰) ⟨🄸,🄹,🄻⟩ ψ
  Synth (fixee 🄶) 🄶 (A `J₀ `K₁)     ψ ⟨`J₀×K₁⟩,
  Synth (fixee 🄷) 🄷 (B `J₀ `K₀ `K₁) ψ ⟨`J₀×K⟩,
  Synth (fixee 🄸) 🄸 (A `J₀ `K₀)     ψ ⟨`J₀×K₀⟩⟩
+Opt
 
 SaveAs (A `J `K) "rec"

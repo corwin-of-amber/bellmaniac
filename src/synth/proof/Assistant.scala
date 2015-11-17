@@ -17,6 +17,8 @@ import semantics.Binding
 import semantics.Prelude
 import semantics.TypedLambdaCalculus
 import semantics.LambdaCalculus
+import semantics.pattern.SimplePattern
+import semantics.Trench
 
 
 
@@ -123,4 +125,29 @@ class Assistant(implicit env: Environment) {
     val a = condA.split(I("∧"))
     && (a ++ (condB.split(I("∧")) filterNot a.contains))
   }
+  
+  /**
+   * Use common idioms for passing a proof obligation to the prover.
+   */
+  def invokeProver(assumptions: List[Term], goals: List[Term], subexprPattern: SimplePattern, verbose: Prover.Verbosity=null, oneByOne: Boolean=true, exitOnFail: Boolean=true)(implicit prover: Prover) = {
+    println("· " * 25)
+
+    val commits =
+      for (goals <- if (oneByOne) goals map (List(_)) else List(goals)) yield {
+        val igoals = goals map intros
+        val t = if (verbose == null) new prover.Transaction else new prover.Transaction(verbose)
+        val switch = t.commonSwitch(new prover.CommonSubexpressionElimination(igoals, subexprPattern))
+
+        t.commit(assumptions map simplify map t.prop, igoals map (switch(_)) map simplify map t.goal)
+      }
+
+    val results = commits reduce (_ ++ _)
+
+    if (exitOnFail && !(results.toList forall (_.root == "valid"))) System.exit(1)
+
+    println("=" * 80)  // QED!
+    
+    results
+  }
+
 }

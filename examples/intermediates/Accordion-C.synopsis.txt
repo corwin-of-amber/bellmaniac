@@ -1,0 +1,30 @@
+J : set
+J₀ J₁ : set
+K₀ K₁ K₂ K₃ : set
+
+C `J₀ `J₁
+∵
+SaveAs (C `J₀ `J₁) "loop"
+
+Slice (find (i ↦ ?)) (⟨`K₀×K₀,`K₀×K₁,`K₁×K₁⟩)
+Let "/" (slasher 🄰) 🄰 ψ
+Let "/" (slasher 🄰) 🄰 ψ
+
+⟨🄴 🄶 ↦ Slice . (find . ψ) (`? ⟨`K₂,`K₃⟩) max,
+ 🄸 ↦ Slice . (find . ψ) ⟨`K₀×K₂,`K₀×K₃,`K₁×?⟩ max⟩
+Assoc max
+
+Let max (slasher 🄲) ⟨🄹,🄼⟩ ψ
+⟨Let max (slasher 🄰) ⟨🄴,🄵⟩ ψ,
+ Let max (slasher 🄱) ⟨🄷,🄸⟩ ψ,
+ Let max (slasher 🄲) ⟨🄺,🄻⟩ ψ⟩
+
+⟨Synth 🄰 (C `K₁ `K₃) ψ,
+ Synth 🄱 (C `K₁ `K₂) ψ,
+ Synth 🄲 (D `K₀ `K₁ `K₃) ψ,
+ Synth 🄳 (D `K₀ `K₁ `K₂) ψ,
+ Synth 🄴 (C `K₀ `K₃) ψ,
+ Synth 🄵 (C `K₀ `K₂) ψ⟩
+Opt
+
+SaveAs (C `J₀ `J₁) "rec"

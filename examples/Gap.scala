@@ -64,7 +64,7 @@ object Gap {
               min :@ (q ↦ ((θ:@(i,q)) + ((w :: ((K x K) ∩ K_<) ->: ?):@(q,j)))),
               min :@ (p ↦ ((θ:@(p,j)) + ((`w'` :: ((J x J) ∩ J_<) -> ?):@(p,i))))
             )
-          )) -: f
+          )) :: (? -> ((J x K) -> R))  // -: f
         ))
       )
   }
@@ -131,8 +131,8 @@ object Gap {
   object BreakDown {
     
     def main(args: Array[String]): Unit = {
-      val filename = args.headOption getOrElse "/tmp/synopsis.json"
-      new Interpreter().executeFile(filename)
+      ui.Config.tae(args)
+      new Interpreter().executeFile(ui.Config.config.filename())
     }
 
     class Interpreter(implicit scope: Scope) extends TacticApplicationEngine {
@@ -162,7 +162,7 @@ object Gap {
         val minKR = MinPod(K, R, toR.<)
         val minNR = MinPod(N, R, toR.<)
 
-        new Prover(List(NatPod, TuplePod, toR, toJ, toK, idxJ, idxK, partJ, partK, partJ0, partJ1, partK0, partK1, minJR, minKR, minNR), Prover.Verbosity.ResultsOnly)
+        new Prover(List(NatPod, TuplePod, toR, toJ, toK, idxJ, idxK, partJ, partK, partJ0, partJ1, partK0, partK1, minJR, minKR, minNR) ++ pods, Prover.Verbosity.ResultsOnly)
       }
 
       override lazy val prover: Prover = prover(List())

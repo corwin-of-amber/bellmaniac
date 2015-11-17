@@ -12,8 +12,8 @@ Let "/" (slasher 🄰) 🄰 ψ
 Let "/" (slasher 🄰) 🄰 ψ
 Let "/" (slasher 🄰) 🄰 ψ
 
-⟨Slice 🄵 ψ (⟨`J₀, `J₁⟩ ⟨`M₀, `M₁⟩) min,
- Slice 🄸 ψ (⟨`J₀, `J₁⟩ ⟨`M₀, `M₁⟩) min,
+⟨Slice 🄵 ψ (⟨`J₀×?, `J₁×M₀, `J₁×M₁⟩) min,
+ Slice 🄸 ψ (⟨`J₀×?, `J₁×M₀, `J₁×M₁⟩) min,
  Slice 🄻 ψ (⟨`?⟩ ⟨`M₀, `M₁⟩) min,
  Slice 🄾 ψ (⟨`?⟩ ⟨`M₀, `M₁⟩) min,
  Slice (findAll (q ↦ ?)) ⟨`M₀, `M₁⟩⟩
@@ -21,13 +21,13 @@ Let "/" (slasher 🄰) 🄰 ψ
 Distrib min
 Assoc min
 
-⟨Let min (slasher 🄰) ⟨🄴,🄵,🄶⟩ ψ,
- Let min (slasher 🄱) ⟨🄻,🄼,🄽⟩ ψ⟩
+⟨Let min (slasher 🄰) ⟨🄴,🄵⟩ ψ,
+ Let min (slasher 🄱) ⟨🄺,🄻⟩ ψ⟩
 
 ⟨Let min (slasher 🄰) ⟨🄶,🄷,🄹⟩ ψ,
- Let min (slasher 🄲) ⟨🄾,🄿,🅁⟩ ψ,
- Let min (slasher 🄴) ⟨🅆,🅇,🅉⟩ ψ,
- Let min (slasher 🄵) ⟨🄱̲,🄲̲,🄴̲⟩ ψ⟩
+ Let min (slasher 🄲) ⟨🄽,🄾,🅀⟩ ψ,
+ Let min (slasher 🄴) ⟨🅄,🅅,🅇⟩ ψ,
+ Let min (slasher 🄵) ⟨🅉,🄰̲,🄲̲⟩ ψ⟩
 
 ⟨Synth 🄰 (B `J₁ `M₁ `M₃) ψ,
  Synth 🄱 (B `J₁ `M₀ `M₃) ψ,
@@ -37,5 +37,6 @@ Assoc min
  Synth 🄷 (B `J₀ `M₀ `M₃) ψ,
  Synth 🄸 (B `J₀ `M₁ `M₂) ψ,
  Synth 🄹 (B `J₀ `M₀ `M₂) ψ⟩
+Opt
 
 SaveAs (B `J `K₀ `K₁) "rec"

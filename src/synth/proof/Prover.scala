@@ -29,7 +29,7 @@ import semantics.Trench
  * Carries out automatic proofs employing macro expansion, term translation,
  * and reflection.
  */
-class Prover(val pods: List[Pod], verbose: Prover.Verbosity=Prover.Verbosity.All)(implicit val env: Environment) {
+class Prover(val pods: List[Pod], val verbose: Prover.Verbosity=Prover.Verbosity.All)(implicit val env: Environment) {
 
   import TypeTranslation.TypingSugar._
   import TypedTerm.typeOf_!

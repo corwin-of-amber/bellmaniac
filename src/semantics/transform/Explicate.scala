@@ -11,7 +11,7 @@ import semantics._
  * @param includePreconditions
  * @param scope
  */
-class Explicate(includePreconditions: Boolean=true)(implicit scope: Scope) {
+class Explicate(includePreconditions: Boolean=true, masterGuards: Boolean=false)(implicit scope: Scope) {
 
   import TypedTerm.{preserve, typeOf_!}
   import LambdaCalculus.{isApp, isAbs}
@@ -30,7 +30,7 @@ class Explicate(includePreconditions: Boolean=true)(implicit scope: Scope) {
 
   def collate(t: Term)(implicit assumptions: List[Term]): Map[Id[Term], List[Term]] = isApp(t) match {
     case Some((f, args)) =>
-      val precond = nontriv(TypeTranslation.checks(scope, typeOf_!(f), args))
+      val precond = nontriv(TypeTranslation.checks(scope, typeOf_!(f), args) ++ masterHacks(args))
       accumulate((f +: args) flatMap (x => collate(x)(assumptions ++ precond)) toMap, t, precond)
     case _ => isAbs(t) match {
       case Some((vars, body)) =>
@@ -47,6 +47,15 @@ class Explicate(includePreconditions: Boolean=true)(implicit scope: Scope) {
           t.subtrees flatMap collate toMap
       }
     }
+  }
+  
+  def masterHacks(terms: Iterable[Term]) = {
+    if (masterGuards) 
+      terms collect (x => typeOf_!(x) match {
+        case typ if typ.isLeaf &&
+          !x.isLeaf && scope.sorts.isMaster(typ.root) && !(List(Prelude.B,Prelude.R,Prelude.N) contains typ) => typ(x)
+      }) 
+    else List()
   }
 
   def accumulate[A, B](map: Map[A, List[B]], key: A, values: List[B]) = map get key match {
@@ -80,10 +89,10 @@ class Explicate(includePreconditions: Boolean=true)(implicit scope: Scope) {
 }
 
 object Explicate {
-  def explicate(t: Term, includePreconditions: Boolean=false)(implicit scope: Scope) =
-    new Explicate(includePreconditions) apply t
-  def explicateHoist(t: Term, includePreconditions: Boolean=false)(implicit scope: Scope) = {
-    val e = new Explicate(includePreconditions)
+  def explicate(t: Term, includePreconditions: Boolean=true, masterGuards: Boolean=false)(implicit scope: Scope) =
+    new Explicate(includePreconditions, masterGuards) apply t
+  def explicateHoist(t: Term, includePreconditions: Boolean=true, masterGuards: Boolean=false)(implicit scope: Scope) = {
+    val e = new Explicate(includePreconditions, masterGuards)
     e.hoist(e(t))
   }
 }

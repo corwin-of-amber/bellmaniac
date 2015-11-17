@@ -249,14 +249,6 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     
     val derivatives = resolvePatterns(command)(s) flatMap (pods(_)(s)) map instapod
 
-    def cert_?(p: Pod) = p match {
-      case _: LetSynthPod | _: SynthPod => true
-      //case _: StratifySlashPod | _: StratifySlash2Pod => true
-      //case _: StratifyReducePod => true
-      //case _: SliceAndDicePod => true
-      case _ => false
-    }
-
     if (derivatives.isEmpty) s
     else {
       derivatives filter (_.it |> cert_?) filter (_.obligations != TRUE) foreach invokeProver
@@ -268,6 +260,18 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     }
   }
 
+  def cert_?(p: Pod) = {
+    val cert = ui.Config.config.cert()
+    if (cert contains "all") true
+    else p match {
+      case _: SynthPod | _: LetSynthPod => cert contains "Synth"
+      case _: StratifySlashPod | _: StratifySlash2Pod | _: LetSlashPod => cert contains "/"
+      case _: StratifyReducePod | _: LetReducePod => cert contains "reduce"
+      case _: SliceAndDicePod => cert contains "Slice"
+      case _ => false
+    }
+  }
+  
   def mkState(term: Term) = State(term, extrude(term))
 
   def display(program: Term) { display(extrude(program)) }
@@ -313,15 +317,18 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   }
 
   def invokeOptimize(implicit s: State) = {
-    val rec = new OptimizationPass.Recorder()(prover.env)
-    (new DependencyAnalysis()(rec, prover) apply s.program)
+    if (ui.Config.config.opt()) {
+      val rec = new OptimizationPass.Recorder()(prover.env)
+      (new DependencyAnalysis()(rec, prover) apply s.program)
+    }
+    else s.program
   }
 
   /*
    * Output part
    */
 
-  def emit(s: State) = mkState(Explicate.explicateHoist(s.program |> OptimizationPass.foldAll, includePreconditions=true))
+  def emit(s: State) = mkState(Explicate.explicateHoist(s.program |> OptimizationPass.foldAll, masterGuards=true))
 
   /*
    * JSON part
@@ -343,16 +350,18 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     , s)
   }
   
+  def finalize(s: State) {
+    val prog = s.program |> OptimizationPass.foldAll
+    if (prog != s.program) {
+      println("=" * 80)
+      display(prog)
+    }
+  }
+  
   def execute(reader: BufferedReader)(implicit sc: SerializationContainer=new DisplayContainer) {
     val head #:: blocks = sc.flatten(CLI.getBlocks(reader) map
         JSON.parse map (_.asInstanceOf[DBObject]))
-    val finalState =
-      (initial(head) /: blocks) { (s, json) => transform(s, json) }
-    val finalProgram = finalState.program |> OptimizationPass.foldAll
-    if (finalProgram != finalState.program) {
-      println("=" * 80)
-      display(finalProgram)
-    }
+    (initial(head) /: blocks) { (s, json) => transform(s, json) } |> finalize
   }
 
   def executeFile(filename: String)(implicit sc: SerializationContainer=new DisplayContainer) {

@@ -44,13 +44,18 @@ object Reflection {
   def isFunc(v: TypedIdentifier) = isFuncType(v.typ)    
   
   
-  val log = Logger.getLogger("semantics.Reflection")
-  log.setLevel(Level.OFF)
+  val log = {
+    val log = Logger.getLogger("semantics.Reflection")
+    log.setLevel(Level.OFF)
   
-  {  /* I'm not sure this is advised */
+    if (ui.Config.config.log() contains "Reflection") log.setLevel(Level.INFO)
+    
+    /* I'm not sure this is advised */
     val handler = new java.util.logging.ConsoleHandler
     handler.setLevel(Level.FINER);
-    Reflection.log.addHandler(handler);
+    log.addHandler(handler);
+    
+    log
   }
 }
 
@@ -384,7 +389,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term])(impl
       }
     }
     
-    val (z3g, fo_base) = TypeTranslation toSmt List(env)
+    val (z3g, fo_base) = TypeTranslation toSmt (smtFactory, List(env))
 
     val start = System.currentTimeMillis
     def finish = System.currentTimeMillis - start
@@ -413,6 +418,12 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term])(impl
     results
   }
   
+  def smtFactory = ui.Config.config.prover() match {
+    case "z3" => new smt.Z3Gate
+    case "cvc4" => new smt.CVC4Gate
+    case "null" => new smt.NullSmtGate
+    case what_? => throw new RuntimeException(s"unrecognized prover: '${what_?}'")
+  }
 }
 
 

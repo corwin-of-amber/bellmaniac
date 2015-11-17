@@ -112,9 +112,8 @@ object Accordion {
 
 
   def main(args: Array[String]): Unit = {
-    val filename = args.lift(0) getOrElse "/tmp/synopsis.json"
-
-    new Interpreter().executeFile(filename)
+    ui.Config.tae(args)
+    new Interpreter().executeFile(ui.Config.config.filename())
   }
 
 
@@ -133,7 +132,9 @@ object Accordion {
     val P2 = TV("P₂")
     override val prototypes = Map(A → (A:@(? ∩ P1)))
 
-    override lazy val prover = {
+    override lazy val prover: Prover = prover(List())
+    
+    def prover(pods: List[Pod]) = {
       import synth.pods._
 
       val toR = TotalOrderPod(R)
@@ -142,52 +143,19 @@ object Accordion {
       val partJ = PartitionPod(J, toJ.<, J0, J1)
       val partJ0 = PartitionPod(J0, toJ.<, K0, K1)
       val partJ1 = PartitionPod(J1, toJ.<, K2, K3)
+      val partK0 = PartitionPod(K0, toJ.<, L0, L1)
+      val partK1 = PartitionPod(K1, toJ.<, L2, L3)
+      val partK2 = PartitionPod(K2, toJ.<, L4, L5)
       val maxJR = MaxPod(J, R, toR.<)
       val maxNR = MaxPod(N, R, toR.<)
 
-      new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, maxJR, maxNR), Prover.Verbosity.ResultsOnly)
+      new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, partK0, partK1, partK2, maxJR, maxNR) ++ pods, Prover.Verbosity.ResultsOnly)
     }
     
     override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
+    
     def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
-      import synth.pods._
-      import syntax.Piping._
-
-      for (goal <- goals) extrude(goal) |> report.console.Console.display
-      for (goal <- goals)
-        logf += Map("term" -> goal,
-          "display" -> Rich.display(extrude(goal) |-- report.console.Console.display))
-
-      println("· " * 25)
-
-      val a = new Assistant
-
-      val toR = TotalOrderPod(R)
-      val toJ = TotalOrderPod(J, <)
-      val idxJ = IndexArithPod(J, toJ.<)
-      val partJ = PartitionPod(J, toJ.<, J0, J1)
-      val partJ0 = PartitionPod(J0, toJ.<, K0, K1)
-      val partJ1 = PartitionPod(J1, toJ.<, K2, K3)
-      val maxJR = MaxPod(J, R, toR.<)
-      val maxNR = MaxPod(N, R, toR.<)
-
-      val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, maxJR, maxNR) ++ pods, Prover.Verbosity.ResultsOnly)
-
-      val commits =
-        for (goals <- goals map (List(_))) yield {
-          //for (goals <- List(goals)) yield {
-          val igoals = goals map a.intros
-          val t = new p.Transaction
-          val switch = t.commonSwitch(new p.CommonSubexpressionElimination(igoals, new SimplePattern(min :@ ?)))
-
-          t.commit(assumptions map a.simplify map t.prop, igoals map (switch(_)) map a.simplify map t.goal)
-        }
-
-      val results = commits reduce (_ ++ _)
-
-      if (!(results.toList forall (_.root == "valid"))) System.exit(1)
-
-      println("=" * 80)  // QED!
+      (new Assistant).invokeProver(assumptions, goals, new SimplePattern(min :@ ?))(prover(pods))
     }
   }  
   

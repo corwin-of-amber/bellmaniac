@@ -3,5 +3,6 @@ cp -r out/production/Bellmania jarbin
 cd jarbin
 jar xf /opt/local/share/scala-2.11/lib/scala-library.jar
 jar xf ../lib/mongo-java-driver-2.13.1.jar
+tar xf ../lib/scallop_2.11-0.9.5.jar
 echo "Main-Class: ui.CLI" > Manifest.txt
 jar cfm ../bell.jar Manifest.txt .
