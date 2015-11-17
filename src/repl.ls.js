@@ -75,6 +75,14 @@
     };
     $scope.output = {};
     $scope.data = [];
+    $scope.reset = function(){
+      return $scope.history = [{
+        id: 1,
+        input: "",
+        output: null,
+        error: null
+      }];
+    };
   });
   x$.filter("collapse", function(){
     var lead;

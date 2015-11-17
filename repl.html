@@ -35,6 +35,11 @@
 		<div class="container">
 			<h1>Bellmania Interface</h1>
 			<p>Press Cmd-Enter in the code editor to parse current code.</p>
+			<div style="margin-bottom: 15px" class="form-inline">
+				<a class="btn btn-default" ng-click="reset()">New</a>
+				<a class="btn btn-default" ng-click="save()">Save</a>
+				<a class="btn btn-default" ng-click="load()">Load</a>
+			</div>
 		</div>
 		<div class="container" ng-repeat="h in history">
 			<hr ng-if="$index > 0">

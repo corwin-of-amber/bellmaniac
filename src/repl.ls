@@ -65,6 +65,12 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
         return ($scope.mostRecentId < h.id && h.output != null)
     $scope.output = {}
     $scope.data = []
+
+    $scope.reset = ->
+      $scope.history = [
+          {id: 1, input: "", output: null, error: null}
+      ]
+
   ..filter "collapse" ->
     lead = -> it.match /^\s*/ .0.length
     (input, indent) ->
