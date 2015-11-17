@@ -28,7 +28,7 @@ More tactic definitions are given in the appendix.
 \theoremstyle{definition}
 \newtheorem{tactic}{Tactic}
 
-\newcommand\tacticdef[1]{\subsection*{#1}}
+\newcommand\tacticdef[1]{\subsection*{\sf\larger #1}\vspace{-3mm}}
 
 \tacticdef{Slice} \label{tactics:Slice}
 \[f ~=~ f\big|_{X_1} ~\Big/~ f\big|_{X_2} ~\Big/ ~\cdots~ \Big/~ f\big|_{X_r}\] 
@@ -78,8 +78,28 @@ Although the proof is not hard, we defer it to a later theorem.
   (\fix f_1) :: \T_1 ~\big/~ \cdots ~\big/~ (\fix f_r) :: \T_r\]
 
 This tactic is used to generate recursive calls to sub-programs. For $i=1..r$, $f_i$
-is typically either $h_i$ or a sub-term occurring earlier in the development.
+is typically either $\fix h_i$, $h_i\,\psi$, or $t\,\psi$, where $\psi$ is some
+variable and $t$ is a term corresponding to a previously defined subroutine.
 
+\newcommand\Y{\mathcal{Y}}
+
+\Obligations Let $h=h_1/\cdots/h_r$, and let $\T\to\T$ be the shape of $h$. 
+  For each $f_i$, depending on the form of $f_i$:
+\begin{itemize}
+  \item If $f_i \cong \fix f$,
+  \begin{itemize}
+    \item $h :: (\T \to \Y) = h :: (\Y \to \Y) = f_i :: (\Y \to \T)$
+    for some $\Y$ which is a subtype of $\T$ and a supertype of $\T_i$.
+  \end{itemize}
+  \item If $f_i$ does not contain any ``$\fix$'' terms,
+  \begin{itemize}
+    \item $h\,(h\,\theta) :: \T_i = f_i :: \T_i$ for a fresh variable $\theta$.
+  \end{itemize}
+\end{itemize}
+
+We use $\cong$ to denote syntactic congruence up to $\beta$-reduction.
+
+\begin{comment}
 \Obligations Let $h=h_1/\cdots/h_r$, let $\overline\theta\!=\!\theta_{1..r}$ be $r$ fresh variables, and let
 $f = \theta_{1..r} \mapsto (f_1\,\theta_1)::\T_1/\cdots/(f_r\,\theta_r)::\T_r$.
 \begin{itemize}
@@ -90,6 +110,8 @@ $f = \theta_{1..r} \mapsto (f_1\,\theta_1)::\T_1/\cdots/(f_r\,\theta_r)::\T_r$.
 \end{itemize}
 
 (We give two alternatives, as the first is usually easier to prove, but may hold in less cases)
+\end{comment}
+
 
 \newenvironment{tacticbox}[1]{\begin{center}\begin{tabular}{|@{~~~~}l@{~~~~}|}\hline\rule{0pt}{2.3ex}\underline{#1}\\[.4em]$}{$\\[-1em] \\[.3ex] \hline\end{tabular}\end{center}}
 
@@ -227,7 +249,7 @@ $\semp{s}=\semp{s'}$ for all interpretations of the free variables of $s$ and $s
 For the tactics with {\bf Obligations:} tactic, the theorem is trivial.
 
 \medskip
-For Stratify, let $f$, $g$ be partial functions such that
+For {\sf Stratify}, let $f$, $g$ be partial functions such that
 \[\renewcommand\arraystretch{1.3}
   \forall \theta,\zeta.\quad \begin{array}{l}f\,(g\,\zeta\,\theta) ~=~ f\,\zeta \\
   g\,(f\,\theta)\,\theta ~=~ h\,\theta
@@ -254,7 +276,50 @@ Now instantiate $h$, $f$, and $g$, with $f\applt g$, $f$, and $g'$ from \Cref{ta
 and we obtain the equality in the tactic.
 
 \medskip
-For Synth, ({\it i}) assume
+For {\sf Synth}, ({\it i}) assume
+\[h :: \T\to\Y = h :: \Y\to\Y = f_i :: \Y\to\T\]
+
+Intuitively, $\Y$ ``cuts out'' a region of an array $\theta :: \T$ given
+as input to $h$ or $f_i$. This area is self-contained, in the sense that
+only elements in $\Y$ are needed to compute elements in $\Y$, as indicated
+by the refined type $\Y\to\Y$.
+
+First we show that for any $f : \T\to\T$, if either $f :: \T\to\Y = f :: \Y\to\Y$
+or $f :: \Y\to\T = f :: \Y\to\Y$, 
+then $(\fix f)::\Y = \fix (f :: \Y\to\Y)$. For the first case, assume $\theta=\fix f$,
+
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l}
+   \theta::\Y = (\theta\applt f)::\Y = \theta\applt(f::\T\to\Y) = \\
+   \qquad=\theta\applt(f::\Y\to\Y) = (\theta::\Y)\applt(f::\Y\to\Y)
+ \end{array}\]
+
+This means that $\theta::\Y = \fix(f::\Y\to\Y)$, as desired.
+For the second case, from domain theory we know that $\fix f = f^k\bot$ for some $k\geq 1$.
+We prove by induction that $f^k\bot = (f :: \Y\to\Y)^k\bot$.
+
+For $k=1$, \[f\,\bot = f\,(\bot :: \Y) = (f :: \Y\to\T)\,\bot = (f :: \Y\to\Y)\,\bot\]
+
+Assume $f^k\bot = (f :: \Y\to\Y)^k\bot$, then definitely $f^k\bot = f^k\bot :: \Y$.
+Therefore, 
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l}
+    f^{k+1}\bot = (f^k\bot)\applt f = (f^k\bot::\Y)\applt f = \\
+    \qquad = (f^k\bot)\applt(f::\Y\to\T) = \\
+    \qquad = ((f :: \Y\to\Y)^k\bot) \applt (f::\Y\to\Y) = \\
+    \qquad = (f::\Y\to\Y)^{k+1}\bot
+  \end{array}
+\]
+
+From this we learn that $\fix f = \fix(f :: \Y\to\Y) = (\fix f) :: \Y$.
+
+\todo{complete proof}
+
+{\it (ii)} Assume $h\,(h\,\theta) :: \T_i = f_i :: \T_i$ holds for any $\theta:\T$,
+then in particlar, for $\theta=\fix\,h$, we get $h\,(h\,\fix h) :: \T_i = f_i :: \T_i$.
+Since $h\,(h\,\fix h) = \fix h$, we obtain the conjecture $(\fix h) :: \T_i = f_i :: \T_i$.
+
+\begin{comment}
 \[\forall \overline\theta.\quad h\,(f\,\overline\theta)=f\,\overline\theta \quad\]
 %
 and let $\theta=\theta_{1..r}$ such that $\theta_i=\fix f_i$. So $f_i\,\theta_i=\theta_i$.
@@ -284,8 +349,10 @@ and let $\theta=\fix h$. So $h\,\theta=\theta$, therefore $(f_i\,\theta)::\T_i=\
 Since we assume that $\fix f_i$, we get by induction that $(\fix f_i)::\T_i=\theta::\T_i$.
 Hence,
 \[(\fix f_1)::\T_1 / \cdots / (\fix f_r)::\T_r = \theta::\T_1 / \cdots / \theta::\T_r = \theta\]
+\end{comment}
 \end{proof}
 
+\medskip
 Our reliance on the termination of $\fix$ expressions may seem conspicuous, since some of these
 expressions are generated automatically by the system. However, a closer look reveals that whenever
 such a computation is introduced, the set of the recursive calls is makes is a subset of those made by the existing one.
