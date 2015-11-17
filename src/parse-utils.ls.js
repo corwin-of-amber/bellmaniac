@@ -59,6 +59,25 @@
       }())
     };
   };
+  root.declareSubsets = function(head, tail, superset){
+    var v;
+    console.log(head, tail, superset);
+    return {
+      kind: 'set',
+      multiple: [
+        root.scope.push(identifier(superset.root.literal, 'set')), (function(){
+          var i$, ref$, len$, x$, results$ = [];
+          for (i$ = 0, len$ = (ref$ = [head].concat(slice$.call(tail))).length; i$ < len$; ++i$) {
+            v = ref$[i$];
+            x$ = [identifier(v.root.literal, 'set'), identifier(superset.root.literal, 'set')];
+            root.scope.push(x$);
+            results$.push(x$);
+          }
+          return results$;
+        }())
+      ]
+    };
+  };
   root.typeVariable = function(literal){
     if (root.keywords.indexOf(literal) > -1) {
       return false;

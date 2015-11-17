@@ -28,6 +28,7 @@ hintWords =
 	* text: "ω", displayText: "\\omega"
 	* text: "×", displayText: "\\times"
 	* text: "∩", displayText: "\\cap"
+	* text: "⊆", displayText: "\\subseteq"
 	* text: "∵", displayText: "\\because"
 	* text: "∎", displayText: "\\qed"
 

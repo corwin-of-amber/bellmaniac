@@ -89,6 +89,8 @@ root.bellmaniaParse = (input, success, error) ->
             scope: window.scope
         ).value!
 
+        console.log(output.fromNearley)
+
         toStream = (stream) ->
             if input.isTactic
                 for parsedBlock in output.fromNearley

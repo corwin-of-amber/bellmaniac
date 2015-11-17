@@ -6,6 +6,7 @@ term -> _ expression _ {% take(1) %}
 
 expression 	-> setMode {% id %}
     | setDeclaration {% id %}
+    | subsetDeclaration {% id %}
 	| untypedExpression (_ colon _ type):? {% function(d) {
 		if (d[1] === null) {
 			return d[0];
@@ -18,7 +19,7 @@ expression 	-> setMode {% id %}
 ####### MODE SWITCH #######
 ###########################
 
-setMode -> 
+setMode ->
     "∵" {% function() { return {setMode: "tactic"}; } %}
   | "∎" {% function() { return {setMode: "tactic"}; } %}
 
@@ -28,6 +29,9 @@ setMode ->
 
 setDeclaration -> variable (__ variable):* _ colon _ "set" {%
   function(d, loc, reject) { return declareSets(d[0], d[1].map(take(1))) || reject; } %}
+
+subsetDeclaration -> variable (__ variable):* _ subseteq  _ variable {%
+  function(d, loc, reject) { return declareSubsets(d[0], d[1].map(take(1)), d[5]) || reject; } %}
 
 ###########################################
 ####### LAMBDA CALCULUS EXPRESSIONS #######
@@ -116,7 +120,7 @@ type -> typeWithOperations _ typeArrow _ type {% function(d) {return functionTyp
 	| typeWithOperations {% id %}
 
 ## type operators (× and ∩) are right associative
-typeWithOperations -> 
+typeWithOperations ->
       typeWithOperations _ "×" _ rootType {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
     | typeWithOperations _ "∩" _ variable {% function(d) {return typeOperation(d[2], d[0], d[4]); } %}
 	| rootType {% id %}
@@ -169,6 +173,7 @@ rightbracket -> "⟩"
 underscore -> "_"
 forwardslash -> "/"
 backtick -> "`"
+subseteq -> "⊆"
 colon -> ":"
 comma -> ","
 typeArrow -> "->" {% id %}

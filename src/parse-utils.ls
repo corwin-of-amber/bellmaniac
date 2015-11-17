@@ -39,6 +39,15 @@ root.declareSets = (head, tail) ->
 			identifier(v.root.literal, \set)
 				root.scope.push ..
 
+root.declareSubsets = (head, tail, superset) ->
+	console.log(head, tail, superset)
+	kind: \set
+	multiple:
+		root.scope.push(identifier(superset.root.literal, \set))
+		for v in [head, ...tail]
+			[identifier(v.root.literal, \set), identifier(superset.root.literal, \set)]
+				root.scope.push ..
+
 root.typeVariable = (literal) ->
 	if root.keywords.indexOf(literal) > -1
 		# console.error <| "Literal " + literal + " is reserved."

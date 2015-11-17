@@ -107,6 +107,7 @@
         var ref$;
         return ref$ = {}, ref$[block.mode] = block, ref$.scope = window.scope, ref$;
       }).value();
+      console.log(output.fromNearley);
       toStream = function(stream){
         var i$, ref$, len$, parsedBlock, term, tacticBlock;
         if (input.isTactic) {

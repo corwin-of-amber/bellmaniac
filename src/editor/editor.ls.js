@@ -82,6 +82,9 @@
       text: "∩",
       displayText: "\\cap"
     }, {
+      text: "⊆",
+      displayText: "\\subseteq"
+    }, {
       text: "∵",
       displayText: "\\because"
     }, {
