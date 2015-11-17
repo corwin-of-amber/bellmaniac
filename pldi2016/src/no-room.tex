@@ -1,0 +1,114 @@
+\noindent
+\exampleTitle \begin{comment}\subsection{Example}\end{comment}
+
+For simplicity of the example, we assume that the input to the Simplified Arbiter problem
+satisfies triangle inequalities:
+%
+\begin{equation}
+w_{pij} \leq w_{pkj} + w_{kij} \qquad w'_{qji} \leq w'_{qki} + w'_{kji}
+\label{equ:triangle}
+\end{equation}
+%
+for all (appropriately typed) $p<k<i$, ~$q<k<j$.
+
+\begin{comment}
+\label{annex:more tactics} % make TeXlipse happy
+\end{comment}
+
+\medskip
+Starting from the specification in \eqref{lang:arbiter spec}, Richard applies Synth to turn
+$\fix (\theta\,i\,j\mapsto\square/\min\langle\cdots\rangle)$ into $\fix\theta\,i\,j\mapsto\min\langle\square,\cdots\rangle$.
+While not absolutely necessary, we will see that it makes some expressions easier to handle later
+on.
+
+Distributivity and Associativity (refer to \Cref{annex:more tactics}) are used to obtain the tactic parameter $f_1$;
+the proof is deferred until Synth is applied so that the prover can use the extra context.
+
+\begin{tacticbox}{Synth}
+  \begin{array}{@{} l @{} l @{} l @{}}
+       h_1=\theta\,i\,j\mapsto{}
+	      & \lspan2{0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0} ~\big/~} \\
+	      & \min\,\langle~ & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+       f_1=\theta\,i\,j\mapsto{}
+	      & \min\,\langle~ & 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}, \\
+	      & & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{\!\!\!}l@{}l@{}l@{}}
+    G ~=~ \fix \theta\,i\,j\mapsto{}
+	      & \min\,\langle~ & 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}, \\
+	      & & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle
+  \end{array}
+\end{equation}
+
+He then applies Let Insertion, followed by Stratify, to separate the base case and obtain a more general 
+form, similar to {\it Compute} of \eqref{intro:breakdown}.
+
+\begin{tacticbox}{Let}
+  \begin{array}{l@{}l}
+   e[\square] ~=~ \theta\,i\,j\mapsto\min\langle~ & \square, \\
+      & \min p\mapsto\theta_{pj}+w_{pij}, \\
+      & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+   \lspan2{~~t ~=~
+      0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}}
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{}l@{}l@{}l@{}l@{}}
+    G ~=~ & \fix \big(\,& \lspan2{(\theta\,i\,j\mapsto 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0})\applt} \\
+	      & & z\,\theta\,i\,j \mapsto \min\,\langle~& z_{\theta ij}, \\
+	      & & & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle\,\big)
+  \end{array}
+\end{equation}
+
+\begin{tacticbox}{Stratify}
+  \begin{array}{l}
+       f ~=~ \theta\,i\,j\mapsto 0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0} \\
+       g ~=~ z\,\theta\,i\,j\mapsto \min\langle z_{\theta ij},\cdots\rangle
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{}l@{}l@{}l@{}}
+    G ~=~ & \lspan2{\fix \big(\theta\,i\,j\mapsto
+	              0|_{i=0\land j=0} ~\big/~ w'_{0j0}|_{i=0} ~\big/~ w_{0i0}|_{j=0}\big)\applt} \\
+	      & \psi\mapsto \fix \theta\,i\,j\mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & \min p\mapsto\theta_{pj}+w_{pij}, \\
+	      & & \min q\mapsto\theta_{iq}+w'_{qji} ~\rangle
+  \end{array}
+\end{equation}
+
+Setting the base case aside, let $A^{IJ}$ be the second term,
+where the superscript parameterizes the types of $i$, $j$ and $p$, $q$.
+
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}l@{}l@{}c@{}c@{}l@{}l@{}}
+    A^{^{IJ}} ~=~ 
+	      & \psi\mapsto \fix \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I)}} & ^{^{(J)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle
+  \end{array}
+  \label{tactics:arbiter phase A}
+\end{equation}
+
+Vertical typeset was used to save some horizontal space, but $\vtyped v\T$
+should be read as just $v:\T$.
+
+\medskip
+This is exactly what Richard was after. $A^{IJ}$ constitutes the first phase
+of the divide-and-conquer formalization.
+
+\medskip
+\hrule
+\bigskip

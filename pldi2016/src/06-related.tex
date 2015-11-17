@@ -12,6 +12,10 @@ into programs via a refinement calculus. While Bellmania offloads proofs to auto
 Fiat formalizes refinements using the Coq proof assistant. The user is then responsible of proving
 the correctness of the derivation using a library of symbolic proof tactics.
 
+Broadly speaking, the Bellmania system could have been implemented as a library on top of a framework
+such as Coq or Why3~\cite{ESOP13/Filliatre} using binding to SMT solvers provided by these frameworks.
+The decision not to do so was merely a design choice.
+
 Our ``$\big/$'' operator can be compared to the separating disjunction ``$\ast$'' of Separation Logic~\cite{LICS02/Reynolds},
 used to frame parts of the dynamic heap (which can be thought of as one large array),
 in particular while checking that a program only accesses the parts allocated to it in its precondition.

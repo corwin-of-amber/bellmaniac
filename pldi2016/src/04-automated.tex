@@ -28,7 +28,8 @@ the interpretation of the node depends on the values of these variables, it is
 For example, if $e:\T$, then inside a term $(v:\S)\mapsto \cdots e\cdots$ it would be treated as
 type $\S\to\T$.
 
-When a function is being used as an argument in an application term (first-class functions), 
+\begin{paragraph}{First-class functions.}
+When a function is being used as an argument in an application term, 
 we take its arrow type $\T\to\S$ and create a corresponding \newterm{faux sort} $F_{\T\to\S}$,
 an operator $@ : F_{\T\to\S}\to\T\to\S$, and the \newterm{extensionality axiom} ---
 \begin{equation}
@@ -42,6 +43,7 @@ And for each such function symbol $f^k:\T\to\S$ used as argument, create its
 \forall \overline\alpha.~~@(f^0,\overline\alpha)=f^k(\overline\alpha)
 \label{automated:reflection}
 \end{equation}
+\end{paragraph}
 
 Typically, the goal is an equality between functions $f=g$. This naturally translates
 to first-order logic as

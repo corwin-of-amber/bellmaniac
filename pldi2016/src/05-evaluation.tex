@@ -103,17 +103,16 @@ represent quadrants.
 \newcommand\lbox{\@ifstar\lbox@tiny\lbox@small}
 \makeatother
 
-\begin{center}
-\fbox{$\begin{array}{ll}
-       \mbox{\underline{Slice}} \\ 
+\begin{tacticbox}{Slice}
+  \begin{array}{@{} l  l @{}}
        f ~=~ \theta\,i\,j\mapsto \cdots \\
        X_1 ~=~ \_\times I_0\times J_0 &
        X_2 ~=~ \_\times I_0\times J_1 \\
        X_3 ~=~ \_\times I_1\times J_0 &
        X_4 ~=~ \_\times I_1\times J_1 \\[.5em]
        \cspan2{\mbox{\small ({\it recall that each} ``\_'' {\it is a fresh type variable})}}
-       \end{array}$}
-\end{center}
+  \end{array}
+\end{tacticbox}
 
 \begin{equation}
   \renewcommand\arraystretch{1.2}
@@ -165,7 +164,7 @@ output.
 
 \medskip
 The sequence Let, Stratify[with Padding] is now applied in the same manner to $\lbox B$
-and $\lbox C$ (see \Cref{evaluation:stratify A}). We do not list the applications as they are analogous to the previous ones.
+and $\lbox C$ (see \Cref{overview:slice-stratify-synth}). We do not list the applications as they are analogous to the previous ones.
 
 \begin{equation}
   \renewcommand\arraystretch{1.5}
@@ -176,12 +175,6 @@ and $\lbox C$ (see \Cref{evaluation:stratify A}). We do not list the application
                  \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\dot\psi}{\lbox D}
   \end{array}
 \end{equation}
-
-\begin{figure}
-\includegraphics[width=.47\textwidth]{img/arbiter-stratify}
-\caption{\label{evaluation:stratify A}
-  Stratification steps for phase ``A'' of Simplified Arbiter.}
-\end{figure}
 
 \begin{tacticbox}{Synth}
 	\begin{array}{@{}l@{}c@{}c@{}l@{}l}
@@ -303,62 +296,7 @@ lies within \lbox2 ($q\in J_1$). The same reasoning is applied to the other quad
 
 
 \begin{figure}
-\begin{tikzpicture}[x=4mm,y=4mm, node distance=1cm,
-    slicer/.style={ultra thick},
-    cell/.style={thick}, dot/.style={fill=BrickRed},
-    block C/.style={fill=OliveGreen, fill opacity=0.2},
-    block B/.style={fill=Orange, fill opacity=0.2},
-    block A/.style={fill=Purple, fill opacity=0.2},
-    label position=right,label distance=1pt,every label/.style={inner sep=0}]
-  \draw[help lines] (0,0) grid[step=1] (8,8);
-  \draw[slicer] (4,0) -- (4,8) (0,4) -- (8,4);
-  \fill[block A] (0,5) rectangle (2,6) rectangle (3,8);
-  \draw[cell] (2,5) rectangle +(1,1); \path[dot] (2.5,5.5) circle (1.5pt);
-  \path (2,8) node[above] {$q\in J_0$} (6,8) node[above] {$q\in J_1$};
-  \path (0,0) -- node[midway,above,sloped] {$p\in I_1$} (0,4)
-              -- node[midway,above,sloped] {$p\in I_0$} (0,8);
-
-  \tikzset{xshift=4cm}
-
-  \draw[help lines] (0,0) grid[step=1] (8,8);
-  \draw[slicer] (4,0) -- +(0,8) (0,4) -- +(8,0);
-  \fill[block B] (0,5) rectangle (4,6);
-  \fill[block A] (4,5) rectangle (6,6) rectangle (7,8);
-  \draw[cell] (6,5) rectangle +(1,1); \path[dot] (6.5,5.5) circle (1.5pt);
-  \path (2,8) node[above] {$q\in J_0$} (6,8) node[above] {$q\in J_1$};
-  \path (0,0) -- node[midway,above,sloped] {$p\in I_1$} (0,4)
-              -- node[midway,above,sloped] {$p\in I_0$} (0,8);
-              
-  \tikzset{yshift=-4cm,xshift=-4cm}
-  
-  \draw[help lines] (0,0) grid[step=1] (8,8);
-  \draw[slicer] (4,0) -- +(0,8) (0,4) -- +(8,0);
-  \fill[block C] (2,4) rectangle (3,8);
-  \fill[block A] (0,1) rectangle (2,2) rectangle (3,4);
-  \draw[cell] (2,1) rectangle +(1,1); \path[dot] (2.5,1.5) circle (1.5pt);
-  \path (2,8) node[above] {$q\in J_0$} (6,8) node[above] {$q\in J_1$};
-  \path (0,0) -- node[midway,above,sloped] {$p\in I_1$} (0,4)
-              -- node[midway,above,sloped] {$p\in I_0$} (0,8);
-
-  \tikzset{xshift=4cm}
-  
-  \draw[help lines] (0,0) grid[step=1] (8,8);
-  \draw[slicer] (4,0) -- +(0,8) (0,4) -- +(8,0);
-  \fill[block C] (6,4) rectangle (7,8);
-  \fill[block B] (0,1) rectangle (4,2);
-  \fill[block A] (4,1) rectangle (6,2) rectangle (7,4);
-  \draw[cell] (6,1) rectangle +(1,1); \path[dot] (6.5,1.5) circle (1.5pt);
-  \path (2,8) node[above] {$q\in J_0$} (6,8) node[above] {$q\in J_1$};
-  \path (0,0) -- node[midway,above,sloped] {$p\in I_1$} (0,4)
-              -- node[midway,above,sloped] {$p\in I_0$} (0,8);
-  
-  \tikzset{yshift=-.7cm,xshift=-2cm}
-  
-  \node(A)[rectangle,label=$A$,block A] {};
-  \node(B)[right=of A,rectangle,label=$B$,block B] {};
-  \node(C)[right=of B,rectangle,label=$C$,block C] {};
-  
-\end{tikzpicture}
+\input{gfx/evaluation-slicing-strategy}
 \medskip
 \caption{\label{evaluation:slicing strategy}
   The strategy for applications of Slice in the case study.}
