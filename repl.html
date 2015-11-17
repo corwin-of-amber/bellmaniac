@@ -3,6 +3,7 @@
 	<meta charset="UTF-8">
 	<script src="node_modules/jquery/dist/jquery.min.js"></script>
 	<script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+	<script src="node_modules/async/dist/async.js"></script>
 	<script src="node_modules/nearley/lib/nearley.js"></script>
 	<script src="node_modules/codemirror/lib/codemirror.js"></script>
 	<script src="node_modules/codemirror/mode/scheme/scheme.js"></script>
@@ -12,6 +13,8 @@
 	<script src="node_modules/angular-recursion/angular-recursion.js"></script>
 	<script src="node_modules/angular-ui-codemirror/src/ui-codemirror.js"></script>
 	<script src="node_modules/angular-ui-select/select.js"></script>
+	<script src="node_modules/bootbox/bootbox.js"></script>
+	<script src="node_modules/ngbootbox/dist/ngBootbox.js"></script>
 
     <script src="src/editor/bellmania-mode.js"></script>
     <script src="src/editor/matchbrackets-patched.js"></script>
@@ -38,7 +41,10 @@
 			<div style="margin-bottom: 15px" class="form-inline">
 				<a class="btn btn-default" ng-click="reset()">New</a>
 				<a class="btn btn-default" ng-click="save()">Save</a>
-				<a class="btn btn-default" ng-click="load()">Load</a>
+				<label class="btn btn-default">
+					<input type="file" style="display:none;" accept=".json" ng-model="file" file-change="load()">
+					Load
+				</label>
 			</div>
 		</div>
 		<div class="container" ng-repeat="h in history">

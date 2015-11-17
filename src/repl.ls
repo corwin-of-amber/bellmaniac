@@ -1,59 +1,63 @@
 _ = require \lodash
 LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*$/
 
-angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
-  ..controller "Ctrl" ($scope, $timeout) !->
+angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
+  ..controller "Ctrl" ($scope, $timeout, $ngBootbox) !->
+
+    submitCm = (cm, parent) ->
+        cm.removeOverlay(cm.currentOverlay)
+
+        calc = cm.parent
+        calc.output = null
+        calc.error = null
+        calc.loading = true
+        thisIdx = _.findIndex($scope.history, (h) ->
+            h.id == calc.id
+        )
+        thisId = thisIdx + 1 # "id" of In[] and Out[] start from 1
+
+        success = (output) ->
+            $timeout(->
+                calc.output = output.fromJar
+                calc.fromNearley = output.fromNearley
+
+                if (thisId == ($scope.history.length))
+                    $scope.history.push({id: thisId + 1, input: "", output: null, error: null})
+                calc.loading = false
+            )
+
+        error = (err) ->
+            $timeout(->
+                calc.error = err.message
+                cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.offset + 1)
+                cm.addOverlay(cm.currentOverlay)
+                calc.loading = false
+            )
+
+        if (thisIdx == 0)
+            # parse as a term
+            bellmaniaParse({isTactic: false, text: calc.input}, success, error)
+        else
+            # parse as a tactic
+            bellmaniaParse({
+                isTactic: true,
+                text: calc.input,
+                termJson: _.last($scope.history[thisIdx-1].output).value.term
+                },
+                success, error)
+        cm.getInputField().blur()
+        $scope.mostRecentId = thisId
+        $scope.$apply()
+
 
     $scope.cmOptions = cmOptions()
     $scope.wrapper = (parent) ->
         submitCallback = (cm) ->
-
-            cm.removeOverlay(cm.currentOverlay)
-
-            calc = cm.parent
-            calc.output = null
-            calc.error = null
-            calc.loading = true
-            thisIdx = _.findIndex($scope.history, (h) ->
-                h.id == calc.id
-            )
-            thisId = thisIdx + 1 # "id" of In[] and Out[] start from 1
-
-            success = (output) ->
-                $timeout(->
-                    calc.output = output.fromJar
-                    calc.fromNearley = output.fromNearley
-
-                    if (thisId == ($scope.history.length))
-                        $scope.history.push({id: thisId + 1, input: "", output: null, error: null})
-                    calc.loading = false
-                )
-
-            error = (err) ->
-                $timeout(->
-                    calc.error = err.message
-                    cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.offset + 1)
-                    cm.addOverlay(cm.currentOverlay)
-                    calc.loading = false
-                )
-
-            if (thisIdx == 0)
-                # parse as a term
-                bellmaniaParse({isTactic: false, text: calc.input}, success, error)
-            else
-                # parse as a tactic
-                bellmaniaParse({
-                    isTactic: true,
-                    text: calc.input,
-                    termJson: _.last($scope.history[thisIdx-1].output).value.term
-                    },
-                    success, error)
-            cm.getInputField().blur()
-            $scope.mostRecentId = thisId
-            $scope.$apply()
+            submitCm(cm, parent)
 
         loadCallback = (cm) ->
             cm.parent = parent
+            parent.cm = cm
 
         initEditor(submitCallback, loadCallback)
 
@@ -70,6 +74,50 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
       $scope.history = [
           {id: 1, input: "", output: null, error: null}
       ]
+
+    $scope.save = ->
+      $ngBootbox.prompt("Save file as:", "newfile.json")
+        .then((filename) ->
+          saveText = JSON.stringify({
+            mostRecentId: $scope.mostRecentId,
+            history: _.map($scope.history, (h) ->
+              {id: h.id, input: h.input}
+            )
+          })
+          bb = new Blob([saveText], {type: "application/json"})
+          blobURL = (window.URL || window.webkitURL).createObjectURL(bb);
+          anchor = document.createElement("a");
+          anchor.download = filename
+          anchor.href = blobURL
+          anchor.click()
+        )
+
+    $scope.load = ->
+      if ($scope.file)
+        reader = new FileReader();
+        reader.onload = ->
+          try
+            $scope.$apply( ->
+              loaded = JSON.parse(reader.result)
+              $scope.mostRecentId = loaded.mostRecentId
+              $scope.history = _.map(loaded.history, (h) ->
+                h.error = null
+                h.output = null
+                h
+              )
+            )
+            $timeout(->
+              async.series(_.map($scope.history, (h) ->
+                (callback) ->
+                    console.log(h)
+                    submitCm(h.cm, h)
+                    setTimeout(callback, 5000)
+                    ))
+            )
+          catch {message}
+            bootbox.alert(message)
+
+        reader.readAsText($scope.file)
 
   ..filter "collapse" ->
     lead = -> it.match /^\s*/ .0.length
@@ -100,6 +148,22 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select]
           scope[lhs] = v
         , true
         $(clone).insertAfter element
+  ..directive 'fileChange', ->
+    restrict: 'A',
+    require: 'ngModel',
+    scope: {
+      fileChange: '&'
+    },
+    link: (scope, element, attrs, ctrl) ->
+      onChange = ->
+        ctrl.$setViewValue(element[0].files[0])
+        scope.fileChange()
+
+      element.on('change', onChange);
+
+      scope.$on('destroy', ->
+        element.off('change', onChange)
+      )
 
   ..filter "isString" -> _.isString
 

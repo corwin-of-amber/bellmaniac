@@ -3,63 +3,68 @@
   var _, LET_RE, x$;
   _ = require('lodash');
   LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*$/;
-  x$ = angular.module('app', ['RecursionHelper', 'ui.codemirror', 'ui.select']);
-  x$.controller("Ctrl", function($scope, $timeout){
+  x$ = angular.module('app', ['RecursionHelper', 'ui.codemirror', 'ui.select', 'ngBootbox']);
+  x$.controller("Ctrl", function($scope, $timeout, $ngBootbox){
+    var submitCm;
+    submitCm = function(cm, parent){
+      var calc, thisIdx, thisId, success, error;
+      cm.removeOverlay(cm.currentOverlay);
+      calc = cm.parent;
+      calc.output = null;
+      calc.error = null;
+      calc.loading = true;
+      thisIdx = _.findIndex($scope.history, function(h){
+        return h.id === calc.id;
+      });
+      thisId = thisIdx + 1;
+      success = function(output){
+        return $timeout(function(){
+          calc.output = output.fromJar;
+          calc.fromNearley = output.fromNearley;
+          if (thisId === $scope.history.length) {
+            $scope.history.push({
+              id: thisId + 1,
+              input: "",
+              output: null,
+              error: null
+            });
+          }
+          return calc.loading = false;
+        });
+      };
+      error = function(err){
+        return $timeout(function(){
+          calc.error = err.message;
+          cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.offset + 1);
+          cm.addOverlay(cm.currentOverlay);
+          return calc.loading = false;
+        });
+      };
+      if (thisIdx === 0) {
+        bellmaniaParse({
+          isTactic: false,
+          text: calc.input
+        }, success, error);
+      } else {
+        bellmaniaParse({
+          isTactic: true,
+          text: calc.input,
+          termJson: _.last($scope.history[thisIdx - 1].output).value.term
+        }, success, error);
+      }
+      cm.getInputField().blur();
+      $scope.mostRecentId = thisId;
+      return $scope.$apply();
+    };
     $scope.cmOptions = cmOptions();
     $scope.wrapper = function(parent){
       var submitCallback, loadCallback;
       submitCallback = function(cm){
-        var calc, thisIdx, thisId, success, error;
-        cm.removeOverlay(cm.currentOverlay);
-        calc = cm.parent;
-        calc.output = null;
-        calc.error = null;
-        calc.loading = true;
-        thisIdx = _.findIndex($scope.history, function(h){
-          return h.id === calc.id;
-        });
-        thisId = thisIdx + 1;
-        success = function(output){
-          return $timeout(function(){
-            calc.output = output.fromJar;
-            calc.fromNearley = output.fromNearley;
-            if (thisId === $scope.history.length) {
-              $scope.history.push({
-                id: thisId + 1,
-                input: "",
-                output: null,
-                error: null
-              });
-            }
-            return calc.loading = false;
-          });
-        };
-        error = function(err){
-          return $timeout(function(){
-            calc.error = err.message;
-            cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.offset + 1);
-            cm.addOverlay(cm.currentOverlay);
-            return calc.loading = false;
-          });
-        };
-        if (thisIdx === 0) {
-          bellmaniaParse({
-            isTactic: false,
-            text: calc.input
-          }, success, error);
-        } else {
-          bellmaniaParse({
-            isTactic: true,
-            text: calc.input,
-            termJson: _.last($scope.history[thisIdx - 1].output).value.term
-          }, success, error);
-        }
-        cm.getInputField().blur();
-        $scope.mostRecentId = thisId;
-        return $scope.$apply();
+        return submitCm(cm, parent);
       };
       loadCallback = function(cm){
-        return cm.parent = parent;
+        cm.parent = parent;
+        return parent.cm = cm;
       };
       return initEditor(submitCallback, loadCallback);
     };
@@ -82,6 +87,62 @@
         output: null,
         error: null
       }];
+    };
+    $scope.save = function(){
+      return $ngBootbox.prompt("Save file as:", "newfile.json").then(function(filename){
+        var saveText, bb, blobURL, anchor;
+        saveText = JSON.stringify({
+          mostRecentId: $scope.mostRecentId,
+          history: _.map($scope.history, function(h){
+            return {
+              id: h.id,
+              input: h.input
+            };
+          })
+        });
+        bb = new Blob([saveText], {
+          type: "application/json"
+        });
+        blobURL = (window.URL || window.webkitURL).createObjectURL(bb);
+        anchor = document.createElement("a");
+        anchor.download = filename;
+        anchor.href = blobURL;
+        return anchor.click();
+      });
+    };
+    $scope.load = function(){
+      var reader;
+      if ($scope.file) {
+        reader = new FileReader();
+        reader.onload = function(){
+          var message;
+          try {
+            $scope.$apply(function(){
+              var loaded;
+              loaded = JSON.parse(reader.result);
+              $scope.mostRecentId = loaded.mostRecentId;
+              return $scope.history = _.map(loaded.history, function(h){
+                h.error = null;
+                h.output = null;
+                return h;
+              });
+            });
+            return $timeout(function(){
+              return async.series(_.map($scope.history, function(h){
+                return function(callback){
+                  console.log(h);
+                  submitCm(h.cm, h);
+                  return setTimeout(callback, 5000);
+                };
+              }));
+            });
+          } catch (e$) {
+            message = e$.message;
+            return bootbox.alert(message);
+          }
+        };
+        return reader.readAsText($scope.file);
+      }
     };
   });
   x$.filter("collapse", function(){
@@ -125,6 +186,26 @@
             return scope[lhs] = v;
           }, true);
           return $(clone).insertAfter(element);
+        });
+      }
+    };
+  });
+  x$.directive('fileChange', function(){
+    return {
+      restrict: 'A',
+      require: 'ngModel',
+      scope: {
+        fileChange: '&'
+      },
+      link: function(scope, element, attrs, ctrl){
+        var onChange;
+        onChange = function(){
+          ctrl.$setViewValue(element[0].files[0]);
+          return scope.fileChange();
+        };
+        element.on('change', onChange);
+        return scope.$on('destroy', function(){
+          return element.off('change', onChange);
         });
       }
     };
