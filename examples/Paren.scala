@@ -195,7 +195,7 @@ object Paren {
       val (ψ, θ, i, j, k) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), TV("k"))
 
       override val program = TI("program")(
-        A :- (ψ ↦ fix(
+        A :- ((ψ :: ((J x J) ∩ <) ->: R) ↦ fix(
             (θ :: ((J x J) ∩ <) ->: R) ↦: i ↦: j ↦: (
     
             min:@`⟨ ⟩`(
@@ -283,11 +283,9 @@ object Paren {
     val * = TI("*")
     
     def main(args: Array[String]): Unit = {
-      val filename = args.lift(0) getOrElse "/tmp/synopsis.json"
-
-      new Interpreter()(scope, env).executeFile(filename)
+      ui.Config.tae(args)
+      new Interpreter()(scope, env).executeFile(ui.Config.config.filename())
     }
-    
     
     import syntax.transform.Extrude
     import semantics.pattern.SimplePattern 

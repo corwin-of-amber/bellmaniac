@@ -184,4 +184,6 @@ object Strip {
   val boxedAbcOverline = (boxedAbcList map (_ + "̅")) orElse numeral
   val boxedAbcUnderbar = (boxedAbcList map (_ + "̱")) orElse numeral
   val boxedAbcThenUnderbar = (boxedAbcList ++ (boxedAbcList map (_ + "̲"))) orElse numeral
+  val subscript0_9 = "₀₁₂₃₄₅₆₇₈₉".toList orElse numeral
+  def subscriptIndexed(symbol: String): PartialFunction[Int, String] = { case x: Int => symbol + subscript0_9(x) }
 }

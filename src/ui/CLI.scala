@@ -19,6 +19,8 @@ import synth.engine.TacticApplicationEngine
 import synth.pods._
 import synth.proof.{Assistant, Prover}
 import report.data.{SerializationError, Rich, DisplayContainer}
+import java.io.StringWriter
+import java.io.PrintWriter
 
 
 
@@ -66,13 +68,13 @@ object CLI {
               cc.map(Map("term" -> result.program,
                          "display" -> Rich.display(result.ex)))
             case _ =>
-              new BasicDBObject("error", "unrecognized JSON element").append("json", json)
+              new BasicDBObject("error", "unrecognized JSON element")append("json", json)
           }
         }
       }
       catch {
         case e: Throwable =>
-          new BasicDBObject("error", "exception").append("message", e.toString)
+          new BasicDBObject("error", "exception")append("message", e.toString)append("stack", stack(e))
       }
     }
 
@@ -91,6 +93,12 @@ object CLI {
     }
   }
 
+  def stack(e: Throwable) = {
+    val sw = new StringWriter
+    e.printStackTrace(new PrintWriter(sw))
+    sw.toString
+  }
+  
   def main(args: Array[String]) {
     import org.rogach.scallop._
     
@@ -109,7 +117,7 @@ object CLI {
     }
     catch {
       case e: Throwable =>
-        println(new BasicDBObject("error", "fatal").append("message", e.toString))
+        println(new BasicDBObject("error", "fatal")append("message", e.toString)append("stack", stack(e)))
     }
   }
 }

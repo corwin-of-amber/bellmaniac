@@ -8,11 +8,13 @@ struct scalar { bit supp; int val; }
 |scalar| only(bit guard, |scalar| val) { return when(guard && val.supp, val.val); /* guard ? val : bot;*/ }
 |scalar| slash(|scalar| a, |scalar| b) { if (!a.supp) a = b; return a; }
 
-|scalar| apply(fun op, |scalar| a, |scalar| b) { return only(a.supp && b.supp, op(a.val, b.val)); }
-bit      applyb(fun op, |scalar| a) { return a.supp && op(a.val); }
+|scalar| apply2(fun op, |scalar| a, |scalar| b) { return only(a.supp && b.supp, op(a.val, b.val)); }
+bit      applyb1(fun op, |scalar| a) { return a.supp && op(a.val); }
+bit      applyb2(fun op, |scalar| a, |scalar| b) { return a.supp && b.supp && op(a.val, b.val); }
 
 |scalar| plus(int a, int b) { return some(a + b); }
 |scalar| minus(int a, int b) { return when(a>=b, a - b); }
+bit      lt(int a, int b) { return a < b; }
 
 /* minimum */
 
@@ -43,3 +45,24 @@ void minz(int n, ref |scalar| acc, fun fn) {
 |scalar| min(int n, fun fn) {
   return min_acc(bot, n, fn);
 }
+
+void maxz2(ref |scalar| a, |scalar| b) {
+  if (b.supp && (!a.supp || (b.val > a.val))) a = b;
+}
+
+void maxz(int n, ref |scalar| acc, fun fn) {
+  for (int k = 0; k < n; ++k) {
+    |scalar| item = fn(k);
+    maxz2(acc, item);
+  }
+}
+
+|scalar| max_acc(|scalar| acc, int n, fun fn) {
+  maxz(n, acc, fn);
+  return acc;
+}
+
+|scalar| max(int n, fun fn) {
+  return max_acc(bot, n, fn);
+}
+

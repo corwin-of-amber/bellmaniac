@@ -13,6 +13,10 @@ import synth.pods.ConsPod.`⟨ ⟩`
 import synth.pods.IndexArithPod
 import synth.pods.TotalOrderPod
 import report.data.Rich
+import scala.collection.immutable.ListMap
+import syntax.Scheme
+import syntax.Scheme.SchemeFun
+import syntax.Strip
 
 
 
@@ -119,18 +123,18 @@ object Accordion {
 
   class Interpreter(implicit scope: Scope) extends TacticApplicationEngine {
     import TacticApplicationEngine._
-
+    import syntax.Subroutine
+    import syntax.Subroutine.Arity
+    
+    val fac: Map[Any,Subroutine[Term,Pod] with Arity] = ListMap("A" -> Subroutine(APod), "B" -> Subroutine(BPod), "C" -> Subroutine(CPod), "D" -> Subroutine(DPod))
+    
     override def pods(implicit s: State) = {
-      case (L("A"), List(~(j))) => APod(j)
-      case (L("B"), List(~(j0), ~(j1))) => BPod(j0, j1)
-      case (L("C"), List(~(j0), ~(j1))) => CPod(j0, j1)
-      case (L("D"), List(~(j0), ~(j1), ~(j2))) => DPod(j0, j1, j2)
+      case (L(name), args) if fac.contains(name) => fac(name)(args)
     }
 
-    val A = TV("A")
-    val P1 = TV("P₁")
-    val P2 = TV("P₂")
-    override val prototypes = Map(A → (A:@(? ∩ P1)))
+    val ph = Strip.subscriptIndexed("P").andThen(TV(_))
+
+    override val prototypes = fac map { case (name, sr) => TV(name) → (TV(name):@(1 to sr.arity map ph map (? ∩ _) toList)) } toMap
 
     override lazy val prover: Prover = prover(List())
     

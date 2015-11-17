@@ -201,7 +201,8 @@ class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val impl: Term
     val y = (indexDomain ∩ Q) -> ?
     &&(
       (lhs :: (? -> y)) =:= (lhs :: (y -> y)),
-      (lhs :: (? -> y)) =:= (rhs :: (y -> y))
+      (lhs :: (? -> y)) =:= (rhs :: (y -> ?))//,
+      //(rhs :: (? -> y)) =:= rhs
     )
   }
 

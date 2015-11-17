@@ -19,6 +19,8 @@ Assoc max
 ⟨Let max (slasher 🄱) ⟨🄸,🄹⟩ ψ,
  Let max (slasher 🄴) ⟨🄿,🅀⟩ ψ⟩
 
+🄰 🄲 🄳 🄴 🄶 🄷 ↦ SynthAuto . ... ψ
+/*
 ⟨Synth 🄰 (B `K₁ `K₃) ψ,
  Synth 🄲 (D `K₁ `K₂ `K₃) ψ,
  Synth 🄳 (B `K₁ `K₂) ψ,
@@ -27,4 +29,4 @@ Assoc max
  Synth 🄷 (B `K₀ `K₂) ψ⟩
 Opt
 
-SaveAs (B `J₀ `J₁) "rec"
+SaveAs (B `J₀ `J₁) "rec"*/

@@ -462,6 +462,9 @@ object Synth {
     def mne(id: Identifier) = mnemonics.get(id)
     def mne(t: Term) = mnemonics.get(t.leaf)
 
+    def suf(code: Term, f: Term, args: List[Term]) =
+      (if (typeOf_!(code) == B) "b" else "") + args.length
+        
     def apply(code: Term): String = code match {
       case T(def_.root, List(f, T(`()`.root, params), body)) =>
         try s"${typ(typeOf_!(f))} ${mne(f)}(${params map param mkString ", "}) {\n${indent(apply(body))}\n}"
@@ -470,7 +473,7 @@ object Synth {
         try s"${typ(typeOf_!(f))} ${mne(f)}(${params map param mkString ", "});"
         finally mnemonics release (params map (_.leaf))
       case T(`;`.root, stmts) => stmts map apply mkString "\n"
-      case T(@:.root, f :: args) => s"apply${if (typeOf_!(code) == B) "b" else ""}(${mne(f)}, ${args map apply mkString ", "})"
+      case T(@:.root, f :: args) => s"apply${suf(code, f, args)}(${mne(f)}, ${args map apply mkString ", "})"
       case T(ret.root, List(r)) => s"return ${apply(r)};"
       case T(IntConst(n), Nil) => s"$n"
       case T(v, Nil) => s"${mne(v)}"
@@ -492,7 +495,7 @@ object Synth {
       s"""${prologue map apply mkString "\n\n"}\n\ninclude "harness.sk";\n"""
     }
 
-    val INFIX = Map(I("+") -> "+", I("=") -> "==", I("<") -> "<", I(">") -> ">", I("∧") -> "&&", I("∨") -> "||")
+    val INFIX = Map(I("=") -> "==", I("<") -> "<", I(">") -> ">", I("∧") -> "&&", I("∨") -> "||")
     val PREFIX = Map(I("¬") -> "!")
 
     object InfixOp { def unapply(id: Identifier) = INFIX get id }
