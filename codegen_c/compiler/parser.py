@@ -893,16 +893,21 @@ class bmTerm(bmRoot):
                             toRemove.append(g) 
                         if sx == sy and not xLoopsBeforey: 
                             #you can run x-loop from begin to y
-                            Assert(False,"not supported x<y with y looping before x")
-                            #loopEndPoints[x] = (loopEndPoints[x][0],y)
-                            #toRemove.append(g) 
+                            #Assert(False,"not supported x<y with y looping before x")
+                            if loopEndPoints[x][1] == defineEnd(sx):
+                                loopEndPoints[x] = (loopEndPoints[x][0],y)
+                            else:
+                                refineLP(loopEndPoints,x,loopEndPoints[x][0],y)
+                            toRemove.append(g) 
                         if sx != sy and areDisjoint(sx,sy,self.prg.superset) == "x<y":
                             toRemove.append(g) #trivially satisfied!
                         if sx != sy and areDisjoint(sx,sy,self.prg.superset) == "y<x":
                             loopEndPoints[x] = (None,None)
                             loopEndPoints[y] = (None,None)
                             toRemove.append(g) #Useless loop!
-                            
+                    if g not in toRemove:
+                        import pdb
+                        pdb.set_trace()
             #print "EP:",loopEndPoints
             for g in toRemove:
                 self.guardCompStrs.remove(g)
@@ -1015,6 +1020,7 @@ class bmTerm(bmRoot):
                     ctx["use_tmp"] = tVar
                 #print "GN:",guardedNode.guardCompStrs, tmpVar
         boundExpr.setCode(ctx)
+        '''
         if ("loop_bounds" not in ctx) or (len(ctx["loop_bounds"]) == 0) :
             ctx["loop_bounds"] = {}
             for v in loopEndPoints:
@@ -1036,6 +1042,7 @@ class bmTerm(bmRoot):
                     
                 for v in toRemove:
                     del ctx["loop_bounds"][v]
+        '''
         if guardedNode and tVar and guardLocal:
             loclsargs = [v for (v,r) in filter(lambda (v, r): v not in [THETA, QMARK, PSI], ctx['fvr'])]
             initVar = arrayAccessStr(self.prg,u"dist", loclsargs)
@@ -1751,6 +1758,7 @@ def addSS(ss2,ss):
             Assert(ss[k] == ss2[k],"information overwritten: " + k + ","  + ss[k] + "," + ss2[k])
         ss[k] = ss2[k]
 def main():
+    global problem
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action='store_true')
     parser.add_argument("files", metavar="F", type=str, nargs='+', help="All JSON files")
