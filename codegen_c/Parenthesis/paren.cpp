@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <string>
 #include <cassert>
 #include <iostream>
 #include <cilk/cilk.h>
