@@ -28,6 +28,11 @@ the interpretation of the node depends on the values of these variables, it is
 For example, if $e:\T$, then inside a term $(v:\S)\mapsto \cdots e\cdots$ it would be treated as
 type $\S\to\T$.
 
+Typically, the goal is an equality between functions $f=g$. This naturally translates
+to first-order logic as
+\[\forall\overline{\alpha}.~\big(|f|(\overline\alpha)\liff|g|(\overline\alpha)\big) \land
+  \big(|f|(\overline\alpha) \limplies f^k(\overline\alpha)=g^k(\overline\alpha)\big)\]
+
 \begin{paragraph}{First-class functions.}
 When a function is being used as an argument in an application term, 
 we take its arrow type $\T\to\S$ and create a corresponding \newterm{faux sort} $F_{\T\to\S}$,
@@ -45,11 +50,6 @@ And for each such function symbol $f^k:\T\to\S$ used as argument, create its
 \end{equation}
 \end{paragraph}
 
-Typically, the goal is an equality between functions $f=g$. This naturally translates
-to first-order logic as
-\[\forall\overline{a}.~\big(|f|(\overline\alpha)\liff|g|(\overline\alpha)\big) \land
-  \big(|f|(\overline\alpha) \limplies f^k(\overline\alpha)=g^k(\overline\alpha)\big)\]
-  
 \subsection{Simplification}
 
 When $f$,$g$ of the goal, $f=g$, are abstraction terms, the above can be simplified by
@@ -59,8 +59,14 @@ of $f$ and $g$ (which should have the same shape). We can then apply $\beta$-red
 a simplification step. This dramatically reduces the number of quantifiers in the first-order
 theory representing the goal, making SMT solving feasible.
 
-Moreover, if the goal has the form $f\,t_1 = f\,t_2$ (e.g. Stratify, \Cref{tactics}) it may
+Moreover, if the goal has the form $f\,t_1 = f\,t_2$ (e.g. {\sf Stratify}, \Cref{tactics}) it may
 be worth trying to prove that $t_1::\T = t_2::\T$, where $f:\T\to\S$.
-This trivially entails the goal and much easier to prove. To understand why
-this is a common case, consider \eqref{evaluation:stratify A 1} below: 
-notice how $g$ does not modify the quadrant from which $f$ reads.
+This trivially entails the goal and is much easier to prove. 
+%To understand why
+%this is a common case, consider \eqref{evaluation:stratify A 1} below: 
+%notice how $g$ does not modify the quadrant from which $f$ reads.
+
+Another useful technique is common subexpression elimination, which is quite standard
+in compiler optimizations. Tactic applications tend to create copies of terms, so
+merging identical subexpressions into a single symbol can drastically reduce the size
+of the SMT encoding.
