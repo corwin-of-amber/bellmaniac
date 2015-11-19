@@ -31,7 +31,7 @@ More tactic definitions are given in the appendix.
 \newcommand\tacticdef[1]{\subsection*{\sf\larger #1}\vspace{-3mm}}
 
 \tacticdef{Slice} \label{tactics:Slice}
-\[f ~=~ f\big|_{X_1} ~\Big/~ f\big|_{X_2} ~\Big/ ~\cdots~ \Big/~ f\big|_{X_r}\] 
+\[f ~=~ \big[f\big]_{X_1} ~\Big/~ \big[f\big]_{X_2} ~\Big/ ~\cdots~ \Big/~ \big[f\big]_{X_r}\] 
 
 This tactic partitions a mapping into sub-regions. Each $X_i$ may be a $\times$-expression
 according to the arity of $f$.
@@ -48,8 +48,8 @@ Used to extra-specify the type of a sub-term.
 
 \Obligations tactic.
 
-For arrow-typed terms, this essentially requires to prove that $f$ is undefined anyway for
-argument values outside the domain of $\T$, and that the defined values are in the range of $\T$.
+For arrow-typed terms, this essentially requires to prove that $f$ 
+is only defined for arguments in the domain of $\T$, and that the values are in the range of $\T$.
 
 \tacticdef{Stratify} \label{tactics:Stratify}
 \[\fix (f\applt g) ~=~ \fix f ~\applt~ \psi\mapsto \fix (\dot\psi\applt g)\]
@@ -75,11 +75,12 @@ Although the proof is not hard, we defer it to a later theorem.
 
 \tacticdef{Synth} \label{tactics:Synth}
 \[\fix\big(h_1 ~\big/~ \cdots ~\big/~ h_r\big) ~=~ 
-  (\fix f_1) :: \T_1 ~\big/~ \cdots ~\big/~ (\fix f_r) :: \T_r\]
+  f_1 :: \T_1 ~\big/~ \cdots ~\big/~ f_r :: \T_r\]
 
 This tactic is used to generate recursive calls to sub-programs. For $i=1..r$, $f_i$
 is typically either $\fix h_i$, $h_i\,\psi$, or $t\,\psi$, where $\psi$ is some
-variable and $t$ is a term corresponding to a previously defined subroutine.
+variable and $t$ is a term corresponding to a previously defined subroutine
+($A$, $B$, $C$ in the example).
 
 \newcommand\Y{\mathcal{Y}}
 
@@ -88,7 +89,7 @@ variable and $t$ is a term corresponding to a previously defined subroutine.
 \begin{itemize}
   \item If $f_i \cong \fix f$,
   \begin{itemize}
-    \item $h :: (\T \to \Y) = h :: (\Y \to \Y) = f_i :: (\Y \to \T)$
+    \item $h :: (\T \to \Y) = h :: (\Y \to \Y) = g :: (\Y \to \T)$
     for some $\Y$ which is a subtype of $\T$ and a supertype of $\T_i$.
   \end{itemize}
   \item If $f_i$ does not contain any ``$\fix$'' terms,
@@ -131,7 +132,7 @@ $\semp{s}=\semp{s'}$ for all interpretations of the free variables of $s$ and $s
 \end{theorem}
 
 \begin{proof}
-For the tactics with {\bf Obligations:} tactic, the theorem is trivial.
+For the tactics with \textbf{\textit{Obligations}:} tactic, the theorem is trivial.
 
 \medskip
 \noindent
@@ -163,15 +164,15 @@ and we obtain the equality in the tactic.
 
 \medskip
 \noindent
-{\tt >} For {\sf Synth}, ({\it i}) assume
-\[h :: \T\to\Y = h :: \Y\to\Y = f_i :: \Y\to\T\]
+{\tt >} For {\sf Synth}, ({\it i}) assume $f_i=\fix g$ and
+\[h :: \T\to\Y = h :: \Y\to\Y = g :: \Y\to\T\]
 
 Intuitively, $\Y$ ``cuts out'' a region of an array $\theta :: \T$ given
-as input to $h$ or $f_i$. This area is self-contained, in the sense that
+as input to $h$ and $g$. This area is self-contained, in the sense that
 only elements in $\Y$ are needed to compute elements in $\Y$, as indicated
 by the refined type $\Y\to\Y$.
 
-First we show that for any $f : \T\to\T$, if either $f :: \T\to\Y = f :: \Y\to\Y$
+First we show that for {\em any} $f : \T\to\T$, if either $f :: \T\to\Y = f :: \Y\to\Y$
 or $f :: \Y\to\T = f :: \Y\to\Y$, 
 then $(\fix f)::\Y = \fix (f :: \Y\to\Y)$. For the first case, assume $\theta=\fix f$,
 
@@ -200,7 +201,13 @@ Therefore,
 
 From this we learn that $\fix f = \fix(f :: \Y\to\Y) = (\fix f) :: \Y$.
 
-\todo{complete proof}
+Now for the given $h$ and $f_i$, from the corollary, $(\fix h)::\Y = \fix(h::\Y\to\Y)$,
+and also $(\fix g)::\Y=\fix(g::\Y\to\Y)$. Since $h::\Y\to\Y=g::\Y\to\Y$,
+we get $(\fix h)::\Y = (\fix g)::\Y$; now, $\Y$ is a supertype of $\T_i$, so $(\theta::\Y)::\T_i=\theta::\T_i$:
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l}(\fix h)::\T_i = ((\fix h)::\Y)::\T_i = ((\fix g)::\Y)::\T_i = \\
+    \qquad = (\fix g)::\T_i=f_i::\T_i
+  \end{array}\]
 
 {\it (ii)} Assume $h\,(h\,\theta) :: \T_i = f_i :: \T_i$ holds for any $\theta:\T$,
 then in particlar, for $\theta=\fix\,h$, we get $h\,(h\,\fix h) :: \T_i = f_i :: \T_i$.

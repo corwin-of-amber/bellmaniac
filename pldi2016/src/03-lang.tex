@@ -16,7 +16,7 @@ The semantics differ slightly from that of traditional functional languages: arr
 are interpreted as {\bf mappings} from values of type $\T_1$ to values of type $\T_2$. Algebraically,
 interpretations of types, $\semp{\T_1}$, $\semp{\T_2}$, are sets, and interpretations of arrow-typed terms,
 $f : \T_1\to\T_2$, are {\bf partial functions} --- $\semp{f} : \semp{\T_1}\rightharpoonup\semp{\T_2}$.
-This implies that a term $t : \T$ may evaluate to an \newterm{undefined} value, $\semp{t}=\bot_\T$
+This implies that a term $t : \T$ may have an \newterm{undefined} value, $\semp{t}=\bot_\T$
 (We would shorten it to $\semp{t}=\bot$ when the type is either insignificant or understood from the context).
 For simplicity, we shall identify $\bot_{\T_1\to\T_2}$ with the empty mapping $(v:\T_1)\mapsto\bot_{\T_2}$.
 
@@ -39,7 +39,7 @@ The core is augmented with the following intrinsic operators:
       {}[f]_{P_1\times P_2\times \cdots P_n} = \overline{x} \mapsto [f\,\overline{x}]_{\bigwedge P_i(x_i)}
     \end{array}\]
   where $\overline{x} = x_1 \cdots x_n$. This second form can be used to
-  refer to quadrants of an array; for example, in \Cref{overview:quadrants-abstract}, $\qbox2 \equiv G\big|_{J_0\times J_1}$.
+  refer to quadrants of an array; for example, in \Cref{overview:quadrants-abstract}, $\qbox2 \equiv [G]_{J_0\times J_1}$.
   \item A slash operator $/$,     \vspace{-2pt}
   \[\renewcommand\arraystretch{1.5}
     \begin{array}{ll}
@@ -50,11 +50,12 @@ The core is augmented with the following intrinsic operators:
   parts of the array. For example, \[\psi\mapsto \big[f\,\psi\big]_{I_0} ~ \Big/ ~ \big[g\,\psi\big]_{I_1}\]
   combines a result of $f$ in the lower indices of a (one-dimensional) array
   with a result of $g$ in the higher indices ($I_0$ and $I_1$, respectively, are the index subsets).
-  In our concrete syntax, $\big|$ take precedence over $/$,
-  and function application takes precedence over both.
   Notice that this does not limit the areas from which $f$ and $g$ read,
   and they are free to access the entire domain of $\psi$.
 \end{itemize}
+
+In our concrete syntax, function application takes precedence over $/$,
+and the bodies of $\mapsto$ spans as far as possible.
 
 \subsection{Types and Type Qualifiers}
 
@@ -66,10 +67,10 @@ check a program for safety and reject ill-typed program, but rather to serve as 
 tactics, to convey information to the solver for use in the proof, and later to help the compiler
 to properly schedule parallel computations.
 
-More specifically, typing $f : \{v:\T_1 \,|\, P(v)\}\to\T_2$ would mean that $f\,x$
+More specifically, typing $f : \{v:\T_1 ~|~ P(v)\}\to\T_2$ would mean that $f\,x$
 can only be defined where $P(x)$ is true; otherwise, $f\,x=\bot$. 
-It {\bf does not} mean that $x$ has to have the qualifier $P$ at compile time for the term $f\,x$
-to be well-typed.
+It {\bf does not} mean that the compiler has to prove $P(x)$ at the point where the term $f\,x$
+occurs.
 
 As such, we define a Bellmania program to be well-typed iff it is well-typed
 without the annotations (in its \newterm{raw form}). Qualifiers are processed
@@ -167,7 +168,10 @@ Where $::$ is defined as follows:
 
 \medskip
 We extend our abstract syntax with an explicit \newterm{cast operator}
-$t::\T$ following this semantics.
+$t::\T$ following this semantics. Notice that the second case of $[\,]_{_\square}\,$
+can be refined as syntactic sugar for $::$,
+$[t]_{_\square} = t :: \square\to \_$, where $\_$ is a fresh
+type variable to be inferred.
 
 \subsubsection*{Type Inference}
 
@@ -180,6 +184,8 @@ constants with the following types:
     (::\T) : \mathrm{shape}[\T]\to\mathrm{shape}[\T]
   \end{array}\]
 
+Any type variables occurring in type expressions are resolved at that
+stage. In particular, it means that type variables are always assigned raw types.
 
 Qualifiers are also inferred by essentially propagating them up and down the syntax tree.
 Since the program already typechecks once the base types are in place, the problem is no longer
@@ -205,9 +211,9 @@ qualifiers that cannot be expressed in droplets are discarded.
 \begin{figure*}
 \newcommand\typerule[2]{{\renewcommand\arraystretch{1.5}\begin{array}[t]{c} #1 \\ \hline #2 \end{array}}}
 \[
-\renewcommand\arraystretch{4}
+\renewcommand\arraystretch{3}
 \begin{array}{cccp{1cm}}
-  \multirow{2}{1cm}[-3em]{\begin{tikzpicture}\draw (1mm,6em) -- (0,6em) -- (0,-5em) node[midway,above,xshift=-2mm,rotate=90] {Core language} -- +(1mm,0);\end{tikzpicture}} &
+  \multirow{2}{1cm}[-2em]{\begin{tikzpicture}\draw (0,0) -- ++(-1mm,0) -- ++(0,-12em) {} node[midway,anchor=base,xshift=-3mm,rotate=90] {Core language} -- ++(1mm,0);\end{tikzpicture}} &
   \typerule{e=v \qquad \Gamma,v:\T_1\vdash e:\T_0}
            {\Gamma,v:\T_1 ~\vdash~ e:\T_0\sqcap\T_1} &
   \typerule{e=e_1\,e_2 \qquad \Gamma \vdash e:\T, ~ e_1:\T_1, ~ e_2:\T_2\to\S_2}
@@ -226,19 +232,19 @@ qualifiers that cannot be expressed in droplets are discarded.
               \Gamma,v:\T\sqcap\T_0 ~\vdash~ & e_1:\T_1\sqcap\S_0 
             \end{array}}  } & \\
   %
-  \multirow{2}{1cm}[-2.5em]{\begin{tikzpicture}\draw (1mm,0) -- (0,0) -- (0,-8em) node[midway,above,xshift=-2mm,rotate=90] {Extensions} -- +(1mm,0);\end{tikzpicture}} &
+  \multirow{2}{1cm}[-2em]{\begin{tikzpicture}\draw (0,0) -- ++(-1mm,0) -- ++(0,-9em) node[midway,anchor=base,xshift=-3mm,rotate=90] {Extensions} -- ++(1mm,0);\end{tikzpicture}} &
   \typerule{e=\fix e_1 \qquad \Gamma\vdash e:\T, ~ e_1:\T_1\to\T_2}          % fix
            {\Gamma\vdash e: \T\sqcap\T_2} &
   \typerule{e=e_1/e_2 \qquad \Gamma\vdash e:\T, ~ e_1:\T_1, ~ e_2:\T_2}      % /
            {\renewcommand\arraystretch{1.2}
             \begin{array}[t]{@{}l@{}l@{}}
-              \Gamma\vdash{} & e_1:\T_1\sqcap\T \\ & 
-                               e_2:\T_2\sqcap\T
+              \Gamma\vdash{} & e_1:\T_1\sqcap\T, ~ e_2:\T_2\sqcap\T
             \end{array}} & \\
   &
-  \cspan2{
-  \typerule{e=e_1::\T \qquad \Gamma\vdash e_1:\T_1}                           % ::
-           {\Gamma\vdash e:\T\sqcap\T_1, ~ e_1:\T\sqcap\T_1} } &
+  \typerule{e=[e_1]_{_\square} \qquad \Gamma\vdash e:\T,e_1:\T_1}                           % ::
+           {\Gamma\vdash e:\T\sqcap\T_1, ~ e_1:\T\sqcap\T_1} &
+  \typerule{e=e_1::\T \qquad \Gamma\vdash e:\T_0,e_1:\T_1}                           % ::
+           {\Gamma\vdash e:\T\sqcap\T_0\sqcap\T_1, ~ e_1:\T\sqcap\T_0\sqcap\T_1}
 \end{array}
 \]
 \caption{\label{lang:type refinement rules}
@@ -255,8 +261,8 @@ inferences:
 
 \hspace*{\fill}
 \begin{tikzpicture}[node distance=1em]
-  \node(farg) {$f$};
-  \node(iarg)[right=of farg] {$(i:I_0)$};
+  \node(farg) {$(f:I_0\to\_)$};
+  \node(iarg)[right=of farg] {$i$};
   \node(mapsto)[right=of iarg] {$\mapsto$};
   \node(f)[right=of mapsto] {$f$};
   \node(i1)[right=of f] {$i$};
@@ -269,15 +275,16 @@ inferences:
   \node(l3)[coordinate,below=3.5mm of l2] {};
   \node(l4)[coordinate,below=3.5mm of l3] {};
   \def\ytip{2pt}
-  \draw (l0 -| farg.west) -- +(0,-\ytip) -| (l0 -| farg.east) node[pos=0.25,below] {\tiny $I\to I\to T$};
-  \draw (l0 -| f.west) -- +(0,-\ytip) -| (l0 -| f.east) node[pos=0.5,anchor=north east,inner xsep=0] {\tiny $I_0\to I_0\to T$};
+  \draw (l0 -| farg.west) -- +(0,-\ytip) -| (l0 -| farg.east) node[pos=0.25,below] {\tiny $I_0\to I\to T$};
+  \draw (l0 -| iarg.west) -- +(0,-\ytip) -| (l0 -| iarg.east) node[pos=0.25,below] {\tiny $I$};
+  \draw (l0 -| f.west) -- +(0,-\ytip) -| (l0 -| f.east) node[pos=0.5,anchor=23,inner xsep=0] {\tiny $I_0\to I\to T$};
   \draw (l0 -| i1.west) -- +(0,-\ytip) -| (l0 -| i1.east) node[pos=0.25,below] {\tiny $I_0$};
-  \draw (l0 -| i2.west) -- +(0,-\ytip) -| (l0 -| i2.east) node[pos=0.25,below] {\tiny $I_0$};
+  \draw (l0 -| i2.west) -- +(0,-\ytip) -| (l0 -| i2.east) node[pos=0.25,below] {\tiny $I$};
   \draw (l0 -| zero.west) -- +(0,-\ytip) -| (l0 -| zero.east) node[pos=0.25,below] {\tiny $T$};
   \draw (l1 -| f.west) -- +(0,-\ytip) -| (l1 -| i1.east) node[pos=0.25,below] {\tiny $I_0\to T$};
   \draw (l2 -| f.west) -- +(0,-\ytip) -| (l2 -| i2.east) node[pos=0.25,below] {\tiny $T$};
   \draw (l3 -| f.west) -- +(0,-\ytip) -| (l3 -| zero.east) node[pos=0.25,below] {\tiny $T$};
-  \draw (l4 -| farg.west) -- +(0,-\ytip) -| (l4 -| zero.east) node[pos=0.25,below] {\tiny $(I\to I\to T)\to I_0\to T$};
+  \draw (l4 -| farg.west) -- +(0,-\ytip) -| (l4 -| zero.east) node[pos=0.25,below] {\tiny $(I_0\to I\to T)\to I\to T$};
 \end{tikzpicture}
 \hspace*{\fill}
 
@@ -317,8 +324,8 @@ The specification of the Simplified Gap (\Cref{intro:arbiter spec}) will be writ
 \begin{equation}
   \renewcommand\arraystretch{1.5}
   \begin{array}{@{}l@{}l@{}l@{}}
-    \lspan3{\xw : ((I\times I)\cap{<})\to J\to\R} \\
-    \lspan3{\yw : ((J\times J)\cap{<})\to I\to\R} \\
+    \lspan3{\xw{} : ((I\times I)\cap{<})\to J\to\R} \\
+    \lspan3{\yw{} : ((J\times J)\cap{<})\to I\to\R} \\
     G ~=~ \fix \theta\,i\,j\mapsto{}
       & \lspan2{\big[0\big]_{i=j=0} \,\Big/~ \big[\yw{0j0}\big]_{i=0} \,\Big/~ \big[\xw{0i0}\big]_{j=0} \,\Big/} \\
       & \min~\langle~ & \min p\mapsto\theta_{pj}+\xw{pij}, \\
