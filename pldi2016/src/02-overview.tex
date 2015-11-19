@@ -120,9 +120,12 @@ to bottom.
 
 \newcommand\plusoneocd{\raisebox{.5pt}{$\scriptstyle+1$}}
 
+\algrenewtext{Procedure}{\hspace{-3mm}{\bf procedure}~}  % hach to make proc header slighly less indented
+
 \begin{algorithm}
 \renewcommand\arraystretch{1.3}
 \begin{algorithmic}
+\Procedure{A{\larger{[}}$G${\larger{]}}}{}\EndProcedure
   \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox1}
     \For{$j=1..\frac{m}{2}$} 
       \State $G_{ij} :=
@@ -147,10 +150,8 @@ to bottom.
    Simplified Arbiter --- Sliced}
 \end{algorithm}
 
-
 \begin{algorithm}
 \renewcommand\arraystretch{1.3}
-\algrenewtext{Procedure}{\hspace{-3mm}{\bf procedure}~}
 \begin{algorithmic}
 \Procedure{A{\larger{[}}$G${\larger{]}}}{}\EndProcedure
   \State A\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}$\big] \Head{Compute \qbox1}
@@ -209,57 +210,61 @@ increasing memory locality while preserving parallelism. With divide-and-conquer
 the DP table is partitioned into regions, and each region is expressed as a sub-problem
 to be solved.
 
-For the running example, Richard takes the two-di\-men\-sio\-nal array $G$ and partitions it into
-quadrants, as illustrated in \Cref{overview:quadrants}. He then applies the same reasoning
-as in the iterative case, concluding that the computations of \qbox2 and \qbox3 depend on \qbox1,
-and that the computation of \qbox4 depends on \qbox2 and \qbox3.
+We will now describe how Richard approaches the running example using Bellmania.
+He would like to partition the two-di\-men\-sio\-nal array $G$ into
+quadrants, as illustrated in \Cref{overview:quadrants}.
+In Bellmania, this is accomplished by applying the {\sf Slice} tactic,
+illustrated graphically at the top of \Cref{overview:slice-stratify-synth}.
+{\em Tactics} are transformation steps that manipulate the program,
+and represent a high-level refinement concept.
+The partitions are labeled $I_0,I_1$ and $J_0,J_1$ for row index ranges and column index ranges,
+respectively~(\Cref{overview:quadrants-abstract}).
+Richard obtains the program in \Cref{intro:breakdown}, which he names ``A'' 
+(only the first two steps are shown, remaining steps are analogous).
+
+Following the same reasoning as in the iterative case, computing \qbox1
+does not depend on any of the other computations. Richard applies the
+{\sf Stratify} tactic, which encodes exactly this intuition: it separates
+an independent computation step as a separate loop.
+Bellmania checks the data dependencies and verifies that the transformation
+is sound.
+A stratified computation can be seen in \Cref{overview:chain}. This does not,
+in fact, affect the generated program, but encodes some knowledge that the
+system has gained and presents the user with a clearer functional structure.
 \end{paragraph}
 
 \medskip
-He \emph{stratifies} the computations on these quadrants into the following
-four steps:
-\begin{algorithmic}[1]
-  \State Compute \qbox1.
-  \State Compute \qbox2 using data from \qbox1.
-  \State Compute \qbox3 using data from \qbox1.
-  \State Compute \qbox4 using data from \qbox2 and \qbox3.
-\end{algorithmic}
-
-The result can be seen in \Cref{intro:breakdown} (only the first two steps are shown, remaining steps are analogous).
-Each step depends only on a subset of the steps that came before it, 
-as illustrated by \Cref{intro:chain}. 
 At this point, Richard notices that {\it Compute \qbox1} is just a smaller version of
-the original {\it Compute}; so he replaces it by a recursive call with
-the sub-matrix $G_{(0..\frac{n}{2})(0..\frac{m}{2})}$
+the original {\it Compute}; he invokes {\sf Synth}, which automatically
+synthesizes a recursive call A\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}$\big]
+(presented using abstract index ranges as $A^{I_0J_0}$).
 
-This is not yet a divide-and-conquer algorithm: 
-apart from \qbox1, the other steps
-look somewhat different from the original problem and lack significant locality. 
-To achieve the desired properties of high memory locality and improved
-performance would require some further algebraic manipulation.
-
-To illustrate how Richard can perform this transformation, 
-we observe the computation of \qbox2, which is {\bf not} equivalent to
+The other steps would require some further algebraic manipulation.
+Observe that the computation of \qbox2 is {\bf not} equivalent to
 A\big[$G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$], 
 because when $\frac{m}{2} \leq j < m$, the range of $0\leq q < j$ leads to
 some of the access $G_{iq}$ lying outside of \qbox2.
 
-Richard addressed this problem by splitting the range of $q$, breaking
-the original loop into two loops, one where $0\leq q < \frac{m}{2}$,
-and one where $\frac{m}{2}\leq q < j$. He obtains the version seen in
-\Cref{intro:further-breakdown}, which he calls ``A''. 
-It is important to notice that the first
-loop only reads from \qbox1, while the second loop only reads from \qbox2.
-Also note, that both loops write to the same area, namely \qbox2; hence
-the second loop should take into account the results of the first loop,
-to avoid blind overwriting that would lead to loss of computed data elements.
+Richard addressed this problem by splitting the range of $q$ using the {\sf Slice}
+tactic again, effectively breaking the original $\min\langle\cdots\rangle$ into two:
+one where $0\leq q < \frac{m}{2}$,
+and one where $\frac{m}{2}\leq q < j$. 
+He uses {\sf Stratify} to organize the loops in the program such that both 
+loops write to the same area, namely \qbox2, where the second loop reads data
+written by the first loop, as shown in \Cref{intro:further-breakdown}.
+It is important to notice that the first loop only reads from \qbox1, 
+while the second loop only reads from \qbox2.
 
-The computation of \qbox2:(right) is now a true copy of {\it Compute},
+The computation of \qbox2:(right) is now a true copy of A,
 with sub-matrix $G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$ (with the small caveat,
 that A has to be changed to include the term $G_{ij}$ in the $\min\langle~\rangle$ expression).
-\qbox2:(left) is a new computation, to which Richard gives the name ``B''. After repeating
-the same reasoning steps to {\it Compute \qbox3} and {\it Compute \qbox4},
-he finally has the version in \Cref{intro:recursive-A}.
+Again, Bellmania synthesizes the sub-call and proves the equivalence.
+Running {\sf Synth} on \qbox2:(left) will reveal that it is a new computation,
+to which Richard gives the name ``B''. 
+
+After repeating
+the same reasoning steps to \qbox3 and \qbox4,
+Richard finally has the version in \Cref{intro:recursive-A}.
 
 \begin{algorithm}
 \renewcommand\arraystretch{1.3}
@@ -290,6 +295,10 @@ further improving the locality of the resulting algorithm.
 Eventually, through this kind of transformations, he can succeed in breaking the computation of $G$ into recursive sub-computations leading to a true divide-and-conquer algorithm. 
 As is well illustrated by the example, this line of reasoning can get quite complicated for most dynamic programming algorithms, 
 and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered the technique. 
+Fortunately, the reasoning can be mechanized in Bellmania, which allows
+Richard and other algorithm designers to produce a {\bf provably correct}
+implementation of this algorithm through a series of high-level tactic
+application.
 
 \newcommand\steparrowwidth{3mm}
 \newcommand\steparrow{\includegraphics[width=\steparrowwidth]{img/arrow}}
@@ -301,7 +310,7 @@ and producing a correct divide-and-conquer algorithm for a given dynamic program
 \else
 \input{gfx/overview-chain}
 \fi
-\caption[caption]{\label{intro:chain}
+\caption[caption]{\label{overview:chain}
   Stratified computation for Simplified Arbiter. \\[.2em]
   The array is initially empty except for the hatched area that is
   filled by {\it Initialize}.
@@ -332,29 +341,6 @@ and producing a correct divide-and-conquer algorithm for a given dynamic program
   Overview of tactic semantics in Bellmania. }
 \end{figure}
 
-
-Fortunately, these steps are mechanized in Bellmania, which is a system that allows
-Richard and other algorithm designers to produce a provably
-correct implementation of this algorithm through a series of high-level commands
-illustrated graphically in \Cref{overview:slice-stratify-synth}.
-In Bellmania, Richard will start by applying the {\sf Slice} tactic, which
-partitions the ranges of $i$ and $j$, each into two partitions, labeled
-$I_0,I_1$ and $J_0,J_1$, respectively (\Cref{overview:quadrants-abstract}). The index arithmetic considerations of
-the concrete implementation are abstracted away, and the only recorded information
-is that $I_0,I_1$ are contiguous disjoint intervals covering a set of indices $I$
-(and, analogously, for $J_0,J_1$). He will continue by invoking {\sf Stratify},
-a tactic that breaks a piece of the computation into a separate step.
-When doing so, dependencies are checked so that the reorganization indeed
-preserves the semantics of the program. The {\sf Synth} tactic will then figure
-out that this sub-computation is equivalent to $A^{I_0J_0}$, which is the
-abstract equivalent of {A{\relsize{1}[}$G_{(0..\frac{n}{2})(0..\frac{m}{2})}${\relsize{1}]}}.
-This automatic inference is denoted by the dashed arrow in the figure.
-When {\sf Synth} cannot find an equivalent subroutine, it generates a new one,
-using the current program fragment as its specification, indicated by the solid arrow.
-
-By guiding Bellmania through a sequence of these tactic applications, the system
-generates a divide-and-conquer version of the original recurrence $G$, which is
-provably equivalent to the na\"ive computation.
 
 \begin{figure}
 \centering

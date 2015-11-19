@@ -1,8 +1,8 @@
 \section{Empirical Evaluation}
 
 We implemented our technique and used it to generate cache-oblivious
-divide-and-conquer implementations of several textbook and naturally occurring
-algorithms.
+divide-and-conquer implementations of three algorithms that were used as
+benchmarks in \cite{IPDPS15/Tithi}, and a few others.
 
 \begin{paragraph}{Gap problem.}
 A generalized minimal edit distance problem. Given two input strings 
@@ -36,12 +36,10 @@ where the shape of the fold is an {\em accordion}, alternating between going dow
 up.
 \end{paragraph}
 
-\begin{paragraph}{Longest Common Subsequence}
-Given two sequences $X,Y \in \Sigma^*$,
-the LCS of $X$ and $Y$ is a string $W\in \Sigma^*$ such that $X=\alpha W\beta$ and $Y=\gamma W\delta$
-for appropriate $\alpha,\beta,\gamma,\delta$, and which maximizes $|W|$.
-\end{paragraph}
-
+\medskip
+We also exercised our system on a number of textbook problems:
+the Longest Common Subsequence (LCS) problem, the Knapsack problem,
+and the Bitonic Traveling Salesman problem.
 
 \begin{figure}
 \[
@@ -75,6 +73,13 @@ for appropriate $\alpha,\beta,\gamma,\delta$, and which maximizes $|W|$.
   Specifications for the Parenthesis Assignment DP problem.}
 \end{figure}
 
+
+The tactic application engine is implemented in Scala. We implemeted a prototype
+IDE using HTML5 and AngularJS, which communicates with the engine by sending
+and receiving program terms serialized as JSON. Our system supports using either
+Z3 or CVC4 as the back-end SMT solver for discharging proof obligations required
+for soundness proofs.
+
 \begin{table}
 \centering
 \renewcommand\a{({\it i})}    % relax! it's only for this figure
@@ -92,7 +97,7 @@ for appropriate $\alpha,\beta,\gamma,\delta$, and which maximizes $|W|$.
   \hline
   {\bf Protein} & 4 & & \\
   \hline
-  {\bf LCS} & 1 & & \\
+  {\bf LCS} & 1 &  0.2  &  1.4  &  0.4  &  1.8 \\
   \hline
   {\bf Knapsack} & 2 & & \\
   \hline

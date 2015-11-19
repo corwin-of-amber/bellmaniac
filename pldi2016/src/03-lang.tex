@@ -138,7 +138,7 @@ specifying that some schedules are impossible, by setting the respective $w\,p\,
 \end{figure}
 
 As mentioned earlier, annotations are ignored when typechecking a term.
-This gives a simple characteristic of type safety without the need to
+This gives a simple characterization of type safety without the need to
 explictly write any new typing rules. It also means that for $f:\T_1\to\T_2$, $x:T_3$, we obtain $f\,x:\T_2$ whenever
 $\T_1$ and $\T_3$ have the same shape. This requires some explanation.
 
@@ -213,7 +213,7 @@ qualifiers that cannot be expressed in droplets are discarded.
 \[
 \renewcommand\arraystretch{3}
 \begin{array}{cccp{1cm}}
-  \multirow{2}{1cm}[-2em]{\begin{tikzpicture}\draw (0,0) -- ++(-1mm,0) -- ++(0,-12em) {} node[midway,anchor=base,xshift=-3mm,rotate=90] {Core language} -- ++(1mm,0);\end{tikzpicture}} &
+  \multirow{2}{1cm}[-2em]{\begin{tikzpicture}\draw (0,0) -- ++(-1mm,0) -- ++(0,-11.7em) {} node[midway,anchor=base,xshift=-3mm,rotate=90] {Core language} -- ++(1mm,0);\end{tikzpicture}} &
   \typerule{e=v \qquad \Gamma,v:\T_1\vdash e:\T_0}
            {\Gamma,v:\T_1 ~\vdash~ e:\T_0\sqcap\T_1} &
   \typerule{e=e_1\,e_2 \qquad \Gamma \vdash e:\T, ~ e_1:\T_1, ~ e_2:\T_2\to\S_2}
@@ -232,7 +232,7 @@ qualifiers that cannot be expressed in droplets are discarded.
               \Gamma,v:\T\sqcap\T_0 ~\vdash~ & e_1:\T_1\sqcap\S_0 
             \end{array}}  } & \\
   %
-  \multirow{2}{1cm}[-2em]{\begin{tikzpicture}\draw (0,0) -- ++(-1mm,0) -- ++(0,-9em) node[midway,anchor=base,xshift=-3mm,rotate=90] {Extensions} -- ++(1mm,0);\end{tikzpicture}} &
+  \multirow{2}{1cm}[-1.8em]{\begin{tikzpicture}\draw (0,0) -- ++(-1mm,0) -- ++(0,-7.7em) node[midway,anchor=base,xshift=-3mm,rotate=90] {Extensions} -- ++(1mm,0);\end{tikzpicture}} &
   \typerule{e=\fix e_1 \qquad \Gamma\vdash e:\T, ~ e_1:\T_1\to\T_2}          % fix
            {\Gamma\vdash e: \T\sqcap\T_2} &
   \typerule{e=e_1/e_2 \qquad \Gamma\vdash e:\T, ~ e_1:\T_1, ~ e_2:\T_2}      % /
@@ -241,7 +241,7 @@ qualifiers that cannot be expressed in droplets are discarded.
               \Gamma\vdash{} & e_1:\T_1\sqcap\T, ~ e_2:\T_2\sqcap\T
             \end{array}} & \\
   &
-  \typerule{e=[e_1]_{_\square} \qquad \Gamma\vdash e:\T,e_1:\T_1}                           % ::
+  \typerule{e=[e_1]_{_{cond}} \qquad \Gamma\vdash e:\T,e_1:\T_1}                           % ::
            {\Gamma\vdash e:\T\sqcap\T_1, ~ e_1:\T\sqcap\T_1} &
   \typerule{e=e_1::\T \qquad \Gamma\vdash e:\T_0,e_1:\T_1}                           % ::
            {\Gamma\vdash e:\T\sqcap\T_0\sqcap\T_1, ~ e_1:\T\sqcap\T_0\sqcap\T_1}
