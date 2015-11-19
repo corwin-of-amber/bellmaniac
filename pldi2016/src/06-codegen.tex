@@ -1,0 +1,13 @@
+\section{Code Generation}
+We built a compiler for programs in Bellmania language that generates efficient C++ code parallelized with Intel Cilk constructs. The compiler (1) figures out directions of loops for fixed point computations by infering the dependency constraints~\cite{JACM1967} from the available type information and solving them using an SMT solver, (2) Parallelizes all function calls and loops inside a function to avoid memory read/write conflicts, (3) uses the type information and guards to optimize the loop bounds and performs some of the high-level traditional compiler transformations, and (4) identifies  loops which read non-contiguous memory blocks and copy-optimizes~\cite{ASPLOS1991} them automatically.  
+
+ 
+%Use Cilk for parallelization - references later
+%Using SMT solver and type information to find directions of loops for fixed point computations
+%Using type information and SMT solvers to parallelize different components
+%Using type information to optimize the loop bounds, reduce checking of guards and do copy optimization
+%Traditional compiler transformations
+
+%code can be found in repo
+%JACM67: Recurrences to loops: http://dl.acm.org/citation.cfm?id=321418
+%ASPLOS1991: copy optimization: http://suif.stanford.edu/papers/lam-asplos91.pdf
