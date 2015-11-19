@@ -4,7 +4,7 @@ J₀ J₁ I₀ I₁ : set
 A `I `J
 
 SaveAs (A `I `J) "loop"
-
+∵
 Slice (find (θ ↦ ?)) (⟨`?⟩ ⟨`I₀, `I₁⟩ ⟨`J₀, `J₁⟩)
 Stratify "/" (fixee 🄰) 🄰 (ctx 🄰 ψ)
 Stratify "/" (fixee 🄰) 🄰 (ctx 🄰 ψ)
@@ -29,9 +29,9 @@ Assoc max
 ⟨Synth (fixee 🄷) 🄷 (A `I₀ `J₀) (ctx 🄷 ψ) ⟨`I₀×J₀⟩,
  Synth (fixee 🄵) 🄵 (A `I₀ `J₁) (ctx 🄵 ψ) ⟨`I₀×J₁⟩,
  Synth (fixee 🄳) 🄳 (A `I₁ `J₀) (ctx 🄳 ψ) ⟨`I₁×J₀⟩,
- Synth (fixee 🄰) 🄰 (A `I₁ `J₁) (ctx 🄰 ψ) ⟨`I₁×J₁⟩⟩
-
-⟨Synth (fixee 🄳) 🄳 (B `I₀ `J₀ `J₁) (ctx 🄳 ψ) ⟨`I₀×J₀,`I₀×J₁⟩,
- Synth (fixee 🄰) 🄰 (B `I₁ `J₀ `J₁) (ctx 🄰 ψ) ⟨`I₁×J₀,`I₁×J₁⟩⟩
+ Synth (fixee 🄰) 🄰 (A `I₁ `J₁) (ctx 🄰 ψ) ⟨`I₁×J₁⟩,
+ Synth (fixee 🄶) 🄶 (B `I₀ `J₀ `J₁) (ctx 🄶 ψ) ⟨`I₀×J₀,`I₀×J₁⟩,
+ Synth (fixee 🄱) 🄱 (B `I₁ `J₀ `J₁) (ctx 🄱 ψ) ⟨`I₁×J₀,`I₁×J₁⟩⟩
+Opt
 
 SaveAs (A `I `J) "rec"

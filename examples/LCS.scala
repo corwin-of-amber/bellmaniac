@@ -2,12 +2,14 @@ package examples
 
 import syntax.AstSugar._
 import semantics.{TypeTranslation, Scope, Prelude}
+import semantics.pattern.SimplePattern
 import semantics.Prelude._
 import semantics.TypeTranslation.TypingSugar._
 import semantics.Domains.SubsortAssocT
 import synth.engine.TacticApplicationEngine
 import synth.pods.Pod
 import synth.proof.{Prover, Assistant}
+import synth.engine.CollectStats
 
 
 
@@ -55,28 +57,12 @@ object LCS {
   }
 
 
-  class Interpreter(implicit scope: Scope) extends TacticApplicationEngine {
-    import TacticApplicationEngine._
-
-    override def pods(implicit s: State) = {
-      case (L("A"), List(~(i), ~(j))) => APod(i, j)
-    }
-
-    val A = TV("A")
-    val P1 = TV("P₁")
-    val P2 = TV("P₂")
-    override val prototypes = Map(A → (A:@(? ∩ P1, ? ∩ P2)))
-
+  trait InvokeProver extends TacticApplicationEngine {
+    
     override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
+    
     def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
       import synth.pods._
-      import syntax.Piping._
-
-      for (goal <- goals) extrude(goal) |> report.console.Console.display
-
-      println("· " * 25)
-
-      val a = new Assistant
 
       val toR = TotalOrderPod(R)
       val toI = TotalOrderPod(I)
@@ -88,22 +74,20 @@ object LCS {
 
       val p = new Prover(List(NatPod, TuplePod, toR, toI, toJ, idxI, idxJ, partI, partJ) ++ pods, Prover.Verbosity.ResultsOnly)
 
-      val commits =
-        for (goals <- goals map (List(_))) yield {
-          //for (goals <- List(goals)) yield {
-          val igoals = goals map a.intros
-          import semantics.pattern.SimplePattern
-          val t = new p.Transaction
-          val switch = t.commonSwitch(new p.CommonSubexpressionElimination(igoals, new SimplePattern(min :@ ?)))
+      (new Assistant).invokeProver(assumptions, goals, new SimplePattern(min :@ ?))(p)
+    }    
+  }
+  
+  class Interpreter(implicit scope: Scope) extends TacticApplicationEngine with InvokeProver with CollectStats {
+    import TacticApplicationEngine._
 
-          t.commit(assumptions map a.simplify map t.prop, igoals map (switch(_)) map a.simplify map t.goal)
-        }
-
-      val results = commits reduce (_ ++ _)
-
-      if (!(results.toList forall (_.root == "valid"))) System.exit(1)
-
-      println("=" * 80)  // QED!
+    override def pods(implicit s: State) = {
+      case (L("A"), List(~(i), ~(j))) => APod(i, j)
     }
+
+    val A = TV("A")
+    val P1 = TV("P₁")
+    val P2 = TV("P₂")
+    override val prototypes = Map(A → (A:@(? ∩ P1, ? ∩ P2)))
   }
 }

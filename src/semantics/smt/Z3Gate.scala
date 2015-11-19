@@ -311,7 +311,8 @@ object Z3Gate {
       
   var benchmarkCounter = 0
   def benchmarkNext(nparts: Int) = {
-    0 until nparts map (i => new File(s"/tmp/benchmark$benchmarkCounter-$i.smt2"))
+    val dir = ui.Config.config.tmpdir() |-- (_.mkdirs())
+    0 until nparts map (i => new File(dir, s"benchmark$benchmarkCounter-$i.smt2"))
   } |-- { _ => benchmarkCounter += 1 }
 
   def zipWithBench[A](l: Iterable[A]) = l zip benchmarkNext(l.size)

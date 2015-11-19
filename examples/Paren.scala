@@ -2,7 +2,6 @@
 package examples
 
 import java.io.{BufferedReader, FileReader}
-
 import com.mongodb.{BasicDBList, DBObject, BasicDBObject}
 import com.mongodb.util.JSON
 import report.{AppendLog, DevNull, FileLog}
@@ -18,6 +17,7 @@ import syntax.transform.ExtrudedTerms
 import synth.pods.ConsPod.`⟨ ⟩?`
 import synth.pods._
 import ui.CLI
+import synth.engine.CollectStats
 
 
 object Paren {
@@ -298,8 +298,18 @@ object Paren {
 
     import synth.engine.TacticApplicationEngine.{instapod, fixer, fixee, ctx, slasher}
 
-    class Interpreter(implicit scope: Scope, env: Environment) extends synth.engine.TacticApplicationEngine {
-      import synth.engine.TacticApplicationEngine._
+    import synth.engine.TacticApplicationEngine
+    
+    trait InvokeProver extends TacticApplicationEngine {
+      override lazy val prover = Paren.BreakDown.prover
+
+      override def invokeProver(pod: Pod): Unit = {
+        Paren.BreakDown.invokeProver(List(), pod.obligations.conjuncts, List(pod), logf)
+      }
+    }
+    
+    class Interpreter(implicit scope: Scope, env: Environment) extends TacticApplicationEngine with InvokeProver with CollectStats {
+      import TacticApplicationEngine._
 
       override def pods(implicit s: State): PartialFunction[(Term, List[Term]), Pod] = {
         case (L("A"), List(~(j))) => APod(j)
@@ -314,12 +324,6 @@ object Paren {
       val P2 = TV("P₂")
       val P3 = TV("P₃")
       override val prototypes = Map(A → (A:@(? ∩ P1)), B → (B:@(? ∩ P1, ? ∩ P2)), C → (C:@(? ∩ P1, ? ∩ P2, ? ∩ P3)))
-
-      override lazy val prover = Paren.BreakDown.prover
-
-      override def invokeProver(pod: Pod): Unit = {
-        Paren.BreakDown.invokeProver(List(), pod.obligations.conjuncts, List(pod), logf)
-      }
     }
 
     def emit(term: Term)(implicit scope: Scope) = Explicate.explicateHoist(term)

@@ -2,6 +2,7 @@ package ui
 
 import org.rogach.scallop.ScallopConf
 import org.rogach.scallop.ScallopOption
+import java.io.File
 
 
 
@@ -15,6 +16,8 @@ object Config {
     val cert: ScallopOption[List[String]]
     val log: ScallopOption[List[String]]
     val opt: ScallopOption[Boolean]
+    val cache: ScallopOption[Boolean]
+    val tmpdir: ScallopOption[File]
     val filename: ScallopOption[String]
   }
   
@@ -22,7 +25,9 @@ object Config {
     val prover = opt[String]("prover", default=Some("z3"))
     val cert = opt[String]("cert", default=Some("Synth")).map((_.split(",").toList))
     val log = opt[String]("log", default=Some("Synth")).map((_.split(",").toList))
+    val tmpdir = opt[String]("tmpdir", default=Some("/tmp")).map(new File(_))
     val opt = toggle("opt", default=Some(true))
+    val cache = toggle("cache", default=Some(true))
   }
   
   class CLIConfig(args: List[String]) extends BaseCommandLineConfig(args) {

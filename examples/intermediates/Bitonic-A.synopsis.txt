@@ -3,7 +3,7 @@ J₀ J₁ : set
 K₀ K₁ K₂ K₃ : set
 
 A `J
-
+∵
 SaveAs (A `J) "loop"
 
 Slice (find (θ ↦ ?)) (`? ⟨`J₀×J₀, `J₀×J₁, `J₁×J₁⟩)
@@ -25,5 +25,6 @@ Stratify min (fixee 🄰) ⟨🄴,🄶⟩ ψ
  Synth (fixee 🄲) 🄲 (B `J₀ `J₁) ψ `J₀×J₁,
  Synth (fixee 🄱) 🄱 (C `J₀ `J₁) ψ ⟨`J₀×J₁,`J₁×J₁⟩,
  Synth (fixee 🄴) 🄴 (A `J₀) ψ ⟨`J₀×J₀⟩⟩
+Opt
 
 SaveAs (A `J) "rec"

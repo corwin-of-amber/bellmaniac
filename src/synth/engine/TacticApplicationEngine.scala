@@ -128,16 +128,16 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
   def command(command: Term)(implicit s: State): Iterable[Pod] = commandArgs(command) match {
     case Some((L("Slice"), List(~(f), ~~(domains)))) =>
-      List(SlicePod(f, domains))
+      List(new SlicePod(f, domains) with PodOrigin { override val tactic = command })
 
     case Some((L("Slice"), List(~(h), ~(θ), ~~(domains)))) =>
       val f = subterm_?(h, θ)
-      List(SliceAndDicePod(h, f, domains, (l: Iterable[Term]) => /::(l.toList)))
+      List(new SliceAndDicePod(h, f, domains, (l: Iterable[Term]) => /::(l.toList)) with PodOrigin { override val tactic = command })
     case Some((L("Slice"), List(~(h), ~(θ), ~~(domains), ++(reduce)))) =>
       val f = subterm_?(h, θ)
-      List(SliceAndDicePod(h, f, domains, (l: Iterable[Term]) => reduce:@`⟨ ⟩`(l)))
+      List(new SliceAndDicePod(h, f, domains, (l: Iterable[Term]) => reduce:@`⟨ ⟩`(l)) with PodOrigin { override val tactic = command })
 
-    /* deprecated */
+    /* deprecated 
     case Some((L("StratifySlash"), List(~(h), ~(quadrant), ~(ψ_)))) =>
       val ψ = ctx_?(h, ψ_)
       List(StratifySlashPod(h, quadrant, ψ))
@@ -152,66 +152,69 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       val ψ = ctx_?(h, ψ_)
       SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
         LetReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
-
+		*/
     case Some((L("Stratify"), List(L("/"), ~(h), ~~(subelements), ~(ψ_)))) =>
       val slashes = slasher(h, subelements.head)
       val ψ = ctx_?(subelements.head, ψ_)
       if (subelements.length == 1 && TypedTerm.eq(slashes, h))
-        List(StratifySlashPod(h, subelements.head, ψ))
+        List(new StratifySlashPod(h, subelements.head, ψ) with PodOrigin { override val tactic = command })
       else
-        List(StratifySlash2Pod(TermWithHole.puncture(h, slashes), slashes, subelements, ψ))
+        List(new StratifySlash2Pod(TermWithHole.puncture(h, slashes), slashes, subelements, ψ) with PodOrigin { override val tactic = command })
     case Some((L("Stratify"), List(++(reduce), ~(h), ~~(subelements), ~(ψ_)))) =>
       val ψ = ctx_?(subelements.head, ψ_)
       SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
-        StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
+        new StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ) with PodOrigin { override val tactic = command }))
     case Some((L("Synth"), List(~(h), ~(subterm), synthed, ~(ψ_), ~~(areaTypes)))) =>
       val ψ = ctx_?(subterm, ψ_)
       //List(SynthPod(h, subterm, encaps(synthed), evalTerm(synthed), ψ, areaTypes))
       val impl = Synth.Alignment.stripProg(evalTerm(synthed))
-      List(SynthPod(h, subterm, encaps(synthed) :- impl, impl, ψ, areaTypes))
+      List(new SynthPod(h, subterm, encaps(synthed) :- impl, impl, ψ, areaTypes) with PodOrigin { override val tactic = command })
     case Some((L("Let"), List(L("/"), ~(h), ~(quadrant), ~(ψ_)))) =>
       val ψ = ctx_?(quadrant, ψ_)
-      List(LetSlashPod(h, quadrant, ψ))
+      List(new LetSlashPod(h, quadrant, ψ) with PodOrigin { override val tactic = command })
     case Some((L("Let"), List(++(reduce), ~(h), ~~(subelements), ~(ψ_)))) =>
       val ψ = ctx_?(subelements.head, ψ_)
       SimplePattern(reduce:@(* :- ?)) find h flatMap (x => `⟨ ⟩?`(x(*)) map (elements =>
-        LetReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ)))
+        new LetReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ) with PodOrigin { override val tactic = command }))
     case Some((L("Synth"), List(~(h), synthed, ~(ψ_)))) =>
       val ψ = ctx_?(h, ψ_)
       val impl = Synth.Alignment.stripProg(evalTerm(synthed))
-      List(LetSynthPod(h, encaps(synthed) :- impl, impl, ψ))
+      List(new LetSynthPod(h, encaps(synthed) :- impl, impl, ψ) with PodOrigin { override val tactic = command })
 
     case Some((L("SynthAuto"), List(~(h), ~(subterm), `⟨⟩`(templates), ~(ψ_)))) =>
       val ψ = ctx_?(h, ψ_)
       val (synthed, footprint) = invokeSynthesis(h, subterm, templates, fix=true)
       val impl = Synth.Alignment.stripProg(evalTerm(synthed))
-      List(SynthPod(h.subtrees(0), subterm, encaps(synthed) :- impl, impl, ψ, footprint))
+      def fillin(command: Term) = command.replaceDescendants(command.nodes collect { case t if t =~ (".",0) => (t,s.cursor) case t if t =~ ("...",0) => (t,encaps(synthed)) }  toList)
+      List(new SynthPod(h.subtrees(0), subterm, encaps(synthed) :- impl, impl, ψ, footprint) with PodOrigin { override val tactic = fillin(command) })
     case Some((L("SynthAuto"), List(~(h), `⟨⟩`(templates), ~(ψ_)))) =>
       val ψ = ctx_?(h, ψ_)
       fixer_?(s.program, h) match {
         case Some(fx) =>  // @@@ repeating code from previous case...
           val (synthed, footprint) = invokeSynthesis(fx, h, templates, fix=true)
           val impl = Synth.Alignment.stripProg(evalTerm(synthed))
-          List(SynthPod(fx.subtrees(0), h, encaps(synthed) :- impl, impl, ψ, footprint))
+          def fillin(command: Term) = command.replaceDescendants(command.nodes collect { case t if t =~ (".",0) => (t,s.cursor) case t if t =~ ("...",0) => (t,encaps(synthed)) }  toList)
+          List(new SynthPod(fx.subtrees(0), h, encaps(synthed) :- impl, impl, ψ, footprint) with PodOrigin { override val tactic = fillin(command) })
         case _ =>
           val (synthed, _) = invokeSynthesis(h, h, templates, fix=false)
           val impl = Synth.Alignment.stripProg(evalTerm(synthed))
-          List(LetSynthPod(h, encaps(synthed) :- impl, impl, ψ))
+          def fillin(command: Term) = command.replaceDescendants(command.nodes collect { case t if t =~ (".",0) => (t,s.cursor) case t if t =~ ("...",0) => (t,encaps(synthed)) }  toList)
+          List(new LetSynthPod(h, encaps(synthed) :- impl, impl, ψ) with PodOrigin { override val tactic = fillin(command) })
       }
 
     case Some((L("Distrib"), List(L("/"), ~(f)))) =>
       val box = SimplePattern(? /: ?) findOne_! f
-      List(SlashDistribPod(f, box.subterm))
+      List(new SlashDistribPod(f, box.subterm) with PodOrigin { override val tactic = command })
     case Some((L("Distrib"), List(L("/"), ~(f), ~(box)))) =>
-      List(SlashDistribPod(f, box))
+      List(new SlashDistribPod(f, box) with PodOrigin { override val tactic = command })
     case Some((L("Distrib"), List(++(reduce)))) =>
       SimplePattern(reduce :@ (* :- /::(`...`))) find s.program map
-          (x => ReduceDistribPod(reduce, x(*).split))
+          (x => new ReduceDistribPod(reduce, x(*).split) with PodOrigin { override val tactic = command })
     case Some((L("Assoc"), List(++(reduce)))) =>
       SimplePattern(reduce :@ (* :- ?)) find s.program flatMap (_(*) |> `⟨ ⟩?`) map
-          (ReduceAssocPod(reduce, _)) filterNot (_.isTrivial)
+          (new ReduceAssocPod(reduce, _) with PodOrigin { override val tactic = command }) filterNot (_.isTrivial)
     case Some((L("SlashToReduce"), List(reduce, ~~(elements)))) =>
-      List(SlashToReducePod(elements, reduce))
+      List(new SlashToReducePod(elements, reduce) with PodOrigin { override val tactic = command })
 
     case Some((L("SaveAs"), List(prog, L(style)))) =>
       val sout = emit(s)
@@ -274,7 +277,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       case _: SynthPod | _: LetSynthPod => cert contains "Synth"
       case _: StratifySlashPod | _: StratifySlash2Pod | _: LetSlashPod => cert contains "/"
       case _: StratifyReducePod | _: LetReducePod => cert contains "reduce"
-      case _: SliceAndDicePod => cert contains "Slice"
+      case _: SlicePod | _: SliceAndDicePod => cert contains "Slice"
       case _ => false
     }
   }
@@ -292,9 +295,9 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
    */
 
   lazy val prover: Prover = new Prover(List.empty)(Environment.empty)
-
+  
   def invokeProver(pod: Pod) { }
-
+    
   def invokeSynthesis(h: Term, subterm: Term, templates: List[Term], fix: Boolean)(implicit s: State) = {
 
     val expandedTemplates = templates flatMap { template =>
@@ -394,6 +397,8 @@ object TacticApplicationEngine {
   def instapod(it: Term)(implicit scope: Scope) = instantiate(it)._2
   def instapod(it: Pod)(implicit scope: Scope) = new Instantiated(it)
 
+  trait PodOrigin { val tactic: Term }
+  
   /* navigator functions */
   def fixer_?(A: Term, q: Term) = SimplePattern(fix(?)) find A map (_.subterm) filter (_.hasDescendant(q)) headOption
 

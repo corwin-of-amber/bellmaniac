@@ -8,9 +8,9 @@ B `I `J₀ `J₁
 SaveAs (B `I `J₀ `J₁) "loop"
 
 Slice (find (i ↦ ?)) (⟨`I₀, `I₁⟩ ⟨`K₂, `K₃⟩)
-LetSlash (slasher 🄰) 🄰 (ctx 🄰 ψ)
-LetSlash (slasher 🄰) 🄰 (ctx 🄰 ψ)
-LetSlash (slasher 🄰) 🄰 (ctx 🄰 ψ)
+Let "/" (slasher 🄰) 🄰 (ctx 🄰 ψ)
+Let "/" (slasher 🄰) 🄰 (ctx 🄰 ψ)
+Let "/" (slasher 🄰) 🄰 (ctx 🄰 ψ)
 
 ⟨Slice (find 🄵 ψ) ⟨`I₀×?, `I₁×K₀, `I₁×K₁⟩,
  Slice (find 🄷 ψ) ⟨`I₀×?, `I₁×K₀, `I₁×K₁⟩,
@@ -29,5 +29,6 @@ Assoc max
  Synth 🄳 (B `I₁ `K₁ `K₂) (ctx 🄳 ψ), Synth 🄴 (B `I₁ `K₀ `K₂) (ctx 🄴 ψ),
  Synth 🄶 (B `I₀ `K₁ `K₃) (ctx 🄶 ψ), Synth 🄷 (B `I₀ `K₀ `K₃) (ctx 🄷 ψ),
  Synth 🄸 (B `I₀ `K₁ `K₂) (ctx 🄸 ψ), Synth 🄹 (B `I₀ `K₀ `K₂) (ctx 🄹 ψ)⟩
+Opt
 
 SaveAs (B `I `J₀ `J₁) "rec"

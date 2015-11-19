@@ -124,7 +124,12 @@ object Synth {
     val INCDIR = "src/synth/tactics/sketch"
     val CODEGEN = "ccg.jar"
 
-    val cached = new Cached("cache.json")
+    import report.data.Deserialize._
+    
+    val cached = ui.Config.config.cache() match { 
+      case true => new Cached[Term]("cache.json") 
+      case false => collection.mutable.Map.empty[String, Map[String,Term]] 
+    }
     
     // --------------
     // Benchmark part

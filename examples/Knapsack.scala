@@ -2,6 +2,7 @@ package examples
 
 import semantics.{Trench, TypeTranslation, Scope, Prelude}
 import semantics.Prelude._
+import semantics.pattern.SimplePattern
 import syntax.AstSugar._
 import semantics.TypeTranslation.TypingSugar._
 import synth.engine.TacticApplicationEngine
@@ -63,27 +64,14 @@ object Knapsack {
   implicit val env = TypeTranslation.subsorts(scope)
 
   def main(args: Array[String]): Unit = {
-    implicit val scope = env.scope
-    new Interpreter().executeFile("/tmp/synopsis.json")
+    ui.Config.tae(args)
+    new Interpreter().executeFile(ui.Config.config.filename())
   }
 
-  class Interpreter(implicit scope: Scope) extends TacticApplicationEngine {
-    import TacticApplicationEngine._
-
-    override def pods(implicit s: State) = {
-      case (L("A"), List(~(i), ~(j))) => APod(i, j)
-      case (L("B"), List(~(i), ~(j0), ~(j1))) => BPod(i, j0, j1)
-    }
-
-    override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
-    def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
+  trait InvokeProver extends TacticApplicationEngine {
+    def prover(pods: List[Pod]) = {
       import synth.pods._
-      import syntax.Piping._
-
-      for (goal <- goals) extrude(goal)  |-- report.console.Console.display
-
-      val a = new Assistant
-
+      
       val toR = TotalOrderPod(R)
       val toI = TotalOrderPod(I)
       val toJ = TotalOrderPod(J)
@@ -91,26 +79,27 @@ object Knapsack {
       val idxJ = IndexArithPod(J, toJ.<)
       val partI = PartitionPod(I, toI.<, I0, I1)
       val partJ = PartitionPod(J, toJ.<, J0, J1)
+      val partJ0 = PartitionPod(J0, toJ.<, K0, K1)
+      val partJ1 = PartitionPod(J1, toJ.<, K2, K3)
 
-      val p = new Prover(List(NatPod, TuplePod, toR, toI, toJ, idxI, idxJ, partI, partJ) ++ pods)
+      new Prover(List(NatPod, TuplePod, toR, toI, toJ, idxI, idxJ, partI, partJ, partJ0, partJ1) ++ pods, verbose=Prover.Verbosity.ResultsOnly)
+    }
+    
+    override lazy val prover: Prover = prover(List())
+    
+    override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
+    def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
+      val a = new Assistant
+      a.invokeProver(assumptions, goals, new SimplePattern(min :@ ?))(prover(pods))
+    }
+  }
+  
+  class Interpreter(implicit scope: Scope) extends TacticApplicationEngine with InvokeProver {
+    import TacticApplicationEngine._
 
-      val commits =
-        for (goals <- goals map (List(_))) yield {
-          //for (goals <- List(goals)) yield {
-          val igoals = goals map a.intros
-          import semantics.pattern.SimplePattern
-          val t = new p.Transaction
-          val switch = t.commonSwitch(new p.CommonSubexpressionElimination(igoals, new SimplePattern(min :@ ?)))
-
-          t.commit(assumptions map a.simplify map t.prop, igoals map (switch(_)) map a.simplify map t.goal)
-        }
-
-      val results = commits reduce (_ ++ _)
-
-      println("=" * 80)
-      Trench.display(results, "◦")
-
-      if (!(results.toList forall (_.root == "valid"))) System.exit(1)
+    override def pods(implicit s: State) = {
+      case (L("A"), List(~(i), ~(j))) => APod(i, j)
+      case (L("B"), List(~(i), ~(j0), ~(j1))) => BPod(i, j0, j1)
     }
   }
 

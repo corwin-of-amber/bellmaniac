@@ -17,6 +17,10 @@ import scala.collection.immutable.ListMap
 import syntax.Scheme
 import syntax.Scheme.SchemeFun
 import syntax.Strip
+import semantics.LambdaCalculus
+import synth.engine.TacticApplicationEngine.Instantiated
+import synth.engine.TacticApplicationEngine.PodOrigin
+import synth.engine.CollectStats
 
 
 
@@ -120,22 +124,8 @@ object Accordion {
     new Interpreter().executeFile(ui.Config.config.filename())
   }
 
-
-  class Interpreter(implicit scope: Scope) extends TacticApplicationEngine {
-    import TacticApplicationEngine._
-    import syntax.Subroutine
-    import syntax.Subroutine.Arity
-    
-    val fac: Map[Any,Subroutine[Term,Pod] with Arity] = ListMap("A" -> Subroutine(APod), "B" -> Subroutine(BPod), "C" -> Subroutine(CPod), "D" -> Subroutine(DPod))
-    
-    override def pods(implicit s: State) = {
-      case (L(name), args) if fac.contains(name) => fac(name)(args)
-    }
-
-    val ph = Strip.subscriptIndexed("P").andThen(TV(_))
-
-    override val prototypes = fac map { case (name, sr) => TV(name) → (TV(name):@(1 to sr.arity map ph map (? ∩ _) toList)) } toMap
-
+  
+  trait InvokeProver extends TacticApplicationEngine {
     override lazy val prover: Prover = prover(List())
     
     def prover(pods: List[Pod]) = {
@@ -155,12 +145,42 @@ object Accordion {
 
       new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, partK0, partK1, partK2, maxJR, maxNR) ++ pods, Prover.Verbosity.ResultsOnly)
     }
-    
-    override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
-    
+
     def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
-      (new Assistant).invokeProver(assumptions, goals, new SimplePattern(min :@ ?))(prover(pods))
+      (new Assistant).invokeProver(assumptions, goals, new SimplePattern(max :@ ?))(prover(pods))
     }
+
+    override def invokeProver(pod: Pod) { 
+      invokeProver(List(), pod.obligations.conjuncts, List(pod))
+    }
+  }
+  
+  trait PodFactory extends TacticApplicationEngine {
+    import TacticApplicationEngine._
+    import syntax.Subroutine
+    import syntax.Subroutine.Arity
+
+    def fac: Map[Any,Subroutine[Term,Pod] with Arity]
+    
+    override def pods(implicit s: State) = {
+      case (L(name), args) if fac.contains(name) => fac(name)(args)
+    }
+
+    val ph = Strip.subscriptIndexed("P").andThen(TV(_))
+
+    override val prototypes = fac map { case (name, sr) => TV(name) → (TV(name):@(1 to sr.arity map ph map (? ∩ _) toList)) } toMap
+  }
+  
+  class Interpreter(implicit scope: Scope) extends TacticApplicationEngine with PodFactory with InvokeProver with CollectStats {
+    import TacticApplicationEngine._
+    import syntax.Subroutine
+    import syntax.Subroutine.Arity
+    
+    def fac: Map[Any,Subroutine[Term,Pod] with Arity] = ListMap(
+        "A" -> Subroutine(APod), 
+        "B" -> Subroutine(BPod), 
+        "C" -> Subroutine(CPod), 
+        "D" -> Subroutine(DPod))
   }  
   
 }

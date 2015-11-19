@@ -83,12 +83,12 @@ class SlicePod(val f: Term, val subdomains: List[Term]) extends Pod {
   val slices = subdomains map (_ -> ?)
   override val program =
     f =:= /::(slices map (f :: _))
-
+/*
   override val obligations = {
     val fabs = $TyTV("f", TypedTerm.typeOf_!(f))
     fabs =:= /::(slices map (fabs :: _))
   }
-
+*/
 }
 
 object SlicePod {
@@ -116,6 +116,10 @@ object SlicePod {
 class SliceAndDicePod(val e: TermWithHole, val f: Term, val subdomains: List[Term],
                       val combine: Iterable[Term] => Term) extends Pod
 {
+  def this(h: Term, f: Term, subdomains: List[Term],
+            combine: Iterable[Term] => Term)(implicit scope: Scope) = 
+    this(TermWithHole.puncture(h, f), f, subdomains, combine)
+  
   val slices = subdomains map (_ -> ?)
   override val program =
     e(f) =:= combine(slices map (f :: _) map (e(_)))
@@ -130,5 +134,5 @@ object SliceAndDicePod {
 
   def apply(h: Term, f: Term, subdomains: List[Term],
             combine: Iterable[Term] => Term)(implicit scope: Scope) =
-    new SliceAndDicePod(TermWithHole.puncture(h, f), f, subdomains, combine)
+    new SliceAndDicePod(h, f, subdomains, combine)
 }

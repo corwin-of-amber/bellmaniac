@@ -17,12 +17,13 @@ trait SerializationContainer {
     case j: AsJson => j.asJson(this)
     case s: String => s
     case o: DBObject => o
+    case l: List[_] => list(l)
     case _ => value.toString
   }
   def byRef(value: AnyRef): AnyRef = anyRef(value)
-  def list[A <: AnyRef](elements: Iterable[A]) = {
+  def list[A <: Any](elements: Iterable[A]) = {
     val l = new BasicDBList
-    l.addAll(elements map anyRef)
+    elements map any foreach { case x: Object => l.add(x) case x => ??? }
     l
   }
   def map[A <: AnyRef](elements: Map[String,A]) = {
