@@ -13,7 +13,10 @@
 
 
 using namespace std;
-int N, B;
+int N;
+#ifndef B
+int B
+#endif
 int *SOF, *S_dp, *S;
 string proteinSeq;
 #define ALIGNMENT 64
@@ -125,6 +128,29 @@ interval J;
 #define BASE_CONSTRAINT_B(a,b) BASE_CONSTRAINT2(a,b)
 #define BASE_CONSTRAINT_D(a,b,c) BASE_CONSTRAINT3(a,b,c)
 
+#define DdistCO(i,j,I,J) V[((j)-DEFBEGIN(J))*B + ((i)-DEFBEGIN(I))]
+#define DdistSimpleV(i,j,I,J) V[((j)-DEFBEGIN(J)) + ((i)-DEFBEGIN(I))*B]
+#define DdistSimpleW(i,j,I,J) W[((j)-DEFBEGIN(J)) + ((i)-DEFBEGIN(I))*B]
+inline void copy_dist_part(TYPE* V,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
+	for(int i=DEFBEGIN(II);i<DEFEND(II);i++){
+		for(int j=DEFBEGIN(JJ);j<DEFEND(JJ);j++){
+			//cout<<i<<" "<<j<<" "<<(j)-DEFBEGIN(JJ)<<" "<<((i)-DEFBEGIN(II))<<endl;
+			DdistSimpleV(i,j,II,JJ) = Ddist(i,j);
+
+		}
+	}
+}
+
+inline void copy_to_dist(TYPE* W,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
+	for(int i=DEFBEGIN(II);i<DEFEND(II);i++){
+		for(int j=DEFBEGIN(JJ);j<DEFEND(JJ);j++){
+			//cout<<i<<" "<<j<<" "<<(j)-DEFBEGIN(JJ)<<" "<<((i)-DEFBEGIN(II))<<endl;
+			Ddist(i,j)=DdistSimpleW(i,j,II,JJ);
+
+		}
+	}
+}
+
 //shifted everything by 1 to consider start in index 1
 
 void SCORE_ONE_FOLD(int n) {
@@ -146,7 +172,7 @@ void SCORE_ONE_FOLD(int n) {
 	}
 }
 
-#include "../accordion-all.cpp"
+#include "../accordion-new-all.cpp"
 
 
 int CO_PROTEIN_FOLDING(int n) {
@@ -240,15 +266,18 @@ void printArr(TYPE* a,string msg){
 int main(int argc, char ** argv) {
 
 	N = 16;
-	B = N / 2;
+	
 	if (argc > 1)
 		N = atoi(argv[1]);
+#ifndef B
+	B = N / 2;
 	if (argc > 2)
 		B = atoi(argv[2]);
-	N = N;
-	cout << N << "," << B << endl;
 	if (B > N)
 		B = N;
+	N = N;
+#endif
+	
 #ifdef HACKJ
 	//HACK
 	DEFBEGIN(J) = 0;
@@ -280,25 +309,24 @@ int main(int argc, char ** argv) {
 		S[i*N:N] = 0;
 	}
 
-	cout << "AUTO";
+	
 
 	unsigned long long tstart = cilk_getticks();
 
 	int finalc = CO_PROTEIN_FOLDING(N);
 
 	unsigned long long tend = cilk_getticks();
-	cout << "," << cilk_ticks_to_seconds(tend - tstart) << ","<<finalc<<endl;
+	cout<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend-tstart);
 #ifdef DEBUG
 	S_dp = (int *) _mm_malloc(N * N * sizeof(int), 64);
 	for(int i = 0; i<N; i++)
 	{
 		S_dp[i*N:N] = 0;
 	}
-	cout<<"LOOPDP";
 	unsigned long long tstart1 = cilk_getticks();
 	int final = LOOP_PROTEIN_FOLDING(N);
 	unsigned long long tend1 = cilk_getticks();
-	cout<<","<<cilk_ticks_to_seconds(tend1-tstart1)<<","<<final<<endl;
+	cout<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend1-tstart1);
 	if (N<20){
 		printArr(SOF,"SOF:");
 		printArr(S,"AUTO_LOOP:");

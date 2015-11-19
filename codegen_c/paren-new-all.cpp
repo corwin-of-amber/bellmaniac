@@ -1,14 +1,12 @@
 
 void funcC_loop(DEFINTERVALFUNC(K0),DEFINTERVALFUNC(K1),DEFINTERVALFUNC(K2)){
-	__declspec(align(ALIGNMENT)) TYPE V[B * B];
-	copy_dist_part(V,PARAM(K1),PARAM(K2));
 
 	FOR_C_loop_2(i,DEFBEGIN(K0),DEFEND(K0)){
 		FOR_C_loop_3(j,DEFBEGIN(K2),DEFEND(K2)){
 
 			TYPE t14= DCLdist(i,j);
 			FOR_C_loop_1(k,DEFBEGIN(K1),DEFEND(K1)){
-				t14 = min(t14,DCLdist(i,k)+DdistCO(k,j,K1,K2)+w(i,k,j)/* INSET(k,K1) */);
+				t14 = min(t14,DCLdist(i,k)+DCLdist(k,j)+w(i,k,j)/* INSET(k,K1) */);
 			}
 
 			DCLdist(i,j) = t14/* INSET(i,K0) && INSET(j,K2) */;

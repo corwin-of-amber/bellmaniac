@@ -143,6 +143,28 @@ class bmTerm(bmRoot):
             #Assert(self.guards.literal != LT,"Caught you: " + self.__str__() + str(ctx))
             Assert(op in [OMAX,MIN,MAX,PLUS],"Only OMAX, APPLY can have guards: " + op)
         if op in [PSI, THETA]:
+            if op == PSI and ("fix" not in ctx or not ctx["fix"]) and len(self.largs[0].subtrees) == 0 and len(self.largs[1].subtrees) == 0:
+                v1 = self.largs[0].literal
+                S1 = self.largs[0].type.literal
+                v2 = self.largs[1].literal
+                S2 = self.largs[1].type.literal
+                vars = []
+                par = self
+                while par is not None:
+                    if par.literal == MAPSTO:
+                        for (v,r) in reversed(par.fvranges):
+                            if v not in [QMARK,PSI,THETA] and v not in vars:
+                                vars.append(v)
+                    par=par.parent
+                vars = list(reversed(vars))
+                #Assert(False,"wait here")
+                if vars.index(v1) > vars.index(v2) and self.prg.impl == u"loop" and isSet(S1) and isSet(S2):
+                    #out-of-order access of dist array
+                    if v1 != vars[1] or v2 !=vars[0]:
+                        Assert(not hasattr(self.prg,"co_set"), "Two co nodes not supported in a function")
+                        self.prg.co_set = (S1,S2)
+                        return "DdistCO("+",".join([v1,v2,S1,S2])+")"
+                
             return arrayAccess(self.prg,u"dist", self.largs,ctx)
         elif op == MINUS:
             Assert(len(self.largs) == 2,u"MINUS is binary! ")
@@ -157,6 +179,7 @@ class bmTerm(bmRoot):
             
             if child.literal == MAPSTO:
                 # minimize over a range denoted by free variables
+                
                 if (not keepTempInMin) and "minevar" in ctx and ctx["minevar"]:
                     tmpVar = ""
                 else:
@@ -169,6 +192,7 @@ class bmTerm(bmRoot):
                 ctx["common_guards"] = oldCommonGuards
                 #if hasattr(self,"pardep"):
                 #    print "FORPAR-MINMAX: ", self.pardep
+                
                 return rs 
             elif child.isConsNode():
                 if "common_guards" in ctx:
@@ -197,7 +221,7 @@ class bmTerm(bmRoot):
                         Assert(ctx["minevar"] == False,"Should be falsed by now")
                     argsExceptPsi = filter(lambda x: x.literal != APPLY or x.funct.literal not in [PSI,THETA],child.consargs)
                     argsCodeExceptPsi = map(lambda x: x.code, argsExceptPsi)
-                    return reduce(lambda a,b: op+"(" + a + "," + b + ")" if a != b else a,argsCodeExceptPsi)
+                    return reduce(lambda a,b: op+"(" + a + "," + b + ")" if remove_comments(a) != remove_comments(b) else remove_comments(a) + a.replace(remove_comments(a),"") + b.replace(remove_comments(b),""),argsCodeExceptPsi)
                 else:
                     Assert(False,"can't have more than one psi in a min expression")
             else:
@@ -362,7 +386,26 @@ class bmTerm(bmRoot):
                         if x in vars and vtypes[x].literal != u"U" and isSet(vtypes[x].literal):
                             #x+1 \in se and (we know) x in sx
                             sx = vtypes[x].literal
-                            if se != sx and sx != u"U" and isSet(sx):
+                            if se != sx and self.prg.superset[sx] == self.prg.superset[se] and sx <se:
+                                if loopEndPoints[x][0] == defineBegin(sx)and loopEndPoints[x][1] == defineEnd(sx):
+                                    loopEndPoints[x] = (defineEnd(sx)+"-1",defineEnd(sx)+"-1")
+                                    toRemove.append(g)
+                                elif loopEndPoints[x][1] == defineEnd(sx) and "+" in loopEndPoints[x][0]:
+                                    [i,d] = loopEndPoints[x][0].split(PLUS)
+                                    Assert(d=="1","Only constant 1 supported for now: expression i+1 or j+1")
+                                    si = vtypes[i].literal
+                                    if i in vars_modif and si == sx:
+                                        #x > i was a guard and now x is constant = defend(sx)-1 so i can't be this value
+                                        if loopEndPoints[i][1] == defineEnd(si):
+                                            loopEndPoints[i] = (loopEndPoints[i][0] ,loopEndPoints[i][1] + "-1")
+                                            loopEndPoints[x] = (defineEnd(sx)+"-1",defineEnd(sx)+"-1")
+                                            print "//SPL CASE:",i,si,x,sx,exp
+                                            #Assert(False,"Debug here")
+                                            toRemove.append(g)
+                                if g not in toRemove:
+                                    refineLP(loopEndPoints,x,defineBegin(se)+u"-1",defineEnd(se)+u"-1")
+                                    toRemove.append(g)
+                            elif se != sx and sx != u"U" and isSet(sx):
                                 refineLP(loopEndPoints,x,defineBegin(se)+u"-1",defineEnd(se)+u"-1")
                                 toRemove.append(g)
                                 '''
@@ -394,10 +437,10 @@ class bmTerm(bmRoot):
                                 '''
                             if se == sx:
                                 #x+1 and x both are in sx so x ranges from [sx.begin,sx.end-1)
-                                if loopEndPoints[x][1] == defineEnd(sx):
-                                    loopEndPoints[x] = (loopEndPoints[x][0],defineEnd(sx)+u"-1")
+                                if loopEndPoints[x][1] == defineEnd(se):
+                                    loopEndPoints[x] = (loopEndPoints[x][0],defineEnd(se)+u"-1")
                                 else:
-                                    refineLP(loopEndPoints,x,defineBegin(sx),defineEnd(sx)+u"-1")
+                                    refineLP(loopEndPoints,x,defineBegin(se),defineEnd(se)+u"-1")
                                 toRemove.append(g)
                         #if not g in toRemove:
                         #    print "NOT RESOLVED."
@@ -409,7 +452,7 @@ class bmTerm(bmRoot):
                             sx = vtypes[x].literal 
                             #x-1 in se and x in sx
                             if se != sx and sx != u"U" and isSet(sx):
-                                refineLP(loopEndPoints,x,defineBegin(sx)+u"+1",defineEnd(sx))
+                                refineLP(loopEndPoints,x,defineBegin(se)+u"+1",defineEnd(se)+u"+1")
                                 toRemove.append(g)
                                 '''
                                 se_sup = self.prg.superset[se]
@@ -441,9 +484,9 @@ class bmTerm(bmRoot):
                             if se == sx:
                                 #x-1 and x both are in sx so x ranges from [sx.begin+1,sx.end)
                                 if loopEndPoints[x][0] == defineBegin(sx):
-                                    loopEndPoints[x] = (defineBegin(sx)+u"+1",loopEndPoints[x][1])
+                                    loopEndPoints[x] = (defineBegin(se)+u"+1",loopEndPoints[x][1])
                                 else:
-                                    refineLP(loopEndPoints,x,defineBegin(sx)+u"+1",defineEnd(sx))
+                                    refineLP(loopEndPoints,x,defineBegin(se)+u"+1",defineEnd(se))
                                 toRemove.append(g)
                         if not g in toRemove:
                             print "NOT RESOLVED."
@@ -463,9 +506,10 @@ class bmTerm(bmRoot):
                             sj = vtypes[j].literal
                             sy = vtypes[y].literal
                             jLoopsBeforey = vars.index(j) < vars.index(y) 
-                            print "//FOUND var + 1 LT var : ",j,sj,y,sy,jLoopsBeforey, areDisjoint(sj,sy,self.prg.superset)
-                            if sj==sy and sj != u"U" and jLoopsBeforey:
+                            #print "//FOUND var + 1 LT var : ",j,sj,y,sy,jLoopsBeforey, areDisjoint(sj,sy,self.prg.superset)
+                            if (isSubset(sj,sy,self.prg.superset) or sj==sy ) and sj != u"U" and jLoopsBeforey:
                                 #change y appropriately to j+2
+                                #j+1 < y and sj = J1 subset of sy = J
                                 if loopEndPoints[y][0] == defineBegin(sy):
                                     loopEndPoints[y] = (j+ "+2",loopEndPoints[y][1])
                                 else:
@@ -474,9 +518,10 @@ class bmTerm(bmRoot):
                             if sj != sy and areDisjoint(sj,sy,self.prg.superset) == "y<x" :
                                 loopEndPoints[y] = (None,None)
                                 toRemove.append(g)
-                            if sj != sy and areDisjoint(sj,sy,self.prg.superset) == "x<y" :
+                            elif sj != sy and areDisjoint(sj,sy,self.prg.superset) == "x<y" :
                                 refineLP(loopEndPoints,y,j+ "+2",loopEndPoints[y][1])
                                 toRemove.append(g)
+                             
                             #if sj != sy and areDisjoint(sj,sy,self.prg.superset) == "x<y" and xLoopsBeforey:
                                 
                     if x in vars and y in vars :
@@ -605,7 +650,9 @@ class bmTerm(bmRoot):
         
     def buildForLoop(self, fvranges, boundExpr, mode, tmpVar,ctx, loopEndPoints):
         # compute the tmpVar using evalExpr in a loop
-        
+        op = None
+        if boundExpr.isMinMax():
+            op = boundExpr.funct.literal
         minEvar = mode in [MIN,MAX] and "minevar" in ctx and ctx["minevar"]
         if minEvar:
             ctx["minevar"] = False
@@ -646,33 +693,12 @@ class bmTerm(bmRoot):
                     ctx["use_tmp"] = tVar
                 #print "GN:",guardedNode.guardCompStrs, tmpVar
         boundExpr.setCode(ctx)
-        '''
-        if ("loop_bounds" not in ctx) or (len(ctx["loop_bounds"]) == 0) :
-            ctx["loop_bounds"] = {}
-            for v in loopEndPoints:
-                if v not in vars_modif:
-                    ctx["loop_bounds"][v] = loopEndPoints[v]
-        else:
-            for v in vars_modif:
-                toRemove = []
-                if v in ctx["loop_bounds"]:
-                    if boundExpr.isMinMax() and len(boundExpr.largs) == 1 and boundExpr.largs[0].isConsNode() and len(boundExpr.largs[0].consargs) == 2 and boundExpr.largs[0].consargs[0].literal == APPLY and boundExpr.largs[0].consargs[0].funct.literal in [PSI,THETA] and boundExpr.largs[0].consargs[1].isMinMax():
-                        mainlow = defineBegin(vtypes[v].literal)
-                        mainhigh = defineEnd(vtypes[v].literal)   
-                        newlow = ctx["loop_bounds"][v][0]
-                        newhigh = ctx["loop_bounds"][v][1]                        
-                        Assert(newlow == mainlow and newhigh ==mainhigh,"Don't need to process this because the relevant guards were lifted up")
-                        toRemove.append(v)
-                    else:
-                        Assert(False,"remove guards(!) on this literal: " + v)
-                    
-                for v in toRemove:
-                    del ctx["loop_bounds"][v]
-        '''
-        if guardedNode and tVar and guardLocal:
+
+        
+        if guardedNode is not None and tVar and guardLocal:
             loclsargs = [v for (v,r) in filter(lambda (v, r): v not in [THETA, QMARK, PSI], ctx['fvr'])]
             initVar = arrayAccessStr(self.prg,u"dist", loclsargs)
-            guardedNode.preCode = u"TYPE " + tVar + " = " + initVar + ";\nif("+guardLocal+"){\n" + tVar + " = "+mode+"(" + tVar + "," + guardedNode.preCode +");\n}\n"
+            guardedNode.preCode = u"TYPE " + tVar + " = " + initVar + ";\nif("+guardLocal+"){\n" + tVar + " = "+op+"(" + tVar + "," + guardedNode.preCode +");\n}\n"
             del ctx["use_tmp"]
         
         
@@ -728,7 +754,7 @@ class bmTerm(bmRoot):
             if v in loopEndPoints and r.literal != u"U":
                 if loopEndPoints[v][0] is None and loopEndPoints[v][1] is None:
                     ignoreLoop[v] = True
-                elif loopEndPoints[v][1] is None:
+                elif loopEndPoints[v][1] is None or loopEndPoints[v][1] == loopEndPoints[v][0]:
                     letStmt = True
                     loopBounds = loopEndPoints[v][0]
                 else:
@@ -770,6 +796,8 @@ class bmTerm(bmRoot):
                 eVar = arrayAccessStr(self.prg,u"dist", lsargs) + u" = "
             else:
                 eVar = ""
+        elif len(lsargs) != 2:
+            eVar = u""
         else:
             eVar = arrayAccessStr(self.prg,u"dist", lsargs) + u" = "
             
@@ -1020,7 +1048,8 @@ class bmTerm(bmRoot):
             del ctx["curpardep"]
             #self.code = u"YYXX[" + unicode(self.pardep) + u"]{" +self.code + u"}\n" 
         if hasattr(self,"guards"):
-            self.code = self.code + "/* " + self.guards.code + " */"
+                #Assert(False,"breakpoint")
+                self.code = self.code + "/* " + self.guards.code + " */"
             
         
     def isPlus(self):
