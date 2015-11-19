@@ -1,43 +1,29 @@
-\def\spacer{\hspace{2in}}
-\begin{tikzpicture}
+\begin{tikzpicture}[>=latex,mark options={scale=.5}]
 	\begin{axis}[
-	    title=Parenthesis,
 	    ymode=log,
-		xlabel=$n$,
+		xlabel=Problem size,
 		ylabel=Time ({\it s}),
 		scaled x ticks=false, %{real:1000}
 		log basis y=2, ymajorgrids=true]
-	\addplot[color=blue!50!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=COZ] {data/plot1.dat}
-	  [yshift=-8pt] node[pos=0] {CO};
-	\addplot[color=red!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=Tiled/Par] {data/plot1.dat}
-	  [yshift=-10pt] node[pos=0] {PluTo};
+	\addplot[color=blue!50!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=COZ] {data/perf-gap.txt}
+	  node(COZ-curve) [coordinate,pos=0.9] {};
+	\addplot[color=orange!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=CO] {data/perf-gap.txt}
+	  node(CO-curve) [coordinate,pos=0.8] {};
+	\addplot[color=olive!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=LOOPDP] {data/perf-gap.txt}
+	  [yshift=-12pt] node[pos=0.05] {LOOPDP};
+	\addplot[color=red!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=Bellmania] {data/perf-gap.txt}
+	  node(Bellmania-curve) [coordinate,pos=0.85] {};
 	\end{axis}
+	
+	\begin{scope}[anchor=west]
+	  \node(CO-lbl)[orange!80!white] at(2,1.5) {CO};
+	  \node(Bellmania-lbl)[red!80!white] at(1.5,1) {Bellmania};
+	  \node(COZ-lbl)[blue!80!white] at(1.25,.5) {COZ};
+	\end{scope}
+	\begin{scope}[->,dashed]
+	  \draw[orange] (CO-lbl) -- (CO-curve);
+	  \draw[red] (Bellmania-lbl) -- (Bellmania-curve);
+	  \draw[blue] (COZ-lbl) -- (COZ-curve);
+	\end{scope}
 \end{tikzpicture}
-\spacer
-\begin{tikzpicture}
-	\begin{axis}[
-	    title=Gap,
-	    ymode=log,
-		xlabel=$n$,
-		scaled x ticks=false, %{real:1000}
-		log basis y=2, ymajorgrids=true]
-	\addplot[color=blue!50!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=COZ] {data/plot2.dat}
-	  [yshift=-8pt] node[pos=0] {CO};
-	\addplot[color=red!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=Tiled/Par] {data/plot2.dat}
-	  [yshift=-8pt] node[pos=0] {PoCC};
-	\end{axis}
-\end{tikzpicture}
-\spacer
-\begin{tikzpicture}
-	\begin{axis}[
-	    title=Floyd-Warshall,
-	    ymode=log,
-		xlabel=$n$,
-		scaled x ticks=false, %{real:1000}
-		log basis y=2, ymajorgrids=true]
-	\addplot[color=blue!50!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=COZ] {data/plot3.dat}
-	  [yshift=-8pt] node[pos=0] {CO};
-	\addplot[color=red!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=Tiled/Par] {data/plot3.dat}
-	  [yshift=-8pt] node[pos=0] {PoCC};
-	\end{axis}
-\end{tikzpicture}
+
