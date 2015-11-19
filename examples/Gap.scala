@@ -4,18 +4,17 @@ import report.data.{Rich, DisplayContainer}
 import syntax.AstSugar._
 import syntax.Identifier
 import syntax.transform.Extrude
-
 import semantics._
 import semantics.Prelude._
 import semantics.TypeTranslation.Environment
 import semantics.TypedScheme.TermWithHole
+import semantics.pattern.SimplePattern
 import synth.engine.TacticApplicationEngine
-
 import synth.pods._
 import synth.pods.ConsPod.{`⟨ ⟩`, `⟨ ⟩?`}
-
 import report.FileLog
 import synth.proof.{Prover, Assistant}
+import synth.engine.CollectStats
 
 
 object Gap {
@@ -128,6 +127,61 @@ object Gap {
   def main(args: Array[String]) = BreakDown.main(args)
 
   
+  trait InvokeProver extends TacticApplicationEngine {
+
+    def prover(pods: List[Pod]) = {
+      import synth.pods._
+      
+      val toR = TotalOrderPod(R)
+      val toJ = TotalOrderPod(J, J_<)
+      val toK = TotalOrderPod(K, K_<)
+      val idxJ = IndexArithPod(J, toJ.<)
+      val idxK = IndexArithPod(K, toK.<)
+      val partJ = PartitionPod(J, toJ.<, J0, J1)
+      val partK = PartitionPod(K, toK.<, K0, K1)
+      val partJ0 = PartitionPod(J0, toJ.<, L0, L1)
+      val partJ1 = PartitionPod(J1, toJ.<, L2, L3)
+      val partK0 = PartitionPod(K0, toK.<, M0, M1)
+      val partK1 = PartitionPod(K1, toK.<, M2, M3)
+      val minJR = MinPod(J, R, toR.<)
+      val minKR = MinPod(K, R, toR.<)
+      val minNR = MinPod(N, R, toR.<)
+
+      new Prover(List(NatPod, TuplePod, toR, toJ, toK, idxJ, idxK, partJ, partK, partJ0, partJ1, partK0, partK1, minJR, minKR, minNR) ++ pods, Prover.Verbosity.ResultsOnly)
+    }
+
+    override lazy val prover: Prover = prover(List())
+    
+    
+    override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
+    def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
+      import syntax.Piping._
+
+      val a = new Assistant
+      a.invokeProver(assumptions, goals, SimplePattern(min :@ ?))(prover(pods))
+/*
+      val p = prover(pods)
+      
+      val commits =
+        for (goals <- goals map (List(_))) yield {
+          //for (goals <- List(goals)) yield {
+          val igoals = goals map a.intros
+          import semantics.pattern.SimplePattern
+          val t = new p.Transaction
+          val switch = t.commonSwitch(new p.CommonSubexpressionElimination(igoals, new SimplePattern(min :@ ?)))
+
+          t.commit(assumptions map a.simplify map t.prop, igoals map (switch(_)) map a.simplify map t.goal)
+        }
+
+      val results = commits reduce (_ ++ _)
+
+      if (!(results.toList forall (_.root == "valid"))) System.exit(1)
+
+      println("=" * 80)  // QED! */
+    }
+}
+  
+  
   object BreakDown {
     
     def main(args: Array[String]): Unit = {
@@ -135,7 +189,7 @@ object Gap {
       new Interpreter().executeFile(ui.Config.config.filename())
     }
 
-    class Interpreter(implicit scope: Scope) extends TacticApplicationEngine {
+    class Interpreter(implicit scope: Scope) extends TacticApplicationEngine  with InvokeProver with CollectStats {
       import TacticApplicationEngine._
 
       override def pods(implicit s: State) = {
@@ -143,61 +197,16 @@ object Gap {
         case (L("B"), List(~(j), ~(k0), ~(k1))) => BPod(j, k0, k1)
         case (L("C"), List(~(j0), ~(j1), ~(k))) => CPod(j0, j1, k)
       }
-
-      def prover(pods: List[Pod]) = {
-        import synth.pods._
-        
-        val toR = TotalOrderPod(R)
-        val toJ = TotalOrderPod(J, J_<)
-        val toK = TotalOrderPod(K, K_<)
-        val idxJ = IndexArithPod(J, toJ.<)
-        val idxK = IndexArithPod(K, toK.<)
-        val partJ = PartitionPod(J, toJ.<, J0, J1)
-        val partK = PartitionPod(K, toK.<, K0, K1)
-        val partJ0 = PartitionPod(J0, toJ.<, L0, L1)
-        val partJ1 = PartitionPod(J1, toJ.<, L2, L3)
-        val partK0 = PartitionPod(K0, toK.<, M0, M1)
-        val partK1 = PartitionPod(K1, toK.<, M2, M3)
-        val minJR = MinPod(J, R, toR.<)
-        val minKR = MinPod(K, R, toR.<)
-        val minNR = MinPod(N, R, toR.<)
-
-        new Prover(List(NatPod, TuplePod, toR, toJ, toK, idxJ, idxK, partJ, partK, partJ0, partJ1, partK0, partK1, minJR, minKR, minNR) ++ pods, Prover.Verbosity.ResultsOnly)
-      }
-
-      override lazy val prover: Prover = prover(List())
       
-      override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
-      def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
-        import syntax.Piping._
-
-        for (goal <- goals) extrude(goal) |> { report.console.Console.display
-          //ex => logf += Map("term" -> goal, "display" -> Rich.display(ex))
-        }
-
-        println("· " * 25)
-
-        val a = new Assistant
-
-        val p = prover(pods)
-        
-        val commits =
-          for (goals <- goals map (List(_))) yield {
-            //for (goals <- List(goals)) yield {
-            val igoals = goals map a.intros
-            import semantics.pattern.SimplePattern
-            val t = new p.Transaction
-            val switch = t.commonSwitch(new p.CommonSubexpressionElimination(igoals, new SimplePattern(min :@ ?)))
-
-            t.commit(assumptions map a.simplify map t.prop, igoals map (switch(_)) map a.simplify map t.goal)
-          }
-
-        val results = commits reduce (_ ++ _)
-
-        if (!(results.toList forall (_.root == "valid"))) System.exit(1)
-
-        println("=" * 80)  // QED!
-      }
+      override val skhDir = "examples/intermediates/sketch/Gap"
+      
+      val A = TV("A")
+      val B = TV("B")
+      val C = TV("C")
+      val P1 = TV("P₁")
+      val P2 = TV("P₂")
+      val P3 = TV("P₃")
+      override val prototypes = Map(A → (A:@(? ∩ P1, ? ∩ P2)), B → (B:@(? ∩ P1, ? ∩ P2, ? ∩ P3)), C → (C:@(? ∩ P1, ? ∩ P2, ? ∩ P3)))
     }
 
 

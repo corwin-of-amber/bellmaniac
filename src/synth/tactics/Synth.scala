@@ -98,11 +98,13 @@ object Synth {
     //println(solution mapValues (_.toPretty))
   }
 
-  class Sketch(val skfile: File) {
+  class Sketch(val skfile: File, val incdirs: List[String]=Sketch.INCPATH) {
     import Sketch._
 
+    val fe_inc = incdirs flatMap (x => Seq("--fe-inc", x))
+    
     val command =
-      Seq(SKETCH, "--slv-lightverif", "--fe-inc", ".", "--fe-inc", INCDIR, "--fe-custom-codegen", CODEGEN, skfile.getPath)
+      Seq(SKETCH, "--slv-lightverif") ++ fe_inc ++ Seq("--fe-custom-codegen", CODEGEN, skfile.getPath)
 
     def run()(implicit scope: Scope) = {
       cached getOrElse (hash, {
@@ -115,13 +117,15 @@ object Synth {
       })
     }
 
+    def incdir(dir: String) = new Sketch(skfile, dir :: incdirs)
+      
     def hash = { import scala.sys.process._ ; (Seq("md5", "-q", skfile.getPath) !!).stripLineEnd }
     def save(results: Map[String, Term]) = cached += hash -> results
   }
 
   object Sketch {
     val SKETCH = "sketch"
-    val INCDIR = "src/synth/tactics/sketch"
+    val INCPATH = List(".", "src/synth/tactics/sketch")
     val CODEGEN = "ccg.jar"
 
     import report.data.Deserialize._
@@ -254,9 +258,9 @@ object Synth {
 
     val code0 = codegen(ir0, "h")  |--  { code0 => println(code0 toPretty) }
 
-    val code1 = for ((fP,i) <- fP.zipWithIndex) yield {
-      val ir1 = fP |> escalate.apply |> explicate.apply |> TypedTerm.raw |> TypedLambdaCalculus.simplify
+    val ir1 = fP map (_ |> escalate.apply |> explicate.apply |> TypedTerm.raw |> TypedLambdaCalculus.simplify)
 
+    val code1 = for ((ir1,i) <- ir1.zipWithIndex) yield {
       println(ir1 toPretty)
 
       codegen(ir1, s"f_$i")  |--  { code1 => println(code1 toPretty) }
@@ -264,7 +268,7 @@ object Synth {
 
     import Prelude._
     val builtin = Set(min, max, cons, nil, TV("+"), TV("-"))
-    val decl = codegen.decl(LambdaCalculus.uncurry(ir0)._1 ++ (LambdaCalculus.freevars(ir0) -- builtin) map TypedTerm.raw)
+    val decl = codegen.decl(LambdaCalculus.uncurry(ir0)._1 ++ (((ir0 :: ir1.toList) flatMap LambdaCalculus.freevars toSet) -- builtin) map TypedTerm.raw)
 
     val codeX = codegen.pred(quadrant, "X")//, sized=false)
     println(codeX toPretty)

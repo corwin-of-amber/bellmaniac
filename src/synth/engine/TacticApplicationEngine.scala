@@ -297,6 +297,8 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   lazy val prover: Prover = new Prover(List.empty)(Environment.empty)
   
   def invokeProver(pod: Pod) { }
+  
+  val skhDir = "examples/intermediates/sketch/generic"
     
   def invokeSynthesis(h: Term, subterm: Term, templates: List[Term], fix: Boolean)(implicit s: State) = {
 
@@ -315,7 +317,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     }
 
     val solution = (if (fix) Synth.synthesizeFixPodSubterm(h, subterm, ipods)
-                        else Synth.synthesizeFlatPodSubterm(h, subterm, ipods)).run()
+                        else Synth.synthesizeFlatPodSubterm(h, subterm, ipods)).incdir(skhDir).run()
     println(solution mapValues (_.toPretty))
     val selected = expandedTemplates(solution("selected").root.literal.asInstanceOf[Int])
     val synthed = selected.replaceDescendants(

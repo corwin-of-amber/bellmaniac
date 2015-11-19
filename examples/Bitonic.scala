@@ -79,8 +79,8 @@ object Bitonic {
   implicit val env = TypeTranslation.subsorts(scope)
 
   def main(args: Array[String]): Unit = {
-    implicit val scope = env.scope
-    new Interpreter().executeFile("/tmp/synopsis.json")
+    ui.Config.tae(args)
+    new Interpreter().executeFile(ui.Config.config.filename())
   }
 
   trait InvokeProver extends TacticApplicationEngine {

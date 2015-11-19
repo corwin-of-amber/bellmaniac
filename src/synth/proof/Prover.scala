@@ -40,6 +40,8 @@ class Prover(val pods: List[Pod], val verbose: Prover.Verbosity=Prover.Verbosity
   val typedecl = env.typedecl
   val expand = new Expansion(pods map (_.macros) reduceOption (_ ++ _) getOrElse MacroMap.empty)
     
+  def ++(e: Iterable[Environment]) = new Prover(pods, verbose)((env /: e)(_ ++ _))
+  
   def intros(goal: Term): (List[Term], Term) = {
     if (goal =~ ("=", 2)) {
       val List(lhs, rhs) = goal.subtrees

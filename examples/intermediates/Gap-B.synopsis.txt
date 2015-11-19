@@ -29,6 +29,8 @@ Assoc min
  Let min (slasher 🄴) ⟨🅄,🅅,🅇⟩ ψ,
  Let min (slasher 🄵) ⟨🅉,🄰̲,🄲̲⟩ ψ⟩
 
+🄰 🄱 🄳 🄴 🄶 🄷 🄸 🄹 ↦ SynthAuto . ... ψ
+/*
 ⟨Synth 🄰 (B `J₁ `M₁ `M₃) ψ,
  Synth 🄱 (B `J₁ `M₀ `M₃) ψ,
  Synth 🄳 (B `J₁ `M₁ `M₂) ψ,
@@ -36,7 +38,7 @@ Assoc min
  Synth 🄶 (B `J₀ `M₁ `M₃) ψ,
  Synth 🄷 (B `J₀ `M₀ `M₃) ψ,
  Synth 🄸 (B `J₀ `M₁ `M₂) ψ,
- Synth 🄹 (B `J₀ `M₀ `M₂) ψ⟩
+ Synth 🄹 (B `J₀ `M₀ `M₂) ψ⟩*/
 Opt
 
 SaveAs (B `J `K₀ `K₁) "rec"

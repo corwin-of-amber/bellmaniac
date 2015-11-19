@@ -29,6 +29,8 @@ Assoc min
 Stratify min (fixee 🄰) ⟨🄷,🄸,🄽⟩ ψ
 Stratify min (fixee 🄰) ⟨🄸,🄹,🄻⟩ ψ
 
+🄰 🄱 🄲 🄴 🄵 🄶 🄷 🄸 ↦ SynthAuto . ... ψ
+/*
 ⟨Synth (fixee 🄰) 🄰 (A `J₁ `K₁)     ψ ⟨`J₁×K₁⟩,
  Synth (fixee 🄱) 🄱 (B `J₁ `K₀ `K₁) ψ ⟨`J₁×K⟩,
  Synth (fixee 🄲) 🄲 (C `J₀ `J₁ `K₁) ψ ⟨`J×K₁⟩,
@@ -36,7 +38,7 @@ Stratify min (fixee 🄰) ⟨🄸,🄹,🄻⟩ ψ
  Synth (fixee 🄵) 🄵 (C `J₀ `J₁ `K₀) ψ ⟨`J×K₀⟩,
  Synth (fixee 🄶) 🄶 (A `J₀ `K₁)     ψ ⟨`J₀×K₁⟩,
  Synth (fixee 🄷) 🄷 (B `J₀ `K₀ `K₁) ψ ⟨`J₀×K⟩,
- Synth (fixee 🄸) 🄸 (A `J₀ `K₀)     ψ ⟨`J₀×K₀⟩⟩
+ Synth (fixee 🄸) 🄸 (A `J₀ `K₀)     ψ ⟨`J₀×K₀⟩⟩ */
 Opt
 
 SaveAs (A `J `K) "rec"

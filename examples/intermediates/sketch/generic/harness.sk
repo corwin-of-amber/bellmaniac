@@ -1,0 +1,40 @@
+
+@Param("P")  bit P(int i)  { return Scope_subsort(minimal(??), i); }
+@Param("P₁") bit P1(int i) { return Scope_subsort(minimal(??), i); }
+@Param("P₂") bit P2(int i) { return Scope_subsort(minimal(??), i); }
+@Param("P₃") bit P3(int i) { return Scope_subsort(minimal(??), i); }
+
+@Inv("Q") bit Q(int i, int j) { return (Scope_2d(/*minimal_4x4*/(??), minimal_1(??), i, j) || X(i,j)); }
+
+
+generator |scalar| Context_JJR(int i, int j) { return psi(i,j); }
+
+|scalar| thetaQ(int i, int j) { return only(Q(i,j), theta(i,j)); }
+
+
+
+|scalar| bot2d(int i, int j) { return bot; }
+
+
+harness void test1(int n, int i, int j) {
+  assume n <= 8 && n > 0;
+  assume i < n && i >= 0;
+  assume j < n && j >= 0;
+ 
+  Scope_facts(n);
+ 
+  |scalar| jones(int x, int y) { return h(n, bot2d, x, y); }
+
+  if (??) {
+      if (Q(i,j)) {
+        assert h(n, theta, i, j) == h(n, thetaQ, i, j);
+        assert h(n, thetaQ, i, j) == f_i(n, thetaQ, i, j);
+      }
+  }
+  else {
+      if (X(i,j)) {
+        assert h(n, jones, i, j) == f_i(n, thetaQ, i, j);
+      }
+  }
+}
+

@@ -15,6 +15,7 @@ bit      applyb2(fun op, |scalar| a, |scalar| b) { return a.supp && b.supp && op
 |scalar| plus(int a, int b) { return some(a + b); }
 |scalar| minus(int a, int b) { return when(a>=b, a - b); }
 bit      lt(int a, int b) { return a < b; }
+bit      lt0(int a, int b) { return a < b; }
 
 /* minimum */
 

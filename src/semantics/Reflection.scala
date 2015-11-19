@@ -44,7 +44,7 @@ object Reflection {
   def isFunc(v: TypedIdentifier) = isFuncType(v.typ)    
   
   
-  val log = {
+  lazy val log = {
     val log = Logger.getLogger("semantics.Reflection")
     log.setLevel(Level.OFF)
   
