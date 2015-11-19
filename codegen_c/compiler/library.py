@@ -63,6 +63,7 @@ def getDecl(name, newparams, intv, impl):
     else:
         return "func" + name + "_" + impl + "(" + ",".join([intv(x) for x in newparams]) + ")"
 def isSet(string):
+    Assert(len(string) >= 1,"Empty string found!")
     return string != 'U' and (string[0]).isupper() and len(string) <= 2 and (string[0] not in VALIDFNAMES)
      
 def Assert(cond, msg):
@@ -152,12 +153,18 @@ def parseJsons(files):
         Assert(u'\u2080' not in x, u"Can't have subscripted unicode letter")
         #print "OS",os.name
         if os.name == 'nt':
-            ljsons = x.split(u"\n\n")
+            if getProblem() == "LCS":
+                ljsons = x.split(u"\r\n\r\n")
+            else:
+                ljsons = x.split(u"\n\n")
         else:
             ljsons = x.split(u"\n\n")
         for j in ljsons:
             if len(j) >= 2 and u"vbox" not in j:  # Ignore jsons with no program and extreneous key "vbox"  
-                form = json.loads(j)
+                try:
+                    form = json.loads(j)
+                except ValueError:
+                    Assert(False,"Debug here")
                 Assert(u'program' in form, u"'program' key not present in " + unicode(form.keys()))
                 if form[u'program'] not in prgs:
                     prgs[form[u'program']] = dict()
@@ -166,8 +173,10 @@ def parseJsons(files):
     
 def arrayAccessStr(prg,funct, largs):
     #return funct + u'[' + u']['.join(largs) + u']'
+    Assert(len(largs) == 2,"Not binary dist access")
     return u"D" + prg.preDist() + funct + u'(' + u','.join(largs) + u')'
 def arrayAccess(prg,funct, largs, ctx):
+    Assert(len(largs) == 2,"Not binary dist access")
     for x in largs:
         x.setCode(ctx)
     #return funct + u'[' + u']['.join([x.code for x in largs]) + u']'
@@ -184,7 +193,7 @@ def opInfix(funct, largs, ctx):
     return funct.join([x.code for x in largs])
 
 def getAllFVsets(code,fvSets):
-    for i in range(len(code)):
+    for i in range(len(remove_comments(code))):
         for DEFSTR in ["DEFBEGIN(","DEFEND("]:
             if code[i:i+len(DEFSTR)] == DEFSTR:
                 z = code[i+len(DEFSTR):].find(")")
@@ -193,8 +202,8 @@ def getAllFVsets(code,fvSets):
                 Assert(isSet(K),"Must be a set: "+ K)
         if code[i:i+6] == "INSET(":
             z1 = code[i+6:].find(",")
-            z2 = code[i+6:].find(")")
-            K = code[i+7+z1:i+6+z2]
+            z2 = code[i+6+z1:].find(")")
+            K = code[i+7+z1:i+6+z1+z2]
             fvSets.add(K)
             Assert(isSet(K),"Must be a set: "+ K)
     
@@ -356,3 +365,49 @@ def setProblem(s):
 def getProblem():
     global problem
     return problem
+    
+def remove_comments(text):
+    """ remove c-style comments.
+        text: blob of text with comments (can include newlines)
+        returns: text with comments removed
+    """
+    pattern = r"""
+                            ##  --------- COMMENT ---------
+           /\*              ##  Start of /* ... */ comment
+           [^*]*\*+         ##  Non-* followed by 1-or-more *'s
+           (                ##
+             [^/*][^*]*\*+  ##
+           )*               ##  0-or-more things which don't start with /
+                            ##    but do end with '*'
+           /                ##  End of /* ... */ comment
+         |                  ##  -OR-  various things which aren't comments:
+           (                ## 
+                            ##  ------ " ... " STRING ------
+             "              ##  Start of " ... " string
+             (              ##
+               \\.          ##  Escaped char
+             |              ##  -OR-
+               [^"\\]       ##  Non "\ characters
+             )*             ##
+             "              ##  End of " ... " string
+           |                ##  -OR-
+                            ##
+                            ##  ------ ' ... ' STRING ------
+             '              ##  Start of ' ... ' string
+             (              ##
+               \\.          ##  Escaped char
+             |              ##  -OR-
+               [^'\\]       ##  Non '\ characters
+             )*             ##
+             '              ##  End of ' ... ' string
+           |                ##  -OR-
+                            ##
+                            ##  ------ ANYTHING ELSE -------
+             .              ##  Anything other char
+             [^/"'\\]*      ##  Chars which doesn't start a comment, string
+           )                ##    or escape
+    """
+    regex = re.compile(pattern, re.VERBOSE|re.MULTILINE|re.DOTALL)
+    noncomments = [m.group(2) for m in regex.finditer(text) if m.group(2)]
+
+    return "".join(noncomments)

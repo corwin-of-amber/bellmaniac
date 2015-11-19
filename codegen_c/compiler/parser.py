@@ -21,13 +21,15 @@ def main():
         setProblem("Paren")
     elif "Accordion" in args.files[0]:
         setProblem("Accordion")
+    elif "LCS" in args.files[0]:
+        setProblem("LCS")
     else:
         Assert(False, "problem name not expected/defined")
     (pdict,prgs) = getBmProgram(args.files)
     #For each loop,rec pair - take superset from rec and put it in loop
     
     unionSS = {}
-    if getProblem == "Accordion":
+    if getProblem() == "Accordion":
         for name in pdict:
             addSS(pdict[name]["rec"].superset,unionSS)
         for name in pdict:
@@ -36,7 +38,7 @@ def main():
     else:
         for name in pdict:
             #print "PRG: ", name, pdict[name]["rec"].superset
-            if getProblem == "Gap":
+            if getProblem() == "Gap":
                 if u"J0" not in pdict[name]["rec"].superset:
                     pdict[name]["rec"].superset[u"J0"] = u"J"
                 if u"J1" not in pdict[name]["rec"].superset:

@@ -100,6 +100,18 @@ struct interval {
 #define BASE_CONSTRAINT_B(a,b) (BASE_CONSTRAINT_A(a) || BASE_CONSTRAINT_A(b))
 #define BASE_CONSTRAINT_C(a,b,c) (BASE_CONSTRAINT_B(a,b) || BASE_CONSTRAINT_A(c))
 
+#define DdistCO(i,j,I,J) V[((j)-DEFBEGIN(J))*B + ((i)-DEFBEGIN(I))]
+
+inline void copy_dist_part(TYPE* V,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
+	for(int i=DEFBEGIN(II);i<DEFEND(II);i++){
+		for(int j=DEFBEGIN(JJ);j<DEFEND(JJ);j++){
+			//cout<<i<<" "<<j<<" "<<(j)-DEFBEGIN(JJ)<<" "<<((i)-DEFBEGIN(II))<<endl;
+			DdistCO(i,j,II,JJ) = Ddist(i,j);
+
+		}
+	}
+}
+
 /*
 * Auto-generated Code
 */
@@ -217,7 +229,6 @@ int main(int argc, char *argv[]) {
 #ifndef NNUM
 	dist = ( TYPE* ) _mm_malloc(NP * NP * sizeof( TYPE ),ALIGNMENT);
 #endif
-	cout<< "p="<<__cilkrts_get_nworkers()<<",N="<<N<<",B="<<B<<endl;
 	init_dist();
 #ifdef DEBUG
 #ifdef RANDOMDIST
@@ -232,7 +243,8 @@ int main(int argc, char *argv[]) {
 	unsigned long long tstart = cilk_getticks();
 	funcA_rec(PARAM(K0));
 	unsigned long long tend = cilk_getticks();
-	cout<<"REC\t"<<N<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
+	cout<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend-tstart);
+	//cout<<"REC\t"<<N<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
 #ifdef DEBUG
 	{
 		drec = ( TYPE* ) _mm_malloc(N * N * sizeof( TYPE ),ALIGNMENT);

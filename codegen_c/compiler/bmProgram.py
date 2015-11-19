@@ -202,6 +202,10 @@ class bmProgram(object):
         intv = defineIntervalFunc
         print "\n".join(self.newFuncs) 
         print u"void " + getDecl(self.name, self.params, intv, self.impl) + u"{"
+        if hasattr(self,"co_set") and self.impl == u"loop":
+            #copy optimization active!
+            print "__declspec(align(ALIGNMENT)) TYPE V[B * B];"
+            print "copy_dist_part(V,PARAM("+self.co_set[0]+"),PARAM("+self.co_set[1]+"));"
         if self.impl == u"rec":
             print self.getBaseCase()
         print self.tempDefCode()

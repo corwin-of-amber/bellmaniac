@@ -121,11 +121,24 @@ struct interval {
 #define BASE_CONSTRAINT_C(a,b,c) BASE_CONSTRAINT3(a,b,c)
 #define BASE_CONSTRAINT_B(a,b,c) BASE_CONSTRAINT_C(a,b,c)
 #define INSET(i,I) ((i) >= DEFBEGIN(I) && (i) < DEFEND(I)) 
+
+#define DdistCO(i,j,I,J) V[((j)-DEFBEGIN(J))*B + ((i)-DEFBEGIN(I))]
+
+inline void copy_dist_part(TYPE* V,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
+	for(int i=DEFBEGIN(II);i<DEFEND(II);i++){
+		for(int j=DEFBEGIN(JJ);j<DEFEND(JJ);j++){
+			//cout<<i<<" "<<j<<" "<<(j)-DEFBEGIN(JJ)<<" "<<((i)-DEFBEGIN(II))<<endl;
+			DdistCO(i,j,II,JJ) = Ddist(i,j);
+
+		}
+	}
+}
+
 /*
 * Auto-generated Code
 */
 
-#include "..\gap-all.cpp"
+#include "..\gap-new2-all.cpp"
 
 #ifdef DEBUG
 void print_problem(){
@@ -322,7 +335,6 @@ int main(int argc, char *argv[]) {
 	X = ( TYPE* ) _mm_malloc(N * sizeof( TYPE ),ALIGNMENT);
 	Y = ( TYPE* ) _mm_malloc(N * sizeof( TYPE ),ALIGNMENT);
 #endif
-	cout<< "p="<<__cilkrts_get_nworkers()<<",N="<<N<<",B="<<B<<endl;
 	init_xy();
 	init_dist();
 #ifdef DEBUG
@@ -352,7 +364,8 @@ int main(int argc, char *argv[]) {
 	unsigned long long tstart = cilk_getticks();
 	funcA_rec(PARAM(J),PARAM(J));
 	unsigned long long tend = cilk_getticks();
-	cout<<"REC\t"<<N<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
+	//cout<<"REC\t"<<N<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
+	cout<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend-tstart);
 #ifdef DEBUG
 	{
 		drec = ( TYPE* ) _mm_malloc(N * N * sizeof( TYPE ),ALIGNMENT);
