@@ -1,0 +1,7 @@
+% Gap, Bellmania-generated code vs. CO, COZ, LOOPDP (Intel Compiler, 6-core Intel i7)
+n/Time(s)       Bellmania       CO            COZ             LOOPDP     
+16300           120.947438      130.117       110.117         2524.06    
+8192            15.281641       16.2363       14.2363         281.006    
+4096            2.099545        3.98231       1.98231         26.318     
+2048            0.745214        1.282749      0.282749        2.644      
+1024            0.165239        0.246717      0.046717        0.32       

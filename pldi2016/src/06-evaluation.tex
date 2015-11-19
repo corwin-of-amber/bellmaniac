@@ -78,10 +78,16 @@ The tactic application engine is implemented in Scala. We implemeted a prototype
 IDE using HTML5 and AngularJS, which communicates with the engine by sending
 and receiving program terms serialized as JSON. Our system supports using either
 Z3 or CVC4 as the back-end SMT solver for discharging proof obligations required
-for soundness proofs. The compiler for programs in Bellmania is implemented in 
+for soundness proofs. Synthesis of recursive calls is done by translating the
+program to Sketch, which employs CEGIS to find the correct assignment to parameters.
+To argue for the feasibility of our system, we include
+solver running time for the verification of the three most used tactics,
+as well as time required for Sketch synthesis, in \Cref{evaluation:solving time}.
+We consider an average delay of \textasciitilde 10 seconds to be reasonable, even for an interactive
+environment such as Bellmania. 
+
+The compiler for programs in Bellmania (serialized as JSON) is implemented in 
 python and generates C++ code with Intel Cilk constructs for parallelization.
-
-
 Table~\ref{table:cppruns} shows the performance improvement for the auto-generated 
 implementation (AUTO) as compared to the standard parallelized loop implementation 
 (LOOPDP). The table also compares it with state-of-the-art parallelized 
@@ -89,7 +95,6 @@ implementations (CO and COZ). It can be seen from the table that our
 implementation performs close to the manually optimized code. 
 Figure~\ref{fig:gap} depicts the performance of these implementations 
 as a function of problem size and shows the scalability of our technique. %ROHIT:scalability of what:the technique or the code?
-
 
 
 \begin{table}
@@ -123,3 +128,6 @@ as a function of problem size and shows the scalability of our technique. %ROHIT
 
 
 
+\begin{figure}
+\input{gfx/charts}
+\end{figure}
