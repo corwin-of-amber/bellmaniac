@@ -134,23 +134,23 @@ as a function of problem size and shows the scalability of our technique. %ROHIT
 \renewcommand\a{({\it i})}    % relax! it's only for this figure
 \renewcommand\b{({\it ii})}
 \renewcommand\c{({\it iii})}
-\begin{tabular}{|l|r|rrr|r|}
+\begin{tabular}{|l|r|rrr|r@{\quad}|}
   \cline{2-6}
   \multicolumn{1}{c|}{} &    & \multicolumn{4}{c|}{\small Average solving time ({\it s})}  \\
-  \multicolumn{1}{c|}{} &    & \multicolumn{3}{c|}{\small Verification} & {\small Synthesis} \\
+  \multicolumn{1}{c|}{} &    & \multicolumn{3}{c|}{\small Verification} & \multicolumn{1}{@{\,}c@{\,}|}{\small Synthesis} \\
   \multicolumn{1}{c|}{} & \# & \multicolumn{1}{c|}{~\sf Slice~} & \multicolumn{1}{c|}{\sf Stratify} & \multicolumn{1}{c|}{\sf Synth} & \multicolumn{1}{c|}{Sketch} \\
   \hline
-  {\bf Gap} & 3 &  & \\
+  {\bf Gap                 }  &  3  &  1.5  &  6.4   &   0.2  &  8     \\
   \hline
-  {\bf Paren.} & 3 & & \\
+  {\bf Paren               }  &  3  &  0.8  &  16.5   &   0.8  &  11.2     \\
   \hline
-  {\bf Protein} & 4 & & \\
+  {\bf Accordion           }  &  4  &  0.6  &  3.8   &   0.4  &  6.1     \\
   \hline
-  {\bf LCS} & 1 &  0.2  &  1.4  &  0.4  &  1.8 \\
+  {\bf LCS                 }  &  1  &  0.2  &  1.5   &   0.4  &  3.1     \\
   \hline
-  {\bf Knapsack} & 2 & & \\
+  {\bf Knapsack            }  &  0  &    &     &     &       \\
   \hline
-  {\bf Bitonic} & 2 & & \\
+  {\bf Bitonic             }  &  0  &    &     &     &       \\
   \hline
 \end{tabular}
 \caption{\label{evaluation:solving time}

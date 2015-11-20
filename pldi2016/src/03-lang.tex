@@ -9,7 +9,9 @@ $\lambda$-calculus, that is, simply typed $\lambda$-calculus with universally qu
 (also known as \newterm{System F}).
 
 We write abstraction terms as $(v:\T)\mapsto e$, where $\T$ is the type of the argument $v$ and $e$ is
-the body. Curried functions $(v_1:\T_1)\mapsto (v_2:\T_2) \mapsto \cdots \mapsto (v_n:\T_n) \mapsto e$ are abbreviated 
+the body, instead of the traditional notation $\lambda(v:\T).\,e$, mainly due to aesthetic reasons
+but also because we hope this will look more familiar to intended users.
+Curried functions $(v_1:\T_1)\mapsto (v_2:\T_2) \mapsto \cdots \mapsto (v_n:\T_n) \mapsto e$ are abbreviated 
 as $(v_1:\T_1)\cdots(v_n:\T_n)\mapsto e$.
 
 The semantics differ slightly from that of traditional functional languages: arrow types $\T_1\to\T_2$
@@ -29,7 +31,7 @@ The core is augmented with the following intrinsic operators:
 
 \begin{itemize}
   \item A fixed point operator $\fix f$, with the denotational semantics
-    \[\semp{\fix f} ~=~ \sigma x.~ (\semp f\,x=x)\]
+    \[\semp{\fix f} ~=~ \theta \textrm{ ~ s.t. ~ } \semp f\,\theta=\theta\]
   we assume that recurrences given in specifications are well-defined, 
   such that $\semp f$ has a single fixed point.
   In other words, we ignore nonterminating computations.
