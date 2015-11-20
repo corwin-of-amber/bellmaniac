@@ -72,7 +72,7 @@ Python and generates C++ code containing Intel Cilk constructs for parallelizati
 Table~\ref{evaluation:cppruntimes} shows performance improvement for our 
 auto-generated implementation (AUTO) on the state-of-the-art optimized parallel
 loop implementation (LOOPDP) from~\cite{IPDPS15/Tithi}. It also compares AUTO with manually 
-optimized recursive implementations CO\_Opt and COZ from~\cite{IPDPS15/Tithi}. 
+optimized recursive implementations CO\_Opt and COZ for the three problems from~\cite{IPDPS15/Tithi}. 
 Our compiler automatically does \textit{copy optimization} 
 as done in CO\_Opt and COZ. COZ also incorporates a low-level 
 optimization of using Z-order layout of the array,
@@ -88,7 +88,7 @@ as a function of problem size and shows the scalability of our technique. %ROHIT
 \begin{table}
 \centering
 \begin{tabular}{|l|c|c|c|c|}
-    \cline{2-4}
+    \cline{2-5}
   \multicolumn{1}{c|}{} & \multicolumn{4}{c|}{\scriptsize Speedup w.r.t parallel LOOPDP on 6 cores}  \\
   \multicolumn{1}{c|}{} & \multicolumn{4}{c|}{\scriptsize   CPU (12 workers), B=64}  \\
   \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{~~\sf N~~} & \multicolumn{1}{c|}{~~\sf CO\_Opt~~} & \multicolumn{1}{c|}{~~~\sf COZ~~~} & \multicolumn{1}{c|}{\sf AUTO}  \\
