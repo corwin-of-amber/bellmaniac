@@ -41,17 +41,17 @@ and the Bitonic Traveling Salesman problem.
 
 \begin{figure}
 \[
-  \renewcommand\arraystretch{1.5}
+  \renewcommand\arraystretch{1.2}
   \begin{array}{@{}l@{}l}
     \lspan2{x :: J\to\R} \\
     \lspan2{w :: (J\times J\times J)\to\R} \\
     E ~=~ \fix \theta\,i\,j\mapsto{}
-      & {\big[x_{ij}\big]_{i+1=j} ~\Big/~} \\
-      & \min k\mapsto\theta_{ik}+\theta_{kj}+w_{ikj} \\
+      & {\big[x_{ij}\big]_{i+1=j} ~\Big/} 
+       \min k\mapsto\theta_{ik}+\theta_{kj}+w_{ikj} \\
   \end{array}
 \]
 \caption{\label{evaluation:paren spec}
-  Specifications for the Parenthesis Assignment DP problem.}
+  Specifications for the Parenthesis problem.}
 \end{figure}
 
 
@@ -68,15 +68,15 @@ We consider an average delay of \textasciitilde 10 seconds to be reasonable, eve
 environment such as Bellmania. 
 
 The compiler for programs in Bellmania is implemented in 
-python and generates C++ code with Intel Cilk constructs for parallelization.
+Python and generates C++ code containing Intel Cilk constructs for parallelization.
 Table~\ref{evaluation:cppruntimes} shows performance improvement for our 
 auto-generated implementation (AUTO) on the state-of-the-art optimized parallel
 loop implementation (LOOPDP) from~\cite{IPDPS15/Tithi}. It also compares AUTO with manually 
 optimized recursive implementations CO\_Opt and COZ from~\cite{IPDPS15/Tithi}. 
-Bellmania compiler automatically does \textit{copy optimization} 
-as done in CO\_Opt and COZ. COZ also incorporates some low-level 
-optimizations like using a Z-order layout of the array etc.,
-which are out of scope for this paper. %pointer arithmetics for loop traversal? 
+Our compiler automatically does \textit{copy optimization} 
+as done in CO\_Opt and COZ. COZ also incorporates a low-level 
+optimization of using Z-order layout of the array,
+which is out of scope for this paper. %pointer arithmetics for loop traversal? 
 %Explicit vectorization of loops?
 $N$ is the problem size and $B$ is the base case size for using loops 
 instead of recursion. It can be seen from the table that our implementation 
@@ -107,7 +107,7 @@ as a function of problem size and shows the scalability of our technique. %ROHIT
   %\hline
 \end{tabular}
 \caption{\label{evaluation:cppruntimes}
-  Performance of different C++ implementations}
+  Performance of different C++ implementations.}
 \end{table}
 
 
@@ -118,7 +118,7 @@ as a function of problem size and shows the scalability of our technique. %ROHIT
 \renewcommand\c{({\it iii})}
 \begin{tabular}{|l|r|rrr|r@{\quad}|}
   \cline{2-6}
-  \multicolumn{1}{c|}{} &    & \multicolumn{4}{c|}{\small Average solving time ({\it s})}  \\
+%  \multicolumn{1}{c|}{} &    & \multicolumn{4}{c|}{\small Average solving time ({\it s})}  \\
   \multicolumn{1}{c|}{} &    & \multicolumn{3}{c|}{\small Verification} & \multicolumn{1}{@{\,}c@{\,}|}{\small Synthesis} \\
   \multicolumn{1}{c|}{} & \# & \multicolumn{1}{c|}{~\sf Slice~} & \multicolumn{1}{c|}{\sf Stratify} & \multicolumn{1}{c|}{\sf Synth} & \multicolumn{1}{c|}{Sketch} \\
   \hline
@@ -136,13 +136,14 @@ as a function of problem size and shows the scalability of our technique. %ROHIT
   \hline
 \end{tabular}
 \caption{\label{evaluation:solving time}
-  Average proof search time for proof obligations and synthesis
-  time}
+  Average proof search time for proof obligations and avegrage synthesis
+  time for {\sf Synth} parameters (seconds).}
 \end{table}
 
 
 
 \begin{figure}
-\input{gfx/charts}
+\resizebox{8cm}{!}{
+\input{gfx/charts}}
 \caption{\label{fig:gap} Performance comparison for parallelized implementations for Gap problem on 6-core Intel i7 CPU}
 \end{figure}

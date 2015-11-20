@@ -1,7 +1,6 @@
 \begin{tikzpicture}[>=latex,mark options={scale=.5}]
 	\begin{axis}[
 	    ymode=log,
-		xlabel=Problem size,
 		ylabel=Time ({\it s}),
 		scaled x ticks=false, %{real:1000}
 		log basis y=2, ymajorgrids=true]
@@ -25,5 +24,7 @@
 	  \draw[red] (Bellmania-lbl.north west) -- (Bellmania-curve);
 	  \draw[blue] (COZ-lbl) -- (COZ-curve);
 	\end{scope}
+	
+	\node[right] at (6.5,-0.25) {Problem size};
 \end{tikzpicture}
 

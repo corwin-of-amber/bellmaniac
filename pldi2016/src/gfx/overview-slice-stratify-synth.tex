@@ -187,9 +187,10 @@
   \draw (s.70) edge[->,out=20] node[knob,diamond] {} (2);
   \node[inner sep=0] at (2.8,1) {$\cdots$};
 
-  \tikzset{xshift=-1.25*\dx,yshift=-.75*\dy}
+  \tikzset{xshift=-3.75*\dx,yshift=-.6*\dy}
 
-  \applytacticnode{Synth {\tikz\node[knob,isosceles triangle,rotate=90] {};} $~~ \longrightarrow B^{I_0J_0J_1}$ \\ 
+  \applytacticnode{Synth {\tikz\node[knob,isosceles triangle,rotate=90] {};} $~~ \longrightarrow B^{I_0J_0J_1}$ 
+      \qquad
       \applytactic{Synth $\diamond$} $~~ \dashrightarrow A^{I_0J_1}$};
 
   \tikzset{yshift=-\dy,xshift=-2*\dx}

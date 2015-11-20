@@ -35,7 +35,7 @@ to first-order logic as
 
 \begin{paragraph}{First-class functions.}
 When a function is being used as an argument in an application term, 
-we take its arrow type $\T\to\S$ and create a corresponding \newterm{faux sort} $F_{\T\to\S}$,
+we take its arrow type $\T\to\S$ and create a \newterm{faux sort} $F_{\T\to\S}$,
 an operator $@ : F_{\T\to\S}\to\T\to\S$, and the \newterm{extensionality axiom} ---
 \begin{equation}
 \forall \alpha\alpha'.~ \big(\forall\beta.~ @(\alpha,\beta)=@(\alpha',\beta)\big)\limplies \alpha=\alpha'
@@ -50,6 +50,7 @@ And for each such function symbol $f^k:\T\to\S$ used as argument, create its
 \end{equation}
 \end{paragraph}
 
+\vspace{-8mm}
 \subsection{Simplification}
 
 When $f$,$g$ of the goal, $f=g$, are abstraction terms, the above can be simplified by
