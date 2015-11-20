@@ -87,27 +87,27 @@ as a function of problem size and shows the scalability of our technique. %ROHIT
 
 \begin{table}
 \centering
-\begin{tabular}{|l|c|c|c|}
+\begin{tabular}{|l|c|c|c|c|}
     \cline{2-4}
-  \multicolumn{1}{c|}{} & \multicolumn{3}{c|}{\scriptsize Speedup w.r.t parallel LOOPDP on 6 cores}  \\
-  \multicolumn{1}{c|}{} & \multicolumn{3}{c|}{\scriptsize   CPU (12 workers), N=16384, B=64}  \\
-  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{~~~\sf CO\_Opt~~~} & \multicolumn{1}{c|}{~~~~\sf COZ~~~~} & \multicolumn{1}{c|}{\sf AUTO}  \\
+  \multicolumn{1}{c|}{} & \multicolumn{4}{c|}{\scriptsize Speedup w.r.t parallel LOOPDP on 6 cores}  \\
+  \multicolumn{1}{c|}{} & \multicolumn{4}{c|}{\scriptsize   CPU (12 workers), B=64}  \\
+  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{~~\sf N~~} & \multicolumn{1}{c|}{~~\sf CO\_Opt~~} & \multicolumn{1}{c|}{~~~\sf COZ~~~} & \multicolumn{1}{c|}{\sf AUTO}  \\
   \hline
-  {\bf Gap}  & 21x & 34x & 30x\\
+  {\bf Gap}  & 16384 & 21x & 34x & 30x\\
   \hline
-  {\bf Parenthesis}  & 32x & 50x & 46x\\
+  {\bf Parenthesis}  & 16384  & 32x & 50x & 46x\\
   \hline
-  {\bf Protein} & 2.2x & 2.6x & 1.4x \\
+  {\bf Protein} & 16384  & 2.2x & 2.6x & 1.4x \\
   \hline
-  %{\bf LCS} & 10x &  10x  &  10x \\
+  {\bf LCS}  & 45000 & $-$ & $-$ & 1.5x \\
+  \hline
+  %{\bf Knapsack} & $-$ & $-$ & ?x\\
   %\hline
-  {\bf Knapsack} & $-$ & $-$ & ?x\\
+  {\bf Bitonic}  & 45000  & $-$ & $-$ & 4.2x\\
   \hline
-  %{\bf Bitonic} & & 2 & \\
-  %\hline
 \end{tabular}
 \caption{\label{evaluation:cppruntimes}
-  Performance of different C++ implementations.}
+  Performance of different C++ implementations}
 \end{table}
 
 
