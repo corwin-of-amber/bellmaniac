@@ -89,11 +89,11 @@ environment such as Bellmania.
 The compiler for programs in Bellmania is implemented in 
 python and generates C++ code with Intel Cilk constructs for parallelization.
 Table~\ref{evaluation:cppruntimes} shows performance improvement for our 
-auto-generated implementation (AUTO) on the state-of-the-art parallelized 
-loop implementation (LOOPDP). It also compares AUTO with manually 
-optimized recursive implementations CO and COZ from~\cite{IPDPS15/Tithi}. 
+auto-generated implementation (AUTO) on the state-of-the-art optimized parallel
+loop implementation (LOOPDP) from~\cite{IPDPS15/Tithi}. It also compares AUTO with manually 
+optimized recursive implementations CO\_Opt and COZ from~\cite{IPDPS15/Tithi}. 
 Bellmania compiler automatically does \textit{copy optimization} 
-as done in CO and COZ. COZ also incorporates some low-level 
+as done in CO\_Opt and COZ. COZ also incorporates some low-level 
 optimizations like using a z-morton layout of the array etc 
 which are out of scope for this work. %pointer arithmetics for loop traversal? 
 %Explicit vectorization of loops?
@@ -109,7 +109,7 @@ as a function of problem size and shows the scalability of our technique. %ROHIT
     \cline{2-4}
   \multicolumn{1}{c|}{} & \multicolumn{3}{c|}{\scriptsize Speedup w.r.t parallel LOOPDP on 6 cores}  \\
   \multicolumn{1}{c|}{} & \multicolumn{3}{c|}{\scriptsize   CPU (12 workers), N=16384, B=64}  \\
-  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{~~~~~~\sf CO~~~~~} & \multicolumn{1}{c|}{~~~~~\sf COZ~~~~} & \multicolumn{1}{c|}{\sf AUTO}  \\
+  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{~~~\sf CO\_Opt~~~} & \multicolumn{1}{c|}{~~~~\sf COZ~~~~} & \multicolumn{1}{c|}{\sf AUTO}  \\
   \hline
   {\bf Gap}  & 21x & 34x & 30x\\
   \hline
@@ -119,7 +119,7 @@ as a function of problem size and shows the scalability of our technique. %ROHIT
   \hline
   %{\bf LCS} & 10x &  10x  &  10x \\
   %\hline
-  {\bf Knapsack} & ?x & ?x & ?x\\
+  {\bf Knapsack} & $-$ & $-$ & ?x\\
   \hline
   %{\bf Bitonic} & & 2 & \\
   %\hline
