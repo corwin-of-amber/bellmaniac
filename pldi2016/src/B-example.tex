@@ -1,0 +1,486 @@
+\section{Example Development}
+
+The following example shows in more detail the first phase of the development
+for the Simplified Arbiter test case,
+to give the reader a flavor of the technique and the way the system
+does reasoning.
+
+In Bellmania language, the Simplified Arbiter example is specified by
+a base case $\Psi$ corresponding to {\it Initialize}, and a computation
+part corresponding to {\it Compute}.
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{}l@{}l@{}l@{}}
+    \Psi ~=~ & \fix \Big(\theta\,i\,j\mapsto
+	              [0]_{i=j=0} ~\big/~ [\yw{0j0}]_{i=0} ~\big/~ [\xw{0i0}]_{j=0}\Big)
+  \end{array}
+\end{equation}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}l@{}l@{}c@{}c@{}l@{}l@{}}
+    A^{^{IJ}} ~=~ 
+	      & \psi\mapsto \fix \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I)}} & ^{^{(J)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle
+  \end{array}
+  \label{tactics:arbiter phase A}
+\end{equation}
+
+Vertical typeset was used to save some horizontal space, but $\vtyped v\T$
+should be read as just $v:\T$.
+
+\medskip
+
+After Richard applies {\sf Slice}, he gets the four quadrants $I_0\times J_0$, $I_0\times J_1$, $I_1\times J_0$, $I_1\times J_1$
+(\Cref{overview:quadrants}). The system defined unary qualifiers with the axioms:
+\[
+\begin{array}{c@{\qquad}c}
+  \forall i{:}I.~~I_0(i)\lor I_1(i)   &    \forall i_0{:}I_0,~i_1{:}I_1.~~i_0<i_1 \\
+  \forall j{:}J.~~J_0(j)\lor J_1(j)   &    \forall j_0{:}J_0,~j_1{:}J_1.~~j_0<j_1 \\
+\end{array}
+\]
+
+The program is just about to
+grow quite large; to make such terms easy to read and refer to, we provide
+boxed letters as labels for sub-terms, using them as abbreviations where they
+occur in the larger expression.
+
+\makeatletter
+\newcommand{\quadrants@normal}[4]{
+  \renewcommand\arraystretch{1.5}
+   \begin{array}{c|c}
+     #1 & #2 \\ \hline
+     #3 & #4
+   \end{array}}
+\newcommand{\quadrants@small}[4]{
+  \renewcommand\arraystretch{0.9}
+   \begin{array}{@{~}c@{~}|@{~}c@{~}}
+     \scriptstyle #1 & \scriptstyle #2 \\ \hline
+     \scriptstyle #3 & \scriptstyle #4
+   \end{array}}
+\newcommand\quadrants{\@ifstar\quadrants@small\quadrants@normal}
+\makeatother
+
+In addition, to allude to the reader's intuition, expressions of the form
+$a/b/c/d$ will be written as $\quadrants*{a}{b}{c}{d}$ when the slices
+represent quadrants.
+
+\makeatletter
+\newcommand{\lbox@small}[1]{ {\setlength{\fboxsep}{1pt}\fbox{\small #1}} }
+\newcommand{\lbox@tiny}[1]{ {\setlength{\fboxsep}{1pt}\fbox{\tiny #1}} }
+\newcommand\lbox{\@ifstar\lbox@tiny\lbox@small}
+\makeatother
+
+\begin{tacticbox}{Slice}
+  \begin{array}{@{} l  l @{}}
+       f ~=~ \theta\,i\,j\mapsto \cdots \\
+       X_1 ~=~ \_\times I_0\times J_0 &
+       X_2 ~=~ \_\times I_0\times J_1 \\
+       X_3 ~=~ \_\times I_1\times J_0 &
+       X_4 ~=~ \_\times I_1\times J_1 \\[.5em]
+       \cspan2{\mbox{\small ({\it each} ``\_'' {\it is a fresh type variable})}}
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}r@{}l@{}c@{}c@{}l@{}l@{}}
+    A^{^{IJ}} =~ & \lspan5{\psi\mapsto \fix \quadrants{\lbox A}{\lbox B}{\lbox C}{\lbox D}} \\
+	\lbox A ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I_0)}} & ^{^{(J_0)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+	\lbox B ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I_0)}} & ^{^{(J_1)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+	\lbox C ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I_1)}} & ^{^{(J_0)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+	\lbox D ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I_1)}} & ^{^{(J_1)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+  \end{array}
+  \label{evaluation:A sliced}
+\end{equation}
+
+\begin{tacticbox}{Let}
+   e[\square] ~=~ \quadrants*{\square}{\lbox*B}{\lbox*C}{\lbox*D} \qquad
+   t ~=~ \lbox A
+\end{tacticbox}
+
+\begin{equation}
+  A^{^{IJ}} =~ \psi\mapsto \fix \left(\lbox A \applt z\mapsto\quadrants{z}{\lbox B}{\lbox C}{\lbox D}\right)
+\end{equation}
+
+\begin{tacticbox}{Stratify[with Padding]}
+  \begin{array}{@{} l @{} l @{}}
+    f ~=~ \quadrants*{\lbox*A}{\dot\psi}{\dot\psi}{\dot\psi}
+         & \mbox{\small ({\it recall that } $\dot\psi=\theta\mapsto\psi$)} \\
+    g ~=~ z\mapsto\quadrants*{z}{\lbox*{B}}{\lbox*C}{\lbox*D} &
+    \qquad\psi=\psi
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  A^{^{IJ}} =~ \psi\mapsto \fix \quadrants{\lbox A}{\dot\psi}{\dot\psi}{\dot\psi} ~\applt~ \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\lbox C}{\lbox D}
+  \label{evaluation:stratify A 1}
+\end{equation}
+
+Notice that an existing variable $\psi$ is reused, rebinding any occurrences within $\lbox B$, $\lbox C$, $\lbox D$.
+This effect is useful, as it limits the context of the expression: the inner $\psi$ shadows the outer $\psi$,
+meaning $\lbox B$, $\lbox C$, $\lbox D$ do not need to access the data that was input to $\lbox A$, only its
+output.
+
+\medskip
+The sequence Let, Stratify[with Padding] is now applied in the same manner to $\lbox B$
+and $\lbox C$ (see \Cref{overview:slice-stratify-synth}). We do not list the applications as they are analogous to the previous ones.
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{l@{}l}
+    A^{^{IJ}} =~ \psi\mapsto{} & \fix \quadrants{\lbox A}{\dot\psi}{\dot\psi}{\dot\psi} ~\applt~ 
+                 \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} ~\applt \\
+               & \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\lbox C}{\dot\psi} ~\applt~
+                 \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\dot\psi}{\lbox D}
+  \end{array}
+\end{equation}
+
+\begin{tacticbox}{Synth}
+	\begin{array}{@{}l@{}c@{}c@{}l@{}l}
+       \lspan5{h_1= \lbox A} \\
+       \lspan5{h_{2,3,4}=\dot\psi} \\
+	   f_1 = \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & ^{^{(I_0)}} & ^{^{(J_0)}} & & \min \vtyped p {I_0} \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & \min \vtyped q {J_0} \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
+	   \lspan5{f_{2,3,4} = \dot\psi}
+   \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{l@{}l}
+    A^{^{IJ}} =~ \psi\mapsto{} & \quadrants{A^{^{I_0J_0}}_\psi\!\!\!}{\psi}{\psi}{\psi} ~\applt~ 
+                 \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} ~\applt \\
+               & \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\lbox C}{\dot\psi} ~\applt~
+                 \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\dot\psi}{\lbox D}
+  \end{array}
+  \label{fix A}
+\end{equation}
+
+We note that $\fix f_1=A^{^{I_0J_0}}_\psi$ are identical (up to $\beta$-reduction),
+which is the whole reason $f_1$ was chosen. Also, we took the liberty
+to simplify $\fix\dot\psi$ into $\psi$ --- although this is not necessary --- just to display
+a shorter term.
+
+\medskip
+The next few tactics will focus on the subterm $\lbox B$ from \eqref{evaluation:A sliced}.
+
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}r@{}l@{}c@{}c@{}l@{}l@{}}
+	\lbox B ~=~ & \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
+	      & & ^{^{(I_0)}} & ^{^{(J_1)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle
+  \end{array}
+\end{equation}
+
+\begin{tacticbox}{Slice}
+  \begin{array}{@{} l @{}}
+    f = \vtyped q J \mapsto \theta_{iq}+w'_{qji} \\
+    X_1 = J_0\to\_ \qquad X_2 = J_1\to\_
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}r@{}l@{}c@{}c@{}l@{}l@{}l@{}}
+	\lbox B ~=~ & \theta\,& i & j & \mapsto\min\,\big\langle~ & \psi_{ij} \\
+	      & & ^{^{(I_0)}} & ^{^{(J_1)}} & & \lspan2{\min \vtyped p I \mapsto\theta_{pj}+w_{pij},} \\
+	      & & & & & \min \big( & (\vtyped q {J_0} \mapsto\theta_{iq}+w'_{qji}) ~\big/~ \\
+	      & & & & & & (\vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji})\big)  ~\big\rangle
+  \end{array}
+  \label{evaluation:horiz sliced}
+\end{equation}
+
+For the intuition behind this, see the top-right part of \Cref{evaluation:slicing strategy}.
+The colors represent cell ranges that will be read by different sub-routines (presumably running on different cores).
+The range of $q$ is split into the part that lies within \qbox1 ($q\in J_0$) and the one that
+lies within \lbox2 ($q\in J_1$). The same reasoning is applied to the other quadrants.
+
+\begin{tacticbox}{Distributivity}
+  \begin{array}{@{} l @{}}
+    e[\square] = \min\square \\
+    t_1 = \min \vtyped q {J_0} \mapsto \theta_{iq}+w'_{qji} \\
+    t_2 = \min \vtyped q {J_1} \mapsto \theta_{iq}+w'_{qji} \\
+  \end{array}
+\end{tacticbox}
+
+\begin{tacticbox}{Associativity}
+  \begin{array}{@{} l @{} l @{}}
+    \lspan2{\reduce = \min} \\
+    \overline x_1 ={} & \psi_{ij} \\
+    \overline x_2 ={} & \min \vtyped p I \mapsto\theta_{pj}+w_{pij} \\
+    \overline x_3 ={} & \min \vtyped q {J_0} \mapsto \theta_{iq}+w'_{qji} ~, \\
+                      & \min \vtyped q {J_1} \mapsto \theta_{iq}+w'_{qji}
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}r@{}l@{}c@{}c@{}l@{}l@{}}
+	\lbox B ~=~ & \theta\,& i & j & \mapsto\min\,\big\langle~ & \psi_{ij} \\
+	      & & ^{^{(I_0)}} & ^{^{(J_1)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+	      & & & & & \min \vtyped q {J_0} \mapsto\theta_{iq}+w'_{qji}, \\
+	      & & & & & \min \vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji} ~\big\rangle
+  \end{array}
+\end{equation}
+
+\begin{tacticbox}{Let[$\reduce$]}
+  \begin{array}{@{} r @{} l @{}}
+    e[\square] ={} & \quadrants{\dot\psi}{\theta\,i\,j\mapsto\square}{\dot\psi}{\dot\psi} \\
+    \overline a ={} & \psi_{ij}, ~\min \vtyped q{J_0}\mapsto \theta_{iq}+w'_{qji} \\
+    \overline b ={} & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+                    & \min \vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji}
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{r @{} l @{} c @{} c @{} l @{} l}
+    \lspan6{
+    \quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} =
+      \fix\left(\lbox E \applt z\mapsto\quadrants{\dot\psi}{\lbox F}{\dot\psi}{\dot\psi}\right) 
+    } \\[1.5em]
+    ~\lbox E ={} &
+      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
+             & & ^{^{(I_0)}} & ^{^{(J_1)}} &
+                                          & \min \vtyped q{J_0}\mapsto\theta_{iq}+w'_{qji} \rangle \\
+    ~\lbox F ={} &
+      \theta & i & j & \mapsto\min\langle & z_{\theta ij}, \\
+             & & ^{^{(I_0)}} & ^{^{(J_1)}} &
+                                         & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+             & & & &                     & \min \vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji}\rangle
+  \end{array}
+\end{equation}
+
+
+\begin{figure}
+\input{gfx/evaluation-slicing-strategy}
+\medskip
+\caption{\label{evaluation:slicing strategy}
+  The strategy for applications of {\sf Slice} in the case study.}
+\end{figure}
+
+\begin{tacticbox}{Stratify[with Padding]}
+  \begin{array}{@{} l @{}}
+    f ~=~ \quadrants*{\dot\psi}{\lbox*E}{\dot\psi}{\dot\psi} \\
+    g ~=~ z\mapsto\quadrants*{\dot\psi}{\lbox*F}{\dot\psi}{\dot\psi}
+    \qquad\psi=\psi
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{r @{} l @{} c @{} c @{} l @{} l}
+    \lspan6{
+    \fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} =
+      \fix\quadrants{\dot\psi}{\lbox E}{\dot\psi}{\dot\psi} \applt
+      \psi\mapsto\fix\quadrants{\dot\psi}{\lbox F}{\dot\psi}{\dot\psi}
+    } \\[1.5em]
+    ~\lbox E ={} &
+      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
+             & & ^{^{(I_0)}} & ^{^{(J_1)}} &
+                                          & \min \vtyped q{J_0}\mapsto\theta_{iq}+w'_{qji} \rangle \\
+    ~\lbox F ={} &
+      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
+             & & ^{^{(I_0)}} & ^{^{(J_1)}} &
+                                          & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
+             & & & &                      & \min \vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji}\rangle
+  \end{array}
+\end{equation}
+
+\noindent
+Define
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}l @{} l @{\!} c @{} c @{} l @{} l@{}}
+  B^{^{IJ_0J_1}} =~ \big( & \psi\mapsto \\
+      & \fix
+      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
+           & & ^{^{(I)}} & ^{^{(J)}} &
+                                          & \min \vtyped q{J_0}\mapsto\theta_{iq}+w'_{qji} \rangle\big) \\
+      & \lspan5{:: \big((I\times J_0)\to\R\big) \to \big((I\times J_1)\to\R\big)}
+  \end{array}
+\end{equation}
+
+\begin{tacticbox}{Synth}
+  \begin{array}{@{} l @{} c @{} c @{} l @{} l @{}}
+    \lspan5{h_2 = \lbox E} \\
+    \lspan5{h_{1,3,4} = \dot\psi} \\
+    f_2 = 
+      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
+             & ^{^{(I_0)}} & ^{^{(J_1)}} &
+                                          & \min \vtyped q {J_0} \mapsto\theta_{iq}+w'_{qji}\rangle \\
+    \lspan5{f_{1,3,4} = \dot\psi}
+  \end{array}
+\end{tacticbox}
+
+\begin{tacticbox}{Synth}
+  \begin{array}{@{} l @{} c @{} c @{} l @{} l @{}}
+    \lspan5{h_2 = \lbox F} \\
+    \lspan5{h_{1,3,4} = \dot\psi} \\
+    f_2 = 
+      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
+             & ^{^{(I_0)}} & ^{^{(J_1)}} &
+                                          & \min \vtyped p {I_0} \mapsto\theta_{pj}+w_{pij}, \\
+             & & &                        & \min \vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji}\rangle \\
+    \lspan5{f_{1,3,4} = \dot\psi}
+  \end{array}
+\end{tacticbox}
+
+\begin{equation}
+  \fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} ~=~
+    \quadrants{\psi}{B^{^{I_0J_0J_1}}_\psi\!\!\!\!}{\psi}{\psi} ~\applt~
+    \psi\mapsto\quadrants{\psi}{A^{^{I_0J_1}}_\psi\!\!\!}{\psi}{\psi}
+  \label{fix B}
+\end{equation}
+
+\medskip\noindent
+In a similar manner, we will obtain the following:
+
+\begin{equation}
+  \fix\quadrants{\dot\psi}{\dot\psi}{\lbox C}{\dot\psi} ~=~
+    \quadrants{\psi}{\psi}{C^{^{I_0I_1J_0}}_\psi\!\!\!\!}{\psi} ~\applt~
+    \psi\mapsto\quadrants{\psi}{\psi}{A^{^{I_1J_0}}_\psi\!\!\!}{\psi}
+  \label{fix C}
+\end{equation}
+
+\begin{equation}
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}l @{} l @{\!} c @{} c @{} l @{} l@{}}
+  C^{^{I_0I_1J}} =~ \big( & \psi\mapsto \\
+      & \fix
+      \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
+           & & ^{^{(I)}} & ^{^{(J)}} &
+                                          & \min \vtyped p {I_0} \mapsto\theta_{pj}+w_{pij} \rangle\big) \\
+      & \lspan5{:: \big((I_0\times J)\to\R\big) \to \big((I_1\times J)\to\R\big)}
+  \end{array}
+\end{equation}
+
+\medskip\noindent
+And ---
+
+\begin{equation}
+  \begin{array}{@{} l @{} l @{}}
+    \fix\quadrants{\dot\psi}{\dot\psi}{\dot\psi}{\lbox D} ~=~ &
+      \quadrants{\psi}{\psi}{\psi}{B^{^{I_1J_0J_1}}_\psi\!\!\!\!} ~\applt~
+      \psi\mapsto\quadrants{\psi}{\psi}{\psi}{C^{^{I_0I_1J_1}}_\psi\!\!\!} \\
+    &
+       ~\applt~ \psi\mapsto\quadrants{\psi}{\psi}{\psi}{A^{^{I_1J_1}}_\psi\!\!\!}
+  \end{array}
+  \label{fix D}
+\end{equation}
+
+This gives the stratified version as shown in \Cref{evaluation:arbiter stratify A chain}.
+The read and write regions are already encoded in the types of $A$, $B$, $C$ in 
+\eqref{fix A}, \eqref{fix B}, \eqref{fix C}, and \eqref{fix D}.
+
+\begin{figure*}
+\centering
+\begin{tikzpicture}[>=latex,x=7mm,y=7mm,
+    every path/.style={step=1},
+    every node/.style={inner sep=.5pt},
+    below edge/.style={below=1mm},
+    above edge/.style={above=1mm},
+    block/.style={rectangle,draw,thick,fill=blue, fill opacity=0.15, inner sep=0}]
+    
+  \def\dx{2.1cm}
+  \def\dy{1cm}
+  \def\w{3mm}
+    
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
+  \node(s)[block,fit={(0,1) (1,2)}] {};
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+  
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
+  \draw[->] (s.60) to[out=30] node[above edge] {$A$} (1);
+  \node(s)[block,fit={(.05,1) (2.05,2)}] {};
+  \node(t)[block,fit={(0,2.05) (1,0)}] {};
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+  
+  \tikzset{xshift=\dx, yshift=\dy}
+ 
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {\,2$'$};
+  \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
+  \draw[->] (s.60) to[out=80,looseness=1.2] node[above edge] {$B$} (2.120);
+  \node(s)[block,fit={(1,1) (2,2)}] {};
+
+  \tikzset{yshift=-2*\dy}
+ 
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5,.5) {\,3$'$};    \node(4) at (1.5,.5) {4};
+  \draw[->] (t.-80) to[out=-60,in=-140] node[below edge] {$C$} (3.-120);
+  \node(t)[block,fit={(0,0) (1,1)}] {};
+
+  \tikzset{yshift=\dy} % back to middle
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+  
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {\,\,2$''$};
+  \node(3) at (.5,.5) {\,\,3$''$};    \node(4) at (1.5,.5) {4};
+  \draw[->] (s) to[out=40,in=120] node[above edge,xshift=1mm] {$A$}  (2);
+  \draw[->] (t) to[out=-60,in=-120] node[below edge] {$A$}  (3);
+  \node(s)[block,fit={(1,0) (2,2)}] {};
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+
+  \tikzset{xshift=\dx}
+
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {\,\,2$''$};
+  \node(3) at (.5,.5) {\,\,3$''$};    \node(4) at (1.5,.5) {\,4$'$};
+  \draw[->] (s.-80) to[out=-40,in=-120] node[below edge] {$C$}  (4);
+  \node(s)[block,fit={(0,0) (2,1)}] {};
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+
+  \tikzset{xshift=\dx}
+
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {\,\,2$''$};
+  \node(3) at (.5,.5) {\,\,3$''$};    \node(4) at (1.5,.5) {\,\,4$''$};
+  \draw[->] (s.-40) to[out=-40,in=-120] node[below edge] {$B$} (4);
+  \node(s)[block,fit={(1,0) (2,1)}] {};
+
+  \node[inner sep=0] at (2.5,1) {\includegraphics[width=\w]{img/arrow}};
+
+  \tikzset{xshift=\dx}
+
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\,1$'$};   \node(2) at (1.5,1.5) {\,\,2$''$};
+  \node(3) at (.5,.5) {\,\,3$''$};    \node(4) at (1.5,.5) {\,\,\,4$'''$};
+  \draw[->] (s.-80) to[out=-40,in=-120] node[below edge] {$A$} (4);
+
+\end{tikzpicture}
+\caption{\label{evaluation:arbiter stratify A chain}
+  Fully divide-and-conquered version of $A^{IJ}$ in the example development.}
+\end{figure*}
+
+
+\medskip
+\hrule
+\bigskip
