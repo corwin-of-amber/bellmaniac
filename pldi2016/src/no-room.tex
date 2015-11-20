@@ -115,6 +115,35 @@ of the divide-and-conquer formalization.
 
 
 
+
+% -------------------------------------------------------------
+% -------------------------------------------------------------
+% -------------------------------------------------------------
+% -------------------------------------------------------------
+% -------------------------------------------------------------
+
+
+
+
+\begin{figure}
+\[
+  \renewcommand\arraystretch{1.5}
+  \begin{array}{@{}l@{}l@{}l@{}}
+    \lspan3{\xw :: ((J\times J)\cap{<})\to\R} \\
+    \lspan3{\yw :: ((K\times K)\cap{<})\to\R} \\
+    G ~=~ \fix \theta\,i\,j\mapsto{}
+      & \lspan2{\big[0\big]_{i=j=0} ~\Big/~ \big[\yw{0j}\big]_{i=0} ~\Big/~ \big[\xw{i0}\big]_{j=0} ~\Big/~} \\
+      & \min~\langle~ & \theta_{(i-1)\,(j-1)} + c_{ij},\\
+      & & \min p\mapsto\theta_{pj}+\xw{pi}, \\
+      & & \min q\mapsto\theta_{iq}+\yw{qj} ~\rangle
+  \end{array}
+\]
+\caption{\label{evaluation:gap spec}
+  Specifications for the full version of the Gap DP problem.}
+\end{figure}
+
+
+
 % -------------------------------------------------------------
 % -------------------------------------------------------------
 % -------------------------------------------------------------
@@ -889,41 +918,3 @@ The measurements were taken using MacBook Air, 1.7GHz Intel Core i7, with 4GB of
 The numbers show wait times that are acceptable for interactive work. Synth goals are rather tricky
 as they involve quantified assumptions --- Z3 timed out while trying to find the proof, but we
 managed to complete it successfully via CVC4 in all cases.
-
-\begin{table}
-\centering
-\renewcommand\a{({\it i})}    % relax! it's only for this figure
-\renewcommand\b{({\it ii})}
-\renewcommand\c{({\it iii})}
-\begin{tabular}{|l@{\,}c@{\,}|rr|}
-  \cline{3-4}
-  \multicolumn{2}{c|}{} & \multicolumn{2}{c|}{\small Solving time ({\it s})} \\
-  \multicolumn{2}{c|}{} & \multicolumn{1}{c|}{~Z3~} & \multicolumn{1}{c|}{CVC4} \\
-  \hline
-  {\bf \hspace{-.1cm}Gap} & &  & \\
-  \hline
-  Synth                                   &    & T/O & 2.8 \\
-  Stratify \qbox1                         &    & 6.2 & 5.8 \\
-  Stratify \qbox2                         &    & 3.5 & 0.5 \\
-  Let[$\reduce$] + Stratify in \qbox2     &    & 3.1 & 1.9 \\
-  Let[$\reduce$] + Stratify in \qbox4     & \a &  10 & 3.9 \\
-                                          & \b & 5.7 & 4.7 \\
-                                          & \c & 4.7 & 4.3 \\
-  \hline
-  {\bf \hspace{-.1cm}Parenthesis} & & & \\
-  \hline
-  Stratify \!\lbox{$\diagdown$} ({\it diagonal})
-                                          &    & 0.4 & 0.1 \\
-  Stratify \qbox1                         &    & 1.8 & 2.5 \\
-  Stratify \qbox2                         &    & 1.7 & 0.6 \\
-  Synth \qbox1                            &    & T/O & 0.5 \\
-  Synth \qbox2                            &    & T/O & 0.5 \\
-  \hline
-\end{tabular}
-\caption{\label{evaluation:solving time}
-  Proof search time for proof obligations in a few sample tactic applications.}
-\end{table}
-
-
-
-

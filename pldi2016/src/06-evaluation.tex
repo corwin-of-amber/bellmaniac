@@ -14,8 +14,6 @@ following steps
   \item Deleting $x_{p+1}\cdots x_q$, at cost $\xw{pq}$.
   \item Inserting $y_{p+1}\cdots y_q$ in $\overline{x}$, at cost $\yw{pq}$.
 \end{itemize}
-
-The computation is given by the recurrence \Cref{evaluation:gap spec}.
 \end{paragraph}
 
 \begin{paragraph}{Parenthesis problem.} Compute
@@ -40,23 +38,6 @@ up.
 We also exercised our system on a number of textbook problems:
 the Longest Common Subsequence (LCS) problem, the Knapsack problem,
 and the Bitonic Traveling Salesman problem.
-
-\begin{figure}
-\[
-  \renewcommand\arraystretch{1.5}
-  \begin{array}{@{}l@{}l@{}l@{}}
-    \lspan3{\xw :: ((J\times J)\cap{<})\to\R} \\
-    \lspan3{\yw :: ((K\times K)\cap{<})\to\R} \\
-    G ~=~ \fix \theta\,i\,j\mapsto{}
-      & \lspan2{\big[0\big]_{i=j=0} ~\Big/~ \big[\yw{0j}\big]_{i=0} ~\Big/~ \big[\xw{i0}\big]_{j=0} ~\Big/~} \\
-      & \min~\langle~ & \theta_{(i-1)\,(j-1)} + c_{ij},\\
-      & & \min p\mapsto\theta_{pj}+\xw{pi}, \\
-      & & \min q\mapsto\theta_{iq}+\yw{qj} ~\rangle
-  \end{array}
-\]
-\caption{\label{evaluation:gap spec}
-  Specifications for the full version of the Gap DP problem.}
-\end{figure}
 
 \begin{figure}
 \[
@@ -94,13 +75,14 @@ loop implementation (LOOPDP) from~\cite{IPDPS15/Tithi}. It also compares AUTO wi
 optimized recursive implementations CO\_Opt and COZ from~\cite{IPDPS15/Tithi}. 
 Bellmania compiler automatically does \textit{copy optimization} 
 as done in CO\_Opt and COZ. COZ also incorporates some low-level 
-optimizations like using a z-morton layout of the array etc 
-which are out of scope for this work. %pointer arithmetics for loop traversal? 
+optimizations like using a Z-order layout of the array etc.,
+which are out of scope for this paper. %pointer arithmetics for loop traversal? 
 %Explicit vectorization of loops?
 $N$ is the problem size and $B$ is the base case size for using loops 
 instead of recursion. It can be seen from the table that our implementation 
 performs close to the manually optimized code and can be optimized further by 
 hand. Figure~\ref{fig:gap} depicts the performance of these implementations 
+on one sample instance
 as a function of problem size and shows the scalability of our technique. %ROHIT:scalability of what:the technique or the code?
 
 \begin{table}
