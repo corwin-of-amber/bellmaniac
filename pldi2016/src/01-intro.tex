@@ -7,9 +7,9 @@
 \newcommand{\xw}[1]{w^x_{#1}}
 \newcommand{\yw}[1]{w^y_{#1}}
 
-Software synthesis techniques can be broadly classified into two categories: \emph{inductive} approaches, which generalize from concrete values or execution traces, and \emph{deductive} approaches, which derive an implementation from a specification through deductive reasoning steps. Inductive synthesis techniques have been the focus of significant renewed interest thanks to two important developments: (a) the discovery of techniques that leverage SAT/SMT solvers to symbolically represent and search very large spaces of possible programs~\cite{APLAS09/Solar-Lezama, PLDI11/Gulwani, Onward13/Torlak}, and (b) the use of counterexample-guided inductive synthesis (CEGIS), which allows one to leverage inductive techniques to find programs that satisfy more general specifications as long as one has access to an oracle to check that a candidate solution satisfies the specification~\cite{APLAS09/Solar-Lezama}. Deductive techniques, however, still hold some important advantages over inductive approaches; in particular, their scalability is not limited by the power of a checking oracle, because the correctness of the implementation is guaranteed by construction.
+Software synthesis techniques can be broadly classified into two categories: \emph{inductive} approaches, which generalize from concrete values or execution traces, and \emph{deductive} approaches, which derive an implementation from a specification through deductive reasoning steps. Inductive synthesis has been the focus of renewed interest thanks to the discovery of techniques that leverage SAT/SMT solvers to symbolically represent and search very large spaces of possible programs~\cite{APLAS09/Solar-Lezama, PLDI11/Gulwani, Onward13/Torlak}, and the use of counterexample-guided inductive synthesis (CEGIS), which allows one to leverage inductive techniques to find programs that satisfy more general specifications. Deductive techniques, however, still hold some important advantages over inductive approaches; in particular, their scalability is not limited by the power of a checking oracle, because the correctness of the implementation is guaranteed by construction.
 
-In this paper, we present a new approach to interactive deductive synthesis based on \emph{solver-aided tactics} that preserves the benefits of deductive synthesis techniques but reduces the burden on the user by relying on two important innovations: (a) the use of inductive synthesis to discover important details of the low-level steps needed by the transformation, (b) the use of a type system based on predicate abstraction (liquid types) that associates semantic information with program terms, enabling automated verification of the validity of a transformation. Both of these innovations rely on aggressive use of SMT solvers to discharge complex proof obligations that would otherwise have to be discharged interactively with significant manual effort. 
+In this paper, we present a new approach to interactive deductive synthesis based on \emph{solver-aided tactics} that preserves the benefits of deductive synthesis techniques but reduces the burden on the user by relying on two important innovations: (a) the use of inductive synthesis to discover important details of the low-level steps needed to achieve a transformation, (b) the use of a type system based on predicate abstraction (liquid types) that associates semantic information with program terms, enabling automated verification of the validity of a transformation. Both of these innovations rely on aggressive use of SMT solvers to discharge complex proof obligations that would otherwise have to be discharged interactively with significant manual effort. 
 
 We believe the approach has the potential to be generally applicable to a variety of synthesis problems, but in this paper, we focus on a particular domain of \emph{divide-and-conquer dynamic programming} algorithms. Specifically, we have developed a system called \emph{Bellmania} that uses solver-aided tactics specialized for this domain to help an algorithm designer derive divide-and-conquer dynamic programming algorithms from a high-level specification. As we illustrate in the next section, this domain is challenging not just as a synthesis target, but also for human experts. Therefore, in addition to serving as a test bed for a new synthesis approach, the development of Bellmania is a significant achievement in itself.
 
@@ -22,12 +22,7 @@ liquid types in the context of deductive synthesis:
 (b) The solver can prove validity of side conditions that ensure the soundness of each individual transformation, 
 (c) the tactics can leverage information from logically qualified types in the program in
     order to guide the transformation. 
-The flexibility of being able to rely on the solver to check the validity of
-transformations means that we do not have to compute a priori the set of all conditions under which a transformation can
-be applied. Even a transformation that is only sometimes correct can be useful as long as we check the validity of every
-application. Being able to rely on the solver to fill in parameters and proof details means
-that the user has to type less and has less chance for error.
-
+The flexibility of being able to rely on the solver to check the validity of transformations means that we do not have to rely on a conservative approximation of the set of cases when a transformation can be applied. Additionally, the reliance on the synthesizer to fill in parameters and proof details means that the user has to type less and has less chance for error.
 
 Overall, we make the following contributions.
 \begin{itemize}
@@ -42,6 +37,5 @@ Overall, we make the following contributions.
 \item We show that the side conditions can be effectively translated into first-order closed
   formulas, and verified automatically by SMT solvers.
 \item We demonstrates the first system capable of generating provably correct implementations of divide-and-conquer implementations from a high-level description of the algorithm. 
-\item We measure the performance of automatically generated code and show that it is
-  comparable to manually tuned reference implementations written by experts.
+\item We measure the performance of automatically generated code and show that it is comparable to manually tuned reference implementations written by experts.
 \end{itemize}
