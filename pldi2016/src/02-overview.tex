@@ -185,8 +185,8 @@ is sound.
 
 Repeating {\sf Stratify} would result in a four-step computation
 as seen in \Cref{overview:chain}, from which Richard can obtain the program in \Cref{overview:breakdown}
-(only the first two steps are shown, remaining steps are analogous).
-This already gives some performance, since the compututations \qbox2 and \qbox3
+(only the first two steps are shown; remaining steps are analogous).
+This already gives some performance gain, since the compututations \qbox2 and \qbox3
 can now run in parallel. However, this is not what Richard wants; so he
 changes the development of this procedure, which he calls ``A'', to produce
 a recursive divide-and-conquer algorithm.
@@ -326,8 +326,8 @@ synthesizes a recursive call A\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}$\big]
 The other steps require some further algebraic manipulation.
 Observe that the computation of \qbox2 is {\bf not} equivalent to
 A\big[$G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$], 
-because when $\frac{m}{2} \leq j < m$, the range of $0\leq q < j$ leads to
-some of the access $G_{iq}$ lying outside of \qbox2.
+because when $\frac{m}{2} \leq j < m$, the range $0\leq q < j$ leads to
+some accesses $G_{iq}$ lying outside of \qbox2.
 
 Richard addressed this problem by splitting the range of $q$ using the {\sf Slice}
 tactic again, effectively breaking the original $\min\langle\cdots\rangle$ into two:
@@ -380,7 +380,7 @@ The specific size bound needs to be tuned for performance.\footnote{The auto-tun
 Richard must then use the same strategy to further break down and
 transform the computations of B and C, each into four recursive sub-computations, 
 further improving the locality of the resulting algorithm.
-Eventually, through this kind of transformations, he can succeed in breaking the computation of $G$ into recursive sub-computations leading to a true divide-and-conquer algorithm. 
+Eventually, through these transformations, he can succeed in breaking the computation of $G$ into recursive sub-computations leading to a true divide-and-conquer algorithm. 
 
 As is well illustrated by the example, this line of reasoning can get quite complicated for most dynamic programming algorithms, 
 and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered the technique. 
