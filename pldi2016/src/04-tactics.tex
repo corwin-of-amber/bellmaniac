@@ -80,9 +80,9 @@ g'\,(f\,\theta)\,\theta ~=~ h\,\theta
 
 Proof is given in \Cref{tactics:soundness}.
 
-\tacticdef{Synth} \label{tactics:Synth}
-\[\fix\big(h_1 ~\big/~ \cdots ~\big/~ h_r\big) ~=~ 
-  f_1 :: \T_1 ~\big/~ \cdots ~\big/~ f_r :: \T_r\]
+\tacticdefcompact{Synth} \label{tactics:Synth}
+$\fix\big(h_1 ~\big/~ \cdots ~\big/~ h_r\big) ~=~ 
+  f_1 :: \T_1 ~\big/~ \cdots ~\big/~ f_r :: \T_r$
 
 This tactic is used to generate recursive calls to sub-programs. For $i=1..r$, $f_i$
 is one of the following: $\fix h_i$, $h_i\,\psi$, or $t\,\psi$, where $\psi$ is some

@@ -16,6 +16,10 @@ Broadly speaking, the Bellmania system could have been implemented as a library 
 such as Coq or Why3~\cite{ESOP13/Filliatre} using binding to SMT solvers provided by these frameworks.
 The decision not to do so was merely a design choice.
 
+Polyhedral compilers offer some optimizations for the same domain of problem via tiling~\cite{HPC10/Pouchet,PLDI08/Bondhugula}.
+While showing significant speedups, these compilers cannot produce divide-and-conquer optimizations,
+which were proved to be more effective by \cite{IPDPS15/Tithi}.
+
 \begin{comment}
 Our ``$\big/$'' operator can be compared to the separating disjunction ``$\ast$'' of Separation Logic~\cite{LICS02/Reynolds},
 used to frame parts of the dynamic heap (which can be thought of as one large array),

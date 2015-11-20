@@ -6,21 +6,21 @@
 		log basis y=2, ymajorgrids=true]
 	\addplot[color=blue!50!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=COZ] {data/perf-gap.txt}
 	  node(COZ-curve) [coordinate,pos=0.66] {};
-	\addplot[color=orange!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=CO] {data/perf-gap.txt}
-	  node(CO-curve) [coordinate,pos=0.5] {};
-	\addplot[color=olive!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=LOOPDP] {data/perf-gap.txt}
+	\addplot[color=olive!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=CO] {data/perf-gap.txt}
+	  node(CO-curve) [coordinate,pos=0.55] {};
+	\addplot[color=brown!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=LOOPDP] {data/perf-gap.txt}
 	  [yshift=-12pt] node[pos=0.05] {LOOPDP};
 	\addplot[color=red!70!white,ultra thick,mark=*,smooth] table[x=n/Time(s),y=Bellmania] {data/perf-gap.txt}
 	  node(Bellmania-curve) [coordinate,pos=0.4] {};
 	\end{axis}
 	
 	\begin{scope}[anchor=east]
-	  \node(CO-lbl)[orange!80!white] at(5,4) {CO\_Opt};
-	  \node(Bellmania-lbl)[red!80!white] at(6.75,2) {Bellmania};
+	  \node(CO-lbl)[olive!80!white] at(5,4) {CO\_Opt};
+	  \node(Bellmania-lbl)[red!80!white] at(6.75,2) {AUTO};
 	  \node(COZ-lbl)[blue!80!white] at(6.75,1) {COZ};
 	\end{scope}
 	\begin{scope}[->,dashed]
-	  \draw[orange] (CO-lbl) -- (CO-curve);
+	  \draw[olive] (CO-lbl.south west) -- (CO-curve);
 	  \draw[red] (Bellmania-lbl.north west) -- (Bellmania-curve);
 	  \draw[blue] (COZ-lbl) -- (COZ-curve);
 	\end{scope}
