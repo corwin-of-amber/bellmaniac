@@ -8,12 +8,10 @@ benchmarks in \cite{IPDPS15/Tithi}, and a few others.
 A generalized minimal edit distance problem. Given two input strings 
 $\overline{x}=x_1\cdots x_m$ and $\overline{y}=y_1\cdots y_n$,
 compute the cost of transforming $x$ into $y$ by any combination of the
-following steps
-\begin{itemize}
-  \item Replacing $x_i$ with $y_j$, at cost $c_{ij}$.
-  \item Deleting $x_{p+1}\cdots x_q$, at cost $\xw{pq}$.
-  \item Inserting $y_{p+1}\cdots y_q$ in $\overline{x}$, at cost $\yw{pq}$.
-\end{itemize}
+following steps:
+  (i) Replacing $x_i$ with $y_j$, at cost $c_{ij}$,
+  (ii) Deleting $x_{p+1}\cdots x_q$, at cost $\xw{pq}$,
+  (iii) Inserting $y_{p+1}\cdots y_q$ in $\overline{x}$, at cost $\yw{pq}$.
 \end{paragraph}
 
 \begin{paragraph}{Parenthesis problem.} Compute
@@ -40,6 +38,7 @@ the Longest Common Subsequence (LCS) problem, the Knapsack problem,
 and the Bitonic Traveling Salesman problem.
 
 \begin{figure}
+\vspace{-5mm}
 \[
   \renewcommand\arraystretch{1.2}
   \begin{array}{@{}l@{}l}
@@ -50,6 +49,7 @@ and the Bitonic Traveling Salesman problem.
        \min k\mapsto\theta_{ik}+\theta_{kj}+w_{ikj} \\
   \end{array}
 \]
+\vspace{-5mm}
 \caption{\label{evaluation:paren spec}
   Specifications for the Parenthesis problem.}
 \end{figure}
@@ -83,7 +83,7 @@ instead of recursion. It can be seen from the table that our implementation
 performs close to the manually optimized code and can be optimized further by 
 hand. Figure~\ref{fig:gap} depicts the performance of these implementations 
 on one sample instance
-as a function of problem size and shows the scalability of our technique. %ROHIT:scalability of what:the technique or the code?
+as a function of problem size, and shows the scalability of our technique. %ROHIT:scalability of what:the technique or the code?
 
 \begin{table}
 \centering

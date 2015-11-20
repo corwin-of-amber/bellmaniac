@@ -1,3 +1,4 @@
+\vspace{-3mm}
 \section{A Unified Language}
 \label{lang}
 
@@ -28,7 +29,7 @@ All functions are naturally extended, so that $f\,\bot=\bot$.
 \subsection{Operators}
 \label{lang:operators}
 
-The core is augmented with the following intrinsic operators:
+The core language is augmented with the following intrinsic operators:
 
 \begin{itemize}
   \item A fixed point operator $\fix f$, with denotational semantics
@@ -43,7 +44,7 @@ The core is augmented with the following intrinsic operators:
     \end{array}\]
   where $\overline{x} = x_1 \cdots x_n$. This second form can be used to
   refer to quadrants of an array; for example, in \Cref{overview:quadrants-abstract}, $\qbox2 \equiv [G]_{J_0\times J_1}$.
-  \item A slash operator $/$,     \vspace{-2pt}
+  \item A slash operator $/$~:     \vspace{-2pt}
   \[\renewcommand\arraystretch{1.5}
     \begin{array}{ll}
       \mbox{For scalars $x,y:\S$} & x/y = \begin{cases}x & \mbox{if }x\neq\bot \\ y & \mbox{if }x=\bot\end{cases} \\
@@ -53,8 +54,8 @@ The core is augmented with the following intrinsic operators:
   parts of the array. For example, \[\psi\mapsto \big[f\,\psi\big]_{I_0} ~ \Big/ ~ \big[g\,\psi\big]_{I_1}\]
   combines a result of $f$ in the lower indices of a (one-dimensional) array
   with a result of $g$ in the higher indices ($I_0$ and $I_1$, respectively, are the index subsets).
-  Notice that this does not limit the areas from which $f$ and $g$ read,
-  and they are free to access the entire domain of $\psi$.
+  Notice that this does not limit the areas from which $f$ and $g$ read;
+  they are free to access the entire domain of $\psi$.
 \end{itemize}
 
 In our concrete syntax, function application takes precedence over $/$,
@@ -139,7 +140,7 @@ obtained from it by removing all qualifiers.
 \tikz[baseline=(E.base)]\node(E)[rectangle,draw=black!20!white,rounded corners=.7em] {\bf Example.};
 }
 \examplePar
-The inputs $\xw{}$, $\yw{}$ to the Simplified Arbiter (\Cref{intro:arbiter spec}) can be typed using these droplets:
+The inputs $\xw{}$, $\yw{}$ to the Simplified Arbiter (\Cref{overview:arbiter spec}) can be typed using these droplets:
 \[
 \begin{array}{l}
   \xw{} : ((I\times I)\cap{<})\to J\to\R \\
@@ -234,7 +235,7 @@ occuring in either $\T_1$ or $\T_2$. The operator is defined in terms of the cor
     \[\T_1\sqcap\T_2 ~=~ x:(\S_1\sqcap\S_3)\to(\S_2\sqcap\S_4)\]
 \end{itemize}
 
-We then define the \newterm{type refinement} steps for $e$ a sub-term, listed in \Cref{lang:type refinement rules}.
+We then define the \newterm{type refinement} steps for terms. They are listed in \Cref{lang:type refinement rules}.
 These rules are applied continuously until a fixed point is reached.
 The resulting types are eventually converted back to droplet form (expressed via $\cap$ and $\times$);
 qualifiers that cannot be expressed in droplets are discarded.
