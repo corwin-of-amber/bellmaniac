@@ -143,27 +143,31 @@ For the tactics with \textbf{\textit{Obligations}:} tactic, the theorem is trivi
 \medskip
 \noindent
 {\tt >} For {\sf Stratify}, let $f$, $g$ be partial functions such that
+\vspace{-.5em}
 \[\renewcommand\arraystretch{1.3}
   \forall \theta,\zeta.\quad \begin{array}{l}f\,(g\,\zeta\,\theta) ~=~ f\,\zeta \\
   g\,(f\,\theta)\,\theta ~=~ h\,\theta
   \end{array}\quad\]
   
 Assume that $\zeta = \fix f$ and $\theta = \fix (g\,\zeta)$. That is,
+\vspace{-.5em}
 \[\renewcommand\arraystretch{1.3}
-  \begin{array}{l}
-    f\,\zeta = \zeta\\
+  \begin{array}{l@{\qquad}l}
+    f\,\zeta = \zeta &
     g\,\zeta\,\theta = \theta
   \end{array}\]
   
+\vspace{-.5em}
 Then ---
+\vspace{-.8em}
 \[\renewcommand\arraystretch{1.3}
   \begin{array}{l@{}l}
-   h\,\theta & {}= g\,(f\,\theta)\,\theta = g\,(f\,(g\,\zeta\,\theta))\,\theta = \\
-             & {}= g\,(f\,\zeta)\,\theta = \theta
+   h\,\theta & {}= g\,(f\,\theta)\,\theta = g\,(f\,(g\,\zeta\,\theta))\,\theta =
+              g\,(f\,\zeta)\,\theta = \theta
   \end{array}\]
   
 So $\theta = \fix h$. We get $\fix h = \fix \big(g \,(\fix f)\big)$, or, equivalently,
-\[\fix h = \fix f \applt \psi\mapsto\fix (g\,\psi)\]
+\[\fix h = (\fix f) \applt \big(\psi\mapsto\fix (g\,\psi)\big)\]
 
 Now instantiate $h$, $f$, and $g$, with $f\applt g$, $f$, and $g'$ from \Cref{tactics:Stratify},
 and we obtain the equality in the tactic.

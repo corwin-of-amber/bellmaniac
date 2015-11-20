@@ -108,71 +108,13 @@ to bottom, as shown in \Cref{overview:iterative}.
 
 
 \newcommand\qbox[1]{\fbox{\rm\scriptsize#1}}
+\newcommand\tinyqbox[1]{\hspace{.5pt}\tikz \node[draw,inner sep=1.5pt] {$\scriptscriptstyle #1$};}
+
+\newcommand\plusoneocd{\raisebox{.5pt}{$\scriptstyle+1$}}
 
 \algrenewtext{Procedure}{\hspace{-3mm}{\bf procedure}~}  % hach to make proc header slighly less indented
 
 \begin{paragraph}{Divide-and-Conquer Algorithm.}
-
-\newcommand\plusoneocd{\raisebox{.5pt}{$\scriptstyle+1$}}
-
-\begin{algorithm}
-\renewcommand\arraystretch{1.3}
-\begin{algorithmic}
-\Procedure{A{\larger{[}}$G${\larger{]}}}{}\EndProcedure
-  \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox1}
-    \For{$j=1..\frac{m}{2}$} 
-      \State $G_{ij} :=
-        \begin{array}[t]{@{}l@{~}l} 
-          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
-                      & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
-        \end{array}$
-    \EndFor
-  \EndFor
-  \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox2}
-    \For{$j=\frac{m}{2}\plusoneocd..m$}
-      \State $G_{ij} :=
-        \begin{array}[t]{@{}l@{~}l} 
-          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
-                      & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
-        \end{array}$
-    \EndFor
-  \EndFor
-  \State $\vdots$ \Head{Compute \qbox3}
-\end{algorithmic}
-\caption{\label{overview:breakdown}
-   Simplified Arbiter --- Sliced}
-\end{algorithm}
-
-\begin{algorithm}
-\renewcommand\arraystretch{1.3}
-\begin{algorithmic}
-\Procedure{A{\larger{[}}$G${\larger{]}}}{}\EndProcedure
-  \State A\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}$\big] \Head{Compute \qbox1}
-  \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox2}
-    \For{$j=\frac{m}{2}\plusoneocd..m$}
-      \State $G_{ij} :=
-        \begin{array}[t]{@{}l@{~}l} 
-          \min\langle & \underset{0\leq q<\frac{m}{2}}\min ~ G_{iq} + \yw{qji}~\rangle \\         
-        \end{array}$
-          \Comment{(left)}
-    \EndFor
-  \EndFor
-  \For{$i=1..\frac{n}{2}$}
-    \For{$j=\frac{m}{2}\plusoneocd..m$}
-      \State $G_{ij} :=
-        \begin{array}[t]{@{}l@{~}l} 
-          \min\langle G_{ij}, & \underset{\frac{m}{2}\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
-                      & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
-        \end{array}$
-          \Comment{(right)}
-    \EndFor
-  \EndFor
-  \State $\vdots$
-\end{algorithmic}
-\caption{\label{overview:further-breakdown}
-   Simplified Arbiter --- Sliced Even More}
-\end{algorithm}
-
 
 \begin{figure}
 \centering
@@ -221,23 +163,159 @@ illustrated graphically at the top of \Cref{overview:slice-stratify-synth}.
 and represent a high-level refinement concept.
 The partitions are labeled $I_0,I_1$ and $J_0,J_1$ for row index ranges and column index ranges,
 respectively.
-Richard obtains the program in \Cref{overview:breakdown}, which he names ``A'' 
-(only the first two steps are shown, remaining steps are analogous).
+Slicing gives the analog of the specification in \Cref{overview:logical-slice-stratify}({\it i}).
+The expression inside $\min\langle\cdots\rangle$ is shortened for space,
+but it is the same as in \Cref{overview:iterative}.
 
 Following the same reasoning as in the iterative case, computing \qbox1
 does not depend on any of the other computations. Richard applies the
 {\sf Stratify} tactic, which encodes exactly this intuition: it separates
 an independent computation step as a separate loop.
+This is equivalent to rewriting the specification as in \Cref{overview:logical-slice-stratify}({\it ii}):
+the first computation is given a special name $G^{\tinyqbox1}$, then the following
+computations read data either from $G^{\tinyqbox1}$ (when the indices are in \qbox1)
+or from $G$ (otherwise), which is denoted by $G^{\tinyqbox1}\!/G$. The ``$/\,$'' operator
+is part of the Bellmania language and will be defined formally in \Cref{lang}.
 Bellmania checks the data dependencies and verifies that the transformation
 is sound.
-A stratified computation can be seen in \Cref{overview:chain}. This does not,
-in fact, affect the generated program, but encodes some knowledge that the
-system has gained and presents the user with a clearer functional structure.
+
+Repeating {\sf Stratify} would result in a four-step computation
+as seen in \Cref{overview:chain}, from which Richard can obtain the program in \Cref{overview:breakdown}
+(only the first two steps are shown, remaining steps are analogous).
+This already gives some performance, since the compututations \qbox2 and \qbox3
+can now run in parallel. However, this is not what Richard wants; so he
+changes the development of this procedure, which he calls ``A'', to produce
+a recursive divide-and-conquer algorithm.
 \end{paragraph}
+
+
+\begin{figure}
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{@{}l@{}}
+    \textsf{Slice} \quad i:\langle I_0|I_1\rangle \quad j:\langle J_0|J_1\rangle \hfill (i)\\
+    ~\forall i,j\in\qbox1.~ G_{ij} = \min \langle\cdots G_{iq} \cdots G_{pj} \cdots \rangle \\
+    ~\forall i,j\in\qbox2.~ G_{ij} = \min \langle\cdots G_{iq} \cdots G_{pj} \cdots \rangle \\
+    ~\forall i,j\in\qbox3.~ G_{ij} = \min \langle\cdots G_{iq} \cdots G_{pj} \cdots \rangle \\
+    ~\forall i,j\in\qbox4.~ G_{ij} = \min \langle\cdots G_{iq} \cdots G_{pj} \cdots \rangle \\
+    %
+    \textsf{Stratify} ~ \qbox1 \hfill (ii)\\
+    %
+    ~\forall i,j\in\qbox1.~ G^{\tinyqbox1}_{ij} = \min \langle\cdots G^{\tinyqbox1}_{iq} \cdots G^{\tinyqbox1}_{pj} \cdots \rangle \\
+    ~\forall i,j\in\qbox2.~ G_{ij} = \min \langle\cdots (G^{\tinyqbox1}\!/G)_{iq} \cdots (G/G^{\tinyqbox1})_{pj} \cdots \rangle \\
+    ~\forall i,j\in\qbox3.~ G_{ij} = \min \langle\cdots (G/G^{\tinyqbox1})_{iq} \cdots (G/G^{\tinyqbox1})_{pj} \cdots \rangle \\
+    ~\forall i,j\in\qbox4.~ G_{ij} = \min \langle\cdots (G/G^{\tinyqbox1})_{iq} \cdots (G/G^{\tinyqbox1})_{pj} \cdots \rangle
+  \end{array}
+\]
+\caption{\label{overview:logical-slice-stratify}
+  The first two steps in the development, represented as logical specifications.}
+\end{figure}
+
+
+\newcommand\steparrowwidth{3mm}
+\newcommand\steparrow{\includegraphics[width=\steparrowwidth]{img/arrow}}
+
+\begin{figure}
+\centering
+\ifarmando
+\bigskip(missing figure)\bigskip
+\else
+\input{gfx/overview-chain}
+\fi
+\caption[caption]{\label{overview:chain}
+  Stratified computation for Simplified Arbiter. \\[.2em]
+  The array is initially empty except for the hatched area that is
+  filled by {\it Initialize}.
+  Shaded areas indicate the region that is read at each step.
+  The arrows point at the quadrant that is written to. }
+\end{figure}
+
+\newcommand\applytactic[1]{{\tt >} \sf #1}
+\newcommand\applytacticnode[1]{\node[right,align=left] at (3,1) {\applytactic{#1}}}
+
+
+\begin{algorithm}
+\renewcommand\arraystretch{1.3}
+\begin{algorithmic}
+\Procedure{A{\larger{[}}$G${\larger{]}}}{}\EndProcedure
+  \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox1}
+    \For{$j=1..\frac{m}{2}$} 
+      \State \hspace{-.5cm}$G_{ij} :=
+        \begin{array}{@{}l@{~}l} 
+          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, 
+                        \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
+        \end{array}$
+    \EndFor
+  \EndFor
+  \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox2}
+    \For{$j=\frac{m}{2}\plusoneocd..m$}
+      \State \hspace{-.5cm}$G_{ij} :=
+        \begin{array}[t]{@{}l@{~}l} 
+          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, 
+                        \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
+        \end{array}$
+    \EndFor
+  \EndFor
+  \State $\vdots$ \Head{Compute \qbox3}
+\end{algorithmic}
+\caption{\label{overview:breakdown}
+   Simplified Arbiter --- Sliced and Stratified}
+\end{algorithm}
+
+\begin{algorithm}
+\renewcommand\arraystretch{1.3}
+\begin{algorithmic}
+\Procedure{A{\larger{[}}$G${\larger{]}}}{}\EndProcedure
+  \State A\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}$\big] \Head{Compute \qbox1}
+  \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox2}
+    \For{$j=\frac{m}{2}\plusoneocd..m$}
+      \State $G_{ij} :=
+        \begin{array}[t]{@{}l@{~}l} 
+          \min\langle & \underset{0\leq q<\frac{m}{2}}\min ~ G_{iq} + \yw{qji}~\rangle \\         
+        \end{array}$
+          \Comment{(left)}
+    \EndFor
+  \EndFor
+  \For{$i=1..\frac{n}{2}$}
+    \For{$j=\frac{m}{2}\plusoneocd..m$}
+      \State $G_{ij} :=
+        \begin{array}[t]{@{}l@{~}l} 
+          \min\langle G_{ij}, & \underset{\frac{m}{2}\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
+                      & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
+        \end{array}$
+          \Comment{(right)}
+    \EndFor
+  \EndFor
+  \State $\vdots$
+\end{algorithmic}
+\caption{\label{overview:further-breakdown}
+   Simplified Arbiter --- Sliced Even More}
+\end{algorithm}
+
+
+\newbox\primebox
+\setbox\primebox\hbox{$'$}
+\newbox\doubleprimebox
+\setbox\doubleprimebox\hbox{$''$}
+
+\newcommand\primeocd[1]{\hspace{\wd\primebox}#1\usebox\primebox}
+\newcommand\doubleprimeocd[1]{\hspace{\wd\doubleprimebox}#1\usebox\doubleprimebox}
+
+\begin{figure}
+\centering
+\ifarmando
+\bigskip(missing figure)\bigskip
+\else
+\input{gfx/overview-slice-stratify-synth}
+\vspace{-2mm}
+\fi
+\caption[caption]{\label{overview:slice-stratify-synth}
+  Overview of tactic semantics in Bellmania. }
+\end{figure}
+
 
 \medskip
 At this point, Richard notices that {\it Compute \qbox1} is just a smaller version of
-the original {\it Compute}; he invokes {\sf Synth}, which automatically
+the original {\it Compute}; so following {\sf Stratify} \qbox1, he invokes {\sf Synth}, which automatically
 synthesizes a recursive call A\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}$\big]
 (presented using abstract index ranges as $A^{I_0J_0}$).
 
@@ -294,49 +372,6 @@ The specific size bound needs to be tuned for performance.\footnote{The auto-tun
 \caption{\label{overview:recursive-A}
    Simplified Arbiter --- Recursive Version}
 \end{algorithm}
-
-
-\newcommand\steparrowwidth{3mm}
-\newcommand\steparrow{\includegraphics[width=\steparrowwidth]{img/arrow}}
-
-\begin{figure}
-\centering
-\ifarmando
-\bigskip(missing figure)\bigskip
-\else
-\input{gfx/overview-chain}
-\fi
-\caption[caption]{\label{overview:chain}
-  Stratified computation for Simplified Arbiter. \\[.2em]
-  The array is initially empty except for the hatched area that is
-  filled by {\it Initialize}.
-  Shaded areas indicate the region that is read at each step.
-  The arrows point at the quadrant that is written to. }
-\end{figure}
-
-\newcommand\applytactic[1]{{\tt >} \sf #1}
-\newcommand\applytacticnode[1]{\node[right,align=left] at (3,1) {\applytactic{#1}}}
-
-\newbox\primebox
-\setbox\primebox\hbox{$'$}
-\newbox\doubleprimebox
-\setbox\doubleprimebox\hbox{$''$}
-
-\newcommand\primeocd[1]{\hspace{\wd\primebox}#1\usebox\primebox}
-\newcommand\doubleprimeocd[1]{\hspace{\wd\doubleprimebox}#1\usebox\doubleprimebox}
-
-\begin{figure}
-\centering
-\ifarmando
-\bigskip(missing figure)\bigskip
-\else
-\input{gfx/overview-slice-stratify-synth}
-\vspace{-2mm}
-\fi
-\caption[caption]{\label{overview:slice-stratify-synth}
-  Overview of tactic semantics in Bellmania. }
-\end{figure}
-
 
 Richard must then use the same strategy to further break down and
 transform the computations of B and C, each into four recursive sub-computations, 

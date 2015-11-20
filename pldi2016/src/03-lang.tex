@@ -1,4 +1,5 @@
 \section{A Unified Language}
+\label{lang}
 
 \newcommand\semp[1]{[\![{#1}]\!]}
 \newcommand\fix{\operatorname{fix}}
@@ -322,9 +323,9 @@ inferences:
 \exampleTitle  \begin{comment}\subsection{Example}\end{comment}
 
 \noindent
-The specification of the Simplified Arbiter (\Cref{intro:arbiter spec}) will be written as
+The specification of the Simplified Arbiter (\Cref{overview:arbiter spec}) will be written as
 %
-\begin{equation}
+\[
   \renewcommand\arraystretch{1.5}
   \begin{array}{@{}l@{}l@{}l@{}}
     \lspan3{\xw{} : ((I\times I)\cap{<})\to J\to\R} \\
@@ -334,8 +335,7 @@ The specification of the Simplified Arbiter (\Cref{intro:arbiter spec}) will be 
       & \min~\langle~ & \min p\mapsto\theta_{pj}+\xw{pij}, \\
       & & \min q\mapsto\theta_{iq}+\yw{qji} ~\rangle
   \end{array}
-  \label{lang:arbiter spec}
-\end{equation}
+\]
 
 \medskip
 We are using $f_{xy}$

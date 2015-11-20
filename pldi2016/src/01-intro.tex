@@ -22,7 +22,8 @@ liquid types in the context of deductive synthesis:
 (b) The solver can prove validity of side conditions that ensure the soundness of each individual transformation, 
 (c) the tactics can leverage information from logically qualified types in the program in
     order to guide the transformation. 
-The flexibility of being able to rely on the solver to check the validity of transformations means that we do not have to rely on a conservative approximation of the set of cases when a transformation can be applied. Additionally, the reliance on the synthesizer to fill in parameters and proof details means that the user has to type less and has less chance for error.
+The flexibility of being able to rely on the solver to check the validity of transformations means that we do not have to be conservative when checking if a transformation can be applied.
+In addition, the reliance on the synthesizer to fill in parameters and proof details means that the user has to type less and has less chance for error.
 
 Overall, we make the following contributions.
 \begin{itemize}
