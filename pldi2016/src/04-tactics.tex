@@ -33,7 +33,7 @@ More tactic definitions are given in the appendix.
 \tacticdef{Slice} \label{tactics:Slice}
 \[f ~=~ \big[f\big]_{X_1} ~\Big/~ \big[f\big]_{X_2} ~\Big/ ~\cdots~ \Big/~ \big[f\big]_{X_r}\] 
 
-This tactic partitions a mapping into sub-regions. Each $X_i$ may be a $\times$-expression
+This tactic partitions a mapping into sub-regions. Each $X_i$ may be a cross product ($\times$)
 according to the arity of $f$.
 
 \Obligations tactic.
@@ -41,18 +41,8 @@ according to the arity of $f$.
 Informally, the recombination expression is equal to $f$
 when $X_{1..r}$ ``cover'' all the defined points of $f$ (also known as the \newterm{support} of $f$).
 
-\tacticdef{Shrink} \label{tactics:Shrink}
-\[f ~=~ f :: \T\] 
-
-Used to extra-specify the type of a sub-term.
-
-\Obligations tactic.
-
-For arrow-typed terms, this essentially requires to prove that $f$ 
-is only defined for arguments in the domain of $\T$, and that the values are in the range of $\T$.
-
 \tacticdef{Stratify} \label{tactics:Stratify}
-\[\fix (f\applt g) ~=~ \fix f ~\applt~ \psi\mapsto \fix (\dot\psi\applt g)\]
+\[\fix (f\applt g) ~=~ (\fix f) ~\applt~ \big(\psi\mapsto \fix (\dot\psi\applt g)\big)\]
 %
 where $\dot\psi$ abbreviates $\theta\mapsto\psi$, with fresh variable $\theta$.
 
@@ -78,9 +68,11 @@ Although the proof is not hard, we defer it to a later theorem.
   f_1 :: \T_1 ~\big/~ \cdots ~\big/~ f_r :: \T_r\]
 
 This tactic is used to generate recursive calls to sub-programs. For $i=1..r$, $f_i$
-is typically either $\fix h_i$, $h_i\,\psi$, or $t\,\psi$, where $\psi$ is some
+is one of the following: $\fix h_i$, $h_i\,\psi$, or $t\,\psi$, where $\psi$ is some
 variable and $t$ is a term corresponding to a previously defined subroutine
 ($A$, $B$, $C$ in the example).
+Bellmania chooses these values automatically (see \Cref{tactics:synthesis}),
+but the user may override it.
 
 \newcommand\Y{\mathcal{Y}}
 
@@ -120,7 +112,21 @@ $f = \theta_{1..r} \mapsto (f_1\,\theta_1)::\T_1/\cdots/(f_r\,\theta_r)::\T_r$.
   {$\\[-1em] \\[.3ex] \hline \end{tabular} \end{center}}
 
 
+\subsection{Synthesis-supported {\sf Synth} Tactic}
+\label{tactics:synthesis}
+
+As mentioned in \Cref{intro,overview}, the user is assisted by automatic
+inference while applying tactics. In particular, the {\sf Synth} tactic requires
+the user to specify a subroutine to call and parameters to call it with.
+In addition, the subtype $\Y$ is required to complete the correctness proof.
+To automate this task, Bellmania employs {\cegis}, a software synthesis technique
+implemented in the tool {\Sketch}. The proof obligations, along with the possible
+space of parameter assignments taken from the set of sub-types defined during
+{\sf Slice}, are translated to {\Sketch}. Since {\Sketch} uses bounded domains,
+the result is then verified using full SMT.
+
 \subsection{Soundness}
+\label{tactics:soundness}
 
 \renewenvironment{proof}{\noindent{\bf Proof.~}}{}
 
@@ -172,36 +178,16 @@ as input to $h$ and $g$. This area is self-contained, in the sense that
 only elements in $\Y$ are needed to compute elements in $\Y$, as indicated
 by the refined type $\Y\to\Y$.
 
-First we show that for {\em any} $f : \T\to\T$, if either $f :: \T\to\Y = f :: \Y\to\Y$
-or $f :: \Y\to\T = f :: \Y\to\Y$, 
-then $(\fix f)::\Y = \fix (f :: \Y\to\Y)$. For the first case, assume $\theta=\fix f$,
+Notice that from the premise follows $g :: \Y\to\T = g :: \Y\to\Y$. We use the following corollary:
 
-\[\renewcommand\arraystretch{1.3}
-  \begin{array}{l}
-   \theta::\Y = (\theta\applt f)::\Y = \theta\applt(f::\T\to\Y) = \\
-   \qquad=\theta\applt(f::\Y\to\Y) = (\theta::\Y)\applt(f::\Y\to\Y)
- \end{array}\]
+\medskip\noindent
+{\bf Corollary.~} Let $f : \T\to\T$; if either $f :: \T\to\Y = f :: \Y\to\Y$ or $f :: \Y\to\T = f :: \Y\to\Y$, 
+then $(\fix f)::\Y = \fix (f :: \Y\to\Y)$.
 
-This means that $\theta::\Y = \fix(f::\Y\to\Y)$, as desired.
-For the second case, from domain theory we know that $\fix f = f^k\bot$ for some $k\geq 1$.
-We prove by induction that $f^k\bot = (f :: \Y\to\Y)^k\bot$.
+Proof is included in the appendix.
 
-For $k=1$, \[f\,\bot = f\,(\bot :: \Y) = (f :: \Y\to\T)\,\bot = (f :: \Y\to\Y)\,\bot\]
-
-Assume $f^k\bot = (f :: \Y\to\Y)^k\bot$, then definitely $f^k\bot = f^k\bot :: \Y$.
-Therefore, 
-\[\renewcommand\arraystretch{1.3}
-  \begin{array}{l}
-    f^{k+1}\bot = (f^k\bot)\applt f = (f^k\bot::\Y)\applt f = \\
-    \qquad = (f^k\bot)\applt(f::\Y\to\T) = \\
-    \qquad = ((f :: \Y\to\Y)^k\bot) \applt (f::\Y\to\Y) = \\
-    \qquad = (f::\Y\to\Y)^{k+1}\bot
-  \end{array}
-\]
-
-From this we learn that $\fix f = \fix(f :: \Y\to\Y) = (\fix f) :: \Y$.
-
-Now for the given $h$ and $f_i$, from the corollary, $(\fix h)::\Y = \fix(h::\Y\to\Y)$,
+\medskip
+From the corollary, and for the given $h$ and $g$, we learn that $(\fix h)::\Y = \fix(h::\Y\to\Y)$,
 and also $(\fix g)::\Y=\fix(g::\Y\to\Y)$. Since $h::\Y\to\Y=g::\Y\to\Y$,
 we get $(\fix h)::\Y = (\fix g)::\Y$; now, $\Y$ is a supertype of $\T_i$, so $(\theta::\Y)::\T_i=\theta::\T_i$:
 \[\renewcommand\arraystretch{1.3}
@@ -225,4 +211,3 @@ so practically, this should never become a problem.
 
 \newcommand\vtyped[2]{\underset{\scriptscriptstyle ( #2 )}{ #1 }}
 
-\todo{put an example here}

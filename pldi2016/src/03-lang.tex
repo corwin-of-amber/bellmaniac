@@ -59,6 +59,33 @@ The core is augmented with the following intrinsic operators:
 In our concrete syntax, function application takes precedence over $/$,
 and the bodies of $\mapsto$ spans as far as possible.
 
+\subsection{Primitives}
+
+The standard library contains some common primitives:
+
+\begin{itemize}
+  \item $\R$, a type for real numbers; $\N$ for natural numbers; $\B$ for Boolean true/false.
+  \item ${=} : \T\to\T\to\B$, always interpreted as equality.
+  \item ${+}, {-} : \T\to\T\to\T$, polymorphic binary operators.
+  \item ${<} : \T\to\T\to\B$, a polymorphic order relation.
+  \item $cons : \T\to(\N\to\T)\to(\N\to\T), nil : \N\to\T$, list constructors.
+  \item $\min, \max, \Sigma : (\T\to\S)\to\S$, reduction (aggregation) operators
+    on ordered/unordered collections. The collection is represented by a mapping $f : \T\to\S$,
+    so that e.g. \[\semp{\min f} = \min \big\{\semp{f}\,v \;\big|\; v\in\semp{\T}, \semp{f}\,v\neq\bot\big\}\]
+    The collections are expected to be finite.
+\end{itemize}
+
+\subsection{Additional Notation}
+\newcommand\applt{\textrm{{\scriptsize\,}\guillemotright{\scriptsize\,}}}
+
+We also adopt some syntactic sugar to make complex terms more managable:
+
+\begin{itemize}
+  \item $x \applt f ~=~ f\,x$ for application from the left.
+  \item $\langle t_1,\cdots,t_n\rangle = cons~t_1 ~ (cons \cdots (cons~t_n ~ nil) \cdots)$
+    for fixed-length lists.
+\end{itemize}
+
 \subsection{Types and Type Qualifiers}
 
 We extend the type system with predicate abstraction in the form of logically qualified data types 
@@ -134,14 +161,15 @@ specifying that some schedules are impossible, by setting the respective $w\,p\,
   e^k     & ::= & e^k \cap P & \mbox{\it\small for $k$-ary predicate symbol $P$} 
 \end{array}
 \]
+\vspace{-.5em}
 \caption{\label{lang:droplets}
-  Syntax of type qualifiers (droplets). $k$, $l$ are positive integer
-  dimension indexes.}
+  Syntax of type qualifiers (droplets). $k$, $l$ are positive integers
+  that stand for dimension indexes.}
 \end{figure}
 
 As mentioned earlier, annotations are ignored when typechecking a term.
 This gives a simple characterization of type safety without the need to
-explictly write any new typing rules. It also means that for $f:\T_1\to\T_2$, $x:T_3$, we obtain $f\,x:\T_2$ whenever
+explictly write any new typing rules. It also means that for $f:\T_1\to\T_2$, $x:\T_3$, we obtain $f\,x:\T_2$ whenever
 $\T_1$ and $\T_3$ have the same shape. This requires some explanation.
 
 Considering a (partial) function $\T\to\S$ to be a set of pairs of elements $\langle x,y\rangle$ 
@@ -171,7 +199,7 @@ Where $::$ is defined as follows:
 \medskip
 We extend our abstract syntax with an explicit \newterm{cast operator}
 $t::\T$ following this semantics. Notice that the second case of $[\,]_{_\square}\,$
-can be refined as syntactic sugar for $::$,
+can be defined as syntactic sugar for $::$,
 $[t]_{_\square} = t :: \square\to \_$, where $\_$ is a fresh
 type variable to be inferred.
 
@@ -290,38 +318,11 @@ inferences:
 \end{tikzpicture}
 \hspace*{\fill}
 
-\subsection{Primitives}
-
-The standard library contains some common primitives:
-
-\begin{itemize}
-  \item $\R$, a type for real numbers; $\N$ for natural numbers; $\B$ for Boolean true/false.
-  \item ${=} : \T\to\T\to\B$, always interpreted as equality.
-  \item ${+}, {-} : \T\to\T\to\T$, polymorphic binary operators.
-  \item ${<} : \T\to\T\to\B$, a polymorphic order relation.
-  \item $cons : \T\to(\N\to\T)\to(\N\to\T), nil : \N\to\T$, list constructors.
-  \item $\min, \max, \Sigma : (\T\to\S)\to\S$, reduction (aggregation) operators
-    on ordered/unordered collections. The collection is represented by a mapping $f : \T\to\S$,
-    so that e.g. \[\semp{\min f} = \min \big\{\semp{f}\,v \;\big|\; v\in\semp{\T}, \semp{f}\,v\neq\bot\big\}\]
-    The collections are expected to be finite.
-\end{itemize}
-
-\subsection{Additional Notation}
-\newcommand\applt{\textrm{{\scriptsize\,}\guillemotright{\scriptsize\,}}}
-
-We also adopt some syntactic sugar to make complex terms more managable:
-
-\begin{itemize}
-  \item $x \applt f ~=~ f\,x$ for application from the left.
-  \item $\langle t_1,\cdots,t_n\rangle = cons t_1 (cons \cdots (cons t_n nil) \cdots)$
-    for fixed-length lists.
-\end{itemize}
-
 
 \exampleTitle  \begin{comment}\subsection{Example}\end{comment}
 
 \noindent
-The specification of the Simplified Gap (\Cref{intro:arbiter spec}) will be written as
+The specification of the Simplified Arbiter (\Cref{intro:arbiter spec}) will be written as
 %
 \begin{equation}
   \renewcommand\arraystretch{1.5}
@@ -342,7 +343,7 @@ as a more readable alternative typography for $f\,x\,y$,
 where $f$ is a function symbol and $x$, $y$ are its arguments.
 
 Note that the ranges for $\min p$ and $\min q$ are implicit, from the types of
-$\xw{}$, $\yw{}$: \[\xw{pij}\neq\bot\limplies p<i \quad \mbox{and} \quad \yw{qji}\neq\bot\limplies q<j\]
+$\xw{}$, $\yw{}$: \[\xw{pij}\neq\bot\implies p<i \quad \mbox{and} \quad \yw{qji}\neq\bot\implies q<j\]
 
 \medskip
 \hrule
