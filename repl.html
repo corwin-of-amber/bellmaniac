@@ -31,6 +31,7 @@
 	<link rel="stylesheet" href="node_modules/codemirror/theme/neat.css">
 	<link rel="stylesheet" href="node_modules/codemirror/addon/hint/show-hint.css">
 	<link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
 	<link rel="stylesheet" href="src/index.css">
 </head>
 <body>
@@ -58,7 +59,17 @@
 					<textarea ui-codemirror="{ onLoad : wrapper(h), indentWithTabs : true }" ui-codemirror-opts="cmOptions" ng-model="h.input"></textarea>
 				</div>
 			</div>
-			<div ng-show="h.error.length > 0" class="alert alert-danger">{{h.error}}</div>
+			<div ng-show="h.error && h.error.msg.length > 0" class="alert alert-danger">
+				<div ng-hide="h.error && h.error.stack">{{h.error.msg}}</div>
+				<div ng-show="h.error && h.error.stack">
+					<a class="btn" ng-click="toggleStackShow(h.error)">
+						<i ng-hide="h.error.stackshow" class="fa fa-caret-right"></i>
+						<i ng-show="h.error.stackshow" class="fa fa-caret-down"></i>
+					</a>
+					<span ng-hide="h.error.stackshow">{{h.error.msg}}</span>
+					<span ng-show="h.error.stackshow">{{h.error.stack}}</span>
+				</div>
+			</div>
 			<div class="sk-fading-circle" ng-if="h.loading">
 			  <div class="sk-circle1 sk-circle"></div>
 			  <div class="sk-circle2 sk-circle"></div>

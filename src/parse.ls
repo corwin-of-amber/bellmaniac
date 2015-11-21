@@ -89,7 +89,6 @@ root.bellmaniaParse = (input, success, error) ->
             scope: window.scope
         ).value!
 
-        console.log(output.fromNearley)
 
         toStream = (stream) ->
             if input.isTactic
@@ -103,7 +102,6 @@ root.bellmaniaParse = (input, success, error) ->
                         term: term
                         # scope: parsedBlock.scope
                     }
-                    # console.log(JSON.stringify(tacticBlock));
 
                     stream.write <| JSON.stringify(tacticBlock)
                     stream.write "\n\n"

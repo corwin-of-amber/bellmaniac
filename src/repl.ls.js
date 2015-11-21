@@ -34,7 +34,11 @@
       };
       error = function(err){
         return $timeout(function(){
-          calc.error = err.message;
+          calc.error = {
+            msg: err.message,
+            stack: err.stack,
+            stackshow: false
+          };
           cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.offset + 1);
           cm.addOverlay(cm.currentOverlay);
           return calc.loading = false;
@@ -130,7 +134,6 @@
             return $timeout(function(){
               return async.series(_.map($scope.history, function(h){
                 return function(callback){
-                  console.log(h);
                   submitCm(h.cm, h);
                   return setTimeout(callback, 5000);
                 };
@@ -143,6 +146,9 @@
         };
         return reader.readAsText($scope.file);
       }
+    };
+    $scope.toggleStackShow = function(err){
+      return err.stackshow = !err.stackshow;
     };
   });
   x$.filter("collapse", function(){

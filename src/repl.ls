@@ -28,7 +28,11 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
 
         error = (err) ->
             $timeout(->
-                calc.error = err.message
+                calc.error = {
+                  msg: err.message,
+                  stack: err.stack,
+                  stackshow: false
+                }
                 cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.offset + 1)
                 cm.addOverlay(cm.currentOverlay)
                 calc.loading = false
@@ -109,7 +113,6 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
             $timeout(->
               async.series(_.map($scope.history, (h) ->
                 (callback) ->
-                    console.log(h)
                     submitCm(h.cm, h)
                     setTimeout(callback, 5000)
                     ))
@@ -118,6 +121,9 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
             bootbox.alert(message)
 
         reader.readAsText($scope.file)
+
+    $scope.toggleStackShow = (err) ->
+      err.stackshow = !err.stackshow
 
   ..filter "collapse" ->
     lead = -> it.match /^\s*/ .0.length
