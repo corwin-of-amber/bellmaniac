@@ -33,7 +33,12 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
                   stack: err.stack,
                   stackshow: false
                 }
-                cm.currentOverlay = errorOverlay(cm.getLine(err.line - 1), err.offset + 1)
+                line = err.line - 1
+                offset = err.offset + 1
+                while (offset >= cm.getLine(line).length)
+                  offset = offset - cm.getLine(line).length - 1
+                  line += 1
+                cm.currentOverlay = errorOverlay(cm.getLine(line), offset)
                 cm.addOverlay(cm.currentOverlay)
                 calc.loading = false
             )

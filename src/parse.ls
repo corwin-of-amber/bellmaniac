@@ -7,7 +7,7 @@ root = exports ? this
 stripComments = (input) ->
     input.replace //  \s* \/\/ .*$  |  \/\* [\s\S]*? \*\/  //mg, ''
 
-splitTextToBlocks = (input) ->
+root.splitTextToBlocks = (input) ->
     blocks = input.split /(\n+)(?!\s)/ .map ->
       text: it
     countLines = (text) -> (text.match(/\n/g)||[]).length
@@ -121,5 +121,3 @@ root.bellmaniaParse = (input, success, error) ->
 
     catch err
         error(err)
-        # err.message = JSON.stringify(err)
-        # error(err)
