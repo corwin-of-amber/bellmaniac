@@ -47,6 +47,7 @@ root.bellmaniaParse = (input, success, error) ->
 
         # spawn jar and initialize jar behavior
         jar = spawn "java", <[-jar lib/bell.jar -]>
+        #jar = spawn "../Bellmaniac/bell", <[ui.CLI -]>
         jar.stdout.setEncoding('utf-8')
         jar.stdout.on \data, (data) !->
             buffer.push(data)
@@ -59,7 +60,7 @@ root.bellmaniaParse = (input, success, error) ->
                 error(err, output)
 
         jar.stderr.on \data, (data) !->
-            error(data)
+            error(data, output)
 
         # reset global list of sets to empty
         root.scope = []

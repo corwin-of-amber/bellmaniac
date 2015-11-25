@@ -52,8 +52,10 @@
 
 			<div class="tab-content">
 				<div role="tabpanel" class="tab-pane active" id="parsed">
-					<pre>{{parsed | json:4}}</pre>
-					<pre>{{output | json:4}}</pre>
+                    <pre>[<span ng-repeat="obj in parsed" class="tip"
+                                data-tip="{{obj | json:4}}"> ∙ </span>]</pre>
+					<!--<pre>{{parsed | json:4}}</pre>
+					<pre>{{output | json:4}}</pre> -->
 				</div>
 				<div role="tabpanel" class="tab-pane" id="format">
 					<div class="cell" ng-repeat="cell in output | orderBy:'index'">

@@ -23,7 +23,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror]
       $scope.cm = cm)
 
     $scope.prefix = (s) -> s.match(/(.*?)-/)[1] || s
-    $scope.examples = ["Paren-A", "Paren-B", "Paren-C", "LCS-A", "Gap-A", "Gap-B"]
+    $scope.examples = ["Paren-A", "Paren-B", "Paren-C", "LCS-A", "Gap-A", "Gap-B", "Gap-C", "Accordion-A", "Accordion-B", "Accordion-C", "Accordion-D", "Knapsack-A", "Knapsack-B", "Bitonic-A", "Bitonic-B", "Bitonic-C"]
     $scope.open = !->
       if $scope.filename == null
         $scope.code = ""
