@@ -20,7 +20,7 @@
     "livescript": "^1.4.0",
     "lodash": "^3.10.1",
     "mocha": "^2.3.3",
-    "nearley": "^1.6.2",
+    "nearley": "^1.8.0",
     "ngbootbox": "^0.1.2",
     "nw": "^0.12.2",
     "prelude-ls": "^1.1.2",
