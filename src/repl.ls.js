@@ -6,7 +6,7 @@
   x$ = angular.module('app', ['RecursionHelper', 'ui.codemirror', 'ui.select', 'ngBootbox']);
   x$.controller("Ctrl", function($scope, $timeout, $ngBootbox){
     var submitCm;
-    submitCm = function(cm, parent){
+    submitCm = function(cm, parent, callback){
       var calc, thisIdx, thisId, success, error;
       cm.removeOverlay(cm.currentOverlay);
       calc = cm.parent;
@@ -29,7 +29,10 @@
               error: null
             });
           }
-          return calc.loading = false;
+          calc.loading = false;
+          if (callback) {
+            return callback();
+          }
         });
       };
       error = function(err){
@@ -100,26 +103,24 @@
       }];
     };
     $scope.save = function(){
-      return $ngBootbox.prompt("Save file as:", "newfile.json").then(function(filename){
-        var saveText, bb, blobURL, anchor;
-        saveText = JSON.stringify({
-          mostRecentId: $scope.mostRecentId,
-          history: _.map($scope.history, function(h){
-            return {
-              id: h.id,
-              input: h.input
-            };
-          })
-        });
-        bb = new Blob([saveText], {
-          type: "application/json"
-        });
-        blobURL = (window.URL || window.webkitURL).createObjectURL(bb);
-        anchor = document.createElement("a");
-        anchor.download = filename;
-        anchor.href = blobURL;
-        return anchor.click();
+      var saveText, bb, blobURL, anchor;
+      saveText = JSON.stringify({
+        mostRecentId: $scope.mostRecentId,
+        history: _.map($scope.history, function(h){
+          return {
+            id: h.id,
+            input: h.input
+          };
+        })
       });
+      bb = new Blob([saveText], {
+        type: "application/json"
+      });
+      blobURL = (window.URL || window.webkitURL).createObjectURL(bb);
+      anchor = document.createElement("a");
+      anchor.download = 'newfile.json';
+      anchor.href = blobURL;
+      return anchor.click();
     };
     $scope.load = function(){
       var reader;
@@ -139,10 +140,9 @@
               });
             });
             return $timeout(function(){
-              return async.series(_.map($scope.history, function(h){
+              return async.series(_.map(_.initial($scope.history), function(h){
                 return function(callback){
-                  submitCm(h.cm, h);
-                  return setTimeout(callback, 5000);
+                  return submitCm(h.cm, h, callback);
                 };
               }));
             });

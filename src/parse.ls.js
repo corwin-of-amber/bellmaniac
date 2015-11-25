@@ -119,8 +119,10 @@
             }
             tacticBlock = {
               tactic: parsedBlock.check,
-              term: term
+              term: term,
+              scope: parsedBlock.scope
             };
+            console.log(JSON.stringify(tacticBlock));
             stream.write(JSON.stringify(tacticBlock));
             stream.write("\n\n");
           }

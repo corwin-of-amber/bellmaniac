@@ -4,7 +4,7 @@ LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*$/
 angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
   ..controller "Ctrl" ($scope, $timeout, $ngBootbox) !->
 
-    submitCm = (cm, parent) ->
+    submitCm = (cm, parent, callback) ->
         cm.removeOverlay(cm.currentOverlay)
 
         calc = cm.parent
@@ -24,6 +24,8 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
                 if (thisId == ($scope.history.length))
                     $scope.history.push({id: thisId + 1, input: "", output: null, error: null})
                 calc.loading = false
+                if (callback)
+                  callback()
             )
 
         error = (err) ->
@@ -85,21 +87,18 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
       ]
 
     $scope.save = ->
-      $ngBootbox.prompt("Save file as:", "newfile.json")
-        .then((filename) ->
-          saveText = JSON.stringify({
-            mostRecentId: $scope.mostRecentId,
-            history: _.map($scope.history, (h) ->
-              {id: h.id, input: h.input}
-            )
-          })
-          bb = new Blob([saveText], {type: "application/json"})
-          blobURL = (window.URL || window.webkitURL).createObjectURL(bb);
-          anchor = document.createElement("a");
-          anchor.download = filename
-          anchor.href = blobURL
-          anchor.click()
+      saveText = JSON.stringify({
+        mostRecentId: $scope.mostRecentId,
+        history: _.map($scope.history, (h) ->
+          {id: h.id, input: h.input}
         )
+      })
+      bb = new Blob([saveText], {type: "application/json"})
+      blobURL = (window.URL || window.webkitURL).createObjectURL(bb);
+      anchor = document.createElement("a");
+      anchor.download = 'newfile.json'
+      anchor.href = blobURL
+      anchor.click()
 
     $scope.load = ->
       if ($scope.file)
@@ -116,10 +115,9 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
               )
             )
             $timeout(->
-              async.series(_.map($scope.history, (h) ->
+              async.series(_.map(_.initial($scope.history), (h) ->
                 (callback) ->
-                    submitCm(h.cm, h)
-                    setTimeout(callback, 5000)
+                    submitCm(h.cm, h, callback)
                     ))
             )
           catch {message}
