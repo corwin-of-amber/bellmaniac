@@ -100,14 +100,8 @@ object CLI {
   }
   
   def main(args: Array[String]) {
-    import org.rogach.scallop._
-    
-    object Conf extends ScallopConf(args toList) {
-      val prover: ScallopOption[String] = opt[String]("prover", default=Some("z3"))
-      val filename = trailArg[String](default=Some("-"))
-    }
-    
-    val filename = Conf.filename()
+    ui.Config(new ui.Config.CLIConfig(args toList))
+    val filename = ui.Config.config.filename()
     try {
       val f = new BufferedReader(
         if (filename == "-") new InputStreamReader(System.in) else new FileReader(filename))

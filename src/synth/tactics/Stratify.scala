@@ -28,6 +28,7 @@ import semantics.pattern.MacroMap
 import semantics.ProgressiveTypedSubstitution
 import semantics.Reflection.Consolidated
 import semantics.Binding
+import syntax.transform.EqByRef
 
 
 object Stratify {
@@ -124,8 +125,8 @@ object Stratify {
     def encapsulate(goal: Term, item: Term, item_uf: Term) = {
       val capsule = pullOut(goal, item) get
       val args = enclosure(goal, item) get
-      val subst = new ProgressiveTypedSubstitution(List((item, item_uf :@ (args))))
-      (capsule, subst(goal, (_ eq _)))
+      val subst = new ProgressiveTypedSubstitution(List((item, item_uf :@ (args)))) with EqByRef[Term]
+      (capsule, subst(goal))
     }
     
     def instantiate(goal: Term, concretes: List[Term]): Term = {

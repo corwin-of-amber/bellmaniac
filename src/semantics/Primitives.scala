@@ -299,6 +299,9 @@ object TypedLambdaCalculus {
   def context(term: Term, subterm: Term): Map[Any, Term] =
     enclosure(term, subterm) getOrElse List() map (x => (x.leaf.literal, x)) toMap
 
+  def contextDecl(term: Term, subterm: Term): Map[Identifier, Term] =
+    enclosure(term, subterm) getOrElse List() map (x => (x.leaf, TypedTerm.typeOf_!(x))) toMap
+
   def pullOut(term: Term, subterm: Term): Option[Term] = {
     if (term eq subterm) Some(term)
     else if (term =~ ("↦", 2)) 

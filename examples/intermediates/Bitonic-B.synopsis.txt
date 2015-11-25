@@ -3,7 +3,7 @@ J₀ J₁ : set
 K₀ K₁ K₂ K₃ : set
 
 B `J₀ `J₁
-
+∵
 SaveAs (B `J₀ `J₁) "loop"
 
 Slice (find (θ ↦ ?)) (`? ⟨`K₀, `K₁⟩ ⟨`K₂, `K₃⟩)
@@ -11,19 +11,14 @@ Stratify "/" (fixee 🄰) 🄰 ψ
 Stratify "/" (fixee 🄰) 🄰 ψ
 Stratify "/" (fixee 🄰) 🄰 ψ
 
-⟨Slice (find 🄵 θ) (`? ⟨`K₂, `K₃⟩), Slice (find 🄶 θ) (`? ⟨`K₂, `K₃⟩),
- Slice (find 🄻 θ) (`? ⟨`K₂, `K₃⟩), Slice (find 🄼 θ) (`? ⟨`K₂, `K₃⟩)⟩
-⟨Distrib "/" 🄵,  Distrib "/" 🄶, Distrib "/" 🄻,  Distrib "/" 🄼⟩
-⟨SlashToReduce min ⟨🄵,🄶⟩, SlashToReduce min ⟨🄷,🄸⟩,
- SlashToReduce min ⟨🄽,🄾⟩, SlashToReduce min ⟨🄿,🅀⟩⟩
+⟨Slice 🄵 θ (`? ⟨`K₂, `K₃⟩) min,
+ Slice 🄹 θ (`? ⟨`K₂, `K₃⟩) min⟩
 Assoc min
 
-⟨Stratify min (fixee 🄰) ⟨🄴,🄵,🄷⟩ ψ, 
- Stratify min (fixee 🄲) ⟨🄼,🄽,🄿⟩ ψ⟩
+⟨Stratify min (fixee 🄰) ⟨🄴,🄵⟩ ψ,
+ Stratify min (fixee 🄲) ⟨🄹,🄺⟩ ψ⟩
 
-⟨Synth (fixee 🄰) 🄰 (B `K₁ `K₃) ψ `K₁×K₃,
- Synth (fixee 🄲) 🄲 (B `K₁ `K₂) ψ `K₁×K₂,
- Synth (fixee 🄳) 🄳 (B `K₀ `K₃) ψ `K₀×K₃,
- Synth (fixee 🄵) 🄵 (B `K₀ `K₂) ψ `K₀×K₂⟩
+🄰 🄲 🄳 🄵 ↦ SynthAuto . B ψ
+Opt
 
 SaveAs (B `J₀ `J₁) "rec"

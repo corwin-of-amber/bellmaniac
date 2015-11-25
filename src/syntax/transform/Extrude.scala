@@ -38,7 +38,7 @@ class Extrude(val ops: Set[Identifier]) {
           }}) }
         case _ => term.subtrees map (x => (x, extrude0(x)))
       }
-    val xtr = new TypedSubstitution(subterms map (x => (x._1, x._2.terms.root)))(term, (_ eq _))
+    val xtr = new TypedSubstitution(subterms map (x => (x._1, x._2.terms.root))) with EqByRef[Term] apply (term)
     new ExtrudedTerms(new Tree(xtr, subterms flatMap (_._2.terms.subtrees)), subterms flatMap (_._2.labels) toMap)
   }
   

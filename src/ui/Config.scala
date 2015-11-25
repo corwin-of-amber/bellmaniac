@@ -24,7 +24,7 @@ object Config {
   abstract class BaseCommandLineConfig(args: List[String]) extends ScallopConf(args toList) with CommandLineConfig {
     val prover = opt[String]("prover", default=Some("z3"))
     val cert = opt[String]("cert", default=Some("Synth")).map((_.split(",").toList))
-    val log = opt[String]("log", default=Some("Synth")).map((_.split(",").toList))
+    val log = opt[String]("log", default=Some("none")).map((_.split(",").toList))
     val tmpdir = opt[String]("tmpdir", default=Some("/tmp")).map(new File(_))
     val opt = toggle("opt", default=Some(true))
     val cache = toggle("cache", default=Some(true))
@@ -38,7 +38,8 @@ object Config {
     val filename = trailArg[String](required=false, default=Some("/tmp/synopsis.json"))
   }
   
-  def tae(args: Array[String]) = { Sources.commandLine = Some[CommandLineConfig](new TAEConfig(args.toList)) }
+  def apply(cfg: CommandLineConfig) { Sources.commandLine = Some(cfg); }
+  def tae(args: Array[String]) = { apply(new TAEConfig(args toList)); }
   
   lazy val config = Sources.commandLine getOrElse { new CLIConfig(List.empty) };
 }

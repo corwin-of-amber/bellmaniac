@@ -19,6 +19,11 @@ import semantics.TypedLambdaCalculus
 import semantics.LambdaCalculus
 import semantics.pattern.SimplePattern
 import semantics.Trench
+import report.DevNull
+import report.AppendLog
+import report.data.Rich
+import syntax.transform.Extrude
+import syntax.transform.EqByRef
 
 
 
@@ -39,8 +44,8 @@ class Assistant(implicit env: Environment) {
   def encapsulate(goal: Term, item: Term, item_uf: Term) = {
     val capsule = pullOut(goal, item) get
     val args = enclosure(goal, item) get
-    val subst = new ProgressiveTypedSubstitution(List((item, item_uf :@ (args))))
-    (capsule, subst(goal, (_ eq _)))
+    val subst = new ProgressiveTypedSubstitution(List((item, item_uf :@ (args)))) with EqByRef[Term]
+    (capsule, subst(goal))
   }
   
   def instantiate(goal: Term, concretes: List[Term]): Term = {
@@ -129,8 +134,15 @@ class Assistant(implicit env: Environment) {
   /**
    * Use common idioms for passing a proof obligation to the prover.
    */
-  def invokeProver(assumptions: List[Term], goals: List[Term], subexprPattern: SimplePattern, verbose: Prover.Verbosity=null, oneByOne: Boolean=true, exitOnFail: Boolean=true)(implicit prover: Prover) = {
+  def invokeProver(assumptions: List[Term], goals: List[Term], subexprPattern: SimplePattern, verbose: Prover.Verbosity=null, oneByOne: Boolean=true, exitOnFail: Boolean=true)(implicit prover: Prover, logf: AppendLog=DevNull, extrude: Extrude=new Extrude(Set.empty)) = {
+    import syntax.Piping._
+
     println("· " * 25)
+
+    if (ui.Config.config.log() contains "Prover") {
+      for (goal <- goals) logf += Map("term" -> goal,
+        "display" -> Rich.display(extrude(goal) |-- report.console.Console.display))
+    }
 
     val commits =
       for (goals <- if (oneByOne) goals map (List(_)) else List(goals)) yield {

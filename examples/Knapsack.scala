@@ -11,6 +11,11 @@ import synth.pods.Pod
 import synth.pods.ConsPod.`⟨ ⟩`
 import semantics.Domains._
 import synth.proof.{Prover, Assistant}
+import examples.Accordion.PodFactory
+import syntax.Subroutine
+import syntax.Subroutine.Arity
+import scala.collection.immutable.ListMap
+import synth.engine.CollectStats
 
 
 object Knapsack {
@@ -81,8 +86,10 @@ object Knapsack {
       val partJ = PartitionPod(J, toJ.<, J0, J1)
       val partJ0 = PartitionPod(J0, toJ.<, K0, K1)
       val partJ1 = PartitionPod(J1, toJ.<, K2, K3)
+      val maxJR = MaxPod(J, R, toR.<)
+      val maxNR = MaxPod(N, R, toR.<)
 
-      new Prover(List(NatPod, TuplePod, toR, toI, toJ, idxI, idxJ, partI, partJ, partJ0, partJ1) ++ pods, verbose=Prover.Verbosity.ResultsOnly)
+      new Prover(List(NatPod, TuplePod, toR, toI, toJ, idxI, idxJ, partI, partJ, partJ0, partJ1, maxJR, maxNR) ++ pods, verbose=Prover.Verbosity.ResultsOnly)
     }
     
     override lazy val prover: Prover = prover(List())
@@ -94,13 +101,11 @@ object Knapsack {
     }
   }
   
-  class Interpreter(implicit scope: Scope) extends TacticApplicationEngine with InvokeProver {
-    import TacticApplicationEngine._
+  class Interpreter(implicit scope: Scope) extends TacticApplicationEngine with PodFactory with InvokeProver with CollectStats {
 
-    override def pods(implicit s: State) = {
-      case (L("A"), List(~(i), ~(j))) => APod(i, j)
-      case (L("B"), List(~(i), ~(j0), ~(j1))) => BPod(i, j0, j1)
-    }
+    def fac: Map[Any,Subroutine[Term,Pod] with Arity] = ListMap(
+        "A" -> Subroutine(APod), 
+        "B" -> Subroutine(BPod))
   }
 
 

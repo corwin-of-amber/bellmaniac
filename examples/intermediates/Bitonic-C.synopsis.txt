@@ -3,8 +3,8 @@ J : set
 J₀ J₁ : set
 K₀ K₁ K₂ K₃ : set
 
-(C `J₀ `J₁)
-
+C `J₀ `J₁
+∵
 SaveAs (C `J₀ `J₁) "loop"
 
 Slice (find (i ↦ ?)) ⟨`K₂×K₂, `K₂×K₃, `K₃×K₃⟩
@@ -12,14 +12,18 @@ Slice (find (i ↦ ?)) ⟨`K₂×K₂, `K₂×K₃, `K₃×K₃⟩
 Let "/" (slasher 🄰) 🄰 ψ
 Let "/" (slasher 🄰) 🄰 ψ
 
-⟨Slice (find 🄴 ψ) ⟨`K₀, `K₁⟩, Slice (find 🄶 ψ) ⟨`K₀, `K₁⟩, Slice (find 🄸 ψ) ⟨`K₀, `K₁⟩⟩
-⟨Distrib "/" 🄴, Distrib "/" 🄶, Distrib "/" 🄸⟩
-⟨SlashToReduce min ⟨🄴,🄵⟩, SlashToReduce min ⟨🄷,🄸⟩, SlashToReduce min ⟨🄺,🄻⟩⟩
+⟨Slice 🄴 (find 🄴 ψ) ⟨`K₀, `K₁⟩ min,
+ Slice 🄶 (find 🄶 ψ) ⟨`K₀, `K₁⟩ min,
+ Slice 🄸 (find 🄸 ψ) ⟨`K₀, `K₁⟩ min⟩
 Assoc min
 
 ⟨Let min (slasher 🄰) ⟨🄳,🄴⟩ ψ, Let min (slasher 🄱) ⟨🄶,🄷⟩ ψ, 
  Let min (slasher 🄲) ⟨🄹,🄺⟩ ψ⟩
+🄰 🄱 🄴 🄵 ↦ SynthAuto . ... ψ
+/*
 ⟨Synth 🄰 (C `K₁ `K₃) ψ, Synth 🄱 (C `K₀ `K₃) ψ, 
  Synth 🄴 (C `K₁ `K₂) ψ, Synth 🄵 (C `K₀ `K₂) ψ⟩
+*/
+Opt
 
 SaveAs (C `J₀ `J₁) "rec"

@@ -47,6 +47,13 @@ void minz(int n, ref |scalar| acc, fun fn) {
   return min_acc(bot, n, fn);
 }
 
+/* maximum */
+
+|scalar| max2(|scalar| a, |scalar| b) {
+  if ( b.supp && (!a.supp || b.val > a.val) ) a = b;
+  return a;
+}
+
 void maxz2(ref |scalar| a, |scalar| b) {
   if (b.supp && (!a.supp || (b.val > a.val))) a = b;
 }

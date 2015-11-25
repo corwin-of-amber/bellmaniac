@@ -33,11 +33,11 @@ import ui.CLI
 class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   import TacticApplicationEngine._
 
-  val extrude = Extrude(Set(I("/"), cons.root))
+  implicit val extrude = Extrude(Set(I("/"), cons.root))
 
   // Override to redirect
-  lazy val outf: AppendLog = new FileLog(new File("/tmp/prog.json"), new DisplayContainer)
-  lazy val logf: AppendLog = new FileLog(new File("/tmp/bell.json"), new DisplayContainer)
+  lazy val          outf: AppendLog = new FileLog(new File("/tmp/prog.json"), new DisplayContainer)
+  implicit lazy val logf: AppendLog = new FileLog(new File("/tmp/bell.json"), new DisplayContainer)
 
   /*
    * Eval part
@@ -278,6 +278,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       case _: StratifySlashPod | _: StratifySlash2Pod | _: LetSlashPod => cert contains "/"
       case _: StratifyReducePod | _: LetReducePod => cert contains "reduce"
       case _: SlicePod | _: SliceAndDicePod => cert contains "Slice"
+      case _: SlashDistribPod => cert contains "Distrib"
       case _ => false
     }
   }
@@ -294,7 +295,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
    * Services part
    */
 
-  lazy val prover: Prover = new Prover(List.empty)(Environment.empty)
+  implicit lazy val prover: Prover = new Prover(List.empty)(Environment.empty)
   
   def invokeProver(pod: Pod) { }
   

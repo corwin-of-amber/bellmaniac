@@ -23,6 +23,7 @@ import semantics.TypedIdentifier
 import semantics.TypedSubstitution
 import semantics.Reflection.Compound
 import semantics.Trench
+import syntax.transform.EqByRef
 
 
 /**
@@ -115,7 +116,7 @@ class Prover(val pods: List[Pod], val verbose: Prover.Verbosity=Prover.Verbosity
           println(s"${l.length}  x  ${prefix(se.enclosure map (_ toPretty) mkString " ")}${se.term toPretty}");
           val uf = let(se.capsule):@(se.enclosure)
           l map (_.term) map ((_, uf))
-        } toList)
+        } toList) with EqByRef[Term]
     
     def commit(assumptions: Iterable[Term], goals: Iterable[Term])(implicit d: DummyImplicit): Trench[Term] = {
       commit(assumptions, goals map (Compound(_)))

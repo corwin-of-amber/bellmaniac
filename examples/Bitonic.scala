@@ -11,6 +11,13 @@ import synth.pods.Pod
 import synth.pods.ConsPod.`⟨ ⟩`
 import semantics.Domains._
 import synth.proof.{Prover, Assistant}
+import syntax.Subroutine
+import syntax.Subroutine.Arity
+import scala.collection.immutable.ListMap
+import examples.Accordion.PodFactory
+import synth.engine.CollectStats
+import report.data.Rich
+
 
 
 object Bitonic {
@@ -48,8 +55,8 @@ object Bitonic {
       ψ ↦ fix((θ ↦: i ↦: j ↦: (
         min:@ `⟨ ⟩`(
           ψ:@(i,j),
-          (θ:@(i,j-_1)) + (d:@(i,j-_1)),
-          (min:@(k ↦ ((θ:@(k,i)) + (d:@(k,i))))) |! (succ:@(i,j))
+          (θ:@(i,j-_1)) + (d:@(i,j-_1))//,
+          //(min:@(k ↦ ((θ:@(k,i)) + (d:@(k,i))))) |! (succ:@(i,j))
         )
       )) :: (((J0 x J1) ∩ <) -> R) ->: (((J0 x J1) ∩ <) -> R))
     )
@@ -65,7 +72,7 @@ object Bitonic {
         (ψ :: (((J0 x J1) ∩ <) -> R),
         (i ↦: j ↦: (min:@ `⟨ ⟩`(
             ψ:@(i,j),
-            (min:@((k :: J0) ↦ ((ψ:@(k,i)) + (d:@(k,i))))) |! (succ:@(i,j))
+            (min:@((k :: J0) ↦  ((ψ:@(k,i)) + (d:@(k,i))))) |! (succ:@(i,j))
           )
         )) :: (((J1 x J1) ∩ <) -> R)
       )
@@ -99,23 +106,21 @@ object Bitonic {
       new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, minNR, minJR) ++ pods, verbose=Prover.Verbosity.ResultsOnly)
     }
     
-    override lazy val prover: Prover = prover(List())
+    override implicit lazy val prover: Prover = prover(List())
     
     override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
     def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
       val a = new Assistant
-      a.invokeProver(assumptions, goals, new SimplePattern(min :@ ?))(prover(pods))
+      a.invokeProver(assumptions, goals, new SimplePattern(min :@ ?))
     }
   }
   
-  class Interpreter(implicit scope: Scope) extends TacticApplicationEngine with InvokeProver {
-    import TacticApplicationEngine._
+  class Interpreter(implicit scope: Scope) extends TacticApplicationEngine with PodFactory with InvokeProver with CollectStats {
 
-    override def pods(implicit s: State) = {
-      case (L("A"), List(~(j))) => APod(j)
-      case (L("B"), List(~(j0), ~(j1))) => BPod(j0, j1)
-      case (L("C"), List(~(j0), ~(j1))) => CPod(j0, j1)
-    }
+    def fac: Map[Any,Subroutine[Term,Pod] with Arity] = ListMap(
+        "A" -> Subroutine(APod), 
+        "B" -> Subroutine(BPod),
+        "C" -> Subroutine(CPod))
   }
 
 

@@ -186,6 +186,7 @@ class Scope {
 object Scope {
 
   import syntax.AstSugar._
+  import Domains.SubsortAssoc
 
   class TypingException(msg: String) extends TraceableException(msg)
 
@@ -195,9 +196,14 @@ object Scope {
 
   def fromJson(json: DBObject)(implicit container: SerializationContainer) = json match {
     case list: BasicDBList =>
-      val ids = list collect { case x: DBObject => Identifier.fromJson(x) }
+      val ids = list collect { 
+        case l: BasicDBList => l.toList match {
+          case List(subsort: DBObject, supersort: DBObject) => Identifier.fromJson(subsort) :<: Identifier.fromJson(supersort)
+        }
+        case x: DBObject => Identifier.fromJson(x)
+      }
       val scope = new Scope
-      ids foreach scope.sorts.declare
+      ids foreach { case id: Identifier => scope.sorts.declare(id) case ext: Domains.Extends => scope.sorts.declare(ext) }
       scope.sorts.cork()
       scope
   }
