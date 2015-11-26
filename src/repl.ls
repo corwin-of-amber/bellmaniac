@@ -20,6 +20,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
             $timeout(->
                 calc.output = output.fromJar
                 calc.fromNearley = output.fromNearley
+                calc.scope = output.scope
 
                 if (thisId == ($scope.history.length))
                     $scope.history.push({id: thisId + 1, input: "", output: null, error: null})
@@ -54,6 +55,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
                 isTactic: true,
                 text: calc.input,
                 termJson: _.last($scope.history[thisIdx-1].output).value.term
+                previousScope: $scope.history[thisIdx-1].scope
                 },
                 success, error)
         cm.getInputField().blur()

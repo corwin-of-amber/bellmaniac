@@ -75,10 +75,22 @@
         }
       });
       jar.stderr.on('data', function(data){
-        error(data);
+        error(data, output);
       });
       root.scope = [];
       mode = "check";
+      if (input.previousScope) {
+        output.scope = _.uniq(window.scope.concat(input.previousScope), function(s){
+          var ref$;
+          return (ref$ = s.literal) != null
+            ? ref$
+            : {
+              literal: s[s[0].literal]
+            };
+        });
+      } else {
+        output.scope = window.scope;
+      }
       output.fromNearley = _.chain(blocks).map(function(block){
         var p, parsed, results, x$, ref$, err;
         p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
@@ -105,7 +117,7 @@
         return block.kind !== 'set' && !(block.setMode != null);
       }).map(function(block){
         var ref$;
-        return ref$ = {}, ref$[block.mode] = block, ref$.scope = window.scope, ref$;
+        return ref$ = {}, ref$[block.mode] = block, ref$.scope = output.scope, ref$;
       }).value();
       toStream = function(stream){
         var i$, ref$, len$, parsedBlock, term, tacticBlock;
@@ -122,7 +134,6 @@
               term: term,
               scope: parsedBlock.scope
             };
-            console.log(JSON.stringify(tacticBlock));
             stream.write(JSON.stringify(tacticBlock));
             stream.write("\n\n");
           }

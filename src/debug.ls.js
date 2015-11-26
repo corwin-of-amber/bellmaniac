@@ -26,7 +26,7 @@
     $scope.prefix = function(s){
       return s.match(/(.*?)-/)[1] || s;
     };
-    $scope.examples = ["Paren-A", "Paren-B", "Paren-C", "LCS-A", "Gap-A", "Gap-B"];
+    $scope.examples = ["Paren-A", "Paren-B", "Paren-C", "LCS-A", "Gap-A", "Gap-B", "Gap-C", "Accordion-A", "Accordion-B", "Accordion-C", "Accordion-D", "Knapsack-A", "Knapsack-B", "Bitonic-A", "Bitonic-B", "Bitonic-C"];
     $scope.open = function(){
       var filename;
       if ($scope.filename === null) {

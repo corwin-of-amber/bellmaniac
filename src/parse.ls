@@ -67,6 +67,13 @@ root.bellmaniaParse = (input, success, error) ->
 
         mode = "check"
 
+        if (input.previousScope)
+            output.scope = _.uniq(window.scope.concat(input.previousScope), (s) ->
+                s.literal ? s.literal : s[0].literal
+            )
+        else
+            output.scope = window.scope
+
         output.fromNearley = _.chain(blocks)
         .map((block) ->
             # parse block with nearley, filter only non-false results, assert parse unambiguous
@@ -87,9 +94,8 @@ root.bellmaniaParse = (input, success, error) ->
         ).map((block) ->
             # wrap each expression in another layer that includes scope
             (block.mode): block
-            scope: window.scope
+            scope: output.scope
         ).value!
-
 
         toStream = (stream) ->
             if input.isTactic
@@ -98,13 +104,14 @@ root.bellmaniaParse = (input, success, error) ->
                         term = tree(identifier(\program, '?'), [input.termJson])
                     else
                         term = input.termJson
+
                     tacticBlock = {
                         tactic: parsedBlock.check,
                         term: term
                         scope: parsedBlock.scope
                     }
 
-                    console.log(JSON.stringify(tacticBlock))
+                    # console.log(JSON.stringify(tacticBlock))
 
                     stream.write <| JSON.stringify(tacticBlock)
                     stream.write "\n\n"
