@@ -25,6 +25,11 @@
   margin-right: 15px;
 }
 
+.error .message,
+.error .stack {
+  white-space: pre-wrap;
+}
+
 /* get bootstrap styling for CodeMirror */
 textarea, .CodeMirror {
   line-height: 1.3em;

@@ -1,0 +1,1 @@
+{"mostRecentId":2,"history":[{"id":1,"input":"J R N:set\nψ ↦ fix ((θ i j ↦ min ⟨ψ i j, min (k ↦ θ i k + θ k j)⟩) : (J×J∩< -> R) -> (J->J->R))"},{"id":2,"input":"Slice (find (θ ↦ ?)) (`? ⟨`J₀×J₀, `J₀×J₁, `J₁×J₁⟩)"},{"id":3,"input":""}]}
