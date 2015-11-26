@@ -86,21 +86,18 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
       ]
 
     $scope.save = ->
-      $ngBootbox.prompt("Save file as:", "newfile.json")
-        .then((filename) ->
-          saveText = JSON.stringify({
-            mostRecentId: $scope.mostRecentId,
-            history: _.map($scope.history, (h) ->
-              {id: h.id, input: h.input}
-            )
-          })
-          bb = new Blob([saveText], {type: "application/json"})
-          blobURL = (window.URL || window.webkitURL).createObjectURL(bb);
-          anchor = document.createElement("a");
-          anchor.download = filename
-          anchor.href = blobURL
-          anchor.click()
+      saveText = JSON.stringify({
+        mostRecentId: $scope.mostRecentId,
+        history: _.map($scope.history, (h) ->
+          {id: h.id, input: h.input}
         )
+      })
+      bb = new Blob([saveText], {type: "application/json"})
+      blobURL = (window.URL || window.webkitURL).createObjectURL(bb);
+      anchor = document.createElement("a");
+      anchor.download = 'newfile.json'
+      anchor.href = blobURL
+      anchor.click()
 
     $scope.load = ->
       if ($scope.file)

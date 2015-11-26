@@ -103,7 +103,7 @@ root.bellmaniaParse = (input, success, error) ->
                     tacticBlock = {
                         tactic: parsedBlock.check,
                         term: term
-                        # scope: parsedBlock.scope
+                        scope: parsedBlock.scope
                     }
 
                     stream.write <| JSON.stringify(tacticBlock)
