@@ -4,7 +4,7 @@ LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*$/
 angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
   ..controller "Ctrl" ($scope, $timeout, $ngBootbox) !->
 
-    submitCm = (cm, parent, callback) ->
+    submitCm = (cm, parent, callback=->) ->
         cm.removeOverlay(cm.currentOverlay)
 
         calc = cm.parent
@@ -17,7 +17,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
         thisId = thisIdx + 1 # "id" of In[] and Out[] start from 1
 
         success = (output) ->
-            $timeout(->
+            $timeout ->
                 calc.output = output.fromJar
                 calc.fromNearley = output.fromNearley
                 calc.scope = output.scope
@@ -25,26 +25,25 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
                 if (thisId == ($scope.history.length))
                     $scope.history.push({id: thisId + 1, input: "", output: null, error: null})
                 calc.loading = false
-                if (callback)
-                  callback()
-            )
+                callback(null, calc)
 
         error = (err) ->
-            $timeout(->
-                calc.error = {
-                  msg: err.message,
-                  stack: err.stack,
+            $timeout ->
+                calc.error =
+                  msg: err.message
+                  stack: err.stack
                   stackshow: false
-                }
-                line = err.line - 1
-                offset = err.offset + 1
-                while (offset >= cm.getLine(line).length)
-                  offset = offset - cm.getLine(line).length - 1
-                  line += 1
-                cm.currentOverlay = errorOverlay(cm.getLine(line), offset)
-                cm.addOverlay(cm.currentOverlay)
+
+                if err.line? && err.offset?
+                  line = err.line - 1
+                  offset = err.offset + 1
+                  while (offset >= cm.getLine(line).length)
+                    offset = offset - cm.getLine(line).length - 1
+                    line += 1
+                  cm.currentOverlay = errorOverlay(cm.getLine(line), offset)
+                  cm.addOverlay(cm.currentOverlay)
                 calc.loading = false
-            )
+                callback(err)
 
         if (thisIdx == 0)
             # parse as a term
@@ -116,12 +115,9 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
                 h
               )
             )
-            $timeout(->
-              async.series(_.map(_.initial($scope.history), (h) ->
-                (callback) ->
-                    submitCm(h.cm, h, callback)
-                    ))
-            )
+            $timeout ->
+              async.eachSeries $scope.history, (h, callback) ->
+                submitCm h.cm, h, callback
           catch {message}
             bootbox.alert(message)
 

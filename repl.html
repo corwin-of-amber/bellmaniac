@@ -26,6 +26,7 @@
 	<script src="src/parse.ls.js"></script>
 	<script src="src/repl.ls.js"></script>
 	<script src="../web.realtime/reload.js"></script>
+    <script>Reload.ignore(/^examples\//);</script>
 
 	<link rel="stylesheet" href="node_modules/codemirror/lib/codemirror.css">
 	<link rel="stylesheet" href="node_modules/codemirror/theme/neat.css">
@@ -59,15 +60,15 @@
 					<textarea ui-codemirror="{ onLoad : wrapper(h), indentWithTabs : true }" ui-codemirror-opts="cmOptions" ng-model="h.input"></textarea>
 				</div>
 			</div>
-			<div ng-show="h.error && h.error.msg.length > 0" class="alert alert-danger">
-				<div ng-hide="h.error && h.error.stack">{{h.error.msg}}</div>
+			<div ng-show="h.error && h.error.msg.length > 0" class="alert alert-danger error">
+				<div ng-hide="h.error && h.error.stack" class="message">{{h.error.msg}}</div>
 				<div ng-show="h.error && h.error.stack">
 					<a class="btn" ng-click="toggleStackShow(h.error)">
 						<i ng-hide="h.error.stackshow" class="fa fa-caret-right"></i>
 						<i ng-show="h.error.stackshow" class="fa fa-caret-down"></i>
 					</a>
-					<span ng-hide="h.error.stackshow">{{h.error.msg}}</span>
-					<span ng-show="h.error.stackshow">{{h.error.stack}}</span>
+					<span ng-hide="h.error.stackshow" class="message">{{h.error.msg}}</span>
+					<span ng-show="h.error.stackshow" class="stack">{{h.error.stack}}</span>
 				</div>
 			</div>
 			<div class="sk-fading-circle" ng-if="h.loading">
@@ -85,7 +86,6 @@
 			  <div class="sk-circle12 sk-circle"></div>
 			</div>
 			<div class="row" ng-if="h.output" ng-class="{invalid: isInvalid(h)}">
-				<br>
 				<div class="col-xs-1">{{"Out[" + h.id + "]"}}</div>
 				<div class="col-xs-11">
 					<div class="cell" ng-repeat="cell in h.output | orderBy:'index'">

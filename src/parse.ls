@@ -39,8 +39,6 @@ root.bellmaniaParse = (input, success, error) ->
     blocks = splitTextToBlocks(stripComments(input.text))
 
     try
-        buffer = []
-
         output =
             fromNearley: []
             fromJar: []
@@ -48,19 +46,23 @@ root.bellmaniaParse = (input, success, error) ->
         # spawn jar and initialize jar behavior
         jar = spawn "java", <[-jar lib/bell.jar -]>
         #jar = spawn "../Bellmaniac/bell", <[ui.CLI -]>
-        jar.stdout.setEncoding('utf-8')
-        jar.stdout.on \data, (data) !->
-            buffer.push(data)
 
-        jar.stdout.on \end, !->
+        fromStream = (stream, callback) ->
+            stream.setEncoding('utf-8')
+            buffer = []
+            stream.on \data, (data) !-> buffer.push(data)
+            stream.on \end, !-> callback(buffer.join(""))
+
+        fromStream jar.stdout, (out) !->
             try
-                output.fromJar = readResponseBlocks buffer.join(""), output.fromNearley
+                output.fromJar = readResponseBlocks out, output.fromNearley
                 success(output)
             catch err
                 error(err, output)
 
-        jar.stderr.on \data, (data) !->
-            error(data, output)
+        fromStream jar.stderr, (err) !->
+            if err != ""
+                error({message: err}, output)
 
         # reset global list of sets to empty
         root.scope = []
@@ -110,8 +112,6 @@ root.bellmaniaParse = (input, success, error) ->
                         term: term
                         scope: parsedBlock.scope
                     }
-
-                    # console.log(JSON.stringify(tacticBlock))
 
                     stream.write <| JSON.stringify(tacticBlock)
                     stream.write "\n\n"

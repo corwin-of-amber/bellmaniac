@@ -8,6 +8,7 @@
     var submitCm;
     submitCm = function(cm, parent, callback){
       var calc, thisIdx, thisId, success, error;
+      callback == null && (callback = function(){});
       cm.removeOverlay(cm.currentOverlay);
       calc = cm.parent;
       calc.output = null;
@@ -31,9 +32,7 @@
             });
           }
           calc.loading = false;
-          if (callback) {
-            return callback();
-          }
+          return callback(null, calc);
         });
       };
       error = function(err){
@@ -44,15 +43,18 @@
             stack: err.stack,
             stackshow: false
           };
-          line = err.line - 1;
-          offset = err.offset + 1;
-          while (offset >= cm.getLine(line).length) {
-            offset = offset - cm.getLine(line).length - 1;
-            line += 1;
+          if (err.line != null && err.offset != null) {
+            line = err.line - 1;
+            offset = err.offset + 1;
+            while (offset >= cm.getLine(line).length) {
+              offset = offset - cm.getLine(line).length - 1;
+              line += 1;
+            }
+            cm.currentOverlay = errorOverlay(cm.getLine(line), offset);
+            cm.addOverlay(cm.currentOverlay);
           }
-          cm.currentOverlay = errorOverlay(cm.getLine(line), offset);
-          cm.addOverlay(cm.currentOverlay);
-          return calc.loading = false;
+          calc.loading = false;
+          return callback(err);
         });
       };
       if (thisIdx === 0) {
@@ -142,11 +144,9 @@
               });
             });
             return $timeout(function(){
-              return async.series(_.map(_.initial($scope.history), function(h){
-                return function(callback){
-                  return submitCm(h.cm, h, callback);
-                };
-              }));
+              return async.eachSeries($scope.history, function(h, callback){
+                return submitCm(h.cm, h, callback);
+              });
             });
           } catch (e$) {
             message = e$.message;

@@ -51,31 +51,41 @@
     return results$;
   };
   root.bellmaniaParse = function(input, success, error){
-    var blocks, buffer, output, jar, mode, toStream, stream, err;
+    var blocks, output, jar, fromStream, mode, toStream, stream, err;
     blocks = splitTextToBlocks(stripComments(input.text));
     try {
-      buffer = [];
       output = {
         fromNearley: [],
         fromJar: []
       };
       jar = spawn("java", ['-jar', 'lib/bell.jar', '-']);
-      jar.stdout.setEncoding('utf-8');
-      jar.stdout.on('data', function(data){
-        buffer.push(data);
-      });
-      jar.stdout.on('end', function(){
+      fromStream = function(stream, callback){
+        var buffer;
+        stream.setEncoding('utf-8');
+        buffer = [];
+        stream.on('data', function(data){
+          buffer.push(data);
+        });
+        return stream.on('end', function(){
+          callback(buffer.join(""));
+        });
+      };
+      fromStream(jar.stdout, function(out){
         var err;
         try {
-          output.fromJar = readResponseBlocks(buffer.join(""), output.fromNearley);
+          output.fromJar = readResponseBlocks(out, output.fromNearley);
           success(output);
         } catch (e$) {
           err = e$;
           error(err, output);
         }
       });
-      jar.stderr.on('data', function(data){
-        error(data, output);
+      fromStream(jar.stderr, function(err){
+        if (err !== "") {
+          error({
+            message: err
+          }, output);
+        }
       });
       root.scope = [];
       mode = "check";
