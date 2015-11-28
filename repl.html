@@ -63,12 +63,11 @@
 			<div ng-show="h.error && h.error.msg.length > 0" class="alert alert-danger error">
 				<div ng-hide="h.error && h.error.stack" class="message">{{h.error.msg}}</div>
 				<div ng-show="h.error && h.error.stack">
-					<a class="btn" ng-click="toggleStackShow(h.error)">
-						<i ng-hide="h.error.stackshow" class="fa fa-caret-right"></i>
-						<i ng-show="h.error.stackshow" class="fa fa-caret-down"></i>
-					</a>
-					<span ng-hide="h.error.stackshow" class="message">{{h.error.msg}}</span>
-					<span ng-show="h.error.stackshow" class="stack">{{h.error.stack}}</span>
+					<a class="expand-collapse" ng-click="toggleStackShow(h.error)">
+						<i class="fa" ng-class="{'fa-caret-right': !h.error.stackshow, 'fa-caret-down': h.error.stackshow}"></i>
+                    </a><!-- funky layout to avoid spaces
+                    --><span ng-hide="h.error.stackshow" class="message">{{h.error.msg}}</span><!--
+					--><span ng-show="h.error.stackshow" class="stack">{{h.error.stack}}</span>
 				</div>
 			</div>
 			<div class="sk-fading-circle" ng-if="h.loading">

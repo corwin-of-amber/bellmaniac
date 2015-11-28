@@ -28,13 +28,19 @@ readResponseBlocks = (output, parsedInputs) ->
               err.line = (..check ? ..tactic)?.line
             throw err
 
+wrapWith = (term, rootLiteral, kind='?') ->
+    if (term.root.literal != rootLiteral)
+        tree(identifier(rootLiteral, kind), [term])
+    else
+        term
+            
 # input is of form
 #     {isTactic: bool,
 #      text: string from codemirror
 #      termJson:? previous json if isTactic is true
 #      scope:? previous scope if isTactic is true
 #     }
-root.bellmaniaParse = (input, success, error) ->
+root.bellmaniaParse = (input, success, error, name='synopsis') ->
 
     blocks = splitTextToBlocks(stripComments(input.text))
 
@@ -44,8 +50,8 @@ root.bellmaniaParse = (input, success, error) ->
             fromJar: []
 
         # spawn jar and initialize jar behavior
-        jar = spawn "java", <[-jar lib/bell.jar -]>
-        #jar = spawn "../Bellmaniac/bell", <[ui.CLI -]>
+        #jar = spawn "java", <[-jar lib/bell.jar -]>
+        jar = spawn "../Bellmaniac/bell", <[ui.CLI -]>
 
         fromStream = (stream, callback) ->
             stream.setEncoding('utf-8')
@@ -69,9 +75,9 @@ root.bellmaniaParse = (input, success, error) ->
 
         mode = "check"
 
-        if (input.previousScope)
-            output.scope = _.uniq(window.scope.concat(input.previousScope), (s) ->
-                s.literal ? s.literal : s[0].literal
+        if (input.scope)
+            output.scope = _.uniq(window.scope.concat(input.scope), (s) ->
+                s.literal ? s[0].literal
             )
         else
             output.scope = window.scope
@@ -102,10 +108,7 @@ root.bellmaniaParse = (input, success, error) ->
         toStream = (stream) ->
             if input.isTactic
                 for parsedBlock in output.fromNearley
-                    if (input.termJson.root.literal != \program)
-                        term = tree(identifier(\program, '?'), [input.termJson])
-                    else
-                        term = input.termJson
+                    term = wrapWith(input.termJson, \program)
 
                     tacticBlock = {
                         tactic: parsedBlock.check,
@@ -121,9 +124,9 @@ root.bellmaniaParse = (input, success, error) ->
                     stream.write "\n\n"
             stream.end!
 
-        fs.writeFileSync "/tmp/synopsis.txt" input.text
+        fs.writeFileSync "/tmp/#name.txt" input.text
 
-        stream = fs.createWriteStream "/tmp/synopsis.json"
+        stream = fs.createWriteStream "/tmp/#name.json"
         stream.once \open -> toStream stream
 
         jar.stdin.setEncoding('utf-8')

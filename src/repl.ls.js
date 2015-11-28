@@ -67,8 +67,8 @@
           isTactic: true,
           text: calc.input,
           termJson: _.last($scope.history[thisIdx - 1].output).value.term,
-          previousScope: $scope.history[thisIdx - 1].scope
-        }, success, error);
+          scope: $scope.history[thisIdx - 1].scope
+        }, success, error, "cell-" + (thisIdx + 1));
       }
       cm.getInputField().blur();
       $scope.mostRecentId = thisId;

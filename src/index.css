@@ -132,6 +132,14 @@ ul.c[bullet="◦"] li:before {
   color: gainsboro !important;
 }
 
+a.expand-collapse {
+  text-decoration: none;
+  display: inline-block;
+  width: 10px;
+  margin-right: 4px;
+}
+a.expand-collapse i.fa-caret-right { margin-left: 2px; } /* severe ocd */
+
 .sk-fading-circle {
   margin: 40px auto;
   width: 40px;

@@ -81,9 +81,10 @@
   root.typeVariable = function(literal){
     if (root.keywords.indexOf(literal) > -1) {
       return false;
-    } else if (root.scope.filter(function(set){
-      return set.literal === literal;
-    }).length > 0) {
+    } else if (root.scope.some(function(set){
+      var ref$;
+      return set.literal === literal || ((ref$ = set[0]) != null ? ref$.literal : void 8) === literal;
+    })) {
       return tree(identifier(literal, 'set'), []);
     } else {
       return tree(identifier(literal, "type variable"), []);

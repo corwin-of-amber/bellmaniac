@@ -54,9 +54,9 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
                 isTactic: true,
                 text: calc.input,
                 termJson: _.last($scope.history[thisIdx-1].output).value.term
-                previousScope: $scope.history[thisIdx-1].scope
+                scope: $scope.history[thisIdx-1].scope
                 },
-                success, error)
+                success, error, "cell-#{thisIdx+1}")
         cm.getInputField().blur()
         $scope.mostRecentId = thisId
         $scope.$apply()

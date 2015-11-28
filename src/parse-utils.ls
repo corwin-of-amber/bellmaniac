@@ -52,9 +52,9 @@ root.typeVariable = (literal) ->
 	if root.keywords.indexOf(literal) > -1
 		# console.error <| "Literal " + literal + " is reserved."
 		false
-	else if root.scope.filter((set) ->
-		set.literal == literal
-	).length > 0
+	else if root.scope.some((set) ->
+		set.literal == literal || set[0]?.literal == literal
+	)
 		tree(identifier(literal, \set), [])
 	else
 		# console.error <| "Literal " + literal + " has not yet been declared as a set."
