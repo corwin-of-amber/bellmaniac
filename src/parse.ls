@@ -50,8 +50,9 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
             fromJar: []
 
         # spawn jar and initialize jar behavior
-        #jar = spawn "java", <[-jar lib/bell.jar -]>
-        jar = spawn "../Bellmaniac/bell", <[ui.CLI -]>
+        launch = if root.devmode then <[../Bellmaniac/bell ui.CLI]> else <[java -jar lib/bell.jar]>
+        flags = (if input.dryRun then <[--dry-run]> else []) ++ <[-]>
+        jar = spawn launch[0], launch[1 to] ++ flags
 
         fromStream = (stream, callback) ->
             stream.setEncoding('utf-8')
@@ -134,3 +135,7 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
 
     catch err
         error(err)
+
+
+if localStorage?
+    root.devmode = JSON.parse(localStorage['bell.devmode'])

@@ -50,11 +50,12 @@
           $scope.errorMsg = err.message;
           $scope.cm.currentOverlay = errorOverlay($scope.cm.getLine(err.line - 1), err.offset + 1);
           $scope.cm.addOverlay($scope.cm.currentOverlay);
-          return $scope.parsed = output.fromNearley;
+          return $scope.parsed = output != null ? output.fromNearley : void 8;
         });
       };
       bellmaniaParse({
         isTactic: false,
+        dryRun: true,
         text: $scope.code
       }, success, error);
     };
