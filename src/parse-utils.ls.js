@@ -61,7 +61,6 @@
   };
   root.declareSubsets = function(head, tail, superset){
     var v;
-    console.log(head, tail, superset);
     return {
       kind: 'set',
       multiple: [

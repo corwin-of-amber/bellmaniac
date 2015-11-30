@@ -72,7 +72,7 @@
         : ['java', '-jar', 'lib/bell.jar'];
       flags = (input.dryRun
         ? ['--dry-run']
-        : []).concat(['-']);
+        : ['--cert', 'all', '--prover', 'null', '--tmpdir'].concat(["/tmp/" + name + "/"])).concat(['-']);
       jar = spawn(launch[0], slice$.call(launch, 1).concat(flags));
       fromStream = function(stream, callback){
         var buffer;
@@ -177,7 +177,7 @@
       return error(err);
     }
   };
-  if (typeof localStorage != 'undefined' && localStorage !== null) {
+  if ((typeof localStorage != 'undefined' && localStorage !== null) && localStorage['bell.devmode']) {
     root.devmode = JSON.parse(localStorage['bell.devmode']);
   }
 }).call(this);

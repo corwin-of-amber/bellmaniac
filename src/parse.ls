@@ -33,7 +33,7 @@ wrapWith = (term, rootLiteral, kind='?') ->
         tree(identifier(rootLiteral, kind), [term])
     else
         term
-            
+
 # input is of form
 #     {isTactic: bool,
 #      text: string from codemirror
@@ -51,7 +51,7 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
 
         # spawn jar and initialize jar behavior
         launch = if root.devmode then <[../Bellmaniac/bell ui.CLI]> else <[java -jar lib/bell.jar]>
-        flags = (if input.dryRun then <[--dry-run]> else []) ++ <[-]>
+        flags = (if input.dryRun then <[--dry-run]> else (<[--cert all --prover null --tmpdir]> ++ ["/tmp/" + name + "/"])) ++ <[-]>
         jar = spawn launch[0], launch[1 to] ++ flags
 
         fromStream = (stream, callback) ->
@@ -137,5 +137,5 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
         error(err)
 
 
-if localStorage?
+if localStorage? && localStorage['bell.devmode']
     root.devmode = JSON.parse(localStorage['bell.devmode'])

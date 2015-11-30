@@ -40,7 +40,6 @@ root.declareSets = (head, tail) ->
 				root.scope.push ..
 
 root.declareSubsets = (head, tail, superset) ->
-	console.log(head, tail, superset)
 	kind: \set
 	multiple:
 		root.scope.push(identifier(superset.root.literal, \set))

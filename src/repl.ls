@@ -1,8 +1,10 @@
 _ = require \lodash
+spawn = require \child_process .spawn
 LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*$/
 
-angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
+angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox, \frapontillo.bootstrap-switch]
   ..controller "Ctrl" ($scope, $timeout, $ngBootbox) !->
+    $scope.verification = true # verify by default
 
     submitCm = (cm, parent, callback=->) ->
         cm.removeOverlay(cm.currentOverlay)
@@ -16,6 +18,9 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
         )
         thisId = thisIdx + 1 # "id" of In[] and Out[] start from 1
 
+        cellName = "cell#{thisIdx + 1}"
+        isTactic = thisIdx > 0
+
         success = (output) ->
             $timeout ->
                 calc.output = output.fromJar
@@ -25,6 +30,9 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
                 if (thisId == ($scope.history.length))
                     $scope.history.push({id: thisId + 1, input: "", output: null, error: null})
                 calc.loading = false
+                if isTactic && $scope.verification
+                    calc.verifyStatus = "In Progress"
+                    $scope.asyncVerify(cellName, calc)
                 callback(null, calc)
 
         error = (err) ->
@@ -45,10 +53,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
                 calc.loading = false
                 callback(err)
 
-        if (thisIdx == 0)
-            # parse as a term
-            bellmaniaParse({isTactic: false, text: calc.input}, success, error)
-        else
+        if isTactic
             # parse as a tactic
             bellmaniaParse({
                 isTactic: true,
@@ -56,7 +61,11 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
                 termJson: _.last($scope.history[thisIdx-1].output).value.term
                 scope: $scope.history[thisIdx-1].scope
                 },
-                success, error, "cell-#{thisIdx+1}")
+                success, error, cellName)
+        else
+            # parse as a term
+            bellmaniaParse({isTactic: false, text: calc.input}, success, error)
+
         cm.getInputField().blur()
         $scope.mostRecentId = thisId
         $scope.$apply()
@@ -116,7 +125,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
               )
             )
             $timeout ->
-              async.eachSeries $scope.history, (h, callback) ->
+              async.eachSeries _.take($scope.history, $scope.mostRecentId), (h, callback) ->
                 submitCm h.cm, h, callback
           catch {message}
             bootbox.alert(message)
@@ -124,7 +133,35 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox]
         reader.readAsText($scope.file)
 
     $scope.toggleStackShow = (err) ->
-      err.stackshow = !err.stackshow
+        err.stackshow = !err.stackshow
+
+    $scope.asyncVerify = (cellName, calc) ->
+        fs.readdir '/tmp/' + cellName, (err, files) ->
+            calc.processes = {}
+            async.each files, (file, callback) ->
+                z3 = spawn('z3', ['/tmp/' + cellName + '/' + file])
+                calc.processes[file] = z3
+                z3.stdout.on 'data', (data) ->
+                    result = data.toString('utf8')
+                    if (result == 'unsat\n')
+                        callback()
+                    else if (result == 'sat\n')
+                        callback(result)
+                z3.stderr.on 'data', (data) ->
+                    result = data.toString('utf8')
+                    callback(result)
+            , (err) ->
+                if (err != null)
+                    calc.verifyStatus = "Error"
+                else
+                    calc.verifyStatus = "Success"
+                $scope.$apply()
+
+    $scope.abortVerification = (calc) ->
+        if (calc.verifyStatus == "In Progress")
+            _.each calc.processes, (p) ->
+                p.kill('SIGINT')
+            calc.verifyStatus = "Aborted"
 
   ..filter "collapse" ->
     lead = -> it.match /^\s*/ .0.length

@@ -13,6 +13,8 @@
 	<script src="node_modules/angular-recursion/angular-recursion.js"></script>
 	<script src="node_modules/angular-ui-codemirror/src/ui-codemirror.js"></script>
 	<script src="node_modules/angular-ui-select/select.js"></script>
+	<script src="node_modules/bootstrap-switch/dist/js/bootstrap-switch.js"></script>
+	<script src="node_modules/angular-bootstrap-switch/dist/angular-bootstrap-switch.js"></script>
 	<script src="node_modules/bootbox/bootbox.js"></script>
 	<script src="node_modules/ngbootbox/dist/ngBootbox.js"></script>
 
@@ -32,6 +34,7 @@
 	<link rel="stylesheet" href="node_modules/codemirror/theme/neat.css">
 	<link rel="stylesheet" href="node_modules/codemirror/addon/hint/show-hint.css">
 	<link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+	<link rel="stylesheet" href="node_modules/bootstrap-switch/dist/css/bootstrap3/bootstrap-switch.css">
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
 	<link rel="stylesheet" href="src/index.css">
 </head>
@@ -47,7 +50,8 @@
 					<input type="file" style="display:none;" accept=".json" ng-model="file" file-change="load()">
 					Load
 				</label>
-			</div>
+				<input bs-switch ng-model="verification" type="checkbox" value="checked" switch-label="Verification" switch-inverse="true">
+    		</div>
 		</div>
 		<div class="container" ng-repeat="h in history">
 			<hr ng-if="$index > 0">
@@ -70,25 +74,32 @@
 					--><span ng-show="h.error.stackshow" class="stack">{{h.error.stack}}</span>
 				</div>
 			</div>
-			<div class="sk-fading-circle" ng-if="h.loading">
-			  <div class="sk-circle1 sk-circle"></div>
-			  <div class="sk-circle2 sk-circle"></div>
-			  <div class="sk-circle3 sk-circle"></div>
-			  <div class="sk-circle4 sk-circle"></div>
-			  <div class="sk-circle5 sk-circle"></div>
-			  <div class="sk-circle6 sk-circle"></div>
-			  <div class="sk-circle7 sk-circle"></div>
-			  <div class="sk-circle8 sk-circle"></div>
-			  <div class="sk-circle9 sk-circle"></div>
-			  <div class="sk-circle10 sk-circle"></div>
-			  <div class="sk-circle11 sk-circle"></div>
-			  <div class="sk-circle12 sk-circle"></div>
+			<div class="loading" ng-if="h.loading">
+				<i class="fa fa-pulse fa-4x fa-spinner"></i>
 			</div>
 			<div class="row" ng-if="h.output" ng-class="{invalid: isInvalid(h)}">
 				<div class="col-xs-1">{{"Out[" + h.id + "]"}}</div>
-				<div class="col-xs-11">
-					<div class="cell" ng-repeat="cell in h.output | orderBy:'index'">
+				<div class="col-xs-10">
+					<div class="cell output-well" ng-repeat="cell in h.output | orderBy:'index'">
 						<display o="cell.value"></display>
+					</div>
+				</div>
+				<div class="col-xs-1" ng-show="$index > 0">
+					<div class="pull-right">
+						<a class="btn btn-sm verify-icon" ng-class="{'btn-warning': h.verifyStatus === 'In Progress', 'btn-success': h.verifyStatus === 'Success', 'btn-danger': (h.verifyStatus === 'Error' || h.verifyStatus === 'Aborted')}" ng-click="abortVerification(h)">
+							<span ng-show="h.verifyStatus == 'In Progress'">
+								<i class="fa fa-cog fa-spin fa-fw"></i> Verifying...
+							</span>
+							<span ng-show="h.verifyStatus == 'Success'">
+								<i class="fa fa-check fa-fw"></i> Verified
+							</span>
+							<span ng-show="h.verifyStatus == 'Error'">
+								<i class="fa fa-exclamation-triangle fa-fw"></i> Error
+							</span>
+							<span ng-show="h.verifyStatus == 'Aborted'">
+								<i class="fa fa-exclamation-triangle fa-fw"></i> Aborted
+							</span>
+						</a>
 					</div>
 				</div>
 			</div>
