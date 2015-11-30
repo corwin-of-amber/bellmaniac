@@ -86,7 +86,7 @@
 				</div>
 				<div class="col-xs-1" ng-show="$index > 0">
 					<div class="pull-right">
-						<a class="btn btn-sm verify-icon" ng-class="{'btn-warning': h.verifyStatus === 'In Progress', 'btn-success': h.verifyStatus === 'Success', 'btn-danger': (h.verifyStatus === 'Error' || h.verifyStatus === 'Aborted')}" ng-click="abortVerification(h)">
+						<a class="btn btn-sm verify-icon" ng-hide="isInvalid(h)" ng-class="{'btn-warning': h.verifyStatus === 'In Progress', 'btn-success': h.verifyStatus === 'Success', 'btn-danger': (h.verifyStatus === 'Error' || h.verifyStatus === 'Aborted')}" ng-click="abortVerification(h)">
 							<span ng-show="h.verifyStatus == 'In Progress'">
 								<i class="fa fa-cog fa-spin fa-fw"></i> Verifying...
 							</span>
