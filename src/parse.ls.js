@@ -28,7 +28,7 @@
   };
   readResponseBlocks = function(output, parsedInputs){
     var i$, ref$, len$, blockIdx, block, outputBlock, err, x$, ref1$, ref2$, results$ = [];
-    for (i$ = 0, len$ = (ref$ = output.split(/\n\n+(?=\S)/)).length; i$ < len$; ++i$) {
+    for (i$ = 0, len$ = (ref$ = output.split(/\n\n+(?=\S)/).filter(fn$)).length; i$ < len$; ++i$) {
       blockIdx = i$;
       block = ref$[i$];
       try {
@@ -42,13 +42,16 @@
       } catch (e$) {
         err = e$;
         x$ = parsedInputs[blockIdx];
-        err.line = (ref1$ = (ref2$ = x$.check) != null
+        err.line = (ref1$ = (ref2$ = x$ != null ? x$.check : void 8) != null
           ? ref2$
-          : x$.tactic) != null ? ref1$.line : void 8;
+          : x$ != null ? x$.tactic : void 8) != null ? ref1$.line : void 8;
         throw err;
       }
     }
     return results$;
+    function fn$(it){
+      return it;
+    }
   };
   wrapWith = function(term, rootLiteral, kind){
     kind == null && (kind = '?');
@@ -70,10 +73,12 @@
       launch = root.devmode
         ? ['../Bellmaniac/bell', 'ui.CLI']
         : ['java', '-jar', 'lib/bell.jar'];
-      flags = (input.dryRun
+      flags = input.dryRun
         ? ['--dry-run']
-        : ['--cert', 'all', '--prover', 'null', '--tmpdir'].concat(["/tmp/" + name + "/"])).concat(['-']);
-      jar = spawn(launch[0], slice$.call(launch, 1).concat(flags));
+        : input.verify
+          ? ['--cert', 'all', '--prover', 'null', '--tmpdir'].concat(["/tmp/" + name + "/"])
+          : [];
+      jar = spawn(launch[0], slice$.call(launch, 1).concat(flags, ['-']));
       fromStream = function(stream, callback){
         var buffer;
         stream.setEncoding('utf-8');

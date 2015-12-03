@@ -108,7 +108,7 @@ variable -> identifier {% function(d, loc, reject) {return variable(d[0]) || rej
 integer -> num {% function(d) { return tree(identifier(d[0],'?')); } %}
 
 notatedInfixOperator -> backtick variable backtick {% function(d) {return d[1]; } %}
-	| [+*\-] {% function(d) {return tree(operator(d[0]),[]); } %}
+	| [+*\-] {% function(d, loc, reject) {return tree(identifier(d[0],'variable')); } %}
 
 defaultInfixOperator -> "/" {% function(d) {return operator(d[0]); } %}
 
@@ -176,5 +176,5 @@ backtick -> "`"
 subseteq -> "⊆"
 colon -> ":"
 comma -> ","
-typeArrow -> "->" {% id %}
+typeArrow -> "->" {% id %} | "→" {% function() { return "->"; } %}
 fix -> "fix"

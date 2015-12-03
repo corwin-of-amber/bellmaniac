@@ -15,7 +15,7 @@ root.splitTextToBlocks = (input) ->
     blocks .filter (.text == /\S/)
 
 readResponseBlocks = (output, parsedInputs) ->
-    for block, blockIdx in output.split(/\n\n+(?=\S)/)
+    for block, blockIdx in output.split(/\n\n+(?=\S)/).filter(-> it)
         try
             outputBlock = JSON.parse(block)
             if (outputBlock.error)
@@ -25,7 +25,7 @@ readResponseBlocks = (output, parsedInputs) ->
             # add line number from input before re-throwing
             # so that correct line can be highlighted
             parsedInputs[blockIdx]
-              err.line = (..check ? ..tactic)?.line
+              err.line = (..?check ? ..?tactic)?.line
             throw err
 
 wrapWith = (term, rootLiteral, kind='?') ->
@@ -51,8 +51,11 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
 
         # spawn jar and initialize jar behavior
         launch = if root.devmode then <[../Bellmaniac/bell ui.CLI]> else <[java -jar lib/bell.jar]>
-        flags = (if input.dryRun then <[--dry-run]> else (<[--cert all --prover null --tmpdir]> ++ ["/tmp/" + name + "/"])) ++ <[-]>
-        jar = spawn launch[0], launch[1 to] ++ flags
+        flags = 
+            if input.dryRun then <[--dry-run]> 
+            else if input.verify then <[--cert all --prover null --tmpdir]> ++ ["/tmp/" + name + "/"]
+            else []
+        jar = spawn launch[0], launch[1 to] ++ flags ++ <[-]>
 
         fromStream = (stream, callback) ->
             stream.setEncoding('utf-8')

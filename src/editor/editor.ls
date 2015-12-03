@@ -35,6 +35,7 @@ hintWords =
 # these words autoreplace without any hint required
 autoWords =
 	* text: "↦", displayText: "|->"
+	* text: "→", displayText: "->"
 	* text: "\u27E8", displayText: "\\<"
 	* text: "\u27E9", displayText: "\\>"
 	* text: "×", displayText: "\\*"
@@ -105,7 +106,7 @@ autoReplace = (editor) ->
 	filteredWords = findSuffixWord(editor, autoWords)
 
 	if filteredWords.length > 0
-		curPos = filteredWords[0]
+		curPos = filteredWords[*-1]  # get longest matching word
 		editor.replaceRange(curPos.word.text,
 			CodeMirror.Pos(cur.line, curPos.start),
 			CodeMirror.Pos(cur.line, curPos.end))

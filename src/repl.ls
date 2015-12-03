@@ -9,16 +9,18 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
     submitCm = (cm, parent, callback=->) ->
         cm.removeOverlay(cm.currentOverlay)
 
-        calc = cm.parent
+        #calc = cm.parent
+        calc = parent
         calc.output = null
         calc.error = null
+        calc.verifyStatus = null
         calc.loading = true
         thisIdx = _.findIndex($scope.history, (h) ->
             h.id == calc.id
         )
         thisId = thisIdx + 1 # "id" of In[] and Out[] start from 1
 
-        cellName = "cell#{thisIdx + 1}"
+        cellName = "cell-#{thisId}"
         isTactic = thisIdx > 0
 
         success = (output) ->
@@ -55,39 +57,54 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
 
         if isTactic
             # parse as a tactic
-            bellmaniaParse({
+            bellmaniaParse do
                 isTactic: true,
                 text: calc.input,
                 termJson: _.last($scope.history[thisIdx-1].output).value.term
                 scope: $scope.history[thisIdx-1].scope
-                },
-                success, error, cellName)
+                verify: $scope.verification
+                , success, error, cellName
         else
             # parse as a term
-            bellmaniaParse({isTactic: false, text: calc.input}, success, error)
+            bellmaniaParse({isTactic: false, text: calc.input}, success, error, cellName)
 
         cm.getInputField().blur()
         $scope.mostRecentId = thisId
         $scope.$apply()
 
 
+    if localStorage['bell.presentMode']
+        if JSON.parse(that)
+            $ \body .addClass 'presentMode'
+        
+    $scope.togglePresent = !->
+      $ \body .toggleClass 'presentMode'
+      localStorage['bell.presentMode'] = JSON.stringify ($ \body .hasClass 'presentMode')
+
     $scope.cmOptions = cmOptions()
     $scope.wrapper = (parent) ->
         submitCallback = (cm) ->
-            submitCm(cm, parent)
+            if parent.input then submitCm(cm, parent)
 
         loadCallback = (cm) ->
             cm.parent = parent
             parent.cm = cm
 
+            $scope.$watch (-> parent.input), (oldValue, newValue) ->
+                if oldValue !== newValue
+                    $scope.storeLocal!
+            
         initEditor(submitCallback, loadCallback)
 
-    $scope.history = [
-        {id: 1, input: "a b", output: null, error: null}
+    restored = 
+        if localStorage['bell.notebookText'] then JSON.parse(that)
+            
+    $scope.history = restored?.history ? [
+        {id: 1, input: "", output: null, error: null}
     ]
     $scope.mostRecentId = 1
-    $scope.isInvalid = (h) ->
-        return ($scope.mostRecentId < h.id && h.output != null)
+    $scope.isOutdated = (h) ->
+        h.output? && $scope.mostRecentId < h.id
     $scope.output = {}
     $scope.data = []
 
@@ -96,6 +113,15 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
           {id: 1, input: "", output: null, error: null}
       ]
 
+    marshal = ->
+      JSON.stringify do
+        mostRecentId: $scope.mostRecentId,
+        history: $scope.history.map (h) ->
+          {id: h.id, input: h.input}
+      
+    $scope.storeLocal = ->
+      localStorage["bell.notebookText"] = marshal!
+      
     $scope.save = ->
       saveText = JSON.stringify({
         mostRecentId: $scope.mostRecentId,
@@ -115,23 +141,25 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
         reader = new FileReader();
         reader.onload = ->
           try
-            $scope.$apply( ->
+            $scope.$apply ->
               loaded = JSON.parse(reader.result)
               $scope.mostRecentId = loaded.mostRecentId
-              $scope.history = _.map(loaded.history, (h) ->
-                h.error = null
-                h.output = null
-                h
-              )
-            )
+              $scope.history = loaded.history.map (<<< {error: null, output: null})
             $timeout ->
               async.eachSeries _.take($scope.history, $scope.mostRecentId), (h, callback) ->
-                submitCm h.cm, h, callback
+                if h.input
+                  submitCm h.cm, h, callback
           catch {message}
             bootbox.alert(message)
 
         reader.readAsText($scope.file)
 
+    $scope.runAll = ->
+      $timeout ->
+          async.eachSeries $scope.history, (h, callback) ->
+            if h.input
+              submitCm h.cm, h, callback
+        
     $scope.toggleStackShow = (err) ->
         err.stackshow = !err.stackshow
 
@@ -152,6 +180,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
                     callback(result)
             , (err) ->
                 if (err != null)
+                    $scope.abortVerification calc # in case some processes are still running
                     calc.verifyStatus = "Error"
                 else
                     calc.verifyStatus = "Success"
@@ -159,8 +188,13 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
 
     $scope.abortVerification = (calc) ->
         if (calc.verifyStatus == "In Progress")
-            _.each calc.processes, (p) ->
+            for name, p of calc.processes
+                console.log "killing " + p.pid
                 p.kill('SIGINT')
+            #_.each calc.processes, (p, callback) ->
+            #    p.kill('SIGINT')
+            #, (err) -> console.log "killed; err=" + err
+              
             calc.verifyStatus = "Aborted"
 
   ..filter "collapse" ->
@@ -217,7 +251,8 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
         [input]
       else if input.tape?
         last = 0
-        text = input.tape.text
+        [text, annot] = input.tape.text.split '\t'
+        reformatType = -> it?.split('->')?.join('→')
         []
           for [[u,v], mark] in input.tape.markup
             x = text.substring(last,u)
@@ -225,9 +260,11 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
             cls = ['mark'] ++ (if mark.type? then ['tip'] else [])
             last = v
             if x.length then ..push [x]
-            if y.length then ..push [y,cls,mark.type]
+            if y.length then ..push [y,cls,reformatType(mark.type)]
           x = text.substring(last)
           if x.length then ..push [x]
+          if annot?
+            ..push [reformatType(annot), ['annotation']]
       else
         [JSON.stringify input]
 

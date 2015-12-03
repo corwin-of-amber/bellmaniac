@@ -28,7 +28,7 @@
 	<script src="src/parse.ls.js"></script>
 	<script src="src/repl.ls.js"></script>
 	<script src="../web.realtime/reload.js"></script>
-    <script>Reload.ignore(/^examples\//);</script>
+    <script>Reload.ignore(/^examples\//, /^cache/);</script>
 
 	<link rel="stylesheet" href="node_modules/codemirror/lib/codemirror.css">
 	<link rel="stylesheet" href="node_modules/codemirror/theme/neat.css">
@@ -40,9 +40,12 @@
 </head>
 <body>
 	<div ng-app="app" ng-controller="Ctrl">
-		<div class="container">
+        <div class="toolbox">
+            <a ng-click="togglePresent()">Present mode</a>
+        </div>
+		<div>
 			<h1>Bellmania Interface</h1>
-			<p>Press Cmd-Enter in the code editor to parse current code.</p>
+			<p>Press <span class="keystroke">⌘⏎</span> in the code editor to execute code.</p>
 			<div style="margin-bottom: 15px" class="form-inline">
 				<a class="btn btn-default" ng-click="reset()">New</a>
 				<a class="btn btn-default" ng-click="save()">Save</a>
@@ -50,18 +53,19 @@
 					<input type="file" style="display:none;" accept=".json" ng-model="file" file-change="load()">
 					Load
 				</label>
+				<a class="btn btn-default" ng-click="runAll()">Run</a>
 				<input bs-switch ng-model="verification" type="checkbox" value="checked" switch-label="Verification" switch-inverse="true">
     		</div>
 		</div>
-		<div class="container" ng-repeat="h in history">
+		<div ng-repeat="h in history">
 			<hr ng-if="$index > 0">
 			<div class="row">
-				<span ng-show="isInvalid(h)" class="label label-danger pull-right icon">OUTDATED</span>
+				<span ng-show="isOutdated(h)" class="label label-danger pull-right icon">OUTDATED</span>
 			</div>
-			<div class="row">
-				<div class="col-xs-1">{{"In[" + h.id + "]"}}</div>
-				<div class="col-xs-11">
-					<textarea ui-codemirror="{ onLoad : wrapper(h), indentWithTabs : true }" ui-codemirror-opts="cmOptions" ng-model="h.input"></textarea>
+			<div class="input-cell">
+				<div class="cell-caption">{{"In[" + h.id + "]"}}</div>
+				<div class="cell-content">
+                    <textarea ui-codemirror="{ onLoad : wrapper(h) }" ui-codemirror-opts="cmOptions" ng-model="h.input"></textarea>
 				</div>
 			</div>
 			<div ng-show="h.error && h.error.msg.length > 0" class="alert alert-danger error">
@@ -77,21 +81,21 @@
 			<div class="loading" ng-if="h.loading">
 				<i class="fa fa-pulse fa-4x fa-spinner"></i>
 			</div>
-			<div class="row" ng-if="h.output" ng-class="{invalid: isInvalid(h)}">
-				<div class="col-xs-1">{{"Out[" + h.id + "]"}}</div>
-				<div class="col-xs-10">
+			<div class="output-cell" ng-if="h.output" ng-class="{invalid: isInvalid(h)}">
+				<div class="cell-caption">{{"Out[" + h.id + "]"}}</div>
+				<div class="cell-content">
 					<div class="cell output-well" ng-repeat="cell in h.output | orderBy:'index'">
 						<display o="cell.value"></display>
 					</div>
 				</div>
-				<div class="col-xs-1" ng-show="$index > 0">
+				<div class="cell-indicator" ng-show="$index > 0">
 					<div class="pull-right">
 						<a class="btn btn-sm verify-icon" ng-hide="isInvalid(h)" ng-class="{'btn-warning': h.verifyStatus === 'In Progress', 'btn-success': h.verifyStatus === 'Success', 'btn-danger': (h.verifyStatus === 'Error' || h.verifyStatus === 'Aborted')}" ng-click="abortVerification(h)">
 							<span ng-show="h.verifyStatus == 'In Progress'">
 								<i class="fa fa-cog fa-spin fa-fw"></i> Verifying...
 							</span>
 							<span ng-show="h.verifyStatus == 'Success'">
-								<i class="fa fa-check fa-fw"></i> Verified
+								<i class="fa fa-check fa-fw"></i> <!-- Verified -->
 							</span>
 							<span ng-show="h.verifyStatus == 'Error'">
 								<i class="fa fa-exclamation-triangle fa-fw"></i> Error

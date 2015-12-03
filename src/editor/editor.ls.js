@@ -97,6 +97,9 @@
       text: "↦",
       displayText: "|->"
     }, {
+      text: "→",
+      displayText: "->"
+    }, {
       text: "\u27E8",
       displayText: "\\<"
     }, {
@@ -191,7 +194,7 @@
     cur = editor.getCursor();
     filteredWords = findSuffixWord(editor, autoWords);
     if (filteredWords.length > 0) {
-      curPos = filteredWords[0];
+      curPos = filteredWords[filteredWords.length - 1];
       return editor.replaceRange(curPos.word.text, CodeMirror.Pos(cur.line, curPos.start), CodeMirror.Pos(cur.line, curPos.end));
     }
   };

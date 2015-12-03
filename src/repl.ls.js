@@ -6,21 +6,22 @@
   LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*$/;
   x$ = angular.module('app', ['RecursionHelper', 'ui.codemirror', 'ui.select', 'ngBootbox', 'frapontillo.bootstrap-switch']);
   x$.controller("Ctrl", function($scope, $timeout, $ngBootbox){
-    var submitCm;
+    var submitCm, that, restored, ref$, marshal;
     $scope.verification = true;
     submitCm = function(cm, parent, callback){
       var calc, thisIdx, thisId, cellName, isTactic, success, error;
       callback == null && (callback = function(){});
       cm.removeOverlay(cm.currentOverlay);
-      calc = cm.parent;
+      calc = parent;
       calc.output = null;
       calc.error = null;
+      calc.verifyStatus = null;
       calc.loading = true;
       thisIdx = _.findIndex($scope.history, function(h){
         return h.id === calc.id;
       });
       thisId = thisIdx + 1;
-      cellName = "cell" + (thisIdx + 1);
+      cellName = "cell-" + thisId;
       isTactic = thisIdx > 0;
       success = function(output){
         return $timeout(function(){
@@ -70,39 +71,61 @@
           isTactic: true,
           text: calc.input,
           termJson: _.last($scope.history[thisIdx - 1].output).value.term,
-          scope: $scope.history[thisIdx - 1].scope
+          scope: $scope.history[thisIdx - 1].scope,
+          verify: $scope.verification
         }, success, error, cellName);
       } else {
         bellmaniaParse({
           isTactic: false,
           text: calc.input
-        }, success, error);
+        }, success, error, cellName);
       }
       cm.getInputField().blur();
       $scope.mostRecentId = thisId;
       return $scope.$apply();
     };
+    if (that = localStorage['bell.presentMode']) {
+      if (JSON.parse(that)) {
+        $('body').addClass('presentMode');
+      }
+    }
+    $scope.togglePresent = function(){
+      $('body').toggleClass('presentMode');
+      localStorage['bell.presentMode'] = JSON.stringify($('body').hasClass('presentMode'));
+    };
     $scope.cmOptions = cmOptions();
     $scope.wrapper = function(parent){
       var submitCallback, loadCallback;
       submitCallback = function(cm){
-        return submitCm(cm, parent);
+        if (parent.input) {
+          return submitCm(cm, parent);
+        }
       };
       loadCallback = function(cm){
         cm.parent = parent;
-        return parent.cm = cm;
+        parent.cm = cm;
+        return $scope.$watch(function(){
+          return parent.input;
+        }, function(oldValue, newValue){
+          if (!deepEq$(oldValue, newValue, '===')) {
+            return $scope.storeLocal();
+          }
+        });
       };
       return initEditor(submitCallback, loadCallback);
     };
-    $scope.history = [{
-      id: 1,
-      input: "a b",
-      output: null,
-      error: null
-    }];
+    restored = (that = localStorage['bell.notebookText']) ? JSON.parse(that) : void 8;
+    $scope.history = (ref$ = restored != null ? restored.history : void 8) != null
+      ? ref$
+      : [{
+        id: 1,
+        input: "",
+        output: null,
+        error: null
+      }];
     $scope.mostRecentId = 1;
-    $scope.isInvalid = function(h){
-      return $scope.mostRecentId < h.id && h.output !== null;
+    $scope.isOutdated = function(h){
+      return h.output != null && $scope.mostRecentId < h.id;
     };
     $scope.output = {};
     $scope.data = [];
@@ -113,6 +136,20 @@
         output: null,
         error: null
       }];
+    };
+    marshal = function(){
+      return JSON.stringify({
+        mostRecentId: $scope.mostRecentId,
+        history: $scope.history.map(function(h){
+          return {
+            id: h.id,
+            input: h.input
+          };
+        })
+      });
+    };
+    $scope.storeLocal = function(){
+      return localStorage["bell.notebookText"] = marshal();
     };
     $scope.save = function(){
       var saveText, bb, blobURL, anchor;
@@ -145,15 +182,15 @@
               var loaded;
               loaded = JSON.parse(reader.result);
               $scope.mostRecentId = loaded.mostRecentId;
-              return $scope.history = _.map(loaded.history, function(h){
-                h.error = null;
-                h.output = null;
-                return h;
-              });
+              return $scope.history = loaded.history.map((function(it){
+                return it.error = null, it.output = null, it;
+              }));
             });
             return $timeout(function(){
               return async.eachSeries(_.take($scope.history, $scope.mostRecentId), function(h, callback){
-                return submitCm(h.cm, h, callback);
+                if (h.input) {
+                  return submitCm(h.cm, h, callback);
+                }
               });
             });
           } catch (e$) {
@@ -163,6 +200,15 @@
         };
         return reader.readAsText($scope.file);
       }
+    };
+    $scope.runAll = function(){
+      return $timeout(function(){
+        return async.eachSeries($scope.history, function(h, callback){
+          if (h.input) {
+            return submitCm(h.cm, h, callback);
+          }
+        });
+      });
     };
     $scope.toggleStackShow = function(err){
       return err.stackshow = !err.stackshow;
@@ -190,6 +236,7 @@
           });
         }, function(err){
           if (err !== null) {
+            $scope.abortVerification(calc);
             calc.verifyStatus = "Error";
           } else {
             calc.verifyStatus = "Success";
@@ -199,10 +246,13 @@
       });
     };
     $scope.abortVerification = function(calc){
+      var name, ref$, p;
       if (calc.verifyStatus === "In Progress") {
-        _.each(calc.processes, function(p){
-          return p.kill('SIGINT');
-        });
+        for (name in ref$ = calc.processes) {
+          p = ref$[name];
+          console.log("killing " + p.pid);
+          p.kill('SIGINT');
+        }
         return calc.verifyStatus = "Aborted";
       }
     };
@@ -278,12 +328,16 @@
   x$.filter("display", function(){
     var f;
     return f = function(input){
-      var last, text, x$, i$, ref$, len$, ref1$, ref2$, u, v, mark, x, y, cls;
+      var last, ref$, text, annot, reformatType, x$, i$, len$, ref1$, ref2$, u, v, mark, x, y, cls;
       if (_.isString(input)) {
         return [input];
       } else if (input.tape != null) {
         last = 0;
-        text = input.tape.text;
+        ref$ = input.tape.text.split('\t'), text = ref$[0], annot = ref$[1];
+        reformatType = function(it){
+          var ref$;
+          return it != null ? (ref$ = it.split('->')) != null ? ref$.join('→') : void 8 : void 8;
+        };
         x$ = [];
         for (i$ = 0, len$ = (ref$ = input.tape.markup).length; i$ < len$; ++i$) {
           ref1$ = ref$[i$], ref2$ = ref1$[0], u = ref2$[0], v = ref2$[1], mark = ref1$[1];
@@ -297,12 +351,15 @@
             x$.push([x]);
           }
           if (y.length) {
-            x$.push([y, cls, mark.type]);
+            x$.push([y, cls, reformatType(mark.type)]);
           }
         }
         x = text.substring(last);
         if (x.length) {
           x$.push([x]);
+        }
+        if (annot != null) {
+          x$.push([reformatType(annot), ['annotation']]);
         }
         return x$;
       } else {
@@ -310,4 +367,88 @@
       }
     };
   });
+  function deepEq$(x, y, type){
+    var toString = {}.toString, hasOwnProperty = {}.hasOwnProperty,
+        has = function (obj, key) { return hasOwnProperty.call(obj, key); };
+    var first = true;
+    return eq(x, y, []);
+    function eq(a, b, stack) {
+      var className, length, size, result, alength, blength, r, key, ref, sizeB;
+      if (a == null || b == null) { return a === b; }
+      if (a.__placeholder__ || b.__placeholder__) { return true; }
+      if (a === b) { return a !== 0 || 1 / a == 1 / b; }
+      className = toString.call(a);
+      if (toString.call(b) != className) { return false; }
+      switch (className) {
+        case '[object String]': return a == String(b);
+        case '[object Number]':
+          return a != +a ? b != +b : (a == 0 ? 1 / a == 1 / b : a == +b);
+        case '[object Date]':
+        case '[object Boolean]':
+          return +a == +b;
+        case '[object RegExp]':
+          return a.source == b.source &&
+                 a.global == b.global &&
+                 a.multiline == b.multiline &&
+                 a.ignoreCase == b.ignoreCase;
+      }
+      if (typeof a != 'object' || typeof b != 'object') { return false; }
+      length = stack.length;
+      while (length--) { if (stack[length] == a) { return true; } }
+      stack.push(a);
+      size = 0;
+      result = true;
+      if (className == '[object Array]') {
+        alength = a.length;
+        blength = b.length;
+        if (first) {
+          switch (type) {
+          case '===': result = alength === blength; break;
+          case '<==': result = alength <= blength; break;
+          case '<<=': result = alength < blength; break;
+          }
+          size = alength;
+          first = false;
+        } else {
+          result = alength === blength;
+          size = alength;
+        }
+        if (result) {
+          while (size--) {
+            if (!(result = size in a == size in b && eq(a[size], b[size], stack))){ break; }
+          }
+        }
+      } else {
+        if ('constructor' in a != 'constructor' in b || a.constructor != b.constructor) {
+          return false;
+        }
+        for (key in a) {
+          if (has(a, key)) {
+            size++;
+            if (!(result = has(b, key) && eq(a[key], b[key], stack))) { break; }
+          }
+        }
+        if (result) {
+          sizeB = 0;
+          for (key in b) {
+            if (has(b, key)) { ++sizeB; }
+          }
+          if (first) {
+            if (type === '<<=') {
+              result = size < sizeB;
+            } else if (type === '<==') {
+              result = size <= sizeB
+            } else {
+              result = size === sizeB;
+            }
+          } else {
+            first = false;
+            result = size === sizeB;
+          }
+        }
+      }
+      stack.pop();
+      return result;
+    }
+  }
 }).call(this);
