@@ -2,12 +2,27 @@
 ####### ROOT EXPRESSION #######
 ###############################
 
-term -> _ expression _ {% take(1) %}
-
 expression 	-> setMode {% id %}
     | setDeclaration {% id %}
     | subsetDeclaration {% id %}
-	| untypedExpression (_ colon _ type):? {% function(d) {
+    | possiblyTypedExpression {% id %}
+    | routineDeclaration {% id %}
+
+routineDeclaration -> variable paramList colondash possiblyTypedExpression {% function(d) {
+	var output = {};
+	output[d[0]] = {params: d[1], body: d[3]};
+	return output;
+} %}
+
+paramList -> leftsquarebracket _ variable (_ comma _ variable):* _ rightsquarebracket {% function(d) {
+	if (d[3].length === 0) {
+		return [d[2]];
+	} else {
+		return [d[2]].concat(d[3].map(take(3)));
+	}
+} %}
+
+possiblyTypedExpression -> untypedExpression (_ colon _ type):? {% function(d) {
 		if (d[1] === null) {
 			return d[0];
 		} else {
@@ -43,8 +58,8 @@ untypedExpression -> applicationExpression {% id %}
 applicationExpression -> applicationWithInfixExpression {% id %}
 	| applicationWithoutInfixExpression {% id %}
 
-applicationWithInfixExpression -> applicationExpression __ notatedInfixOperator __ applicationWithoutInfixExpression {% function(d) {return application(application(d[2], d[0]), d[4]);} %}
-	| applicationExpression __ defaultInfixOperator __ applicationWithoutInfixExpression {% function(d) {return tree(d[2], [d[0], d[4]]); } %}
+applicationWithInfixExpression -> applicationExpression _ notatedInfixOperator _ applicationWithoutInfixExpression {% function(d) {return application(application(d[2], d[0]), d[4]);} %}
+	| applicationExpression _ defaultInfixOperator _ applicationWithoutInfixExpression {% function(d) {return tree(d[2], [d[0], d[4]]); } %}
 
 # to parse application as <A> <B>, we need to have:
 # - no unparenthesized lambdas in A (otherwise lambda body would include B)
@@ -170,8 +185,11 @@ leftparen -> "("
 rightparen -> ")"
 leftbracket -> "⟨"
 rightbracket -> "⟩"
+leftsquarebracket -> "["
+rightsquarebracket -> "]"
 underscore -> "_"
 forwardslash -> "/"
+colondash -> ":-"
 backtick -> "`"
 subseteq -> "⊆"
 colon -> ":"

@@ -3,7 +3,7 @@ root = exports ? this
 root.scope = []
 root.id = (d) -> d && d[0]
 root.take = (index) -> (d) -> d && d[index]
-root.keywords = ["set", "fix", "/", "+", "×", "∩", "-", "*"]
+root.keywords = ["set", "fix", "/", "+", "×", "∩", "-", "*", ":-"]
 
 ## combinators
 

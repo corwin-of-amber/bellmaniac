@@ -123,7 +123,7 @@
         var p, parsed, results, x$, ref$, err;
         p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
         try {
-          parsed = p.feed(block.text);
+          parsed = p.feed(block.text.trim());
           results = _.compact(parsed.results);
           if (results.length === 0) {
             throw {

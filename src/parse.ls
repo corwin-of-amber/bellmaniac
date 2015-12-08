@@ -91,7 +91,7 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
             # parse block with nearley, filter only non-false results, assert parse unambiguous
             p = new nearley.Parser grammar.ParserRules, grammar.ParserStart
             try
-                parsed = p.feed block.text
+                parsed = p.feed block.text.trim()
                 results = _.compact parsed.results
                 if results.length == 0 then throw {message: "No possible parse of input found."}
                 assert results.length == 1, JSON.stringify(results) + " is not a unique parse."

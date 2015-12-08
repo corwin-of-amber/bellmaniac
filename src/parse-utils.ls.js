@@ -11,7 +11,7 @@
       return d && d[index];
     };
   };
-  root.keywords = ["set", "fix", "/", "+", "×", "∩", "-", "*"];
+  root.keywords = ["set", "fix", "/", "+", "×", "∩", "-", "*", ":-"];
   root.tree = function(root, subtrees){
     return {
       $: 'Tree',
