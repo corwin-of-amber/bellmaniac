@@ -43,8 +43,8 @@ untypedExpression -> applicationExpression {% id %}
 applicationExpression -> applicationWithInfixExpression {% id %}
 	| applicationWithoutInfixExpression {% id %}
 
-applicationWithInfixExpression -> applicationOnNonLambdaExpression _ notatedInfixOperator _ applicationExpression {% function(d) {return application(application(d[2], d[0]), d[4]);} %}
-	| applicationOnNonLambdaExpression _ defaultInfixOperator _ applicationExpression {% function(d) {return tree(d[2], [d[0], d[4]]); } %}
+applicationWithInfixExpression -> applicationExpression __ notatedInfixOperator __ applicationWithoutInfixExpression {% function(d) {return application(application(d[2], d[0]), d[4]);} %}
+	| applicationExpression __ defaultInfixOperator __ applicationWithoutInfixExpression {% function(d) {return tree(d[2], [d[0], d[4]]); } %}
 
 # to parse application as <A> <B>, we need to have:
 # - no unparenthesized lambdas in A (otherwise lambda body would include B)

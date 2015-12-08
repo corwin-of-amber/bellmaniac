@@ -51,8 +51,8 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
 
         # spawn jar and initialize jar behavior
         launch = if root.devmode then <[../Bellmaniac/bell ui.CLI]> else <[java -jar lib/bell.jar]>
-        flags = 
-            if input.dryRun then <[--dry-run]> 
+        flags =
+            if input.dryRun then <[--dry-run]>
             else if input.verify then <[--cert all --prover null --tmpdir]> ++ ["/tmp/" + name + "/"]
             else []
         jar = spawn launch[0], launch[1 to] ++ flags ++ <[-]>

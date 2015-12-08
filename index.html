@@ -34,7 +34,7 @@
 
 		<div ng-app="app" ng-controller="Ctrl">
 			<h3>Input <select style="float: right" ng-model="filename" ng-change="open()" ng-options="e group by prefix(e) for e in examples"></select></h3>
-          
+
 			<textarea ui-codemirror="{ onLoad : loaded, indentWithTabs : true }" ui-codemirror-opts="cmOptions" ng-model="code" id="code"></textarea>
 			<br>
 			<button class="btn btn-default" ng-click="parseAndDisplay()" id="submit">Parse!</button>
@@ -54,7 +54,7 @@
 				<div role="tabpanel" class="tab-pane active" id="parsed">
                     <pre>[<span ng-repeat="obj in parsed" class="tip"
                                 data-tip="{{obj | json:4}}"> ∙ </span>]</pre>
-					<!--<pre>{{parsed | json:4}}</pre>
+					<pre>{{parsed | json:4}}</pre><!--
 					<pre>{{output | json:4}}</pre> -->
 				</div>
 				<div role="tabpanel" class="tab-pane" id="format">
