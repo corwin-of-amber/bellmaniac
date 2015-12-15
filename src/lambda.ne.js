@@ -9,9 +9,9 @@ var grammar = {
     {"name": "expression", "symbols": ["subsetDeclaration"], "postprocess": id},
     {"name": "expression", "symbols": ["possiblyTypedExpression"], "postprocess": id},
     {"name": "expression", "symbols": ["routineDeclaration"], "postprocess": id},
-    {"name": "routineDeclaration", "symbols": ["variable", "paramList", "colondash", "possiblyTypedExpression"], "postprocess":  function(d) {
-        	var output = {};
-        	output[d[0]] = {params: d[1], body: d[3]};
+    {"name": "routineDeclaration", "symbols": ["variable", "routineDeclaration$ebnf$1", "_", "colondash", "_", "possiblyTypedExpression"], "postprocess":  function(d) {
+        	var output = {isRoutine: true};
+        	output[d[0].root.literal] = {params: d[1] || [], body: d[5]};
         	return output;
         } },
     {"name": "paramList", "symbols": ["leftsquarebracket", "_", "variable", "paramList$ebnf$1", "_", "rightsquarebracket"], "postprocess":  function(d) {
@@ -135,6 +135,8 @@ var grammar = {
     {"name": "typeArrow", "symbols": [{"literal":"→"}], "postprocess": function() { return "->"; }},
     {"name": "fix$string$1", "symbols": [{"literal":"f"}, {"literal":"i"}, {"literal":"x"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "fix", "symbols": ["fix$string$1"]},
+    {"name": "routineDeclaration$ebnf$1", "symbols": ["routineDeclaration$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "routineDeclaration$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
     {"name": "paramList$ebnf$1", "symbols": []},
     {"name": "paramList$ebnf$1", "symbols": ["paramList$ebnf$1$subexpression$1", "paramList$ebnf$1"], "postprocess": function arrconcat(d) {return [d[0]].concat(d[1]);}},
     {"name": "possiblyTypedExpression$ebnf$1", "symbols": ["possiblyTypedExpression$ebnf$1$subexpression$1"], "postprocess": id},
@@ -163,6 +165,7 @@ var grammar = {
     {"name": "_$ebnf$1", "symbols": [/[\s]/, "_$ebnf$1"], "postprocess": function arrconcat(d) {return [d[0]].concat(d[1]);}},
     {"name": "__$ebnf$1", "symbols": [/[\s]/]},
     {"name": "__$ebnf$1", "symbols": [/[\s]/, "__$ebnf$1"], "postprocess": function arrconcat(d) {return [d[0]].concat(d[1]);}},
+    {"name": "routineDeclaration$ebnf$1$subexpression$1", "symbols": ["_", "paramList"]},
     {"name": "paramList$ebnf$1$subexpression$1", "symbols": ["_", "comma", "_", "variable"]},
     {"name": "possiblyTypedExpression$ebnf$1$subexpression$1", "symbols": ["_", "colon", "_", "type"]},
     {"name": "setDeclaration$ebnf$1$subexpression$1", "symbols": ["__", "variable"]},

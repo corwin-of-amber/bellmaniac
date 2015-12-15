@@ -28,6 +28,7 @@
           calc.output = output.fromJar;
           calc.fromNearley = output.fromNearley;
           calc.scope = output.scope;
+          calc.routines = output.routines;
           if (thisId === $scope.history.length) {
             $scope.history.push({
               id: thisId + 1,
@@ -72,12 +73,14 @@
           text: calc.input,
           termJson: _.last($scope.history[thisIdx - 1].output).value.term,
           scope: $scope.history[thisIdx - 1].scope,
+          routines: $scope.history[thisIdx - 1].routines || {},
           verify: $scope.verification
         }, success, error, cellName);
       } else {
         bellmaniaParse({
           isTactic: false,
-          text: calc.input
+          text: calc.input,
+          routines: {}
         }, success, error, cellName);
       }
       cm.getInputField().blur();

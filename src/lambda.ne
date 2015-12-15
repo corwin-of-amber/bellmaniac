@@ -8,9 +8,9 @@ expression 	-> setMode {% id %}
     | possiblyTypedExpression {% id %}
     | routineDeclaration {% id %}
 
-routineDeclaration -> variable paramList colondash possiblyTypedExpression {% function(d) {
-	var output = {};
-	output[d[0]] = {params: d[1], body: d[3]};
+routineDeclaration -> variable (_ paramList):? _ colondash _ possiblyTypedExpression {% function(d) {
+	var output = {isRoutine: true};
+	output[d[0].root.literal] = {params: d[1] || [], body: d[5]};
 	return output;
 } %}
 

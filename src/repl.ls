@@ -9,7 +9,6 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
     submitCm = (cm, parent, callback=->) ->
         cm.removeOverlay(cm.currentOverlay)
 
-        #calc = cm.parent
         calc = parent
         calc.output = null
         calc.error = null
@@ -28,6 +27,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
                 calc.output = output.fromJar
                 calc.fromNearley = output.fromNearley
                 calc.scope = output.scope
+                calc.routines = output.routines
 
                 if (thisId == ($scope.history.length))
                     $scope.history.push({id: thisId + 1, input: "", output: null, error: null})
@@ -62,11 +62,12 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
                 text: calc.input,
                 termJson: _.last($scope.history[thisIdx-1].output).value.term
                 scope: $scope.history[thisIdx-1].scope
+                routines: $scope.history[thisIdx-1].routines || {}
                 verify: $scope.verification
                 , success, error, cellName
         else
             # parse as a term
-            bellmaniaParse({isTactic: false, text: calc.input}, success, error, cellName)
+            bellmaniaParse({isTactic: false, text: calc.input, routines: {}}, success, error, cellName)
 
         cm.getInputField().blur()
         $scope.mostRecentId = thisId
@@ -76,7 +77,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
     if localStorage['bell.presentMode']
         if JSON.parse(that)
             $ \body .addClass 'presentMode'
-        
+
     $scope.togglePresent = !->
       $ \body .toggleClass 'presentMode'
       localStorage['bell.presentMode'] = JSON.stringify ($ \body .hasClass 'presentMode')
@@ -93,12 +94,12 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
             $scope.$watch (-> parent.input), (oldValue, newValue) ->
                 if oldValue !== newValue
                     $scope.storeLocal!
-            
+
         initEditor(submitCallback, loadCallback)
 
-    restored = 
+    restored =
         if localStorage['bell.notebookText'] then JSON.parse(that)
-            
+
     $scope.history = restored?.history ? [
         {id: 1, input: "", output: null, error: null}
     ]
@@ -118,10 +119,10 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
         mostRecentId: $scope.mostRecentId,
         history: $scope.history.map (h) ->
           {id: h.id, input: h.input}
-      
+
     $scope.storeLocal = ->
       localStorage["bell.notebookText"] = marshal!
-      
+
     $scope.save = ->
       saveText = JSON.stringify({
         mostRecentId: $scope.mostRecentId,
@@ -159,7 +160,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
           async.eachSeries $scope.history, (h, callback) ->
             if h.input
               submitCm h.cm, h, callback
-        
+
     $scope.toggleStackShow = (err) ->
         err.stackshow = !err.stackshow
 
@@ -194,7 +195,7 @@ angular.module 'app', [\RecursionHelper, \ui.codemirror, \ui.select, \ngBootbox,
             #_.each calc.processes, (p, callback) ->
             #    p.kill('SIGINT')
             #, (err) -> console.log "killed; err=" + err
-              
+
             calc.verifyStatus = "Aborted"
 
   ..filter "collapse" ->

@@ -62,7 +62,7 @@
     }
   };
   root.bellmaniaParse = function(input, success, error, name){
-    var blocks, output, launch, flags, jar, fromStream, mode, toStream, stream, err;
+    var blocks, output, launch, flags, jar, fromStream, mode, routines, toStream, stream, err;
     name == null && (name = 'synopsis');
     blocks = splitTextToBlocks(stripComments(input.text));
     try {
@@ -119,8 +119,9 @@
       } else {
         output.scope = window.scope;
       }
+      routines = _.clone(input.routines);
       output.fromNearley = _.chain(blocks).map(function(block){
-        var p, parsed, results, x$, ref$, err;
+        var p, parsed, results, toCheck, k, ref$, v, x$, err;
         p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart);
         try {
           parsed = p.feed(block.text.trim());
@@ -131,11 +132,23 @@
             };
           }
           assert(results.length === 1, JSON.stringify(results) + " is not a unique parse.");
-          x$ = (ref$ = results[0], ref$.mode = mode, ref$.line = block.line, ref$);
-          if (x$.setMode != null) {
-            mode = x$.setMode;
+          if (results[0].isRoutine) {
+            toCheck = {};
+            for (k in ref$ = results[0]) {
+              v = ref$[k];
+              if (k !== 'isRoutine') {
+                routines[k] = v;
+                toCheck = v.body;
+              }
+            }
+            return toCheck.mode = mode, toCheck.line = block.line, toCheck.isRoutine = true, toCheck;
+          } else {
+            x$ = (ref$ = results[0], ref$.mode = mode, ref$.line = block.line, ref$);
+            if (x$.setMode != null) {
+              mode = x$.setMode;
+            }
+            return x$;
           }
-          return x$;
         } catch (e$) {
           err = e$;
           err.line = block.line;
@@ -147,6 +160,12 @@
         var ref$;
         return ref$ = {}, ref$[block.mode] = block, ref$.scope = output.scope, ref$;
       }).value();
+      output.routines = routines;
+      if (_.any(output.fromNearley, function(block){
+        return block.check.isRoutine;
+      })) {
+        input.isTactic = false;
+      }
       toStream = function(stream){
         var i$, ref$, len$, parsedBlock, term, tacticBlock;
         if (input.isTactic) {
@@ -156,7 +175,8 @@
             tacticBlock = {
               tactic: parsedBlock.check,
               term: term,
-              scope: parsedBlock.scope
+              scope: parsedBlock.scope,
+              routines: routines
             };
             stream.write(JSON.stringify(tacticBlock));
             stream.write("\n\n");

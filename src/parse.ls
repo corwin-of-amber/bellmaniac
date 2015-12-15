@@ -86,6 +86,8 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
         else
             output.scope = window.scope
 
+        routines = _.clone(input.routines)
+
         output.fromNearley = _.chain(blocks)
         .map((block) ->
             # parse block with nearley, filter only non-false results, assert parse unambiguous
@@ -95,8 +97,16 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
                 results = _.compact parsed.results
                 if results.length == 0 then throw {message: "No possible parse of input found."}
                 assert results.length == 1, JSON.stringify(results) + " is not a unique parse."
-                results[0] <<< {mode, block.line}
-                  if ..set-mode? then mode := ..set-mode
+                if results[0].isRoutine
+                    toCheck = {}
+                    for k,v of results[0]
+                        if k != \isRoutine
+                            routines[k] = v
+                            toCheck = v.body
+                    toCheck <<< {mode, block.line, isRoutine: true}
+                else
+                    results[0] <<< {mode, block.line}
+                        if ..set-mode? then mode := ..set-mode
             catch err
                 err.line = block.line
                 throw err
@@ -109,6 +119,11 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
             scope: output.scope
         ).value!
 
+        output.routines = routines
+
+        if _.any(output.fromNearley, (block) -> block.check.isRoutine)
+            input.isTactic = false
+
         toStream = (stream) ->
             if input.isTactic
                 for parsedBlock in output.fromNearley
@@ -118,6 +133,7 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
                         tactic: parsedBlock.check,
                         term: term
                         scope: parsedBlock.scope
+                        routines: routines
                     }
 
                     stream.write <| JSON.stringify(tacticBlock)
