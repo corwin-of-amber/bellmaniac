@@ -75,4 +75,7 @@ bower_components
 .bower-tmp
 
 ### binary ###
-lib/bell.jar
+/lib/bell.jar
+
+### temporary files ###
+/cache.json
