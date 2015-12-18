@@ -11,7 +11,8 @@ var grammar = {
     {"name": "expression", "symbols": ["routineDeclaration"], "postprocess": id},
     {"name": "routineDeclaration", "symbols": ["variable", "routineDeclaration$ebnf$1", "_", "colondash", "_", "possiblyTypedExpression"], "postprocess":  function(d) {
         	var output = {isRoutine: true};
-        	output[d[0].root.literal] = {params: d[1] || [], body: d[5]};
+        	var params = d[1] ? d[1][1] : [];
+        	output[d[0].root.literal] = {params: params, body: d[5]};
         	return output;
         } },
     {"name": "paramList", "symbols": ["leftsquarebracket", "_", "variable", "paramList$ebnf$1", "_", "rightsquarebracket"], "postprocess":  function(d) {

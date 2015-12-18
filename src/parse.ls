@@ -124,24 +124,22 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
         if _.any(output.fromNearley, (block) -> block.check.isRoutine)
             input.isTactic = false
 
-        toStream = (stream) ->
-            if input.isTactic
+        if input.isTactic
+            blocks =
                 for parsedBlock in output.fromNearley
                     term = wrapWith(input.termJson, \program)
 
-                    tacticBlock = {
-                        tactic: parsedBlock.check,
-                        term: term
-                        scope: parsedBlock.scope
-                        routines: routines
-                    }
+                    tactic: parsedBlock.check,
+                    term: term
+                    scope: parsedBlock.scope
+                    routines: routines
+        else
+            blocks = output.fromNearley
 
-                    stream.write <| JSON.stringify(tacticBlock)
-                    stream.write "\n\n"
-            else
-                for parsedBlock in output.fromNearley
-                    stream.write <| JSON.stringify(parsedBlock)
-                    stream.write "\n\n"
+        toStream = (stream) ->
+            for block in blocks
+                stream.write <| JSON.stringify(block)
+                stream.write "\n\n"
             stream.end!
 
         fs.writeFileSync "/tmp/#name.txt" input.text

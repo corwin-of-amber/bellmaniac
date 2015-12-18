@@ -62,7 +62,7 @@
     }
   };
   root.bellmaniaParse = function(input, success, error, name){
-    var blocks, output, launch, flags, jar, fromStream, mode, routines, toStream, stream, err;
+    var blocks, output, launch, flags, jar, fromStream, mode, routines, res$, i$, ref$, len$, parsedBlock, term, toStream, stream, err;
     name == null && (name = 'synopsis');
     blocks = splitTextToBlocks(stripComments(input.text));
     try {
@@ -166,27 +166,28 @@
       })) {
         input.isTactic = false;
       }
+      if (input.isTactic) {
+        res$ = [];
+        for (i$ = 0, len$ = (ref$ = output.fromNearley).length; i$ < len$; ++i$) {
+          parsedBlock = ref$[i$];
+          term = wrapWith(input.termJson, 'program');
+          res$.push({
+            tactic: parsedBlock.check,
+            term: term,
+            scope: parsedBlock.scope,
+            routines: routines
+          });
+        }
+        blocks = res$;
+      } else {
+        blocks = output.fromNearley;
+      }
       toStream = function(stream){
-        var i$, ref$, len$, parsedBlock, term, tacticBlock;
-        if (input.isTactic) {
-          for (i$ = 0, len$ = (ref$ = output.fromNearley).length; i$ < len$; ++i$) {
-            parsedBlock = ref$[i$];
-            term = wrapWith(input.termJson, 'program');
-            tacticBlock = {
-              tactic: parsedBlock.check,
-              term: term,
-              scope: parsedBlock.scope,
-              routines: routines
-            };
-            stream.write(JSON.stringify(tacticBlock));
-            stream.write("\n\n");
-          }
-        } else {
-          for (i$ = 0, len$ = (ref$ = output.fromNearley).length; i$ < len$; ++i$) {
-            parsedBlock = ref$[i$];
-            stream.write(JSON.stringify(parsedBlock));
-            stream.write("\n\n");
-          }
+        var i$, ref$, len$, block;
+        for (i$ = 0, len$ = (ref$ = blocks).length; i$ < len$; ++i$) {
+          block = ref$[i$];
+          stream.write(JSON.stringify(block));
+          stream.write("\n\n");
         }
         return stream.end();
       };
