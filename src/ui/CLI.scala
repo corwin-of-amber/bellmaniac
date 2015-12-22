@@ -13,14 +13,22 @@ import semantics.Trench
 import semantics.TypeInference
 import semantics.Prelude._
 import semantics.pattern.SimplePattern
-import examples.Gap
-import examples.Gap._
 import synth.engine.TacticApplicationEngine
 import synth.pods._
 import synth.proof.{Assistant, Prover}
 import report.data.{SerializationError, Rich, DisplayContainer}
 import java.io.StringWriter
 import java.io.PrintWriter
+import semantics.TypeTranslation.Environment
+import synth.engine.CollectStats
+import report.data.SerializationError
+import semantics.SubstituteWithinTypes
+import synth.engine.PodFactory
+import scala.collection.immutable.ListMap
+import report.data.SerializationContainer
+import com.mongodb.BasicDBList
+import semantics.TypeTranslation
+import report.data.SerializationError
 
 
 
@@ -52,8 +60,10 @@ object CLI {
     
     def interpretElement(json: DBObject): DBObject = {
       try {
-        implicit val scope = examples.Paren.env.scope //json.get("scope") andThen_ (Scope.fromJson, examples.Paren.env.scope)
-        println(json.get("routines"))
+        implicit val scope = json.get("scope") andThen_ (Scope.fromJson, { throw new SerializationError("scope not found", json) }) // examples.Paren.env.scope)
+        implicit val env = TypeTranslation.subsorts(scope) //examples.Paren.env
+        val routines = json.get("routines").opt_[DBObject] getOrElse null
+          
         json.get("check") match {
           case check: DBObject =>
             val term = Formula.fromJson(check)
@@ -62,10 +72,7 @@ object CLI {
                        "display" -> Rich.display(extrude(result))))
           case _ => json.get("tactic") match {
             case tactic: DBObject =>
-              val tae = mkTae
-              json.get("routines") andThen_ ( (x:DBObject) => x.toMap().foreach { 
-                case (name:String, defn:DBObject) => defn.get("body") andThen_ ((x:DBObject) => (Formula.fromJson(x).toPretty |> println), ())
-              }, () ) 
+              val tae = mkTae(routines)
               val result =
                 if (ui.Config.config.dryRun()) {
                   tae.mkState(tactic |> Formula.fromJson)
@@ -91,14 +98,17 @@ object CLI {
       for (blk <- blocks) {
         val json = JSON.parse(blk).asInstanceOf[DBObject]
         if (json != null) {
-          //val (result, outs) = 
-            if (ui.Config.config.debug())
-              //(Console.withOut(System.err) { interpretElement(json) }, "")
-              interpretElement(json)
-            else {
-              val (result, outs) = report.console.Console.andOut { interpretElement(json) }
-              println(result)
-            }
+          if (ui.Config.config.debugOnly()) {
+            interpretElement(json).get("stack") andThen (System.err.println, ())
+          }
+          else {
+            val (result, outs) =
+              if (ui.Config.config.debug())
+                (Console.withOut(System.err) { interpretElement(json) }, "")
+              else
+                report.console.Console.andOut { interpretElement(json) }
+            println(result)
+          }
         }
         else {
           println(cc.map(Map("error" -> "failed to parse JSON element")))
@@ -108,7 +118,48 @@ object CLI {
       }
     }
     
-    def mkTae = new examples.Paren.BreakDown.Interpreter
+    def mkTae(routinesJson: DBObject)(implicit scope: Scope, env: Environment) = 
+      routinesJson andThen (new Session.Interpreter(_), new Session.Interpreter(Map.empty[Any,Session.DefnSubroutine]))
+  }
+  
+  object Session {
+    
+    import collection.JavaConversions._
+    import syntax.Subroutine
+    import syntax.Subroutine.Arity
+
+    class DefnSubroutine(val params: List[Term], val body: Term) extends Subroutine[Term,Pod] with Arity {
+      val arity = params.length
+      
+      def apply(l: Term*) = new Pod {
+        override val program = new SubstituteWithinTypes(params zip l)(body)
+      }
+    }
+    
+    object DefnSubroutine {
+      def fromJson(json: DBObject)(implicit cc: SerializationContainer) = {
+        val params = json.get("params") andThen_ ((l: BasicDBList) => l map (x => x andThen_ (Formula.fromJson, { throw new SerializationError("malformed routine parameter", x); })) toList, List())
+        val body = json.get("body") andThen_ (Formula.fromJson, { throw new SerializationError("malformed routine body", json); })
+        new DefnSubroutine(params, body)
+      }
+    }
+    
+    type InvokeProver = examples.Paren.BreakDown.InvokeProver
+    
+    class Interpreter(routines: Map[Any, DefnSubroutine])(implicit scope: Scope, env: Environment) extends TacticApplicationEngine with PodFactory with InvokeProver with CollectStats {
+      import TacticApplicationEngine._
+      
+      def this(routinesJson: DBObject)(implicit scope: Scope, env: Environment, cc: SerializationContainer) =
+        this(
+          routinesJson.toMap().toMap map {  // second toMap is to convert to immutable Map
+            case (name: String, defn: DBObject) => (name:Any, DefnSubroutine.fromJson(defn))
+            case x: AnyRef => throw new SerializationError(s"malformed routine", x);
+            case x => throw new SerializationError(s"malformed routine ${x}", routinesJson);
+          })
+      
+      def fac: Map[Any,Subroutine[Term,Pod] with Arity] = routines
+    }
+
   }
 
   def stack(e: Throwable) = {

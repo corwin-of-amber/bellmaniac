@@ -14,7 +14,7 @@ import synth.proof.{Prover, Assistant}
 import syntax.Subroutine
 import syntax.Subroutine.Arity
 import scala.collection.immutable.ListMap
-import examples.Accordion.PodFactory
+import synth.engine.PodFactory
 import synth.engine.CollectStats
 import report.data.Rich
 

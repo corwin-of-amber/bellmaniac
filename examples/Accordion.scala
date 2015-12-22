@@ -21,6 +21,7 @@ import semantics.LambdaCalculus
 import synth.engine.TacticApplicationEngine.Instantiated
 import synth.engine.TacticApplicationEngine.PodOrigin
 import synth.engine.CollectStats
+import synth.engine.PodFactory
 
 
 
@@ -153,22 +154,6 @@ object Accordion {
     override def invokeProver(pod: Pod) { 
       invokeProver(List(), pod.obligations.conjuncts, List(pod))
     }
-  }
-  
-  trait PodFactory extends TacticApplicationEngine {
-    import TacticApplicationEngine._
-    import syntax.Subroutine
-    import syntax.Subroutine.Arity
-
-    def fac: Map[Any,Subroutine[Term,Pod] with Arity]
-    
-    override def pods(implicit s: State) = {
-      case (L(name), args) if fac.contains(name) => fac(name)(args)
-    }
-
-    val ph = Strip.subscriptIndexed("P").andThen(TV(_))
-
-    override val prototypes = fac map { case (name, sr) => TV(name) → (TV(name):@(1 to sr.arity map ph map (? ∩ _) toList)) } toMap
   }
   
   class Interpreter(implicit scope: Scope) extends TacticApplicationEngine with PodFactory with InvokeProver with CollectStats {

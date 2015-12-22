@@ -414,3 +414,23 @@ object TacticApplicationEngine {
 
   def slasher(A: Term, q: Term) = A.nodes find (n => n.root == "/" && (TypedTerm.split(n, I("/")) exists (_ eq q))) get
 }
+
+
+/* Pod manufacturing */
+trait PodFactory extends TacticApplicationEngine {
+  import syntax.Subroutine
+  import syntax.Subroutine.Arity
+  import syntax.Strip
+  import TacticApplicationEngine._
+
+  def fac: Map[Any,Subroutine[Term,Pod] with Arity]
+  
+  override def pods(implicit s: State) = {
+    case (L(name), args) if fac.contains(name) => fac(name)(args)
+  }
+
+  val ph = Strip.subscriptIndexed("P").andThen(TV(_))
+
+  override val prototypes = fac map { case (name, sr) => TV(name) → (TV(name):@(1 to sr.arity map ph map (? ∩ _) toList)) } toMap
+}
+  

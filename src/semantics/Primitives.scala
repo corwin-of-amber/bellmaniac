@@ -383,7 +383,7 @@ object TypedTerm {
   def replaceDescendant(term: Term, switch: (Term, Term))(implicit scope: Scope): Term = replaceDescendants(term, Some(switch))
 
   def replaceDescendants(term: Term, switch: Iterable[(Term, Term)])(implicit scope: Scope): Term = if (switch.isEmpty) term else
-    switch find (_._1 eq term) match {  // TODO implicit Scope unneeded here?
+    switch find (_._1 eq term) match {
       case Some(sw) => preserveBoth(term, sw._2)
       case _ => preserve(term, new Tree(term.root, term.subtrees map (replaceDescendants(_, switch))))
     }
@@ -458,7 +458,8 @@ class ProgressiveTypedSubstitution(substitutions: List[(Term, Term)])(implicit s
 class SubstituteWithinTypes(substitutions: List[(Term, Term)]) {
   val subst = new TreeSubstitution(substitutions)
   def apply(term: Term): Term = term match {
-    case typed: TypedTerm => TypedTerm(T(typed.root, typed.subtrees map apply), subst(typed.typ))
+    case typed: TypedTerm => T(typed.root, typed.subtrees map apply) :: subst(typed.typ)  // huh
+      //TypedTerm(T(typed.root, typed.subtrees map apply), subst(typed.typ))
     case _ => T(term.root, term.subtrees map apply)
   }
 }

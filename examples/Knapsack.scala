@@ -11,7 +11,7 @@ import synth.pods.Pod
 import synth.pods.ConsPod.`⟨ ⟩`
 import semantics.Domains._
 import synth.proof.{Prover, Assistant}
-import examples.Accordion.PodFactory
+import synth.engine.PodFactory
 import syntax.Subroutine
 import syntax.Subroutine.Arity
 import scala.collection.immutable.ListMap
