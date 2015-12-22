@@ -62,7 +62,7 @@
     }
   };
   root.bellmaniaParse = function(input, success, error, name){
-    var blocks, output, launch, flags, jar, fromStream, mode, routines, res$, i$, ref$, len$, parsedBlock, term, toStream, stream, err;
+    var blocks, output, launch, flags, env, jar, fromStream, ref$, mode, routines, res$, i$, len$, parsedBlock, term, toStream, stream, err;
     name == null && (name = 'synopsis');
     blocks = splitTextToBlocks(stripComments(input.text));
     try {
@@ -78,7 +78,10 @@
         : input.verify
           ? ['--cert', 'all', '--prover', 'null', '--tmpdir'].concat(["/tmp/" + name + "/"])
           : [];
-      jar = spawn(launch[0], slice$.call(launch, 1).concat(flags, ['-']));
+      env = import$(import$({}, process.env), configureEnv());
+      jar = spawn(launch[0], slice$.call(launch, 1).concat(flags, ['-']), {
+        env: env
+      });
       fromStream = function(stream, callback){
         var buffer;
         stream.setEncoding('utf-8');
@@ -107,18 +110,10 @@
           }, output);
         }
       });
-      root.scope = [];
+      root.scope = (ref$ = input.scope) != null
+        ? ref$
+        : [];
       mode = "check";
-      if (input.scope) {
-        output.scope = _.uniq(window.scope.concat(input.scope), function(s){
-          var ref$;
-          return (ref$ = s.literal) != null
-            ? ref$
-            : s[0].literal;
-        });
-      } else {
-        output.scope = window.scope;
-      }
       routines = _.clone(input.routines);
       output.fromNearley = _.chain(blocks).map(function(block){
         var p, parsed, results, toCheck, k, ref$, v, x$, err;
@@ -131,7 +126,7 @@
               message: "No possible parse of input found."
             };
           }
-          assert(results.length === 1, JSON.stringify(results) + " is not a unique parse.");
+          assert(results.length === 1, "Ambiguous parse (got " + results.length + "): " + JSON.stringify(results));
           if (results[0].isRoutine) {
             toCheck = {};
             for (k in ref$ = results[0]) {
@@ -158,8 +153,9 @@
         return block.kind !== 'set' && !(block.setMode != null);
       }).map(function(block){
         var ref$;
-        return ref$ = {}, ref$[block.mode] = block, ref$.scope = output.scope, ref$;
+        return ref$ = {}, ref$[block.mode] = block, ref$.scope = root.scope, ref$;
       }).value();
+      output.scope = root.scope;
       output.routines = routines;
       if (_.any(output.fromNearley, function(block){
         return block.check.isRoutine;
@@ -205,5 +201,10 @@
   };
   if ((typeof localStorage != 'undefined' && localStorage !== null) && localStorage['bell.devmode']) {
     root.devmode = JSON.parse(localStorage['bell.devmode']);
+  }
+  function import$(obj, src){
+    var own = {}.hasOwnProperty;
+    for (var key in src) if (own.call(src, key)) obj[key] = src[key];
+    return obj;
   }
 }).call(this);

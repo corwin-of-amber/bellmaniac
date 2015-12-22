@@ -15,7 +15,7 @@ var grammar = {
         	output[d[0].root.literal] = {params: params, body: d[5]};
         	return output;
         } },
-    {"name": "paramList", "symbols": ["leftsquarebracket", "_", "variable", "paramList$ebnf$1", "_", "rightsquarebracket"], "postprocess":  function(d) {
+    {"name": "paramList", "symbols": ["leftsquarebracket", "_", "typeVariable", "paramList$ebnf$1", "_", "rightsquarebracket"], "postprocess":  function(d) {
         	if (d[3].length === 0) {
         		return [d[2]];
         	} else {
@@ -34,7 +34,7 @@ var grammar = {
     {"name": "setDeclaration$string$1", "symbols": [{"literal":"s"}, {"literal":"e"}, {"literal":"t"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "setDeclaration", "symbols": ["variable", "setDeclaration$ebnf$1", "_", "colon", "_", "setDeclaration$string$1"], "postprocess": 
         function(d, loc, reject) { return declareSets(d[0], d[1].map(take(1))) || reject; } },
-    {"name": "subsetDeclaration", "symbols": ["variable", "subsetDeclaration$ebnf$1", "_", "subseteq", "_", "variable"], "postprocess": 
+    {"name": "subsetDeclaration", "symbols": ["variable", "subsetDeclaration$ebnf$1", "_", "subseteq", "_", "typeVariable"], "postprocess": 
         function(d, loc, reject) { return declareSubsets(d[0], d[1].map(take(1)), d[5]) || reject; } },
     {"name": "untypedExpression", "symbols": ["applicationExpression"], "postprocess": id},
     {"name": "untypedExpression", "symbols": ["lambdaExpression"], "postprocess": id},
@@ -167,7 +167,7 @@ var grammar = {
     {"name": "__$ebnf$1", "symbols": [/[\s]/]},
     {"name": "__$ebnf$1", "symbols": [/[\s]/, "__$ebnf$1"], "postprocess": function arrconcat(d) {return [d[0]].concat(d[1]);}},
     {"name": "routineDeclaration$ebnf$1$subexpression$1", "symbols": ["_", "paramList"]},
-    {"name": "paramList$ebnf$1$subexpression$1", "symbols": ["_", "comma", "_", "variable"]},
+    {"name": "paramList$ebnf$1$subexpression$1", "symbols": ["_", "comma", "_", "typeVariable"]},
     {"name": "possiblyTypedExpression$ebnf$1$subexpression$1", "symbols": ["_", "colon", "_", "type"]},
     {"name": "setDeclaration$ebnf$1$subexpression$1", "symbols": ["__", "variable"]},
     {"name": "subsetDeclaration$ebnf$1$subexpression$1", "symbols": ["__", "variable"]},

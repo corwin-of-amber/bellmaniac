@@ -55,7 +55,8 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
             if input.dryRun then <[--dry-run]>
             else if input.verify then <[--cert all --prover null --tmpdir]> ++ ["/tmp/" + name + "/"]
             else []
-        jar = spawn launch[0], launch[1 to] ++ flags ++ <[-]>
+        env = {} <<< process.env <<< configure-env!
+        jar = spawn launch[0], launch[1 to] ++ flags ++ <[-]>, {env}
 
         fromStream = (stream, callback) ->
             stream.setEncoding('utf-8')
@@ -74,18 +75,9 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
             if err != ""
                 error({message: err}, output)
 
-        # reset global list of sets to empty
-        root.scope = []
-
+        # configure global scope, mode, and routines
+        root.scope = input.scope ? []
         mode = "check"
-
-        if (input.scope)
-            output.scope = _.uniq(window.scope.concat(input.scope), (s) ->
-                s.literal ? s[0].literal
-            )
-        else
-            output.scope = window.scope
-
         routines = _.clone(input.routines)
 
         output.fromNearley = _.chain(blocks)
@@ -96,7 +88,7 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
                 parsed = p.feed block.text.trim()
                 results = _.compact parsed.results
                 if results.length == 0 then throw {message: "No possible parse of input found."}
-                assert results.length == 1, JSON.stringify(results) + " is not a unique parse."
+                assert results.length == 1, "Ambiguous parse (got #{results.length}): #{JSON.stringify(results)}"
                 if results[0].isRoutine
                     toCheck = {}
                     for k,v of results[0]
@@ -116,9 +108,10 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
         ).map((block) ->
             # wrap each expression in another layer that includes scope
             (block.mode): block
-            scope: output.scope
+            scope: root.scope
         ).value!
 
+        output.scope = root.scope
         output.routines = routines
 
         if _.any(output.fromNearley, (block) -> block.check.isRoutine)

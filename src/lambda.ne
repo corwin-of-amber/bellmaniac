@@ -15,7 +15,7 @@ routineDeclaration -> variable (_ paramList):? _ colondash _ possiblyTypedExpres
 	return output;
 } %}
 
-paramList -> leftsquarebracket _ variable (_ comma _ variable):* _ rightsquarebracket {% function(d) {
+paramList -> leftsquarebracket _ typeVariable (_ comma _ typeVariable):* _ rightsquarebracket {% function(d) {
 	if (d[3].length === 0) {
 		return [d[2]];
 	} else {
@@ -46,7 +46,7 @@ setMode ->
 setDeclaration -> variable (__ variable):* _ colon _ "set" {%
   function(d, loc, reject) { return declareSets(d[0], d[1].map(take(1))) || reject; } %}
 
-subsetDeclaration -> variable (__ variable):* _ subseteq  _ variable {%
+subsetDeclaration -> variable (__ variable):* _ subseteq  _ typeVariable {%
   function(d, loc, reject) { return declareSubsets(d[0], d[1].map(take(1)), d[5]) || reject; } %}
 
 ###########################################
