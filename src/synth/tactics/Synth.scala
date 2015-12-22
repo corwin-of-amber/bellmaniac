@@ -100,11 +100,13 @@ object Synth {
 
   class Sketch(val skfile: File, val incdirs: List[String]=Sketch.INCPATH) {
     import Sketch._
-
-    val fe_inc = incdirs flatMap (x => Seq("--fe-inc", x))
+    import syntax.Nullable._
+    
+    val baseDir = new File(System.getenv("BELLMANIA_HOME").opt getOrElse ".") //".")
+    val fe_inc = incdirs flatMap (x => Seq("--fe-inc", new File(baseDir, x).getPath))
     
     val command =
-      Seq(SKETCH, "--slv-lightverif") ++ fe_inc ++ Seq("--fe-custom-codegen", CODEGEN, skfile.getPath)
+      Seq(SKETCH, "--slv-lightverif") ++ fe_inc ++ Seq("--fe-custom-codegen", new File(baseDir, CODEGEN).getPath, skfile.getPath)
 
     def run()(implicit scope: Scope) = {
       cached getOrElse (hash, {

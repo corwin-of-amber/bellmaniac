@@ -18,6 +18,8 @@ object Config {
     val opt: ScallopOption[Boolean]
     val cache: ScallopOption[Boolean]
     val tmpdir: ScallopOption[File]
+    val debug: ScallopOption[Boolean]
+    val dryRun: ScallopOption[Boolean]
     val filename: ScallopOption[String]
   }
   
@@ -28,6 +30,8 @@ object Config {
     val tmpdir = opt[String]("tmpdir", default=Some("/tmp")).map(new File(_))
     val opt = toggle("opt", default=Some(true))
     val cache = toggle("cache", default=Some(true))
+    val debug = opt[Boolean]("debug", default=Some(false))  // @@@ should only be in CLIConfig
+    val dryRun = opt[Boolean]("dry-run", default=Some(false))  // @@@ should only be in CLIConfig
   }
   
   class CLIConfig(args: List[String]) extends BaseCommandLineConfig(args) {

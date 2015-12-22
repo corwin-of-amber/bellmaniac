@@ -64,11 +64,13 @@ object Console {
 
   def display(xterm: ExtrudedTerms) { display(xterm.terms) }
 
-  def asString(op: => Unit) = {
+  def andOut[X](op: => X) = {
     val ss = new ByteArrayOutputStream
-    scala.Console.withOut(ss)(op)
-    new String(ss.toByteArray(), "utf-8")
+    val ret = scala.Console.withOut(ss)(op)
+    (ret, new String(ss.toByteArray(), "utf-8"))
   }
+
+  def asString(op: => Unit) = andOut(op)._2
 
   def sdisplay(xterm: ExtrudedTerms) = asString { display(xterm) }
 

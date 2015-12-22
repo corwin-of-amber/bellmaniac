@@ -48,9 +48,12 @@ object CLI {
     implicit val cc = new DisplayContainer
     val extrude = new Extrude(Set(I("/"), cons.root))
 
+    import collection.JavaConversions._
+    
     def interpretElement(json: DBObject): DBObject = {
       try {
-        implicit val scope = json.get("scope") andThen (_.asInstanceOf[DBObject] |> Scope.fromJson, Gap.env.scope)
+        implicit val scope = examples.Paren.env.scope //json.get("scope") andThen_ (Scope.fromJson, examples.Paren.env.scope)
+        println(json.get("routines"))
         json.get("check") match {
           case check: DBObject =>
             val term = Formula.fromJson(check)
@@ -59,12 +62,18 @@ object CLI {
                        "display" -> Rich.display(extrude(result))))
           case _ => json.get("tactic") match {
             case tactic: DBObject =>
-              val term = json.get("term") andThen_ (Formula.fromJson, TI("dry-run"))
-                  //{ throw new SerializationError("tactic: missing 'term' key", json) })
-              val command = tactic |> Formula.fromJson
-              val tae = new TacticApplicationEngine()
-              val result = if (term == TI("dry-run")) tae.mkState(command)
-                else tae.transform(tae.initial(term), command)
+              val tae = mkTae
+              json.get("routines") andThen_ ( (x:DBObject) => x.toMap().foreach { 
+                case (name:String, defn:DBObject) => defn.get("body") andThen_ ((x:DBObject) => (Formula.fromJson(x).toPretty |> println), ())
+              }, () ) 
+              val result =
+                if (ui.Config.config.dryRun()) {
+                  tae.mkState(tactic |> Formula.fromJson)
+                }
+                else {
+                  json.get("term") andThen_ ((tae.transform(_:DBObject, json)),
+                      { throw new SerializationError("tactic: missing 'term' key", json) })
+                }
               cc.map(Map("term" -> result.program,
                          "display" -> Rich.display(result.ex)))
             case _ =>
@@ -74,7 +83,7 @@ object CLI {
       }
       catch {
         case e: Throwable =>
-          new BasicDBObject("error", "exception")append("message", e.toString)append("stack", stack(e))
+          cc.map(Map("error" -> "exception", "message" -> e.toString, "stack" -> stack(e)))
       }
     }
 
@@ -82,15 +91,24 @@ object CLI {
       for (blk <- blocks) {
         val json = JSON.parse(blk).asInstanceOf[DBObject]
         if (json != null) {
-          println(Console.withOut(System.err) { interpretElement(json) })
+          //val (result, outs) = 
+            if (ui.Config.config.debug())
+              //(Console.withOut(System.err) { interpretElement(json) }, "")
+              interpretElement(json)
+            else {
+              val (result, outs) = report.console.Console.andOut { interpretElement(json) }
+              println(result)
+            }
         }
         else {
-          println("""{"error": "failed to parse JSON element"}""")
+          println(cc.map(Map("error" -> "failed to parse JSON element")))
         }
 
         println()
       }
     }
+    
+    def mkTae = new examples.Paren.BreakDown.Interpreter
   }
 
   def stack(e: Throwable) = {
@@ -102,16 +120,16 @@ object CLI {
   def main(args: Array[String]) {
     ui.Config(new ui.Config.CLIConfig(args toList))
     val filename = ui.Config.config.filename()
+    val session = new Session
     try {
       val f = new BufferedReader(
         if (filename == "-") new InputStreamReader(System.in) else new FileReader(filename))
 
-      val session = new Session
       session repl getBlocks(f)
     }
     catch {
       case e: Throwable =>
-        println(new BasicDBObject("error", "fatal")append("message", e.toString)append("stack", stack(e)))
+        println(session.cc.map(Map("error" -> "fatal", "message" -> e.toString, "stack" -> stack(e))))
     }
   }
 }

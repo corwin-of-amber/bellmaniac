@@ -4,22 +4,20 @@ import report.data.SerializationContainer
 import semantics.Scope.TypingException
 import syntax.Identifier
 import syntax.Tree
-import syntax.AstSugar
+import syntax.AstSugar._
 import syntax.Scheme
 import TypeTranslation.{MicroCode,In,Out,Check}
 import TypeTranslation.InOut
 import TypeTranslation.{emit,simplify,canonical}
-import AstSugar.Term
 import report.console.NestedListTextFormat
 import syntax.transform.TreeSubstitution
 import semantics.pattern.MacroMap
 import semantics.pattern.Expansion
+import syntax.transform.TreeSubstitution
 
 
 
 object TypePrimitives {
-  
-  import AstSugar._
   
   /**
    * Strips type of checks to get the unrefined type.
@@ -203,8 +201,6 @@ object TypePrimitives {
 
 object LambdaCalculus {
   
-  import AstSugar._
-  
   def beta(va: Identifier, body: Term, arg: Term): Term = {
     if (body.isLeaf && body.root == va) arg
     else T(body.root, body.subtrees map (x => beta(va, x, arg)))
@@ -251,7 +247,6 @@ object LambdaCalculus {
 
 object TypedLambdaCalculus {
 
-  import AstSugar._
   import TypedTerm.{preserve,preserveBoth}
 
   def beta(va: Identifier, body: Term, arg: Term, retype: Boolean=false): Term = {
@@ -353,7 +348,6 @@ object `package` {
 
 case class TypedIdentifier(symbol: Identifier, typ: Term)
   extends Identifier(symbol.literal, symbol.kind, symbol.ns) {
-  import AstSugar._
   override def toString() = s"${super.toString()} :: $typ"
   def toPretty = s"${super.toString()} :: ${typ.toPretty}"
   def untype = new Identifier(symbol.literal, symbol.kind, symbol.ns)
@@ -362,19 +356,17 @@ case class TypedIdentifier(symbol: Identifier, typ: Term)
     super.asJson(container).append("type", typ.asJson(container))
 }
 
+
 case class TypedTerm(term: Term, typ: Term)
-  extends AstSugar.Term(term.root, term.subtrees) {
+  extends Term(term.root, term.subtrees) {
   override def toString() = s"${super.toString()} :: $typ"
   override def asJson(container: SerializationContainer) =
     super.asJson(container).append("type", container.anyRef(typ))
   def untype = term.untype
 }
   
-  
 object TypedTerm {
 
-  import AstSugar._
-  
   def typeOf(term: Term) = term match {
     case typed: TypedTerm => Some(typed.typ)
     case _ => (term.isLeaf, term.root) match {
@@ -429,7 +421,6 @@ object TypedTerm {
 
 
 object TypedScheme {
-  import AstSugar._
   
   class Template(vars: List[Identifier], template: Term) extends Scheme.Template(vars, template) {
     override def apply(args: Term*): Term = {
@@ -447,7 +438,6 @@ object TypedScheme {
   
   
   object TermWithHole {
-    import AstSugar._
     val hole = TI("□")
     
     def puncture(term: Term, subterm: Term)(implicit scope: Scope) =
@@ -465,6 +455,14 @@ class ProgressiveTypedSubstitution(substitutions: List[(Term, Term)])(implicit s
   override def preserve(old: Term, new_ : Term) = TypedTerm.preserveBoth(old, new_)
 }
 
+class SubstituteWithinTypes(substitutions: List[(Term, Term)]) {
+  val subst = new TreeSubstitution(substitutions)
+  def apply(term: Term): Term = term match {
+    case typed: TypedTerm => TypedTerm(T(typed.root, typed.subtrees map apply), subst(typed.typ))
+    case _ => T(term.root, term.subtrees map apply)
+  }
+}
+
 /**
  * Used to simplify first-order formulas using standard identities.
  * E.g. x = x     --->  true
@@ -472,7 +470,6 @@ class ProgressiveTypedSubstitution(substitutions: List[(Term, Term)])(implicit s
  */
 object FolSimplify {
   
-  import AstSugar._
   import Prelude.{TRUE,FALSE}
   
   def simplify(phi: Term): Term = {
@@ -588,8 +585,6 @@ class Trench[T](val el: List[Tree[T]]) {
 
 object Trench {
   
-  import AstSugar._
-
   def empty[T] = new Trench[T](List.empty[T])
 
   def display(tr: Trench[Term], ● : String = "•", indent: String = "  ", level: String = " ") = {

@@ -3,6 +3,7 @@ package report.data
 import syntax.Tree
 import syntax.AstSugar._
 import syntax.transform.ExtrudedTerms
+import semantics.TypedTerm
 
 
 object Rich {
@@ -17,7 +18,7 @@ object Rich {
 
   def display(forest: List[Tree[Term]], bullet: String = "•") = {
     new ObjectVBox(forest map (t =>
-      new ObjectTree(t map (_.toPrettyTape))
+      new ObjectTree(t map annotate)
         with BulletDecorator { override val ● = bullet }))
   }
 
@@ -25,6 +26,10 @@ object Rich {
 
   def display(ex: ExtrudedTerms, bullet: String): AsJson = display(ex.terms, bullet)
   
+  def annotate(term: Term) = TypedTerm.typeOf(term) match {
+    case Some(typ) => term.toPrettyTape + s"\t〔 ${typ toPretty} 〕"
+    case None => term.toPrettyTape
+  }
 }
 
 

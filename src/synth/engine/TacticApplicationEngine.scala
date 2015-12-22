@@ -236,7 +236,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       case prg @ T(program.root, _) => prg
       case x => program(instapod(x))
     }
-    State(A, extrude(A) |-- display)
+    mkState(A)
   }
 
   def transform(s: State, command: Term): State = {
@@ -351,17 +351,20 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   import syntax.Nullable._
 
   def initial(json: DBObject)(implicit sc: SerializationContainer): State = json.get("check") andThen ({ check =>
-    initial( Formula.fromJson(check.asInstanceOf[DBObject]) )
+    initial( Formula.fromJson(check.asInstanceOf[DBObject]) ) |-- display
   }, { throw new TranslationError("not a valid start element") })
 
-  def transform(s: State, json: DBObject)(implicit sc: SerializationContainer): State = json match {
+  def transform(s: State, cmd: DBObject)(implicit sc: SerializationContainer): State = cmd match {
     case l: BasicDBList =>  (s /: (l map (_.asInstanceOf[DBObject])))(transform)
-    case _ => json.get("check") orElse json.get("tactic") andThen_ (
+    case _ => cmd.get("check") orElse cmd.get("tactic") andThen_ (
       (_:DBObject) |> Formula.fromJson |> (transform(s, _)) |-- {
         `s'` => if (`s'` ne s) { display(`s'`) }
       }
     , s)
   }
+  
+  def transform(s: DBObject, cmd: DBObject)(implicit sc: SerializationContainer): State =
+    transform(mkState(s |> Formula.fromJson |> Binding.prebind), cmd)
   
   def finalize(s: State) {
     val prog = s.program |> OptimizationPass.foldAll
