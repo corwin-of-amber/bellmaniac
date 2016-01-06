@@ -469,26 +469,32 @@ class SubstituteWithinTypes(substitutions: List[(Term, Term)]) {
  * E.g. x = x     --->  true
  *      P & true  --->  P
  */
-object FolSimplify {
+class FolSimplify {
   
   import Prelude.{TRUE,FALSE}
   
   def simplify(phi: Term): Term = {
     val sub = phi.subtrees map simplify
     if (phi.root == "∧") {
-      val nontrue = sub filter (_ != TRUE)
-      nontrue match {
-        case Nil => TRUE
-        case List(x) => x
-        case _ => T(phi.root, nontrue)
+      if (sub contains FALSE) FALSE
+      else {
+        val nontrue = sub filter (_ != TRUE)
+        nontrue match {
+          case Nil => TRUE
+          case List(x) => x
+          case _ => T(phi.root, nontrue)
+        }
       }
     }
     else if (phi.root == "∨") {
-      val nonfalse = sub filter (_ != FALSE)
-      nonfalse match {
-        case Nil => FALSE
-        case List(x) => x
-        case _ => T(phi.root, nonfalse)
+      if (sub contains TRUE) TRUE
+      else {
+        val nonfalse = sub filter (_ != FALSE)
+        nonfalse match {
+          case Nil => FALSE
+          case List(x) => x
+          case _ => T(phi.root, nonfalse)
+        }
       }
     }
     else if (phi =~ ("<->", 2) || phi =~ ("=", 2)) {
@@ -518,6 +524,7 @@ object FolSimplify {
   case object Identity extends Trivial
   case class Constant(term: Term) extends Trivial
   
+  @deprecated
   def expandTrivials(theory: Iterable[Term]) = {
     def collect(phi: Term)(implicit vars: List[Term]): Map[Identifier, Trivial] = {
       if (phi.root == "∧") phi.subtrees flatMap collect toMap
@@ -541,6 +548,12 @@ object FolSimplify {
     new Expansion( MacroMap(macros:_*) )
   }
   
+}
+
+object FolSimplify extends FolSimplify
+
+object TypedFolSimplify extends FolSimplify {
+  override def simplify(phi: Term) = TypedTerm.preserve(phi, super.simplify(phi))
 }
 
 

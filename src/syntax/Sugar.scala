@@ -80,6 +80,7 @@ object AstSugar {
     def :@(these: List[Term]) = @:(term)(these:_*).foldLeft
 
     def conjuncts = term split I("∧")
+    def disjuncts = term split I("∨")
 
     def |!!(that: List[Term]) = if (that.isEmpty) term else this |! &&(that)
 
@@ -135,6 +136,8 @@ object AstSugar {
  
   def $TV = T($v)
   def $TV(name: String) = T($v(name))
+  def $TI(name: String) = T($I(name))
+  def $TI(name: String, kind: String) = T($I(name, kind))
 
   // - pattern matching for terms
 
@@ -185,5 +188,6 @@ object Strip {
   val boxedAbcUnderbar = (boxedAbcList map (_ + "̱")) orElse numeral
   val boxedAbcThenUnderbar = (boxedAbcList ++ (boxedAbcList map (_ + "̲"))) orElse numeral
   val subscript0_9 = "₀₁₂₃₄₅₆₇₈₉".toList orElse numeral
-  def subscriptIndexed(symbol: String): PartialFunction[Int, String] = { case x: Int => symbol + subscript0_9(x) }
+  def subscriptDecimal(num: Int) = num.toString map (c => subscript0_9(c - '0')) mkString
+  def subscriptIndexed(symbol: String): PartialFunction[Int, String] = { case x: Int => symbol + subscriptDecimal(x) }
 }

@@ -172,7 +172,7 @@ object TypeTranslation {
     def pred(dom: Identifier) = T(dom) -> TS("")
     def top(master: Identifier, subsort: Identifier) = ∀:(T(master), x => T(subsort)(x))
     def bot(master: Identifier, subsort: Identifier) = ∀:(T(master), x => ~T(subsort)(x))
-    for (master <- scope.sorts.masters; slave <- master.nodes if slave.root != ⊥)
+    for (master <- scope.sorts.mastersHie; slave <- master.nodes if slave.root != ⊥)
       yield slave.root -> Declaration(List(TypedIdentifier(slave.root, pred(master.root))), 
           if      (slave eq master)    List(top(master.root, slave.root))
           else if (slave.root.ns eq ⊥) List(bot(master.root, slave.root))

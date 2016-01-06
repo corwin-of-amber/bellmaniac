@@ -44,13 +44,7 @@ class Binding(val left: Set[Identifier], val right: Set[Identifier]) {
     else {
       val rebind =
         if (left contains term.root)
-          (term.subtrees dropRight 1) map getVarId map { x => (x -> bind(x)) } /*
-            val va = getVarId(x)
-            TypedLambdaCalculus.getDeclaredVariable(x) match {
-              case Some(va) => (va -> bind(va))
-              case _ => throw new TypingException(s"not a valid binding: '$x'")
-            }
-          }*/
+          (term.subtrees dropRight 1) map getVarId map { va => (va -> bind(va)) }
         else if (right contains term.root) ???
         else List()
       new Tree(term.root, term.subtrees map (bind(_, bound ++ rebind)))

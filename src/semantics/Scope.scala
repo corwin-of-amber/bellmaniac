@@ -64,7 +64,7 @@ class Domains {
    */
   def cork() = {
     val floor = List(T(⊥))
-    val corks = masters flatMap { master =>
+    val corks = mastersHie flatMap { master =>
         val ley = master.nodes filter (_.subtrees == floor)
         val newbot = new Identifier(s"⊥.${master.root}", "set", ⊥)
         ley map (t => (t, T(t.root, List(T(newbot, t.subtrees)))))
@@ -74,7 +74,8 @@ class Domains {
 
   def contains(sort: Identifier) = findSortHie(sort).isDefined
   
-  def masters = hierarchy.subtrees
+  def masters = mastersHie map (_.root)
+  def mastersHie = hierarchy.subtrees
   
   def getMastersOf(sort: Identifier) =
     if (sort == ⊤) List(⊤)
@@ -87,7 +88,7 @@ class Domains {
       case multi => throw new TypingException(s"ambiguous top-level sort for '$sort': $multi")
     }
 
-  def isMaster(sort: Identifier) = masters exists (_.root == sort)
+  def isMaster(sort: Identifier) = masters contains sort
 
   def supers(sort: Identifier) = {
     def f(t: Tree[Identifier]): List[Identifier] = 

@@ -44,11 +44,14 @@ class Identifier (val literal: Any, val kind: String = "?", val ns: AnyRef = nul
 
 object Identifier {
   def fromJson(json: DBObject)(implicit container: SerializationContainer): Identifier = {
-    // TODO typed identifier, ns
+    // TODO typed identifier
     new Identifier(
       literal = json.get("literal") orElse { throw new SerializationError("'literal' missing", json); },
       kind = json.get("kind") andThen (_.toString, "?"),
-      ns = if (json.get("ns") == "*") new Uid else null
+      ns = json.get("ns") andThen (ns => if (ns == "*") new Uid else container match {
+        case numerator: Numerator => (numerator <-- ns.asInstanceOf[Int]).asInstanceOf[AnyRef]
+        case _ => null
+      }, null)
     )
   }
 }

@@ -7,3 +7,6 @@ jar xf ../lib/mongo-java-driver-2.13.1.jar
 tar xf ../lib/scallop_2.11-0.9.5.jar
 echo "Main-Class: ui.CLI" > Manifest.txt
 jar cfm ../bell.jar Manifest.txt .
+
+cd ..
+jar cf ccg.jar -C bin synth/tactics/sketch/

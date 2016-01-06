@@ -56,7 +56,7 @@ object RealPod {
 }
 
 
-class TotalOrderPod(D: Term, val < : Term) extends Pod {
+class TotalOrderPod(val D: Term, val < : Term) extends Pod {
   
   override val decl = new Declaration(<) where (
       ∀:(D, (i, j) => (< :@ i :@ j) -> ~(< :@ j :@ i)),                           // anti-symmetry

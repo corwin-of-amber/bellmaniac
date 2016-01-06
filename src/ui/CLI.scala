@@ -29,6 +29,7 @@ import report.data.SerializationContainer
 import com.mongodb.BasicDBList
 import semantics.TypeTranslation
 import report.data.SerializationError
+import java.io.File
 
 
 
@@ -50,6 +51,7 @@ object CLI {
   }
 
   def getBlocks(f: BufferedReader) = splitBlocks(getLines(f))
+  def getBlocks(f: File): Stream[String] = getBlocks(new BufferedReader(new FileReader(f)))
 
   class Session {
 

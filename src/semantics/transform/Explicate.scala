@@ -63,20 +63,20 @@ class Explicate(includePreconditions: Boolean=true, masterGuards: Boolean=false)
     case Some(existing) => map + (key -> (existing ++ values))
   }
 
-  def hoist(t: Term): Term = t match {
+  def hoist(t: Term)(implicit assumptions: List[Term]=List.empty): Term = t match {
     case T(`@:`, sub@(f::_)) if f != Prelude.cons /* @@@ cons is special */ =>
       val guarded = sub map hoist map {
         case T(`|!`, List(expr, cond)) => (expr, Some(cond))
         case expr => (expr, None)
       }
-      preserve(t, preserve(t, T(@:, guarded map (_._1))) |!! (guarded flatMap (_._2)))
+      preserve(t, preserve(t, T(@:, guarded map (_._1))) |!! simplify(guarded flatMap (_._2)))
     case T(`:-`, List(lbl, expr)) => hoist(expr) match {
       case T(`|!`, List(expr, cond)) =>
         preserve(t, preserve(t, lbl :- expr) |! cond)
       case expr => preserve(t, lbl :- expr)
     }
-    case T(`|!`, List(expr, cond1)) => hoist(expr) match {
-      case T(`|!`, List(expr, cond2)) => preserve(t, expr |! (cond1 & cond2))
+    case T(`|!`, List(expr, cond1)) => hoist(expr)(assumptions ++ cond1.conjuncts) match {
+      case T(`|!`, List(expr, cond2)) => preserve(t, expr |!! simplify(List(cond1, cond2)))
       case expr => preserve(t, expr |! cond1)
     }
     case T(r, s) => preserve(t, T(r, s map hoist))
@@ -86,6 +86,24 @@ class Explicate(includePreconditions: Boolean=true, masterGuards: Boolean=false)
 
   def nontriv(asserts: List[Term])(implicit assumptions: List[Term]) =
     asserts filterNot assumptions.contains
+    
+  def implied(assumption: Term) = 
+    if (scope.sorts contains assumption.root) {
+      val sups = scope.sorts.supers(assumption.root)
+      val sups_+ = sups filter (assumption.root !=)
+      (sups_+ map (T(_)(assumption.subtrees))) ++
+        (sups_+ flatMap scope.sorts.findSortHie flatMap (_.subtrees map (_.root)) filterNot (sups.contains) map (~T(_)(assumption.subtrees)))
+    }
+    else List()
+   
+  def neg(literal: Term) = if (literal =~ ("¬", 1)) literal.subtrees(0) else ~literal
+    
+  def simplify(asserts: List[Term])(implicit assumptions: List[Term]) = {
+    val truth = assumptions ++ (assumptions flatMap implied)
+    val lies  = truth map neg
+    val subst = new TypedSubstitution((truth map ((_, Prelude.TRUE))) ++ (lies map ((_, Prelude.FALSE))))
+    asserts flatMap (subst(_).conjuncts map TypedFolSimplify.simplify) filter (Prelude.TRUE !=) distinct
+  }
 }
 
 object Explicate {
