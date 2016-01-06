@@ -55,8 +55,8 @@ object OptimizationPass {
               
       //inferLoopDirections(program)
       
-      val fpan = new FixpointLoopAnalysis
-      fpan.inferReadGuards(program)
+      val rdg = new FixpointLoopAnalysis apply program
+      println(rdg toPretty)
     }
   }
  
@@ -178,7 +178,7 @@ object OptimizationPass {
     def intro(v: Term)(implicit ctx: Context) = if (ctx.vars.isEmpty) Input(v) else Fix(v)
     
     def link(expr: Term)(implicit ctx: Context): ListMap[Id[Term], List[Var]] = 
-      if (ctx.vars contains expr) ListMap.empty else nonleaf(expr)
+      if (ctx.vars exists (_.term == expr)) ListMap.empty else nonleaf(expr)
     
     def nonleaf(expr: Term)(implicit ctx: Context): ListMap[Id[Term], List[Var]] = {
       ListMap((expr,
@@ -245,19 +245,20 @@ object OptimizationPass {
     
     implicit val scope = rec.scope
     
+    // TODO eventually this should also call inferLoopDirections
+    override def apply(program: Term) = inferReadGuards(program)
+    
     //------------------
     // Read-Guards Part
     //------------------
 
-    def inferReadGuards(program: Term) {
+    def inferReadGuards(program: Term) = {
       val sprogram = rec.simplify(program)(_.isLeaf)
-
       val chain = this.chain(sprogram)
-      chain.foreach { case (at, accesses) =>
-        println(s"${at.get toPretty}   |   ${accesses map (_.term.toPretty)}")
-      }
+      
       val (qdefs, qswitches) =
         sprogram.nodes.collect { case T(Prelude.fix.root, List(f)) =>
+          val pf = rec.reassoc(program, f)
           // Compute read-set region formula scheme Q
           // e.g.
           //   Q(i,j) := (J₀(i) ∧ J₀(j)) ∨ (J₀(i) ∧ J₁(j)) ∨ (J₁(i) ∧ J₁(j))
@@ -267,7 +268,7 @@ object OptimizationPass {
           val Qdef = Q ~> ((x: Term) => Some(argumentsInRegion(x.subtrees, accessTypes)))
           // Add qualifier Q to any occurrence of the fix variable
           val Qswitch =
-            f.nodes.collect { 
+            pf.nodes.collect { 
               case v if v.isLeaf && accesses.contains(Fix(v)) => 
                 (v, TypedTerm(v, qualifyRegion(typeOf_!(v), Q)))
             }
@@ -275,9 +276,9 @@ object OptimizationPass {
         } unzip
       // Turn qualifiers into guards using Explicate, and expand the definition
       val explicate = new Explicate()
-      val guarded = explicate(TypedTerm.replaceDescendants(sprogram, qswitches.flatten.toIterable)) |-- (_.toPretty |> println)
+      val guarded = explicate(TypedTerm.replaceDescendants(program, qswitches.flatten.toIterable))
       val expansion = new Expansion( MacroMap(qdefs:_*) )
-      explicate.hoist(expansion(guarded) |-- (_.toPretty |> println)) |-- (_.toPretty |> println)
+      explicate.hoist(expansion(guarded))
     }
     
     def argumentsInRegion(args: List[Term], regionTypes: Seq[Term]) =

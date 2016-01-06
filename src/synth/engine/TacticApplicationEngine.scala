@@ -1,10 +1,8 @@
 package synth.engine
 
 import java.io.{File, FileReader, BufferedReader}
-
 import com.mongodb.util.JSON
 import com.mongodb.{BasicDBList, DBObject}
-
 import report.{AppendLog, FileLog}
 import report.console.Console._
 import report.console.Console.display
@@ -19,13 +17,14 @@ import syntax.AstSugar._
 import syntax.Piping._
 import syntax.{Tree, Formula}
 import syntax.transform.{ExtrudedTerms, Extrude}
-import synth.engine.OptimizationPass.DependencyAnalysis
 import synth.pods.ConsPod._
 import synth.pods.TacticalError
 import synth.pods._
 import synth.proof.Prover
 import synth.tactics.Rewrite._
 import synth.tactics.{SliceAndDicePod, SlicePod, Synth}
+import synth.engine.OptimizationPass.DependencyAnalysis
+import synth.engine.OptimizationPass.FixpointLoopAnalysis
 import ui.CLI
 
 
@@ -332,7 +331,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   def invokeOptimize(implicit s: State) = {
     if (ui.Config.config.opt()) {
       val rec = new OptimizationPass.Recorder()(prover.env)
-      (new DependencyAnalysis()(rec, prover) apply s.program)
+      s.program |> (new DependencyAnalysis()(rec, prover) apply)
     }
     else s.program
   }
@@ -341,7 +340,11 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
    * Output part
    */
 
-  def emit(s: State) = mkState(Explicate.explicateHoist(s.program |> OptimizationPass.foldAllCalls, masterGuards=true))
+  def emit(s: State) = {
+    val rec = new OptimizationPass.Recorder()(prover.env)
+    s.program |> OptimizationPass.foldAllCalls |> (new FixpointLoopAnalysis()(rec, prover) apply) |>
+      (Explicate.explicateHoist(_, masterGuards=true)) |> mkState
+  }
 
   /*
    * JSON part
@@ -350,7 +353,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   import scala.collection.JavaConversions._
   import syntax.Nullable._
 
-  def initial(json: DBObject)(implicit sc: SerializationContainer): State = json.get("check") andThen ({ check =>
+  def initial(json: DBObject)(implicit sc: SerializationContainer): State = json.get("check") orElse json.get("term") andThen ({ check =>
     initial( Formula.fromJson(check.asInstanceOf[DBObject]) ) |-- display
   }, { throw new TranslationError("not a valid start element") })
 
