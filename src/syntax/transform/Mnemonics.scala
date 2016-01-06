@@ -20,11 +20,13 @@ class Mnemonics {
     case Some(x) => x
     case _ =>
       val lit = normalize(id)
-      val newMne = (lit #:: (nat map (lit + _))) find (x => ! mnemonics.exists (_._2 == x)) get ;
+      val newMne = (lit #:: (nat map (indexed(lit, _)))) find (x => ! mnemonics.exists (_._2 == x)) get ;
       mnemonics += id -> newMne
       newMne
   }
 
+  def indexed(lit: String, index: Int) = lit + index
+  
   def release(ids: Iterable[Identifier]) = mnemonics --= ids
   def --=(ids: Iterable[Identifier]) = mnemonics --= ids
 

@@ -341,7 +341,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
    * Output part
    */
 
-  def emit(s: State) = mkState(Explicate.explicateHoist(s.program |> OptimizationPass.foldAll, masterGuards=true))
+  def emit(s: State) = mkState(Explicate.explicateHoist(s.program |> OptimizationPass.foldAllCalls, masterGuards=true))
 
   /*
    * JSON part
@@ -367,7 +367,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     transform(mkState(s |> Formula.fromJson |> Binding.prebind), cmd)
   
   def finalize(s: State) {
-    val prog = s.program |> OptimizationPass.foldAll
+    val prog = s.program |> OptimizationPass.foldAllCalls
     if (prog != s.program) {
       println("=" * 80)
       display(prog)

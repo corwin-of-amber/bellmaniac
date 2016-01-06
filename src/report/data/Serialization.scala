@@ -42,8 +42,8 @@ trait AsJson {
 
 
 trait Numerator {
-  def --> (value: Any): Int
-  def <-- (index: Int): Any
+  def --> (value: AnyRef): Int
+  def <-- (index: Int): AnyRef
 }
 
 class DisplayContainer extends SerializationContainer with Numerator {
@@ -72,10 +72,10 @@ class DisplayContainer extends SerializationContainer with Numerator {
     }
   }
 
-  val mapped: collection.mutable.Map[Any,Int] = collection.mutable.Map.empty
+  val mapped: collection.mutable.Map[AnyRef,Int] = collection.mutable.Map.empty
   var max = 0
 
-  def --> (value: Any) = mapped get value match {
+  def --> (value: AnyRef) = mapped get value match {
     case Some(idx) => idx
     case _ => max = max + 1 ; mapped += (value -> max) ; max
   }
@@ -93,7 +93,7 @@ class DisplayContainer extends SerializationContainer with Numerator {
 
   def ref(refid: Any) = new BasicDBObject("ref", refid)
 
-  def withRefid(json: DBObject, value: Any) = {
+  def withRefid(json: DBObject, value: AnyRef) = {
     max = max + 1 ; mapped += (value -> max)
     json.put("_id", max)
     json

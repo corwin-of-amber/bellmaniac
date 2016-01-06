@@ -22,6 +22,8 @@ object Config {
     val debugOnly: ScallopOption[Boolean]
     val dryRun: ScallopOption[Boolean]
     val filename: ScallopOption[String]
+    
+    def file() = new File(filename())
   }
   
   abstract class BaseCommandLineConfig(args: List[String]) extends ScallopConf(args toList) with CommandLineConfig {

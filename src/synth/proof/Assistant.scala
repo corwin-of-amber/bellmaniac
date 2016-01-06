@@ -1,7 +1,7 @@
 package synth.proof
 
 
-import syntax.Identifier
+import syntax.{Identifier,Tree}
 import syntax.AstSugar._
 import semantics.Scope
 import semantics.FunctionType
@@ -24,6 +24,11 @@ import report.AppendLog
 import report.data.Rich
 import syntax.transform.Extrude
 import syntax.transform.EqByRef
+import semantics.Domains
+import semantics.Prelude.{R,N}
+import synth.pods.PartitionPod
+import synth.pods.TotalOrderPod
+import synth.pods.IndexArithPod
 
 
 
@@ -89,7 +94,11 @@ class Assistant(implicit env: Environment) {
     else (List(), goal)
   }
   
-
+  /**
+   * @param term: a term to process and simplify.
+   * @param argpat: when to apply a beta reduction to an expression of the form (v ↦ t₀) t₁.
+   *   Term is reduced when argpat(t₁) is true (default is always).
+   */
   def simplify(term: Term)(implicit argpat: Term=>Boolean=_=>true): Term = {
     val sub = term.subtrees map simplify
     if (term =~ ("@", 2) && sub(0) =~ ("↦", 2) && argpat(sub(1)))
@@ -131,6 +140,28 @@ class Assistant(implicit env: Environment) {
     && (a ++ (condB.split(I("∧")) filterNot a.contains))
   }
   
+  def scopeFacts(designated: Map[DesignatedRole, Term]=Map.empty) = {
+    def is_⊥(t: Tree[Identifier]) = t.root == Domains.⊥ || t.root.ns == Domains.⊥
+    val < = TV("<")
+    val masterIndex =
+      scope.sorts.masters map (T(_)) filterNot List(N,R).contains flatMap { J =>
+        val toJ = designated get DesignatedRole(<, J) match { 
+          case Some(lt) => TotalOrderPod(J, lt) 
+          case _ =>        TotalOrderPod(J) 
+        }
+        val idxJ = IndexArithPod(J, toJ.<)
+        List(toJ, idxJ)
+      }
+    val partitions =
+      scope.sorts.hierarchy.nodes collect {
+        case t if !is_⊥(t) && !t.subtrees.exists(is_⊥) && t.subtrees.length == 2 =>
+          val J = T(scope.sorts.getMasterOf(t.root))
+          val < = masterIndex collectFirst { case toJ: TotalOrderPod if toJ.D == J => toJ.< } get ;
+          PartitionPod(T(t.root), <, T(t.subtrees(0).root), T(t.subtrees(1).root))
+      }
+    masterIndex ++ partitions
+  }
+  
   /**
    * Use common idioms for passing a proof obligation to the prover.
    */
@@ -163,3 +194,5 @@ class Assistant(implicit env: Environment) {
   }
 
 }
+
+case class DesignatedRole(symbol: Term, domain: Term)
