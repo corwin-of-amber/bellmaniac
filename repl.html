@@ -1,7 +1,7 @@
 <html>
 <head>
 	<script src="../web.realtime/reload.js"></script>
-    <script>Reload.ignore(/^examples\//, /^data\//, /^cache/);</script>
+    <script>Reload.ignore(/^examples\//, /^data\//, /^cache/, /^bower_components\//);</script>
 
     <meta charset="UTF-8">
 	<script src="node_modules/jquery/dist/jquery.min.js"></script>
@@ -12,10 +12,11 @@
 	<script src="node_modules/codemirror/mode/scheme/scheme.js"></script>
 	<script src="node_modules/codemirror/addon/hint/show-hint.js"></script>
 	<script src="node_modules/codemirror/addon/selection/active-line.js"></script>
-	<script src="node_modules/angular/angular.js"></script>
+	<script src="node_modules/angular/angular.min.js"></script>
 	<script src="node_modules/angular-recursion/angular-recursion.js"></script>
 	<script src="node_modules/angular-ui-codemirror/src/ui-codemirror.js"></script>
 	<script src="node_modules/angular-ui-select/select.js"></script>
+    <script src="bower_components/angular-indexedDB/angular-indexed-db.js"></script>
 	<script src="node_modules/bootstrap-switch/dist/js/bootstrap-switch.js"></script>
 	<script src="node_modules/angular-bootstrap-switch/dist/angular-bootstrap-switch.js"></script>
 	<script src="node_modules/bootbox/bootbox.js"></script>
@@ -37,7 +38,7 @@
 	<link rel="stylesheet" href="node_modules/codemirror/addon/hint/show-hint.css">
 	<link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
 	<link rel="stylesheet" href="node_modules/bootstrap-switch/dist/css/bootstrap3/bootstrap-switch.css">
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="bower_components/font-awesome/css/font-awesome.min.css">
 	<link rel="stylesheet" href="src/index.css">
 </head>
 <body>
@@ -64,7 +65,7 @@
 			<div class="row">
 				<span ng-show="isOutdated(h)" class="label label-danger pull-right icon">OUTDATED</span>
 			</div>
-			<div class="input-cell">
+			<div class="input-cell" ng-init="bind(h)">
 				<div class="cell-caption">{{"In[" + h.id + "]"}}</div>
 				<div class="cell-content">
                     <textarea ui-codemirror="{ onLoad : wrapper(h) }" ui-codemirror-opts="cmOptions" ng-model="h.input"></textarea>
@@ -81,7 +82,7 @@
 				</div>
 			</div>
 			<div class="loading" ng-if="h.loading">
-				<i class="fa fa-pulse fa-4x fa-spinner"></i>
+				<i class="fa fa-circle-o-notch fa-2x fa-pulse"></i>
 			</div>
 			<div class="output-cell" ng-if="h.output" ng-class="{invalid: isInvalid(h)}">
 				<div class="cell-caption">{{"Out[" + h.id + "]"}}</div>

@@ -37,7 +37,7 @@ wrapWith = (term, rootLiteral, kind='?') ->
 # input is of form
 #     {isTactic: bool,
 #      text: string from codemirror
-#      termJson:? previous json if isTactic is true
+#      term:? previous term (AST) if isTactic is true
 #      scope:? previous scope if isTactic is true
 #     }
 root.bellmaniaParse = (input, success, error, name='synopsis') ->
@@ -113,14 +113,13 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
 
         output.scope = root.scope
         output.routines = routines
+        output.isTactic = input.isTactic && \
+            !_.any(output.fromNearley, (block) -> block.check.isRoutine)
 
-        if _.any(output.fromNearley, (block) -> block.check.isRoutine)
-            input.isTactic = false
-
-        if input.isTactic
+        if output.isTactic
             blocks =
                 for parsedBlock in output.fromNearley
-                    term = wrapWith(input.termJson, \program)
+                    term = wrapWith(input.term, \program)
 
                     tactic: parsedBlock.check,
                     term: term
