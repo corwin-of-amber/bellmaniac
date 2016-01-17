@@ -17,6 +17,7 @@
     "chokidar": "^1.0.5",
     "codemirror": "^5.7.0",
     "coffee-script": "*",
+    "fs-extra": "^0.26.4",
     "glob": "^5.0.9",
     "jquery": "^2.1.4",
     "livescript": "^1.4.0",

@@ -1,18 +1,10 @@
+
+fs = require 'fs-extra'
 spawn = require \child_process .spawn
 assert = require \assert
 _ = require \lodash
 
 root = exports ? this
-
-stripComments = (input) ->
-    input.replace //  \s* \/\/ .*$  |  \/\* [\s\S]*? \*\/  //mg, ''
-
-root.splitTextToBlocks = (input) ->
-    blocks = input.split /(\n+)(?!\s)/ .map ->
-      text: it
-    countLines = (text) -> (text.match(/\n/g)||[]).length
-    _.reduce blocks, ((x,y) -> y.line = x ; x + countLines(y.text)), 1
-    blocks .filter (.text == /\S/)
 
 readResponseBlocks = (output, parsedInputs) ->
     for block, blockIdx in output.split(/\n\n+(?=\S)/).filter(-> it)
@@ -28,9 +20,9 @@ readResponseBlocks = (output, parsedInputs) ->
               err.line = (..?check ? ..?tactic)?.line
             throw err
 
-wrapWith = (term, rootLiteral, kind='?') ->
-    if (term.root.literal != rootLiteral)
-        tree(identifier(rootLiteral, kind), [term])
+wrapWith = (term, root) ->
+    if (term.root.literal != root.literal)
+        tree(root, [term])
     else
         term
 
@@ -42,7 +34,9 @@ wrapWith = (term, rootLiteral, kind='?') ->
 #     }
 root.bellmaniaParse = (input, success, error, name='synopsis') ->
 
-    blocks = splitTextToBlocks(stripComments(input.text))
+    parser = new Parser
+  
+    blocks = parser.splitTextToBlocks(parser.stripComments(input.text))
 
     try
         output =
@@ -51,9 +45,11 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
 
         # spawn jar and initialize jar behavior
         launch = if root.devmode then <[../Bellmaniac/bell ui.CLI]> else <[java -jar lib/bell.jar]>
+        tmpdir = "/tmp/#name/"
+          fs.removeSync ..
         flags =
             if input.dryRun then <[--dry-run]>
-            else if input.verify then <[--cert all --prover null --tmpdir]> ++ ["/tmp/" + name + "/"]
+            else if input.verify then <[--cert all --prover null --tmpdir]> ++ [tmpdir]
             else []
         env = {} <<< process.env <<< configure-env!
         jar = spawn launch[0], launch[1 to] ++ flags ++ <[-]>, {env}
@@ -76,58 +72,43 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
                 error({message: err}, output)
 
         # configure global scope, mode, and routines
-        root.scope = input.scope ? []
-        mode = "check"
-        routines = _.clone(input.routines)
-
-        output.fromNearley = _.chain(blocks)
-        .map((block) ->
-            # parse block with nearley, filter only non-false results, assert parse unambiguous
-            p = new nearley.Parser grammar.ParserRules, grammar.ParserStart
-            try
-                parsed = p.feed block.text.trim()
-                results = _.compact parsed.results
-                if results.length == 0 then throw {message: "No possible parse of input found."}
-                assert results.length == 1, "Ambiguous parse (got #{results.length}): #{JSON.stringify(results)}"
-                if results[0].isRoutine
-                    toCheck = {}
-                    for k,v of results[0]
-                        if k != \isRoutine
-                            routines[k] = v
-                            toCheck = v.body
-                    toCheck <<< {mode, block.line, isRoutine: true}
-                else
-                    results[0] <<< {mode, block.line}
-                        if ..set-mode? then mode := ..set-mode
-            catch err
-                err.line = block.line
-                throw err
-        ).filter((block) -> block.kind != \set && !(block.set-mode?)
-            # only take the expressions that aren't set declarations
-            # nearley has already pushed set declarations to root.scope
-        ).map((block) ->
+        parser.scope = input.scope ? []
+        parser.routines = _.clone(input.routines)
+        
+        output.fromNearley = _.chain blocks 
+        .map parser~processBlock
+        .filter (block) -> block.kind != \set && !(block.set-mode?)
+            # only take the expressions that aren't set declarations or mode switches.
+            # these are handled internally by Parser
+        .value!
+        #.map((block) ->
             # wrap each expression in another layer that includes scope
-            (block.mode): block
-            scope: root.scope
-        ).value!
+        #    (block.mode): block
+        #    scope: root.scope
+        #).value!
 
-        output.scope = root.scope
-        output.routines = routines
+        output.scope = parser.scope
+        output.routines = parser.routines
         output.isTactic = input.isTactic && \
-            !_.any(output.fromNearley, (block) -> block.check.isRoutine)
+            !_.any(output.fromNearley, (block) -> block.kind == \routine)
 
         if output.isTactic
+            term = wrapWith(input.term, identifier(\program, '?'))
             blocks =
                 for parsedBlock in output.fromNearley
-                    term = wrapWith(input.term, \program)
-
-                    tactic: parsedBlock.check,
+                    tactic: parsedBlock
                     term: term
-                    scope: parsedBlock.scope
-                    routines: routines
+                    scope: root.scope
+                    routines: parser.routines
         else
-            blocks = output.fromNearley
-
+            blocks =
+                for parsedBlock in output.fromNearley
+                    check: 
+                        if parsedBlock.kind == 'routine' 
+                            parsedBlock.body
+                        else parsedBlock
+                    scope: root.scope
+                    
         toStream = (stream) ->
             for block in blocks
                 stream.write <| JSON.stringify(block)
@@ -144,6 +125,64 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
 
     catch err
         error(err)
+
+
+class Parser
+
+  (@mode = "check", @scope = [], @routines = {}) ->
+  
+  stripComments: (input) ->
+    input.replace //  \s* \/\/ .*$  |  \/\* [\s\S]*? \*\/  //mg, ''
+
+  splitTextToBlocks: (input) ->
+    blocks = input.split /(\n+)(?!\s)/ .map ->
+      text: it
+    countLines = (text) -> (text.match(/\n/g)||[]).length
+    _.reduce blocks, ((l,blk) -> blk.line = l ; l + countLines(blk.text)), 1
+    blocks .filter (.text == /\S/)
+
+  processBlock: (block) ->
+    @parseBlock block
+      @absorbParse ..
+
+  parseBlock: (block) ->
+    # Pass the current scope.
+    # TODO: is it possible to avoid using a global here?
+    root.scope = @scope
+    
+    # parse block with nearley, filter only non-false results, assert parse unambiguous
+    p = new nearley.Parser grammar.ParserRules, grammar.ParserStart
+    try
+        text = block.text.trim()
+        parsed = p.feed text
+        results = _.compact parsed.results  # TODO: compact unneeded?
+        if results.length == 0 then throw {offset: text.length - 1, message: "Unexpected end of expression"}
+        assert results.length == 1, "Ambiguous parse (got #{results.length}): #{JSON.stringify(results)}"
+        results[0] <<< {@mode, block.line}
+        #if results[0].isRoutine
+        #    toCheck = {}
+        #    for k,v of results[0]
+        #        if k != \isRoutine
+        #            @routines[k] = v
+        #            toCheck = v.body
+        #    toCheck <<< {@mode, block.line, isRoutine: true}
+        #else
+        #    results[0] <<< {@mode, block.line}
+        #        if ..set-mode? then @mode = ..set-mode
+    catch err
+        err.line = block.line
+        throw err
+        
+  absorbParse: (parsedBlock) ->
+    parsedBlock
+      if ..set-mode?
+        @mode = ..set-mode
+      if ..kind == \set
+        if ..multiple? then @scope.push ... ..multiple
+        else @scope.push ..
+      if ..kind == \routine
+        @routines[..name] = parsedBlock
+
 
 
 if localStorage? && localStorage['bell.devmode']

@@ -62,9 +62,11 @@
 		</div>
 		<div ng-repeat="h in history">
 			<hr ng-if="$index > 0">
+          <!--
 			<div class="row">
 				<span ng-show="isOutdated(h)" class="label label-danger pull-right icon">OUTDATED</span>
 			</div>
+          -->
 			<div class="input-cell" ng-init="bind(h)">
 				<div class="cell-caption">{{"In[" + h.id + "]"}}</div>
 				<div class="cell-content">
@@ -84,7 +86,8 @@
 			<div class="loading" ng-if="h.loading">
 				<i class="fa fa-circle-o-notch fa-2x fa-pulse"></i>
 			</div>
-			<div class="output-cell" ng-if="h.output" ng-class="{invalid: isInvalid(h)}">
+			<div class="output-cell" ng-if="h.output" ng-class="{invalid: isInvalid(h)}"
+                 ng-mouseenter="$broadcast('turn')">
 				<div class="cell-caption">{{"Out[" + h.id + "]"}}</div>
 				<div class="cell-content">
 					<div class="cell output-well" ng-repeat="cell in h.output | orderBy:'index'">

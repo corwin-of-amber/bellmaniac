@@ -9,10 +9,12 @@ expression 	-> setMode {% id %}
     | routineDeclaration {% id %}
 
 routineDeclaration -> variable (_ paramList):? _ colondash _ possiblyTypedExpression {% function(d) {
-	var output = {isRoutine: true};
-	var params = d[1] ? d[1][1] : [];
-	output[d[0].root.literal] = {params: params, body: d[5]};
-	return output;
+    return {
+      kind: 'routine',
+      name: d[0].root.literal,
+      params: d[1] ? d[1][1] : [],
+      body: d[5]
+    };
 } %}
 
 paramList -> leftsquarebracket _ typeVariable (_ comma _ typeVariable):* _ rightsquarebracket {% function(d) {

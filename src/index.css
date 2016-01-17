@@ -117,14 +117,14 @@ textarea, .CodeMirror-focused {
 .identifier:hover {
   background: rgba(0,0,0,0.1);
 }
+.tape-mark:hover {
+  background: #227;
+  color: white;
+}
 .tip {
   color: #227;
   position: relative;
   cursor: default;
-}
-.mark:hover {
-  background: #227;
-  color: white;
 }
 .tip:hover:before {
   content: attr(data-tip);

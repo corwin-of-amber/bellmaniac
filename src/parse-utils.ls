@@ -36,28 +36,27 @@ root.declareSet = (literal) ->
             root.scope.push ..
     else
         # console.error <| "Literal " + literal + " is reserved."
-        false
+        void
 
 root.declareSets = (head, tail) ->
     kind: \set
     multiple:
         for v in [head, ...tail]
             identifier(v.root.literal, \set)
-                root.scope.push ..
 
 root.declareSubsets = (head, tail, superset) ->
     if !(superset.subtrees.length == 0 && superset.root.kind == \set)
-        throw new Error "expected a set type but found '#{toPretty superset}'"
+        return void  # bleh. this does not report the reason for rejection.
+        # should report: "expected a set type but found '#{toPretty superset}'"
     kind: \set
     multiple:
         for v in [head, ...tail]
             [identifier(v.root.literal, \set), identifier(superset.root.literal, \set)]
-                root.scope.push ..
 
 root.typeVariable = (literal) ->
     if root.keywords.indexOf(literal) > -1
         # console.error <| "Literal " + literal + " is reserved."
-        false
+        void
     else if root.scope.some((set) ->
         set.literal == literal || set[0]?.literal == literal
     )
@@ -71,7 +70,7 @@ root.variable = (literal) ->
         tree(identifier(literal, \variable), [])
     else
         # console.error <| "Literal " + literal + " is reserved or has been declared as a set."
-        false
+        void
 
 ## recursive calls; trickle up nulls if any subtree is null
 

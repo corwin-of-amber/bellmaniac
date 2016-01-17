@@ -1,5 +1,5 @@
 _ = require \lodash
-spawn = require \child_process .spawn
+{execFile} = require \child_process
 LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*?\|\s*([\s\S]+?)\s*$/
 
 angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapontillo.bootstrap-switch indexedDB]>
@@ -41,12 +41,12 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
 
           if (thisId == ($scope.history.length))
             $scope.history.push({id: thisId + 1, input: "", output: null, error: null})
-          calc.loading = false
           if output.isTactic && $scope.verification
             calc.verifyStatus = "In Progress"
             $scope.asyncVerify(cellName, calc)
           else
             calc.verifyStatus = void
+          calc.loading = false
           callback(null, calc)
 
       error = (err) ->
@@ -58,11 +58,11 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
 
           if err.line? && err.offset?
             line = err.line - 1
-            offset = err.offset + 1
+            offset = err.offset
             while (offset >= cm.getLine(line).length)
-              offset = offset - cm.getLine(line).length - 1
+              offset = offset - cm.getLine(line).length
               line += 1
-            cm.currentOverlay = errorOverlay(cm.getLine(line), offset)
+            cm.currentOverlay = errorOverlay(cm.getLine(line), offset + 1)
             cm.addOverlay(cm.currentOverlay)
           calc.loading = false
           callback(err)
@@ -150,10 +150,6 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
               $scope.mostRecentId = loaded.mostRecentId
               $scope.history = loaded.history.map (<<< {error: null, output: null})
               db.update-cells!
-            $timeout ->
-              async.eachSeries _.take($scope.history, $scope.mostRecentId), (h, callback) ->
-                if h.input
-                  submitCm h.cm, h, callback
           catch {message}
             bootbox.alert(message)
 
@@ -225,32 +221,27 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
       fs.readdir '/tmp/' + cellName, (err, files) ->
         calc.processes = {}
         async.each files, (file, callback) ->
-          z3 = spawn('z3', ['/tmp/' + cellName + '/' + file])
-          calc.processes[file] = z3
-          z3.stdout.on 'data', (data) ->
-            result = data.toString('utf8')
-            if (result == 'unsat\n')
-              callback()
-            else if (result == 'sat\n')
-              callback(result)
-          z3.stderr.on 'data', (data) ->
-            result = data.toString('utf8')
-            callback(result)
+          smt = execFile 'cvc4', ["/tmp/#cellName/#file"], (err, stdout, stderr) ->
+            console.log err, stdout, stderr
+            if err? then callback(err, stderr)
+            else if stdout == 'unsat\n' then callback()
+            else callback(stdout, stderr)
+          calc.processes[file] = smt
         , (err) ->
-          if (err != null)
-            $scope.abortVerification calc # in case some processes are still running
-            calc.verifyStatus = "Error"
+          if err?
+            if calc.verifyStatus != "Aborted"
+              $scope.abortVerification calc # in case some processes are still running
+              calc.verifyStatus = "Error"
           else
             calc.verifyStatus = "Success"
           $scope.$apply()
 
     $scope.abortVerification = (calc) ->
       if (calc.verifyStatus == "In Progress")
+        calc.verifyStatus = "Aborted"
         for name, p of calc.processes
           console.log "killing " + p.pid
           p.kill('SIGINT')
-
-        calc.verifyStatus = "Aborted"
 
   ..filter "collapse" ->
     lead = -> it.match /^\s*/ .0.length
@@ -274,6 +265,8 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
       mo = expr?.match LET_RE
       if !mo? then throw Error("invalid let '#expr'")
       [lhs, rhs, filt] = mo[1 to]
+      x = scope.$parent.$parent
+      x.$on 'turn' -> x.o.flag = 1
       $transclude (clone, scope) ->
         scope.$watch rhs, (v) ->
           if filt? then v = $filter(filt)(v)
@@ -300,26 +293,22 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
   ..filter "isString" -> _.isString
 
   ..filter "display" ->
-    f = (input) ->
+    f = (input, flag) ->
       if _.isString input
         [input]
       else if input.tape?
-        #console.log "display tape"
-        last = 0
+        last-pos = 0
         [text, annot] = input.tape.text.split '\t'
         reformatType = -> it?.split('->')?.join('→')
         []
-          for [[u,v], mark] in input.tape.markup
-            x = text.substring(last,u)
-            y = text.substring(u,v)
-            #mark.term = void    # bahh. Angular scalability issue.
-            if mark.term?
-              console.log mark
-            cls = ['mark'] ++ (if mark.type? then ['tip'] else [])
-            last = v
+          for [[u,v], mark] in (if input.flag then input.tape.markup else [])
+            x = text.substring(last-pos, u)
+            y = text.substring(u, v)
+            cls = ['tape-mark'] ++ (if mark.type? then ['tip'] else [])
+            last-pos = v
             if x.length then ..push [x]
-            if y.length then ..push [y,cls,reformatType(mark.type)]
-          x = text.substring(last)
+            if y.length then ..push [y, cls, reformatType(mark.type)]
+          x = text.substring(last-pos)
           if x.length then ..push [x]
           if annot?
             ..push [reformatType(annot), ['annotation']]
