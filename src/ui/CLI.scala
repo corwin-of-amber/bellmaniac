@@ -62,7 +62,7 @@ object CLI {
     
     def interpretElement(json: DBObject): DBObject = {
       try {
-        implicit val scope = json.get("scope") andThen_ (Scope.fromJson, /*{ throw new SerializationError("scope not found", json) })*/ examples.Paren.env.scope)
+        implicit val scope = json.get("scope") andThen_ (Scope.fromJson, { throw new SerializationError("scope not found", json) }) // examples.Paren.env.scope)
         implicit val env = TypeTranslation.subsorts(scope) //examples.Paren.env
         val routines = json.get("routines").opt_[DBObject] getOrElse null
           
@@ -89,6 +89,7 @@ object CLI {
               case prog: String =>
                 val term = json.get("term") andThen_ (Formula.fromJson, { throw new SerializationError("program: missing 'term' key", json) })
                 val tae = mkTae(routines)
+                println(s"scope: ${scope.sorts}")
                 tae.display(tae.mkState(term))
                 cc.map(Map())
               case _ =>

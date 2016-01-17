@@ -586,7 +586,7 @@ object TypeInference {
     val (vassign, tassign) = infer(scope, term, preassign)
     val typed = annotate(term, tassign)
     if (log.isLoggable(Level.INFO))
-      synth.tactics.Rewrite.display(typed)(new TypeTranslation.Environment(scope, Map()))
+      report.console.Console.display(typed)
     (vassign, typed)
   }
 

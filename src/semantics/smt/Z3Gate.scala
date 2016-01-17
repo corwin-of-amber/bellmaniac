@@ -22,7 +22,7 @@ import semantics.TypedIdentifier
 
 
 
-class Z3Gate {
+class Z3Gate(implicit guidelines: SmtGuidelines=SmtGuidelines.default) {
   
   import AstSugar._
   import Z3Sugar._
@@ -346,6 +346,8 @@ object Z3Gate {
 case class Sequent(negative: List[BoolExpr], positive: BoolExpr)
   
 
+class SmtGuidelines(val fullSaturate: Boolean=false)
+object SmtGuidelines { val default = new SmtGuidelines }
 
 class SmtException(msg: String) extends Exception(msg) { 
   import syntax.AstSugar._

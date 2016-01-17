@@ -385,7 +385,7 @@ object Paren {
             val synths = List( fixer(A, ex :/ "🄰") =:= (newA :@ ctx(A, ex :/ "🄰")("ψ")),
                                fixer(A, ex :/ "🄱") =:= (newB :@ ctx(A, ex :/ "🄱")("ψ")),
                                fixer(A, ex :/ "🄲") =:= (newC :@ ctx(A, ex :/ "🄲")("ψ")) )
-            for (A <- Rewrite( synths )(A)) {
+            for (A <- Rewrite( synths ) apply (A)) {
               val ex = extrude(A) |-- display
               outf += preformat(Map("program" -> "A[J]", "style" -> "rec", "term" -> emit(A)), extrude)
             }
@@ -483,7 +483,7 @@ object Paren {
                                           emulateSynth(ex :/ "🄳̲", TV("C[K₀,K₁,K₂]")),
                                           emulateSynth(ex :/ "🄶̲", TV("B[K₁,K₂]"))
                         )
-                        for (B <- Rewrite(synths)(B)) {
+                        for (B <- Rewrite(synths) apply (B)) {
                           val ex = extrude(B) |-- display
                           outf += preformat(Map("program" -> "B[J₀,J₁]", "style" -> "rec", "term" -> emit(B)), extrude)
                         }
@@ -573,7 +573,7 @@ object Paren {
                                          emulateSynth(ex :/ "🄶", TV("C[L₀,L₃,L₄]")),
                                          emulateSynth(ex :/ "🄷", TV("C[L₀,L₂,L₄]"))
                       )
-                      for (C <- Rewrite(synths)(C)) {
+                      for (C <- Rewrite(synths) apply (C)) {
                         val ex = extrude(C) |-- display
                         outf += preformat(Map("program" -> "C[K₀,K₁,K₂]", "style" -> "rec", "term" -> emit(C)), extrude)
                       }

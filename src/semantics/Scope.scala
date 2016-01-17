@@ -5,6 +5,8 @@ import syntax.AstSugar.Term
 import syntax.{Tree, Identifier, AstSugar}
 import syntax.transform.TreeSubstitution
 import semantics.TypeTranslation.Declaration
+import report.data.AsJson
+import report.data.SerializationContainer
 
 
 
@@ -40,14 +42,14 @@ class Domains {
 
   def findSortHie(sort: Identifier) = hierarchy.nodes find (_.root == sort)
   
-  private def hei_⊥ = findSortHie(⊥) getOrElse {assert(false, "⊥ is missing!") ; null}
+  private def hie_⊥ = findSortHie(⊥) getOrElse {assert(false, "⊥ is missing!") ; null}
   
   def declare(ext: Extends) {
     findSortHie(ext.sup) match {
       case Some(hie) =>
         /**/ assert(ext.sub.kind == "set") /**/
-        val hie0 = if (hie.subtrees exists (_.root == ⊥)) T(hie.root)(T(ext.sub)(hei_⊥))
-          else hie(T(ext.sub)(hei_⊥))
+        val hie0 = if (hie.subtrees exists (_.root == ⊥)) T(hie.root)(T(ext.sub)(hie_⊥))
+          else hie(T(ext.sub)(hie_⊥))
         hierarchy = new TreeSubstitution[Identifier](List(hie -> hie0))(hierarchy)
       case None =>
         throw new TypingException(s"undefined supertype '${ext.sup}'")
@@ -60,14 +62,14 @@ class Domains {
 
   /**
    * Adds an artificial "⊥" sub-sort as the lowest descendant of every master.
-   * These makes a sub-lattice below each master, which is used by the type-checker.
+   * These make a sub-lattice below each master, which is used by the type-checker.
    */
   def cork() = {
     val floor = List(T(⊥))
     val corks = mastersHie flatMap { master =>
-        val ley = master.nodes filter (_.subtrees == floor)
         val newbot = new Identifier(s"⊥.${master.root}", "set", ⊥)
-        ley map (t => (t, T(t.root, List(T(newbot, t.subtrees)))))
+        master.nodes filter (_.subtrees == floor) map (t =>
+          (t, T(t.root)(T(newbot)(t.subtrees))))
       }
     hierarchy = hierarchy.replaceDescendants(corks)
   }
@@ -90,6 +92,8 @@ class Domains {
 
   def isMaster(sort: Identifier) = masters contains sort
 
+  def isEmpty(sort: Identifier) = sort == ⊥ || sort.ns == ⊥
+  
   def supers(sort: Identifier) = {
     def f(t: Tree[Identifier]): List[Identifier] = 
       if (t.root == sort) List(t.root)
@@ -123,6 +127,7 @@ class Domains {
       { assert(false, s"$sort1 and $sort2 do not have a maximal subtype!") ; null }
   }
   
+  override def toString = hierarchy.toString
 }
 
 /**
@@ -160,7 +165,7 @@ class FunctionType(val args: List[Identifier], val ret: Identifier) {
 
 }
 
-class Scope {
+class Scope extends AsJson {
 
   val sorts = new Domains
   val functypes = collection.mutable.Map[Term, FunctionType]()
@@ -182,6 +187,13 @@ class Scope {
         functype
     }
   }
+  
+  override def toString = sorts.toString
+
+  override def asJson(container: SerializationContainer) =
+    container.list(sorts.masters ++ (
+        for (master <- sorts.mastersHie; sup <- master.nodes; sub <- sup.subtrees 
+             if !sorts.isEmpty(sub.root)) yield container.list(List(sub.root, sup.root))))
 }
 
 object Scope {

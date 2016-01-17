@@ -217,7 +217,8 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
     case Some((L("SaveAs"), List(prog, L(style)))) =>
       val sout = emit(s)
-      outf += Map("program" -> encaps(prog).toString, "style" -> style.toString, "text" -> sdisplay(sout.ex), "term" -> sout.program)
+      outf += Map("program" -> encaps(prog).toString, "style" -> style.toString, 
+                  "text" -> sdisplay(sout.ex), "term" -> sout.program, "scope" -> scope)
       List()
 
     case Some((L("Opt"), Nil)) =>

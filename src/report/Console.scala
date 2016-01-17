@@ -1,12 +1,12 @@
 package report.console
 
 import java.io.ByteArrayOutputStream
-
 import semantics.TypedTerm
 import semantics.TypedTerm._
 import syntax.AstSugar._
 import syntax.Tree
 import syntax.transform.ExtrudedTerms
+import syntax.Identifier
 
 
 class NestedListTextFormat[A](val ● : String = "•", val indent: String = "  ")(fmt: A => String = ((a:A) => a.toString)) {
@@ -38,7 +38,12 @@ class NestedListTextFormat[A](val ● : String = "•", val indent: String = "  
 
 object Console {
 
-  def display(xterm: Tree[Term]) {
+  def display(term: Term) {
+    val format = new NestedListTextFormat[Identifier]()()
+    format.layOutAndAnnotate(term, (TypedTerm.typeOf(_) map (_.toPretty)), (_.toPretty))
+  }
+  
+  def display(xterm: Tree[Term])(implicit d: DummyImplicit) {  
     val format = new NestedListTextFormat[String]()()
     format.layOut(xterm map { x => TypedTerm.typeOf(x) match {
       case Some(typ) => s"${annotateWithTypes(x) toPretty}      〔 ${typ toPretty} 〕"

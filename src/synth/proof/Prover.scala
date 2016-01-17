@@ -24,6 +24,7 @@ import semantics.TypedSubstitution
 import semantics.Reflection.Compound
 import semantics.Trench
 import syntax.transform.EqByRef
+import semantics.smt.SmtGuidelines
 
 
 /**
@@ -72,7 +73,7 @@ class Prover(val pods: List[Pod], val verbose: Prover.Verbosity=Prover.Verbosity
 
   import Prover.Verbosity
 
-  class Transaction(verbose: Verbosity=verbose) {
+  class Transaction(verbose: Verbosity=verbose)(implicit smtg: SmtGuidelines=SmtGuidelines.default) {
     val termb = new TermBreak(env)
     val formulat = new FormulaTranslation(termb)
     val termlings = collection.mutable.ListBuffer[(Environment, List[Term])]()
@@ -167,7 +168,7 @@ class Prover(val pods: List[Pod], val verbose: Prover.Verbosity=Prover.Verbosity
     
     def scan(formulas: Iterable[Term], pattern: SimplePattern) {
       for (a <- formulas) {
-        pattern.find(a) foreach (mo => { 
+        pattern.find(a) foreach (mo => {
           def subexpr = Subexpression(mo.subterm, TypedLambdaCalculus.enclosure(a, mo.subterm) get)
           cabinet.find { l => new ExactMatch(l.head.term) matchInclTypes (mo.subterm) } match {
             case Some(l) => l += subexpr

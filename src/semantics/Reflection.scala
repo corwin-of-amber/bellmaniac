@@ -3,18 +3,15 @@ package semantics
 import java.util.logging.{Logger, Level}
 import java.io.StringWriter
 import java.io.ByteArrayOutputStream
-
 import syntax.AstSugar._
 import syntax.Identifier
-
 import TypeTranslation.Environment
 import TypeTranslation.Declaration
 import Scope.TypingException
 import smt.Sequent
-
 import synth.tactics.Rewrite
-
 import report.console.NestedListTextFormat
+import semantics.smt.SmtGuidelines
 
 
 
@@ -332,15 +329,15 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term])(impl
   //------------
   // Solver Part
   //------------
-  def solve(assumptions: List[Term], goals: List[Term]): Trench[Term] = solve(List(), assumptions, goals)
+  def solve(assumptions: List[Term], goals: List[Term])(implicit guidelines: SmtGuidelines): Trench[Term] = solve(List(), assumptions, goals)
     
     
-  def solve(definitions: List[Term], assumptions: List[Term], goals: List[Term]): Trench[Term] = {
+  def solve(definitions: List[Term], assumptions: List[Term], goals: List[Term])(implicit guidelines: SmtGuidelines): Trench[Term] = {
     solve(definitions, assumptions, goals map (Compound(_)))
   }
   
   
-  def solve(definitions: List[Term], assumptions: List[Term], goals: List[Compound])(implicit d: DummyImplicit) = {
+  def solve(definitions: List[Term], assumptions: List[Term], goals: List[Compound])(implicit guidelines: SmtGuidelines, d: DummyImplicit) = {
     import semantics.smt.Z3Sugar
     import syntax.Piping._
     
@@ -418,7 +415,7 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term])(impl
     results
   }
   
-  def smtFactory = ui.Config.config.prover() match {
+  def smtFactory(implicit guidelines: SmtGuidelines) = ui.Config.config.prover() match {
     case "z3" => new smt.Z3Gate
     case "cvc4" => new smt.CVC4Gate
     case "null" => new smt.NullSmtGate
@@ -509,7 +506,7 @@ object `@Reflection` {
     
     println("· " * 25)
   
-    reflect.solve(assumptions, goals)
+    reflect.solve(assumptions, goals)(SmtGuidelines.default)
     
     /*
     val expr1 = (x :: (J0 -> R))

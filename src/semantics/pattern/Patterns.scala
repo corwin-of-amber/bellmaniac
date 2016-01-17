@@ -9,11 +9,14 @@ import semantics.TypePrimitives
 
 
 
-class ExactMatch(val pattern: Term) {
+class ExactMatch(val pattern: Term)(implicit env: Environment) {
+  
+  implicit val scope = env.scope
+  
   def matchInclTypes(symbol1: Identifier, symbol2: Identifier, rebinds: Map[Identifier, Identifier]): Boolean = 
     rebinds.getOrElse(symbol1, symbol1) == symbol2
   
-  def matchInclTypes(term1: Term, term2: Term, top: Boolean=false, rebinds: Map[Identifier, Identifier]=Map())(implicit env: Environment): Boolean = {
+  def matchInclTypes(term1: Term, term2: Term, top: Boolean=false, rebinds: Map[Identifier, Identifier]=Map()): Boolean = {
     if      (term1 =~ (":", 2)) matchInclTypes(term1.subtrees(1), term2, top=top, rebinds=rebinds)
     else if (term2 =~ (":", 2) && !top) matchInclTypes(term1, term2.subtrees(1), rebinds=rebinds)
     else if (matchInclTypes(term1.root, term2.root, rebinds) && env.typeOf(term1) == env.typeOf(term2) &&
@@ -24,18 +27,32 @@ class ExactMatch(val pattern: Term) {
     else false
   }
   
-  def matchInclTypes(term: Term)(implicit env: Environment): Boolean = matchInclTypes(pattern, term, top=true)
+  def matchInclTypes(term: Term): Boolean = matchInclTypes(pattern, term, top=true)
   
-  def find(term: Term)(implicit env: Environment=Environment.empty) =
-    term.nodes filter (matchInclTypes(pattern, _, top=true))
+  def find(term: Term) = term.nodes filter matchInclTypes
 
-  def findInBodies(term: Term)(implicit env: Environment=Environment.empty) =
-    nodesInBodies(term) filter (matchInclTypes(pattern, _, top=true))
+  def findInBodies(term: Term) = nodesInBodies(term) filter matchInclTypes
+
+  /*
+   * Cast: meaning that a pattern will match a term with a tighter type at the top
+   * E.g. (f :: J -> J -> R)  will match  (f :: ((J × J) ∩ <) -> R)
+   */
+  
+  def matchInclTypes_cast(term: Term): Boolean = 
+    isCompatible(term) && matchInclTypes(TypedTerm.preserveBoth(term, pattern), term, top=true)
+
+  def find_cast(term: Term) = term.nodes filter matchInclTypes_cast
+
+  def findInBodies_cast(term: Term) = nodesInBodies(term) filter matchInclTypes_cast
+    
 
   def nodesInBodies(t: Term): Stream[Term] = t #:: {subtreesExceptBinders(t).toStream flatMap nodesInBodies}
 
   def subtreesExceptBinders(t: Term) =
     if (t =~ ("↦", 2) || (t =~ (":", 2))) t.subtrees.tail else t.subtrees
+
+  val shape = env.typeOf(pattern) map TypePrimitives.shape
+  def isCompatible(term: Term) = (env.typeOf(term) map TypePrimitives.shape) == shape  
 }
 
 class SimplePattern(val pattern: Term) {

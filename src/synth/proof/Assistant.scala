@@ -29,6 +29,7 @@ import semantics.Prelude.{R,N}
 import synth.pods.PartitionPod
 import synth.pods.TotalOrderPod
 import synth.pods.IndexArithPod
+import semantics.smt.SmtGuidelines
 
 
 
@@ -165,7 +166,10 @@ class Assistant(implicit env: Environment) {
   /**
    * Use common idioms for passing a proof obligation to the prover.
    */
-  def invokeProver(assumptions: List[Term], goals: List[Term], subexprPattern: SimplePattern, verbose: Prover.Verbosity=null, oneByOne: Boolean=true, exitOnFail: Boolean=true)(implicit prover: Prover, logf: AppendLog=DevNull, extrude: Extrude=new Extrude(Set.empty)) = {
+  def invokeProver(assumptions: List[Term], goals: List[Term], subexprPattern: SimplePattern, verbose: Prover.Verbosity=null, 
+                   oneByOne: Boolean=true, exitOnFail: Boolean=true)
+      (implicit prover: Prover, smtGuidelines: SmtGuidelines=SmtGuidelines.default, 
+                logf: AppendLog=DevNull, extrude: Extrude=new Extrude(Set.empty)) = {
     import syntax.Piping._
 
     println("· " * 25)

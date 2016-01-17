@@ -9,11 +9,13 @@ import java.io.File
  * It uses the Z3 API, then instead of running the solver, it creates
  * a benchmark file and runs "cvc4 ..." on it.
  */
-class CVC4Gate extends Z3Gate {
+class CVC4Gate(implicit guidelines: SmtGuidelines=SmtGuidelines.default) extends Z3Gate {
 
   import Z3Gate._
 
-  def cmdline(smt2f: File) = Seq("cvc4", "--full-saturate-quant", smt2f.getPath)
+  val flags = if (guidelines.fullSaturate) Seq("--full-saturate-quant") else Seq()
+  
+  def cmdline(smt2f: File) = Seq("cvc4") ++ flags ++ Seq(smt2f.getPath)
   
   override def solve(assumptions: List[BoolExpr], goals: List[BoolExpr], verbose: Boolean=false) = {
     if (verbose) for (a <- assumptions) println(s" * $a")

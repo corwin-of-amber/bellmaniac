@@ -22,6 +22,7 @@ import syntax.Identifier
 import semantics.transform.Explicate
 import semantics.pattern.Expansion
 import semantics.pattern.MacroMap
+import semantics.smt.SmtGuidelines
 
 
 
@@ -98,6 +99,8 @@ object OptimizationPass {
 
     import DependencyAnalysis._
 
+    implicit val smtGuidelines = new SmtGuidelines(fullSaturate=false)
+    
     def apply(program: Term) = {
       chain(rec.simplify(program)(_.isLeaf)) |> readWriteSets |> (_.toList) |> layer |>
           (_ map (rec.reassoc(program, _))) |>

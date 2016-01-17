@@ -148,8 +148,10 @@ object Shrink {
     //val item0 = TypedLambdaCalculus.pullOut(program, (program :/ "f|nw" :/ "item")) get
     //val item1 = TypedLambdaCalculus.pullOut(program1, (program1 :/ "f" :/ "item")) get
     
-    Rewrite.display(item0)
-    Rewrite.display(item1)
+    import report.console.Console
+    
+    Console.display(item0)
+    Console.display(item1)
 
     val toR = TotalOrderPod(R)
     val nilNR = NilPod(N, R)
