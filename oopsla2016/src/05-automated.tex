@@ -1,0 +1,73 @@
+\section{Automated Proofs}
+
+This section describes the encoding of proof obligations in (many-sorted) first-order logic,
+and the ways by which type information is used in discharging them.
+
+Each base type is associated with a sort. The qualifiers are naturally encoded
+as predicate symbols with appropriate sorts. In the following paragraphs, we
+use a type and its associated sort interchangebly, and the meaning should be clear
+from the context.
+
+Each free variable and each node in the formula syntax tree are assigned two
+symbols: a function symbol representing the values, and a predicate symbol
+representing the support, that is, the set of tuples for which there is a mapping.
+For example, a variable $f : J\to\R$ will be assigned a function $f^1: J\to\R$
+and a predicate $|f|: J\to\B$. The superscript indictes the function's arity,
+and the vertical bars indicate the support.
+
+For refinement-typed symbols, the first-order symbols are still defined in terms
+of the shape, and an assumption concerning the support is emitted. For example,
+for $g: (J\cap P)\to\R$, the symbols $g^1:J\to\R$, $|g|:J\to\B$ are defined,
+with the assumption $\forall \alpha:J.~|g|(\alpha)\limplies P(\alpha)$.
+
+Assumptions are similarly created for nodes of the syntax tree of the formula to
+be verified. We define the \newterm{enclosure} of a node to be the ordered set of
+all the variables bound by ancestor abstraction nodes ($v\mapsto\ldots$). Since
+the interpretation of the node depends on the values of these variables, it is
+``skolemized'', i.e., its type is prefixed by the types of enclosing variables.
+For example, if $e:\T$, then inside a term $(v:\S)\mapsto \cdots e\cdots$ it would be treated as
+type $\S\to\T$.
+
+Typically, the goal is an equality between functions $f=g$. This naturally translates
+to first-order logic as
+\[\forall\overline{\alpha}.~\big(|f|(\overline\alpha)\liff|g|(\overline\alpha)\big) \land
+  \big(|f|(\overline\alpha) \limplies f^k(\overline\alpha)=g^k(\overline\alpha)\big)\]
+
+\begin{paragraph}{First-class functions.}
+When a function is being used as an argument in an application term, 
+we take its arrow type $\T\to\S$ and create a \newterm{faux sort} $F_{\T\to\S}$,
+an operator $@ : F_{\T\to\S}\to\T\to\S$, and the \newterm{extensionality axiom} ---
+\begin{equation}
+\forall \alpha\alpha'.~ \big(\forall\beta.~ @(\alpha,\beta)=@(\alpha',\beta)\big)\limplies \alpha=\alpha'
+\label{automated:extensionality}
+\end{equation}
+
+And for each such function symbol $f^k:\T\to\S$ used as argument, create its 
+\newterm{reflection} $f^0:F_{\T\to\S}$ defined by
+\begin{equation}
+\forall \overline\alpha.~~@(f^0,\overline\alpha)=f^k(\overline\alpha)
+\label{automated:reflection}
+\end{equation}
+\end{paragraph}
+
+\vspace{-8mm}
+\subsection{Simplification}
+
+When $f$,$g$ of the goal $f=g$, are abstraction terms, the above can be simplified by
+introducing $k$ fresh variables, $\overline x=x_1\cdots x_k$, and writing the goal as
+$f\,\overline x = g\,\overline x$. The types of $\overline x$ are inferred from the types
+of $f$ and $g$ (which should have the same shape). We can then apply $\beta$-reduction as
+a simplification step. This dramatically reduces the number of quantifiers in the first-order
+theory representing the goal, making SMT solving feasible.
+
+Moreover, if the goal has the form $f\,t_1 = f\,t_2$ (e.g. {\sf Stratify}, \Cref{tactics}) it may
+be worth trying to prove that $t_1::\T = t_2::\T$, where $f:\T\to\S$.
+This trivially entails the goal and is much easier to prove. 
+%To understand why
+%this is a common case, consider \eqref{evaluation:stratify A 1} below: 
+%notice how $g$ does not modify the quadrant from which $f$ reads.
+
+Another useful technique is common subexpression elimination, which is quite standard
+in compiler optimizations. Tactic applications tend to create copies of terms, so
+merging identical subexpressions into a single symbol can drastically reduce the size
+of the SMT encoding.

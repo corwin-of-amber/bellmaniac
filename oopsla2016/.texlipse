@@ -1,0 +1,14 @@
+#TeXlipse project settings
+#Fri Jan 29 11:42:27 EST 2016
+markTmpDer=true
+builderNum=2
+outputDir=out/
+makeIndSty=
+bibrefDir=
+outputFormat=pdf
+tempDir=tmp
+mainTexFile=oopsla2016.tex
+outputFile=oopsla2016.pdf
+langSpell=
+markDer=true
+srcDir=src/

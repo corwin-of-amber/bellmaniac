@@ -1,0 +1,95 @@
+\documentclass{sigplanconf}
+\usepackage[1stsubmission]{oopsla2016}
+
+% The following oopsla2015 options are available:
+%
+% 1stsubmission   For the initial submission
+% 2ndsubmission   For the 2nd submission
+% final           For camera-ready
+
+\usepackage{amsmath,amssymb,amsopn,amsthm}
+\usepackage[T1]{fontenc}
+\usepackage{algorithmicx,algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{multirow}
+\usepackage{cleveref}
+\usepackage{graphicx}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{verbatim}
+\usepackage{relsize}
+\usepackage{ifluatex}
+%\usepackage{stfloats}
+
+\usepackage{tikz}
+\usetikzlibrary{fit,positioning,patterns,shapes,shapes.multipart}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.12} 
+
+\include{macros}
+
+
+\begin{document}
+
+\copyrightdata{978-1-nnnn-nnnn-n/yy/mm} 
+%\doi{nnnnnnn.nnnnnnn}
+
+% Uncomment one of the following two, if you are not going for the 
+% traditional copyright transfer agreement.
+
+%\exclusivelicense                % ACM gets exclusive license to publish, 
+                                  % you retain copyright
+
+%\permissiontopublish             % ACM gets nonexclusive license to publish
+                                  % (paid open-access papers, 
+                                  % short abstracts)
+
+\title{Deriving Divide-and-Conquer Dynamic Programming Algorithms Using 
+  Solver-Aided Transformations}
+
+\authorinfo{Name1}
+           {Affiliation1}
+           {Email1}
+\authorinfo{Name2\and Name3}
+           {Affiliation2/3}
+           {Email2/3}
+
+\maketitle
+
+\begin{abstract}
+We introduce \newterm{solver-aided tactics} as a mechanism for transforming
+computational terms 
+in the interest of deriving better, more efficient
+implementations. 
+Solver-aided tactics allow us to combine deductive and constraint-based synthesis to generate provably correct efficient implementations from a very high-level specification of an algorithm by chaining together a small number of high-level transformation steps. Our solver-aided tactics also leverage a type system, which incorporates predicate abstraction to associate semantic information with program terms, to guide transformations and provide enough context for automated proofs. 
+
+In this paper, we develop the technique in the context of a system called Bellmania that uses solver-aided tactics to derive parallel divide-and-conquer implementations of dynamic programming algorithms that have better locality and are significantly more efficient than traditional loop-based implementations. Bellmania includes a high-level language for specifying dynamic programming algorithms and a calculus that facilitates gradual transformation of these specifications into efficient implementations. In particular, it provides solver-aided tactics that formalize the divide-and-conquer technique and a visualization interface to help users to interactively guide the transformation process. 
+We have used the system to generate provably correct implementations of several algorithms including some important algorithms from computational biology, and show that the performance is comparable to that of the best manually optimized code.
+\end{abstract}
+
+\category{CR-number}{subcategory}{third-level}
+
+% general terms are not compulsory anymore, 
+% you may leave them out
+\terms
+term1, term2
+
+\keywords
+keyword1, keyword2
+
+\input{01-intro}
+
+\bibliographystyle{abbrvnat}
+\bibliography{oopsla2016}
+% The bibliography should be embedded for final submission.
+
+%\begin{thebibliography}{}
+%\softraggedright
+
+%\bibitem[Smith et~al.(2009)Smith, Jones]{smith02}
+%P. Q. Smith, and X. Y. Jones. ...reference text...
+
+%\end{thebibliography}
+
+
+\end{document}

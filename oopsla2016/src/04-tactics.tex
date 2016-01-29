@@ -1,0 +1,231 @@
+\section{Tactics}
+\label{tactics}
+
+We now define the method by which that our framework transforms program terms, by means of \newterm{tactics}.
+A tactic is a scheme of equalities that can be used for rewriting.
+When applied to a program term, any occurrence of the {\bf left-hand side} is replaced by the {\bf right-hand side}.%
+\footnote{This is also a standard convention in Coq, for example.}
+A valid application of a tactic is an instance of the scheme that is well-typed and logically valid
+(that is, the two sides have the same interpretation in any structure that interprets the free
+variables occurring in the equality).
+
+The application of tactics yields a sequence of program terms, each of which is checked to
+be equivalent to the previous one. We refer to this sequence by the name \newterm{development}.
+
+We associate with each tactic some \newterm{proof obligations}, listed after the word \textbf{\textit{Obligations}}
+in the following paragraph.
+When applying a tactic instance, these obligations are also instantiated and given to an automated prover. 
+If verified successfully, they entail the validity of the instance. 
+Clearly the tactic itself can be used as its proof obligation, if it is easy enough to prove automatically; 
+in such cases we write ``\textbf{\textit{Obligations}:} tactic.''
+
+The following are the major tactics provided by our framework. 
+More tactic definitions are given in the appendix.
+
+\newcommand\Obligations{\medskip\noindent\textbf{\textit{Obligations}:} }
+\newcommand\reduce{\operatorname{reduce}}
+\newcommand\listConcat{{\scriptstyle \,++\,}}
+
+\theoremstyle{definition}
+\newtheorem{tactic}{Tactic}
+
+\newcommand\tacticdef[1]{\subsection*{\sf\larger #1}\vspace{-3mm}}
+\newcommand\tacticdefcompact[1]{\medskip\noindent{\sf\larger #1}\medskip\hfill}
+
+\tacticdefcompact{Slice} \label{tactics:Slice}
+$f ~=~ \big[f\big]_{X_1} ~\Big/~ \big[f\big]_{X_2} ~\Big/ ~\cdots~ \Big/~ \big[f\big]_{X_r}$\hspace{10mm}
+
+This tactic partitions a mapping into sub-regions. Each $X_i$ may be a cross product ($\times$)
+according to the arity of $f$.
+
+\Obligations tactic.
+
+Informally, the recombination expression is equal to $f$
+when $X_{1..r}$ ``cover'' all the defined points of $f$ (also known as the \newterm{support} of $f$).
+
+\medskip
+\tacticdefcompact{Stratify}
+$\fix (f\applt g) ~=~ (\fix f) ~\applt~ \big(\psi\mapsto \fix (\widehat\psi\applt g)\big)$
+\\
+where $\widehat\psi$ abbreviates $\theta\mapsto\psi$, with fresh variable $\theta$.
+
+This tactic is used to break a long (recursive) computation into simpler sub-computations.
+$\psi$ may be fresh, or it may reuse a variable already occurring in $g$, rebinding those occurrences.
+An example is required to understand why this is useful.
+
+Let $h=\theta\mapsto\big([t_0]_{I_0}\big/[t_1]_{I_1}\big)$, where $t_{0,1}$ are terms with free variable $\theta$.
+Stratification is done by setting $f=\theta\mapsto t_0$ and
+ $g=f\,\theta\mapsto [f\,\theta]_{I_0}\big/[t_1]_{I_1}$. We get $\fix h=\fix(f\applt g)$; {\sf~Stratify}
+breaks it into $\fix f$ and $\psi\mapsto \fix (\widehat\psi\applt g)$,
+which get simplified with $\beta$-reduction, giving the expression the form:
+
+\vspace{-5mm}
+\[\big(\fix(\theta\mapsto t_0)\big) ~\applt~ 
+  \Big(\psi\mapsto \fix \big(\theta\mapsto[\psi]_{I_0}\big/[t_1]_{I_1}\big)\Big)\]
+
+\vspace{-2mm}
+This precisely encodes our intuition of computing the fixed point of $t_0$ first,
+then $t_1$ based on the result of $t_0$.
+
+\Obligations Let $h=f\applt g$ and $g'=\psi\mapsto\widehat\psi\applt g$. Let $\theta,\zeta$ be
+fresh variables.
+\begin{equation}
+\renewcommand\arraystretch{1.5}
+\begin{array}{l@{\qquad}l}
+f\,(g'\,\zeta\,\theta) ~=~ f\,\zeta &
+g'\,(f\,\theta)\,\theta ~=~ h\,\theta
+\end{array}
+\label{tactics:Stratify obligations}
+\end{equation}
+
+Proof is given in \Cref{tactics:soundness}.
+
+\tacticdefcompact{Synth} \label{tactics:Synth}
+$\fix\big(h_1 ~\big/~ \cdots ~\big/~ h_r\big) ~=~ 
+  f_1 :: \T_1 ~\big/~ \cdots ~\big/~ f_r :: \T_r$
+
+This tactic is used to generate recursive calls to sub-programs. For $i=1..r$, $f_i$
+is one of the following: $\fix h_i$, $h_i\,\psi$, or $t\,\psi$, where $\psi$ is some
+variable and $t$ is a term corresponding to a previously defined subroutine
+($A$, $B$, $C$ in the example).
+Bellmania chooses these values automatically (see \Cref{tactics:synthesis}),
+but the user may override it.
+
+\newcommand\Y{\mathcal{Y}}
+
+\Obligations Let $h=h_1/\cdots/h_r$, and let $\T\to\T$ be the shape of $h$. 
+  For each $f_i$, depending on the form of $f_i$:
+\begin{itemize}
+  \item If $f_i \cong \fix f$ --- \\
+    \rule{0pt}{12pt}
+    $h :: (\T \to \Y) = h :: (\Y \to \Y) = g :: (\Y \to \T)$
+    for some $\Y$ which is a subtype of $\T$ and a supertype of $\T_i$.
+  \item If $f_i$ does not contain any ``$\fix$'' terms ---\\
+    \rule{0pt}{12pt}
+    $h\,(h\,\theta) :: \T_i = f_i :: \T_i$ for a fresh variable $\theta$.
+\end{itemize}
+
+We use $\cong$ to denote syntactic congruence up to $\beta$-reduction.
+
+\begin{comment}
+\Obligations Let $h=h_1/\cdots/h_r$, let $\overline\theta\!=\!\theta_{1..r}$ be $r$ fresh variables, and let
+$f = \theta_{1..r} \mapsto (f_1\,\theta_1)::\T_1/\cdots/(f_r\,\theta_r)::\T_r$.
+\begin{itemize}
+  \item $\T_{1..r}$ are disjoint mappings.
+  \item {\bf Either}\quad $h\,(f\,\overline\theta) = f\,\overline\theta$ \\{\bf or}\qquad
+  $\begin{array}[t]{l} h\,\theta=\theta ~\limplies~ (f_i\,\theta :: \T_i)=\theta :: \T_i ~, \\
+  \theta::\T_1~/~\cdots~/~\theta::\T_r=\theta\end{array}$
+\end{itemize}
+
+(We give two alternatives, as the first is usually easier to prove, but may hold in less cases)
+\end{comment}
+
+
+\newenvironment{tacticbox}[1]{\begin{center}
+  \begin{tabular}{|@{~~~~}l@{~~~~}|}\hline
+    \rule{0pt}{2.3ex}\underline{\sf \,#1\,}\\[.4em]$}
+  {$\\[-1em] \\[.3ex] \hline \end{tabular} \end{center}}
+
+
+\subsection{Synthesis-supported {\sf Synth} Tactic}
+\label{tactics:synthesis}
+
+As mentioned in \Cref{intro,overview}, the user is assisted by automatic
+inference while applying tactics. In particular, the {\sf Synth} tactic requires
+the user to specify a subroutine to call and parameters to call it with.
+In addition, the subtype $\Y$ is required to complete the correctness proof.
+To automate this task, Bellmania employs {\cegis}, a software synthesis technique
+implemented in the tool {\Sketch}~\cite{STTT13/Solar-Lezama}. The proof obligations, along with the possible
+space of parameter assignments taken from the set of sub-types defined during
+{\sf Slice}, are translated to {\Sketch}. Since {\Sketch} uses bounded domains,
+the result is then verified using full SMT.
+
+While the size of the search space is not huge, typically in the order of \textasciitilde50
+alternatives, it is usually hard for the user to figure out which exact call
+should be made. Since {\sf Synth} is used extensively throughout the develoment,
+This kind of automation greatly improves overall usability.
+
+\subsection{Soundness}
+\label{tactics:soundness}
+
+\renewenvironment{proof}{\noindent{\bf Proof.~}}{}
+
+\begin{theorem}
+Let $s=s'$ be an instance of one of the tactics introduced in this section.
+let $a_i=b_i$, $i=1..k$, be the proof obligations. If $\semp{a_i}=\semp{b_i}$
+for all interpretations of the free variables of $a_i$ and $b_i$, then
+$\semp{s}=\semp{s'}$ for all interpretations of the free variables of $s$ and $s'$.
+\end{theorem}
+
+\begin{proof}
+For the tactics with \textbf{\textit{Obligations}:} tactic, the theorem is trivial.
+
+\medskip
+\noindent
+{\tt >} For {\sf Stratify}, let $f$, $g$ be partial functions such that
+\vspace{-.5em}
+\[\renewcommand\arraystretch{1.3}
+  \forall \theta,\zeta.\quad \begin{array}{l}f\,(g\,\zeta\,\theta) ~=~ f\,\zeta \quad\land\quad
+  g\,(f\,\theta)\,\theta ~=~ h\,\theta
+  \end{array}\quad\]
+  
+Assume that $\zeta = \fix f$ and $\theta = \fix (g\,\zeta)$. 
+That is, $f\,\zeta = \zeta$ and $g\,\zeta\,\theta = \theta$.
+Then ---
+\vspace{-.5em}
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l@{}l}
+   h\,\theta & {}= g\,(f\,\theta)\,\theta = g\,(f\,(g\,\zeta\,\theta))\,\theta =
+              g\,(f\,\zeta)\,\theta = \theta
+  \end{array}\]
+  
+\noindent
+So $\theta = \fix h$. We get $\fix h = \fix \big(g \,(\fix f)\big)$; equivalently,
+\[\fix h = (\fix f) \applt \big(\psi\mapsto\fix (g\,\psi)\big)\]
+
+Now instantiate $h$, $f$, and $g$, with $f\applt g$, $f$, and $g'$ from \Cref{tactics:Stratify obligations},
+and we obtain the equality in the tactic.
+
+\medskip
+\noindent
+{\tt >} For {\sf Synth}, ({\it i}) assume $f_i=\fix g$ and
+\[h :: \T\to\Y = h :: \Y\to\Y = g :: \Y\to\T\]
+
+Intuitively, $\Y$ ``cuts out'' a region of an array $\theta :: \T$ given
+as input to $h$ and $g$. This area is self-contained, in the sense that
+only elements in $\Y$ are needed to compute elements in $\Y$, as indicated
+by the refined type $\Y\to\Y$.
+
+Notice that from the premise follows $g :: \Y\to\T = g :: \Y\to\Y$. We use the following corollary:
+
+\medskip\noindent
+{\bf Corollary.~} Let $f : \T\to\T$; if either $f :: \T\to\Y = f :: \Y\to\Y$ or $f :: \Y\to\T = f :: \Y\to\Y$, 
+then $(\fix f)::\Y = \fix (f :: \Y\to\Y)$.
+
+Proof is included in the appendix.
+
+\medskip
+From the corollary, and for the given $h$ and $g$, we learn that $(\fix h)::\Y = \fix(h::\Y\to\Y)$,
+and also $(\fix g)::\Y=\fix(g::\Y\to\Y)$. Since $h::\Y\to\Y=g::\Y\to\Y$,
+we get $(\fix h)::\Y = (\fix g)::\Y$; now, $\Y$ is a supertype of $\T_i$, so $(\theta::\Y)::\T_i=\theta::\T_i$:
+\[\renewcommand\arraystretch{1.3}
+  \begin{array}{l}(\fix h)::\T_i = ((\fix h)::\Y)::\T_i = ((\fix g)::\Y)::\T_i = \\
+    \qquad = (\fix g)::\T_i=f_i::\T_i
+  \end{array}\]
+
+{\it (ii)} Assume $h\,(h\,\theta) :: \T_i = f_i :: \T_i$ holds for any $\theta:\T$,
+then in particlar, for $\theta=\fix\,h$, we get $h\,(h\,\fix h) :: \T_i = f_i :: \T_i$.
+Since $h\,(h\,\fix h) = \fix h$, we obtain the conjecture $(\fix h) :: \T_i = f_i :: \T_i$.
+\qed
+\end{proof}
+
+\medskip
+Our reliance on the termination of $\fix$ expressions may seem conspicuous, since some of these
+expressions are generated automatically by the system. However, a closer look reveals that whenever
+such a computation is introduced, the set of the recursive calls it makes is a subset of those made by the existing one.
+Therefore, if the original recurrence terminates, so does the new one. In any case, all the recurrences
+in our development have a trivial termination argument (the indexes $i$,$j$ change monotonically between calls),
+so practically, this should never become a problem.
+
+\newcommand\vtyped[2]{\underset{\scriptscriptstyle ( #2 )}{ #1 }}
+

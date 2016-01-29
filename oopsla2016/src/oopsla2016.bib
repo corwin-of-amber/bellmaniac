@@ -1,0 +1,339 @@
+% The book that started it all
+@book{03/Bellman:DP,
+ author = {Bellman, Richard Ernest},
+ title = {Dynamic Programming},
+ year = {2003},
+ isbn = {0486428095},
+ publisher = {Dover Publications, Incorporated},
+} 
+
+% Book that motivates the use of DP
+@book{DurbinEdKr98,
+  author    = {Richard Durbin and
+               Sean R. Eddy and
+               Anders Krogh and
+               Graeme J. Mitchison},
+  title     = {Biological Sequence Analysis: Probabilistic Models of Proteins and
+               Nucleic Acids},
+  publisher = {Cambridge University Press},
+  year      = {1998},
+  isbn      = {0-521-62971-3}
+}
+
+% Liquid Types
+@inproceedings{PLDI08/Rondon,
+ author = {Rondon, Patrick M. and Kawaguci, Ming and Jhala, Ranjit},
+ title = {Liquid Types},
+ booktitle = {Proceedings of the 29th ACM SIGPLAN Conference on Programming Language Design and Implementation},
+ series = {PLDI '08},
+ year = {2008},
+ location = {Tucson, AZ, USA},
+ pages = {159--169},
+ numpages = {11},
+ keywords = {dependent types, hindley-milner, predicate abstraction, type inference},
+} 
+
+% Staged Parsers: auto-generate parallel DP implementations for operations on sequences
+@inproceedings{OOPSLA14/Jonnalagedda,
+ author = {Jonnalagedda, Manohar and Coppey, Thierry and Stucki, Sandro and Rompf, Tiark and Odersky, Martin},
+ title = {Staged Parser Combinators for Efficient Data Processing},
+ booktitle = {Proceedings of the 2014 ACM International Conference on Object Oriented Programming Systems Languages \& Applications},
+ series = {OOPSLA '14},
+ year = {2014},
+ location = {Portland, Oregon, USA},
+ pages = {637--653},
+ numpages = {17},
+ keywords = {algebraic dynamic programming, multi-stage programming, parser combinators},
+}
+
+% Old refinement paper (Finland)
+@INPROCEEDINGS{TPHOLs96/Butler,
+    author = {Michael Butler and Thomas L\r{a}ngbacka},
+    title = {Program Derivation Using the Refinement Calculator},
+    booktitle = {Theorem Proving in Higher Order Logics: 9th International Conference, volume 1125 of Lecture Notes in Computer Science},
+    year = {1996},
+    pages = {93--108},
+    publisher = {Springer Verlag}
+}
+
+% Even older refinement paper
+@ARTICLE{AI85/Smith,
+	author = {Douglas R. Smith},
+	title = {Top-down synthesis of divide-and-conquer algorithms},
+	journal = "Artificial Intelligence ",
+	volume = "27",
+	number = "1",
+	pages = {43--96},
+	year = "1985"
+}
+
+% DTRE (Similar to KIDS; a Specware predecessor)
+@INPROCEEDINGS{CPS91/Blaine,
+    author = {Lee Blaine and Allen Goldberg},
+    title = {DTRE - A Semi-Automatic Transformation System},
+    booktitle = {Constructing Programs from Specifications},
+    year = {1991},
+    pages = {165--204},
+    publisher = {Elsevier}
+}
+
+% KIDS
+@article{TSE90/Smith,
+  author    = {Douglas R. Smith},
+  title     = {{KIDS:} {A} Semiautomatic Program Development System},
+  journal   = {{IEEE} Trans. Software Eng.},
+  volume    = {16},
+  number    = {9},
+  pages     = {1024--1043},
+  year      = {1990}
+}
+
+% PluTo
+@INPROCEEDINGS{HPC10/Pouchet,
+ author = {Pouchet, Louis-No\"{e}l and Bondhugula, Uday and Bastoul, C{\'e}dric and Cohen, Albert and Ramanujam, J. and Sadayappan, P.},
+ title = {Combined Iterative and Model-driven Optimization in an Automatic Parallelization Framework},
+ booktitle = {Proceedings of the 2010 ACM/IEEE International Conference for High Performance Computing, Networking, Storage and Analysis},
+ series = {SC '10},
+ year = {2010},
+ isbn = {978-1-4244-7559-9},
+ pages = {1--11},
+ numpages = {11}
+} 
+
+% PoCC
+@inproceedings{PLDI08/Bondhugula,
+ author = {Bondhugula, Uday and Hartono, Albert and Ramanujam, J. and Sadayappan, P.},
+ title = {A Practical Automatic Polyhedral Parallelizer and Locality Optimizer},
+ booktitle = {Proceedings of the 29th ACM SIGPLAN Conference on Programming Language Design and Implementation},
+ series = {PLDI '08},
+ year = {2008},
+ location = {Tucson, AZ, USA},
+ pages = {101--113},
+ numpages = {13}
+}
+
+% first DP paper based on serial recursive divide-and-conquer (LCS, FW-APSP, etc.)
+@inproceedings{SODA06/Chowdhury,
+  title     = {Cache-oblivious dynamic programming},
+  author    = {Chowdhury, Rezaul and Ramachandran, Vijaya},
+  booktitle = {Proceedings of the ACM-SIAM Symposium on Discrete Algorithms},
+  pages     = {591--600},
+  year      = {2006}
+}
+
+% first DP paper based on parallel recursive divide-and-conquer (LCS, FW-APSP, parenthesis, etc.)
+@inproceedings{SPAA08/Chowdhury,
+  title     = {Cache-efficient dynamic programming algorithms for multicores},
+  author    = {Chowdhury, Rezaul and Ramachandran, Vijaya},
+  booktitle = {Proceedings of the ACM Symposium on Parallelism in Algorithms and Architectures},
+  pages     = {207--216},
+  year      = {2008}
+}
+
+% a class of DP/DP-like algorithms (FW-APSP, Gaussian elimination w/o pivoting, LU decomposition w/o pivoting, matrix multiplication) based on recursive divide-and-conquer
+@article{TOCS10/Chowdhury,
+  title     = {The cache-oblivious {Gaussian} elimination paradigm: theoretical framework, parallelization and experimental evaluation},
+  author    = {Chowdhury, Rezaul and Ramachandran, Vijaya},
+  journal   = {Theory of Computing Systems},
+  volume    = {47},
+  number    = {4},
+  pages     = {878--919},
+  year      = {2010}
+}
+
+% multicore-oblivious (i.e., parallel cache-oblivious for multicores) algorithms
+@article{JPDC13/Chowdhury,
+  title     = {Oblivious algorithms for multicores and networks of processors},
+  author    = {Chowdhury, Rezaul and Ramachandran, Vijaya and Silvestri, Francesco and Blakeley, Brandon},
+  journal   = {Journal of Parallel and Distributed Computing},
+  year      = {2013}
+}
+
+% recursive divide-and-conquer-based DP for sequence alignment, median and RNA secondary structure prediction
+@article{TCBB10/Chowdhury,
+  title     = {Cache-oblivious dynamic programming for bioinformatics},
+  author    = {Chowdhury, Rezaul and Hai-Son Le and Vijaya Ramachandran},
+  journal   = {IEEE/ACM Transactions on Computational Biology and Bioinformatics},
+  number    = {3},
+  pages     = {495--510},
+  volume    = {7},
+  year      = {2010}
+}
+
+% irregular DP based on recursive divide-and-conquer
+@misc{UnderReview/Chowdhury,
+  title     = {A cache-efficient {Viterbi} algorithm},
+  author    = {Chowdhury, Rezaul and Ganapathi, Pramod and Pradhan, Vivek and Tithi, Jesmin Jahan and Xiao, Yunpeng},
+  note      = {Under Review},
+  year      = {2015}
+}
+
+% comparison between recursive DP and codes generated by polyhedral compilers, and a lot of other most recent experimental results (running times, cache performance, energy, power)
+@inproceedings{IPDPS15/Tithi,
+  title     = {High-performance energy-efficient recursive dynamic programming using matrix-multiplication-like flexible kernels},
+  author    = {Tithi, Jesmin Jahan and Ganapathi, Pramod and Talati, Aakrati and Agarwal, Sonal and Chowdhury, Rezaul},
+  booktitle = {Proceedings of the IEEE International Parallel \& Distributed Processing Symposium},
+  year      = {2015}
+}
+
+% UPenn type-directed synthesis
+@inproceedings{PLDI15/Osera,
+  author    = {Peter{-}Michael Osera and
+               Steve Zdancewic},
+  title     = {Type-and-example-directed program synthesis},
+  booktitle = {Proceedings of the 36th {ACM} {SIGPLAN} Conference on Programming
+               Language Design and Implementation, Portland, OR, USA, June 15-17,
+               2015},
+  pages     = {619--630},
+  year      = {2015}
+}
+
+
+% Sketch !
+@inproceedings{APLAS09/Solar-Lezama,
+  author    = {Armando Solar{-}Lezama},
+  title     = {The Sketching Approach to Program Synthesis},
+  booktitle = {Programming Languages and Systems, 7th Asian Symposium, {APLAS} 2009,
+               Seoul, Korea, December 14-16, 2009. Proceedings},
+  pages     = {4--13},
+  year      = {2009}
+}
+
+@article{STTT13/Solar-Lezama,
+  author    = {Armando Solar{-}Lezama},
+  title     = {Program sketching},
+  journal   = {{STTT}},
+  volume    = {15},
+  number    = {5-6},
+  pages     = {475--495},
+  year      = {2013}
+}
+
+% Brahma
+@inproceedings{PLDI11/Gulwani,
+  author    = {Sumit Gulwani and
+               Susmit Jha and
+               Ashish Tiwari and
+               Ramarathnam Venkatesan},
+  title     = {Synthesis of loop-free programs},
+  booktitle = {Proceedings of the 32nd {ACM} {SIGPLAN} Conference on Programming
+               Language Design and Implementation, {PLDI} 2011, San Jose, CA, USA,
+               June 4-8, 2011},
+  pages     = {62--73},
+  year      = {2011}
+}
+
+% StreamBit
+@inproceedings{PLDI05/Solar-Lezama,
+ author = {Solar-Lezama, Armando and Rabbah, Rodric and Bod\'{\i}k, Rastislav and Ebcio\u{g}lu, Kemal},
+ title = {Programming by Sketching for Bit-streaming Programs},
+ booktitle = {Proceedings of the 2005 ACM SIGPLAN Conference on Programming Language Design and Implementation},
+ series = {PLDI '05},
+ year = {2005},
+ location = {Chicago, IL, USA},
+ pages = {281--294},
+ numpages = {14}
+}
+
+% Rosette
+@inproceedings{Onward13/Torlak,
+ author = {Torlak, Emina and Bodik, Rastislav},
+ title = {Growing Solver-aided Languages with Rosette},
+ booktitle = {Proceedings of the 2013 ACM International Symposium on New Ideas, New Paradigms, and Reflections on Programming \& Software},
+ series = {Onward! 2013},
+ year = {2013},
+ location = {Indianapolis, Indiana, USA},
+ pages = {135--152},
+ numpages = {18}
+} 
+
+% Separation Logic (for separating conjunction)
+@inproceedings{LICS02/Reynolds,
+ author = {Reynolds, John C.},
+ title = {Separation Logic: A Logic for Shared Mutable Data Structures},
+ booktitle = {Proceedings of the 17th Annual IEEE Symposium on Logic in Computer Science},
+ series = {LICS '02},
+ year = {2002},
+ pages = {55--74},
+ numpages = {20}
+}
+
+% Region Logic (originally called Regional Logic)
+@inproceedings{ECOOP08/Banerjee,
+  author    = {Anindya Banerjee and
+               David A. Naumann and
+               Stan Rosenberg},
+  title     = {Regional Logic for Local Reasoning about Global Invariants},
+  booktitle = {{ECOOP} 2008 - Object-Oriented Programming, 22nd European Conference,
+               Paphos, Cyprus, July 7-11, 2008, Proceedings},
+  pages     = {387--411},
+  year      = {2008}
+}
+
+% Leon
+@INPROCEEDINGS{OOPSLA13/Kneuss,
+  author = {Etienne Kneuss and Viktor Kuncak and Ivan Kuraj and Philippe Suter},
+  title = {Synthesis Modulo Recursive Functions},
+  booktitle = {OOPSLA},
+  year = 2013
+}
+
+% Chapter 4, Divide-and-conquer
+@book{09/CLRS,
+  author 	= {Thomas H. Cormen and Charles E. Leiserson and Ronald L. Rivest and Clifford Stein},
+  title 	= {Introduction to Algorithms},
+  edition 	= {Third},
+  publisher = {The MIT Press},
+  year 	= {2009}
+}
+
+% Fiat (Coq-based refinement library)
+@inproceedings{POPL15/Delaware,
+  author    = {Benjamin Delaware and
+               Cl{\'{e}}ment Pit{-}Claudel and
+               Jason Gross and
+               Adam Chlipala},
+  title     = {Fiat: Deductive Synthesis of Abstract Data Types in a Proof Assistant},
+  booktitle = {Proceedings of the 42nd Annual {ACM} {SIGPLAN-SIGACT} Symposium on
+               Principles of Programming Languages, {POPL} 2015, Mumbai, India, January
+               15-17, 2015},
+  pages     = {689--700},
+  year      = {2015}
+}
+
+% Why3 - verification with tactics and SMT
+@inproceedings{ESOP13/Filliatre,
+  author = {Filliâtre, Jean-Christophe and Paskevich, Andrei},
+  booktitle = {ESOP},
+  pages = {125-128},
+  publisher = {Springer},
+  series = {Lecture Notes in Computer Science},
+  title = {Why3 - Where Programs Meet Provers},
+  year = 2013
+}
+
+% Codegen: recursion to loop
+@article{JACM67/Karp,
+ author = {Karp, Richard M. and Miller, Raymond E. and Winograd, Shmuel},
+ title = {The Organization of Computations for Uniform Recurrence Equations},
+ journal = {J. ACM},
+ issue_date = {July 1967},
+ volume = {14},
+ number = {3},
+ month = jul,
+ year = {1967},
+ pages = {563--590},
+ numpages = {28}
+} 
+
+% Codegen: copy optimization
+@inproceedings{ASPLOS91/Lam,
+ author = {Lam, Monica D. and Rothberg, Edward E. and Wolf, Michael E.},
+ title = {The Cache Performance and Optimizations of Blocked Algorithms},
+ booktitle = {Proceedings of the Fourth International Conference on Architectural Support for Programming Languages and Operating Systems},
+ series = {ASPLOS IV},
+ year = {1991},
+ location = {Santa Clara, California, USA},
+ pages = {63--74},
+ numpages = {12}
+} 
