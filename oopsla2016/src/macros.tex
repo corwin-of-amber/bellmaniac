@@ -1,31 +1,4 @@
 
-\newcommand\newterm[1]{{\it #1}}
-\newcommand\R{\mathbb{R}}
-\newcommand\N{\mathbb{N}}
-\newcommand\B{\mathbb{B}}
-\newcommand\T{\mathcal{T}}
-\renewcommand\S{\mathcal{S}}
-
-\newcommand\lspan[2]{\multicolumn{#1}{@{}l}{#2}}
-\newcommand\cspan[2]{\multicolumn{#1}{@{}c}{#2}}
-
-\makeatletter
-\newcommand{\LeftEqNo}{\let\veqno\@@leqno}
-\makeatother
-
-\newcommand\limplies{\Rightarrow}
-\newcommand\liff{\Leftrightarrow}
-
-\newcommand\exampleTitle{
-\bigskip\noindent
-\begin{tikzpicture}
-  \draw (0,0) -- (5mm,0)
-    node(e)[draw,rectangle,rounded corners=.7em,right] {\bf Example};
-  \draw (e) -- (\columnwidth,0);
-\end{tikzpicture}%
-\medskip%
-}
-
 % author comment macros
 \newcommand\authornote[3]{{\color{#2} \footnote{\color{#2} {#1}: {#3}}}}
 \newcommand\todo[1]{{\color{NavyBlue} \footnote{\color{NavyBlue} TODO: {#1}}}}
@@ -50,6 +23,36 @@
     end
   }
 \fi
+
+
+\newcommand\newterm[1]{{\it #1}}
+\newcommand\R{\mathbb{R}}
+\newcommand\N{\mathbb{N}}
+\newcommand\B{\mathbb{B}}
+\newcommand\T{\mathcal{T}}
+\renewcommand\S{\mathcal{S}}
+
+\newcommand\lspan[2]{\multicolumn{#1}{@{}l}{#2}}
+\newcommand\cspan[2]{\multicolumn{#1}{@{}c}{#2}}
+
+\makeatletter
+\newcommand{\LeftEqNo}{\let\veqno\@@leqno}
+\makeatother
+
+\newcommand\limplies{\Rightarrow}
+\newcommand\liff{\Leftrightarrow}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+
+\newcommand\exampleTitle{
+\bigskip\noindent
+\begin{tikzpicture}
+  \draw (0,0) -- (5mm,0)
+    node(e)[draw,rectangle,rounded corners=.7em,right] {\bf Example};
+  \draw (e) -- (\columnwidth,0);
+\end{tikzpicture}%
+\medskip%
+}
 
 \newcommand{\hide}[1]{} 
 \newcommand{\C}[1]{\lstinline!#1!}

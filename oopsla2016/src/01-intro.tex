@@ -1,33 +1,156 @@
 \section{Introduction}
 \label{intro}
 
+Software synthesis aims to close the gap between descriptions of software
+components, such as algorithms and systems, and their implementations
+as computer programs using some programming language having some operational
+semantics. Descriptions can occur as logical specifications, pseudo-code,
+input-output examples, etc., and are at a much higher level than the
+intended implementation, especially when considering performance-optimal
+implementations, because optimizing code often involves introducing many
+low-level details into the program.
 
-\newcommand{\xidx}{i}
-\newcommand{\yidx}{j}
-\newcommand{\xw}[1]{w^x_{#1}}
-\newcommand{\yw}[1]{w^y_{#1}}
+A prominant example for the impedance between high-level description and
+low-level implementation can be seen in high-performance dynamic programming algorithms.
+These programs are mostly memory-bound, so efficient utilization of memory
+caches is crucial to achieving good performance, sometimes resulting in $10\times$
+speedup, which can make the difference between feasible and infeasible.
+
+\begin{algorithm}[t]
+\begin{algorithmic}
+  \For{$i=n..1$}
+    \For{$j=1..n$}
+      \State $G_{ij} := \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
+    \EndFor
+  \EndFor
+\end{algorithmic}
+\caption{\label{intro:naive}
+   A na\"ive loop implementation}
+\end{algorithm}
+
+%# and are usually accompanied by an intended
+% language of programs through a grammar (cite SyGuS) or a skeleton (cite Sketch).
+
+To give an idea, the loop in \Cref{intro:naive} computes an $n\times n$
+region of a DP table $G$ via a simple row-major order. This order is
+loyal to the dependencies between different elements of $G$, but
+performs rather poorly due to a high rate of cache misses incurred by
+reading the ranges $G_{ik}$ and $G_{kj}$, $i<k<j$, repeatedly for every
+iteration of the loops on $i$ and $j$.
+The state-of-the-art solution to this problem uses a \newterm{divide and conquer}
+approach, that will be explained shortly. An excerpt of the pseudo-code for such
+an implementation is shown in \Cref{intro:divide-and-conquer}.
+
+\begin{algorithm}[b!]
+\begin{algorithmic}
+  \State A[$1..n$], ~where:
+  \Procedure{A{\larger{[}}$s..e${\larger{]}}}{}
+	\If{$e-s < b$}
+	  \For{$i=e..s$}
+	    \For{$j=s..e$}
+	      \State $G_{ij} := \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
+	    \EndFor
+	  \EndFor
+	\Else
+	  \State A$\big[ s..\floor{\frac{s+e}{2}} \big]$
+	  \State A$\big[ \floor{\frac{s+e}{2}}{+}1..e \big]$
+	  \State B$\big[ s..\floor{\frac{s+e}{2}} ~,~ \floor{\frac{s+e}{2}}{+}1..e \big]$
+	\EndIf
+  \EndProcedure
+  \Procedure{B{\larger{[}}$s_0..e_0 ~,~ s_1..e_1${\larger{]}}}{}
+	\If{$e-s < b$} \ldots
+	\Else
+	  \State B$\big[ \floor{\frac{s_0+e_0}{2}}{+}1..e_0 ~,~ s_1..\floor{\frac{s_1+e_1}{2}} \big]$
+	  \State C$\big[ s_0..\floor{\frac{s_0+e_0}{2}} ~,~ s_1..\floor{\frac{s_1+e_1}{2}} ~,~ \floor{\frac{s_1+e_1}{2}}{+}1..e_1 \big]$
+	  \vspace{-5pt}
+	  \State $\vdotswithin{C}$
+	\EndIf
+  \EndProcedure
+  \Procedure{C{\larger{[}}$s_0..e_0 ~,~ s_1..e_1 ~,~ s_2..e_2${\larger{]}}}{}
+    \vspace{-5pt}
+    \State $\vdots$
+  \EndProcedure
+\end{algorithmic}
+\caption{\label{intro:divide-and-conquer}
+   An optimized divide-and-conquer version}
+\end{algorithm}
+
+It is easy enough to see that the optimized version requires a high level of
+sophistication and a large amount of low-level details, e.g. recursive procedures,
+the correct order in which calls should be made, and rather involved index
+arithmetics. The full version is, in fact, more than ten times longer than the
+na\"ive one and immeasurably more complicated. We present an approach that addresses
+the high impedance between these versions, making the transition between the na\"ive
+and the optimal easier and more manageable, without sacrificing performance and while
+providing strong correctness guarantees.
+
 There are two broad categories of software synthesis techniques: 
 \emph{inductive} approaches, which generalize from concrete values or execution traces, and \emph{deductive} approaches, which derive an implementation from a specification through deductive reasoning steps. Inductive synthesis has been the focus of renewed interest thanks to the discovery of techniques that leverage SAT/SMT solvers to symbolically represent and search very large spaces of possible programs~\cite{APLAS09/Solar-Lezama, PLDI11/Gulwani, Onward13/Torlak}, and the use of counterexample-guided inductive synthesis (CEGIS), which allows one to leverage inductive techniques to find programs that satisfy more general specifications. Deductive techniques, however, still hold some important advantages over inductive approaches; in particular, their scalability is not limited by the power of a checking oracle, because the correctness of the implementation is guaranteed by construction.
 
-In this paper, we present a new approach to interactive deductive synthesis based on \emph{solver-aided tactics} that preserves the benefits of deductive synthesis techniques but reduces the burden on the user by relying on two important innovations: (a) the use of inductive synthesis to discover important details of the low-level steps needed to achieve a transformation, (b) the use of a type system based on predicate abstraction (liquid types) that associates semantic information with program terms, enabling automated verification of the validity of a transformation. Both of these innovations rely on aggressive use of SMT solvers to discharge complex proof obligations that would otherwise have to be discharged interactively with significant manual effort. 
+\begin{figure}
+  \centering
+  \begin{tikzpicture}[
+      h/.style={minimum height=1.75em}, 
+      tallh/.style={minimum height=3.1em}, 
+      doubleh/.style={minimum height=3.5em+2mm}, 
+      fullw/.style={minimum width=5cm}, 
+      halfw/.style={minimum width=2.4cm},
+      75w/.style={minimum width=1.15cm},
+      every node/.style={align=center}]
+    \node[draw, h, fullw](tae) {Tactic Application Engine};
+    \node[draw, h, fullw, above=2mm of tae](dp) {Divide-and-Conquer Tactic Library};
+    \node[draw, tallh, halfw, below=2mm of tae.south west, anchor=north west](verif) {Verifier \\ {\small (SMT)}};
+    \node[draw, tallh, halfw, below=2mm of tae.south east, anchor=north east](comp) {Compiler \\ {\small (C++, cilk)}};
+    \draw (dp.south) -- (tae.north);
+    \draw (tae.south -| verif.north) -- (verif.north);
+    \draw (tae.south -| comp.north) -- (comp.north);
+    
+    \node[draw, doubleh, left=4mm of dp.north west, anchor=north east](ui) {Frontend \\ UI};
+    \draw (dp.west) -- (dp.west -| ui.east);
+    \draw (tae.west) -- (tae.west -| ui.east);
+    
+    \node[draw, tallh, right=4mm of comp](exe) {Exec. \\ Code};
+    \draw[double] (comp) -- (exe);
+  \end{tikzpicture}
+\caption{\label{intro:design}
+  Overall design of Bellmania.}
+\end{figure}
 
-We believe the approach has the potential to be generally applicable to a variety of synthesis problems, but in this paper, we focus on a particular domain of \emph{divide-and-conquer dynamic programming} algorithms. Specifically, we have developed a system called \emph{Bellmania} that uses solver-aided tactics specialized for this domain to help an algorithm designer derive divide-and-conquer dynamic programming algorithms from a high-level specification. As we illustrate in the next section, this domain is challenging not just as a synthesis target, but also for human experts. Therefore, in addition to serving as a test bed for a new synthesis approach, the development of Bellmania is a significant achievement in itself.
+%In this paper, we present a new approach to interactive deductive synthesis based on \emph{solver-aided tactics} that preserves the benefits of deductive synthesis techniques but reduces the burden on the user by relying on two important innovations: (a) the use of inductive synthesis to discover important details of the low-level steps needed to achieve a transformation, (b) the use of a type system based on predicate abstraction (liquid types) that associates semantic information with program terms, enabling automated verification of the validity of a transformation. Both of these innovations rely on aggressive use of SMT solvers to discharge complex proof obligations that would otherwise have to be discharged interactively with significant manual effort. 
+
+In this paper, we describe the Bellmania\footnote{Named after Richard Bellman.} system (\Cref{intro:design}), which contains a generic
+core --- called the \newterm{Tactic Application Engine} ---
+on top of which a library of \newterm{tactics} specific to dynamic programming
+is built. The library contains enough tactics to successfully develop a
+family of problems, so that the user of the system does not need to change
+or extend the library; the user only applies tactics by issuing commands
+through a GUI and watching the program evolve. The TAE has a back-end that
+verifies conjectures, and is in charge of making sure that
+tactic applications represent valid rewritings of the program. Finally, the
+programs created this way are transferred to a compilation back-end, where
+some automatic static analysis is applied and then executable code is
+emitted.
+
+%We believe the approach has the potential to be generally applicable to a variety of synthesis problems, but in this paper, we focus on a particular domain of \emph{divide-and-conquer dynamic programming} algorithms. Specifically, we have developed a system called \emph{Bellmania} that uses solver-aided tactics specialized for this domain to help an algorithm designer derive divide-and-conquer dynamic programming algorithms from a high-level specification. 
+As we illustrate in the next section, the domain of divide-and-conquer dynaming programming is challenging not just as a synthesis target, but also for human experts. Therefore, in addition to serving as a test bed for a new synthesis approach and design, the development of Bellmania is a significant achievement in itself,
+allowing the developments of implementations for more algorithms of this class.
 
 Our work on solver-aided tactics builds on prior work on the StreamBit project~\cite{PLDI05/Solar-Lezama}, which
 introduced the idea of transformation rules with missing details that can be inferred by a symbolic search procedure, as
-well as the pioneering work on the Leon synthesizer, which has explored the use of deductive techniques to improve the
+well as the pioneering work on the Leon synthesizer\coa{cite?}, which has explored the integration of deductive techniques to improve the
 scalability of inductive synthesis. However, our approach is unique in the way it leverages inductive synthesis and
-liquid types in the context of deductive synthesis: 
+typing in the context of deductive synthesis: 
 (a) the solver can use inductive synthesis to search for the detailed parameters required for a transformation,
 (b) The solver can prove validity of side conditions that ensure the soundness of each individual transformation, 
-(c) the tactics can leverage information from logically qualified types in the program in
+(c) the tactics can leverage information from \newterm{logically qualified types} in the program in
     order to guide the transformation. 
 The flexibility of being able to rely on the solver to check the validity of transformations means that we do not have to be conservative when checking if a transformation can be applied.
 In addition, the reliance on the synthesizer to fill in parameters and proof details means that the user has to type less and has less chance for error.
 
 Overall, we make the following contributions.
 \begin{itemize}
-\item We introduce \emph{solver-aided tactics} as a way to raise the level of abstraction of deductive synthesis.
+\item We introduce \emph{solver-aided tactics}, a form of rewrite rules with proof obligations that can be translated to first-order logic,
+  as a way to raise the level of abstraction of deductive synthesis.
 \item We develop a small library of these formal tactics that can be used to 
   systematically transform a class of problem specifications,
   expressed as recurrences in a simple functional language,
