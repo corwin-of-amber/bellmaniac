@@ -15,26 +15,30 @@ partition the space of subproblems into smaller subspaces (see, e.g., \cite{IPDP
 To illustrate the key concepts undelying Bellmania, we will walk through the first
 few steps that an algorithms expert --- whom we will call Richard --- would follow to
 generate a provably correct divide-and-conquer implementation of a DP algorithm.
-As a motivating example, we consider the Simplified Arbiter problem.
-Two processes $x$ and $y$ must be scheduled to run $n$ and $m$ seconds,
-respectively, on a single processor, using one-second slots.
-Execution starts at $t=0$. The cost for scheduling the slots $[a..b)$ of $x$ after
-having scheduled slots $[0..c)$ of $y$
-is given by $\xw{abc}$, and the cost for schedulting the slots $[a..b)$ of $y$
-after scheduling $[0..c)$ of $x$ is given by $\yw{abc}$.
+The code in \Cref{intro:naive} is (part of) a program to compute the recurrence
+shown in \Cref{overview:paren spec}. This recurrence represents a solution
+for the Parenthesis Assignment Problem: given a sequence $a_1\!\cdots a_n$
+of factors, find a minimal-cost placement of parenthesis in the product expression
+assuming that multiplication is associative (but not commutative), that the cost
+of reading $a_i$ is given by $x_i$, and that the cost for multiplying
+$\Pi(a_{(i+1)..k})$ by $\Pi(a_{(k+1)..j})$ is given by $w_{ikj}$.
+We will use this as a motivating example.
 
 \begin{figure}[b]
 \begin{tabular}{@{\hspace{-1pt}}r@{~}l@{}}
 \begin{tikzpicture}[x=4.1mm,y=4.1mm,baseline=(center), remember picture]
   \coordinate(center) at (3,3);
-  \draw[step=1] (0,0) grid (6,6);
-  \draw[ultra thick] (4,2) rectangle +(1,1);
-  %\node(Gij) at (4.5,2.5) {\tiny $\scriptscriptstyle\langle i,j\rangle$};
-  \node[circle,fill=BrickRed,inner sep=0,minimum size=1mm](Gij) at (4.5,2.5) {};
-  \fill[black,opacity=0.1] (0,5) rectangle (6,6);
-  \fill[black,opacity=0.1] (0,0) rectangle (1,5);
-  \fill[blue,opacity=0.2] (0,2) rectangle (4,3);
-  \fill[blue,opacity=0.2] (4,3) rectangle (5,6);
+  \draw (6,0) -- (6,6) -- (0,6);
+  \foreach \i in {0,1,2,3,4,5} {
+    \draw (6,\i) -- (5-\i,\i); \draw[black!25!white] (5-\i,\i) -- (0,\i);
+    \draw (\i,6) -- (\i,5-\i); \draw[black!25!white] (\i,5-\i) -- (\i,0);
+  }
+  %\draw[step=1] (0,0) grid (6,6);
+  \draw[ultra thick] (4,4) rectangle +(1,1);
+  \node[circle,fill=BrickRed,inner sep=0,minimum size=1mm](Gij) at (4.5,4.5) {};
+  \fill[black,opacity=0.1] (0,6) rectangle ++(1,-1) rectangle ++(1,-1) rectangle ++(1,-1) rectangle ++(1,-1) rectangle ++(1,-1) rectangle ++(1,-1);
+  \fill[blue,opacity=0.2] (1,4) rectangle (4,5);
+  \fill[blue,opacity=0.2] (4,1) rectangle (5,4);
   \node[anchor=south east](G) at (0,6) {\small$G$};
   \draw[->] (G.east) -- +(1.5,0) node[anchor=west] {\small $j$};
   \draw[->] (G.south) -- +(0,-1.5) node[anchor=north] {\small $i$};
@@ -43,70 +47,47 @@ after scheduling $[0..c)$ of $x$ is given by $\yw{abc}$.
 \small
 $
 \begin{array}{l@{}}
-	\tikz[overlay, remember picture]{\draw[BrickRed] (0,0) -- (Gij);}
+	\tikz[overlay, remember picture]{\draw[BrickRed] (-.5mm,.1) -- (Gij);}
 	G_{ij} ~=~ \\
 	~
 	\begin{cases}
-		0                        & i=j=0 \\
-		\yw{0j0}                  & i=0, j>0 \\
-		\xw{0i0}                 & i>0, j=0 \\
-		\begin{array}{@{}l@{\hspace{-1pt}}l@{\hspace{-4pt}}}
-		  \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji},  \\
-		              & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle
-		\end{array}              & i,j>0
+		~~x_i                        & i+1=j \\
+	    \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj} & i+1<j
 	\end{cases}
 \end{array}
 $
 \end{tabular}
 \vspace{5pt}
 \caption{Recurrence equation and cell-level dependencies.}
-\label{overview:arbiter spec}
+\label{overview:paren spec}
 \end{figure}
-
-
-The optimal cost for scheduling the first $i$ slots of $x$ and the first $j$ slots
-of $y$ is given by the recurrence $G_{ij}$ in \Cref{overview:arbiter spec}. When $i$ is zero, it means that
-only $y$ has been scheduled, so the cost is $\yw{0j0}$, and similarly when $j$ is zero, 
-the cost is $\xw{0i0}$. When $i$ and $j$ are both positive, there are two options:
-either the schedule ends with an allocation to $x$, 
-where slots $[p..i)$ of $x$ were scheduled at $t=p+j$, and the cost is 
-$G_{pj} + \xw{pij}$; or it ends with an allocation to $y$, where
-slots $[q..j)$ of $y$ were scheduled at $t=i+q$, and the cost is $G_{iq} + \yw{qji}$.
-The minimum over all respective $p<i$ and $q<j$ is taken.
-Eventually, the optimal cost of the entire schedule is given by $G_{nm}$.
 
 \begin{paragraph}{Iterative Algorithm.}
 Using a standard dynamic programming method, our algorithm expert Richard would compute this recurrence
 with an iterative program by understanding the dependency pattern:
-to compute the $\min\langle\cdots\rangle$ expression in \Cref{overview:arbiter spec} and find the optimal
-values for $p$ and $q$, the algorithm needs information from all cells above and to the left of $G_{ij}$.
-In particular, each value $G_{ij}$ is computed from other values $G_{i'j'}$ with lower
-indexes, $i'<i$, ~$j'<j$. 
-Therefore, considering $G$ as a two-dimensional array, it can be filled in a single pass from left to right and from top
-to bottom, as shown in \Cref{overview:iterative}.
+to compute the $\underset{i<k<j}\min(\cdots)$ expression in \Cref{overview:paren spec} and find the optimal
+value for $k$, the algorithm needs information from all cells below and to the left of $G_{ij}$.
+In particular, each value $G_{ij}$ is computed from other values $G_{i'j'}$ with higher
+row indexes $i'>i$ and lower column indexes ~$j'<j$. 
+Therefore, considering $G$ as a two-dimensional array, it can be filled in a single sweep from left to right and from bottom
+to top, as done in \Cref{overview:iterative}.
 \end{paragraph}
 
-\newcommand\FORLINE[1]{\State\algorithmicfor~{#1} \algorithmicdo~}
+\newcommand\ForLine[1]{\State\algorithmicfor~{#1} \algorithmicdo~}
 \newcommand\Head[1]{\Comment{ {\it #1} ~~}}
 
 \begin{algorithm}
 \renewcommand\arraystretch{1.3}
 \begin{algorithmic}
-  \State $G_{00} := 0$    \Head{Initialize}
-  \FORLINE{$i=1..n$}  $G_{i0} := \xw{0i0}$
-  \FORLINE{$j=1..m$}  $G_{0j} := \yw{0j0}$  
+  \ForLine{$i=1..n$}  $G_{(i+1)i} := x_i$    \Head{Initialize}
   \For{$i=1..n$}          \Head{Compute}
-    \For{$j=1..m$}
-      \State $G_{ij} :=
-        \begin{array}[t]{@{}l@{~}l} 
-          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
-                      & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
-        \end{array}$
+    \For{$j=(i+1)..n$}
+      \State $G_{ij} := \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
     \EndFor
   \EndFor
 \end{algorithmic}
 \caption{\label{overview:iterative}
-   Iterative Simplified Arbiter}
+   Iterative Parenthesis}
 \end{algorithm}
 
 
@@ -123,19 +104,24 @@ to bottom, as shown in \Cref{overview:iterative}.
 \begin{figure}
 \centering
 \begin{tabular}{c@{\hspace{.5in}}c}
-\begin{tikzpicture}[baseline=(n/2), q/.style={font=\relsize{1.3}}]
-  \draw (0,0) grid (2,2);
+\begin{tikzpicture}[baseline=(n/2), q/.style={font=\relsize{1.3}}, pale/.style={color=black!25!white}]
+  \draw (0,2) -- (2,2) -- (2,0);
+  \foreach \i in {0,1} {
+    \draw (\i,2) -- (\i, 1-\i); \draw[pale] (\i, 1-\i) -- (\i,0);
+    \draw (2,\i) -- (1-\i, \i); \draw[pale] (1-\i, \i) -- (0,\i);
+  }
+  %\draw (0,0) grid (2,2);
   \node[q] at (.5,1.5) {1};   \node[q] at (1.5,1.5) {2};
-  \node[q] at (.5, .5) {3};   \node[q] at (1.5, .5) {4};
+  \node[q,pale] at (.5, .5) {3};   \node[q] at (1.5, .5) {4};
   \node(O)[above left] at (0,2) {$0$};
-  \node(m/2)[above] at (1,2) {$\frac{m}{2}$};
-  \node(m)[above] at (2,2) {$m$};
+  \node(m/2)[above] at (1,2) {$\frac{n}{2}$};
+  \node(m)[above] at (2,2) {$n$};
   \node(n/2)[left] at (0,1) {$\frac{n}{2}$};
   \node(n)[left] at (0,0) {$n$};
   \node(J0)[above] at (.5,2.5) {$J_0$};
   \node(J1)[above] at (1.5,2.5) {$J_1$};
-  \node(I0)[left] at (-.5,.5) {$I_0$};
-  \node(I1)[left] at (-.5,1.5) {$I_1$};
+  \node(I0)[left] at (-.5,1.5) {$J_0$};
+  \node(I1)[left] at (-.5,.5) {$J_1$};
   %\coordinate(0) at (0,0);
   %\coordinate(sw) at (0,0);
   %\coordinate(ne) at (2,2);
@@ -147,8 +133,8 @@ to bottom, as shown in \Cref{overview:iterative}.
   \draw (O.south west |- n.160) -- (O.south west |- n/2.220);
 \end{tikzpicture}
 & 
-$\begin{array}{l}\qbox1 \rightsquigarrow \qbox2 \\ 
-\qbox1 \rightsquigarrow \qbox3 \\ \qbox2\rightsquigarrow \qbox4 \\ \qbox3 \rightsquigarrow \qbox4\end{array}$
+$\begin{array}{l}\qbox1 \rightsquigarrow \qbox2 \\
+\qbox4 \rightsquigarrow \qbox2 \end{array}$
 \end{tabular}
 \vspace{5pt}
 \caption{\label{overview:quadrants}
@@ -156,7 +142,7 @@ $\begin{array}{l}\qbox1 \rightsquigarrow \qbox2 \\
 \end{figure}
 
 Divide-and-conquer is a common algorithm development pattern (\cite{09/CLRS}, chapter 4) that has recently
-been applied to DP (\cite{SODA06/Chowdhury,SPAA08/Chowdhury,TOCS10/Chowdhury,TCBB10/Chowdhury}).
+been applied to DP \cite{SODA06/Chowdhury,SPAA08/Chowdhury,TOCS10/Chowdhury,TCBB10/Chowdhury}.
 This approach has the benefit of yielding cache-oblivious implementations by
 increasing memory locality while preserving parallelism. With divide-and-conquer,
 the DP table is partitioned into regions, and each region is expressed as a sub-problem
@@ -169,13 +155,14 @@ In Bellmania, this is accomplished by applying the {\sf Slice} tactic,
 illustrated graphically at the top of \Cref{overview:slice-stratify-synth}.
 {\em Tactics} are transformation steps that manipulate the program,
 and represent a high-level refinement concept.
-The partitions are labeled $I_0,I_1$ and $J_0,J_1$ for row index ranges and column index ranges,
-respectively.
+The partitions are labeled $J_0,J_1$. The table is square, so we may use
+them for both row and column index ranges.
 Slicing gives the analog of the specification in \Cref{overview:logical-slice-stratify}({\it i}).
 The expression inside $\min\langle\cdots\rangle$ is shortened for space,
 but it is the same as in \Cref{overview:iterative}.
 
 Following the same reasoning as in the iterative case, computing \qbox1
+(the top-left quadrant)
 does not depend on any of the other computations. Richard applies the
 {\sf Stratify} tactic, which encodes exactly this intuition: it separates
 an independent computation step as a separate loop.
@@ -200,18 +187,16 @@ a recursive divide-and-conquer algorithm.
 \begin{figure}
 \[\renewcommand\arraystretch{1.3}
   \begin{array}{@{}l@{}}
-    \textsf{Slice} \quad i:\langle I_0|I_1\rangle \quad j:\langle J_0|J_1\rangle \hfill (i)\\
-    ~\forall i,j\in\qbox1.~ G_{ij} = \min \langle\cdots G_{iq} \cdots G_{pj} \cdots \rangle \\
-    ~\forall i,j\in\qbox2.~ G_{ij} = \min \langle\cdots G_{iq} \cdots G_{pj} \cdots \rangle \\
-    ~\forall i,j\in\qbox3.~ G_{ij} = \min \langle\cdots G_{iq} \cdots G_{pj} \cdots \rangle \\
-    ~\forall i,j\in\qbox4.~ G_{ij} = \min \langle\cdots G_{iq} \cdots G_{pj} \cdots \rangle \\
+    \textsf{Slice} \quad i:\langle J_0|J_1\rangle \quad j:\langle J_0|J_1\rangle \hfill (i)\\
+    ~~\forall i,j\in\qbox1.~ G_{ij} = \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj} \\
+    ~~\forall i,j\in\qbox2.~ G_{ij} = \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj} \\
+    ~~\forall i,j\in\qbox4.~ G_{ij} = \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj} \\
     %
     \textsf{Stratify} ~ \qbox1 \hfill (ii)\\
     %
-    ~\forall i,j\in\qbox1.~ G^{\tinyqbox1}_{ij} = \min \langle\cdots G^{\tinyqbox1}_{iq} \cdots G^{\tinyqbox1}_{pj} \cdots \rangle \\
-    ~\forall i,j\in\qbox2.~ G_{ij} = \min \langle\cdots (G^{\tinyqbox1}\!/G)_{iq} \cdots (G/G^{\tinyqbox1})_{pj} \cdots \rangle \\
-    ~\forall i,j\in\qbox3.~ G_{ij} = \min \langle\cdots (G/G^{\tinyqbox1})_{iq} \cdots (G/G^{\tinyqbox1})_{pj} \cdots \rangle \\
-    ~\forall i,j\in\qbox4.~ G_{ij} = \min \langle\cdots (G/G^{\tinyqbox1})_{iq} \cdots (G/G^{\tinyqbox1})_{pj} \cdots \rangle
+    ~~\forall i,j\in\qbox1.~ G^{\tinyqbox1}_{ij} = \underset{i<k<j}\min ~ G^{\tinyqbox1}_{ik} + G^{\tinyqbox1}_{kj} + w_{ikj} \\
+    ~~\forall i,j\in\qbox2.~ G_{ij} = \underset{i<k<j}\min ~ (G^{\tinyqbox1}\!/G)_{ik} + (G^{\tinyqbox1}\!/G)_{kj} + w_{ikj} ~~ \\
+    ~~\forall i,j\in\qbox4.~ G_{ij} = \underset{i<k<j}\min ~ (G^{\tinyqbox1}\!/G)_{ik} + (G^{\tinyqbox1}\!/G)_{kj} + w_{ikj} \\
   \end{array}
 \]
 \caption{\label{overview:logical-slice-stratify}
@@ -230,7 +215,7 @@ a recursive divide-and-conquer algorithm.
 \input{gfx/overview-chain}
 \fi
 \caption[caption]{\label{overview:chain}
-  Stratified computation for Simplified Arbiter. \\[.2em]
+  Stratified computation for Parenthesis. \\[.2em]
   The array is initially empty except for the hatched area that is
   filled by {\it Initialize}.
   Shaded areas indicate the region that is read at each step.

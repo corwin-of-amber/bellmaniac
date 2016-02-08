@@ -19,7 +19,7 @@ speedup, which can make the difference between feasible and infeasible.
 \begin{algorithm}[t]
 \begin{algorithmic}
   \For{$i=n..1$}
-    \For{$j=1..n$}
+    \For{$j=i..n$}
       \State $G_{ij} := \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
     \EndFor
   \EndFor
@@ -47,7 +47,7 @@ an implementation is shown in \Cref{intro:divide-and-conquer}.
   \Procedure{A{\larger{[}}$s..e${\larger{]}}}{}
 	\If{$e-s < b$}
 	  \For{$i=e..s$}
-	    \For{$j=s..e$}
+	    \For{$j=\max\{s,i\}..e$}
 	      \State $G_{ij} := \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
 	    \EndFor
 	  \EndFor
@@ -72,7 +72,7 @@ an implementation is shown in \Cref{intro:divide-and-conquer}.
   \EndProcedure
 \end{algorithmic}
 \caption{\label{intro:divide-and-conquer}
-   An optimized divide-and-conquer version}
+   An optimized divide-and-conquer version (\textit{snippet})}
 \end{algorithm}
 
 It is easy enough to see that the optimized version requires a high level of
@@ -84,6 +84,7 @@ the high impedance between these versions, making the transition between the na\
 and the optimal easier and more manageable, without sacrificing performance and while
 providing strong correctness guarantees.
 
+\coa{not sure this paragraph applies here anymore}
 There are two broad categories of software synthesis techniques: 
 \emph{inductive} approaches, which generalize from concrete values or execution traces, and \emph{deductive} approaches, which derive an implementation from a specification through deductive reasoning steps. Inductive synthesis has been the focus of renewed interest thanks to the discovery of techniques that leverage SAT/SMT solvers to symbolically represent and search very large spaces of possible programs~\cite{APLAS09/Solar-Lezama, PLDI11/Gulwani, Onward13/Torlak}, and the use of counterexample-guided inductive synthesis (CEGIS), which allows one to leverage inductive techniques to find programs that satisfy more general specifications. Deductive techniques, however, still hold some important advantages over inductive approaches; in particular, their scalability is not limited by the power of a checking oracle, because the correctness of the implementation is guaranteed by construction.
 

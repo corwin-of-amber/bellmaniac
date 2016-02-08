@@ -6,8 +6,7 @@
     
   \def\dx{1.75cm}
     
-  \fill[init data] (0,0) rectangle ++(.2,2);
-  \fill[init data] (0,2) rectangle ++(2,-.2);
+  \fill[init data] (0,2) -- ++(.2,0) -- (2,.2) -- (2,0);
   \draw (0,0) grid (2,2);
   \node(s)[block,fit={(0,1) (1,2)}] {};
   %\node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
@@ -21,30 +20,25 @@
   \node(1) at (.5,1.5) {1};   %\node(2) at (1.5,1.5) {2};
   %\node(3) at (.5,.5) {3};         \node(4) at (1.5,.5) {4};
   \draw (s.70) edge[->,out=20] (1);
-  \node(s)[block,fit={(0,1) (2,2)}] {};
+  \node(s)[block,fit={(1,0) (2,1)}] {};
   \node[inner sep=0] at (2.5,1) {\steparrow};
 
   \tikzset{xshift=\dx}
   
   \draw (0,0) grid (2,2);
-  \node(1) at (.5,1.5) {1};  \node(2) at (1.5,1.5) {2};
-  %\node(3) at (.5,.5) {3};        \node(4) at (1.5,.5) {4};
-  \draw (s.70) edge[->,out=20] (2);
-  \node(s)[block,fit={(0,0) (1,2)}] {};
+  \node(1) at (.5,1.5) {1};  %\node(2) at (1.5,1.5) {2};
+                             \node(4) at (1.5,.5) {4};
+  \draw (s.-70) edge[->,out=-20,in=-135] (4);
+  \fill[block] (0,2) |- (.85,1) to[out=0,in=90] (1,.85) |- (2,0) |- (1.15,1) to[out=180,in=-90] (1,1.15) |- cycle;
+  \coordinate(s) at (1.8,0);
   \node[inner sep=0] at (2.5,1) {\steparrow};
 
   \tikzset{xshift=\dx}
   
   \draw (0,0) grid (2,2);
   \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
-  \node(3) at (.5,.5) {3};%    \node(4) at (1.5,.5) {4};
-  \draw (s.south) edge[->,out=-40,in=-150] (3.250);
-  \fill[block] (0,0) |- (.85,1) to[out=0,in=-90] (1,1.15) |- (2,2) |- (1.15,1) to[out=180,in=90] (1,.85) |- cycle;
+                              \node(4) at (1.5,.5) {4};
+  \draw (s.south) edge[->,out=-40,in=-130] (2.-120);
   \coordinate (s) at (.8,0);
   \node[inner sep=0 ] at (2.5,1) {\steparrow};
-  \tikzset{xshift=\dx};
-  \draw (0,0) grid (2,2);
-  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
-  \node(3) at (.5,.5) {3};    \node(4) at (1.5,.5) {4};
-  \draw (s.south) edge[->,out=-30,in=-150] (4); 
 \end{tikzpicture}
