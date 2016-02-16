@@ -32,6 +32,38 @@ object PartitionPod {
 }
 
 
+class OffsetsPod(val J: Term, val arith: IndexArithPod)(implicit scope: Scope) extends Pod {
+  import Prelude.{B,↓}
+
+  val U = T(scope.sorts.getMasterOf(J.leaf))
+  
+  val `J+1` = TypedTerm(T(I(s"${J.leaf.literal}+1", "predicate")), U -> B)
+  val `J-1` = TypedTerm(T(I(s"${J.leaf.literal}-1", "predicate")), U -> B)
+  val `J∪J+1` = TypedTerm(T(I(s"${J.leaf.literal}∪${`J+1`.leaf.literal}", "predicate")), U -> B)
+  val `J∪J-1` = TypedTerm(T(I(s"${J.leaf.literal}∪${`J-1`.leaf.literal}", "predicate")), U -> B)
+  
+  override val decl = new Declaration(`J+1`, `J-1`, `J∪J+1`, `J∪J-1`) where (
+    //∀:(J, x => (`J+1`(x) <-> (J(x) | J(arith.predJ(x))))),
+    
+    //∀:(U, (x,y) => arith.issuccJ(y,x) -> (`J+1`(x) <-> (J(x) | J(y)))),
+    //∀:(U, x => ∀:(U, y => ~arith.issuccJ(y,x)) -> (~`J+1`(x) <-> J(x))),
+      
+    ∀:(U, (x,y) => arith.issuccJ(x,y) -> (`J-1`(x) <-> (/*J(x) |*/ J(y)))),
+    ∀:(U, x => ∀:(U, y => ~arith.issuccJ(x,y)) -> (~`J-1`(x) /*<-> J(x)*/)),
+    
+    ∀:(U, (x,y) => arith.issuccJ(x,y) -> (`J∪J-1`(x) <-> (J(x) | J(y)))),
+    ∀:(U, x => ∀:(U, y => ~arith.issuccJ(x,y)) -> (`J∪J-1`(x) <-> J(x)))
+
+    //∀:(U, x => `J∪J-1`(x) <-> (J(x) | `J-1`(x)))
+    
+    // - this seems to diverge:
+    //∀:(J, x => `J-1`(x) <-> (J(x) | J(arith.succJ(x)) & ↓(arith.succJ:@x) & (arith.issuccJ:@(x,arith.succJ:@x)) ))
+  )
+}
+
+object OffsetsPod {
+  def apply(J0: Term, arith: IndexArithPod)(implicit scope: Scope) = new OffsetsPod(J0, arith)
+}
 
 
 class PadPod(f: Term, padding: List[Term]) extends Pod {

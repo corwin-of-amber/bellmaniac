@@ -77,11 +77,11 @@ class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: S
   import Prelude.{↓,B}
   import IndexArithPod.{_0,_1}
 
-  private val issuccJ = $TyTI("+1", "predicate", J ->: J ->: B)
-  private val succJ = $TyTI("+1", "function", J ->: J)
-  private val predJ = $TyTI("-1", "function", J -> J)
-  private val subJ = $TyTI("-", "function", J ->: J ->: J)
-  private val _0J = $TyTV("0.J", J)
+  val issuccJ = $TyTI("+1", "predicate", J ->: J ->: B)
+  val succJ = $TyTI("+1", "function", J ->: J)
+  val predJ = $TyTI("-1", "function", J -> J)
+  val subJ = $TyTI("-", "function", J ->: J ->: J)
+  val _0J = $TyTV("0.J", J)
 
   private val X = TV("x")
   private val Y = TV("y")

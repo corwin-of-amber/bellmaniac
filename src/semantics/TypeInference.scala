@@ -66,7 +66,7 @@ object TypeInference {
   def mark(tpe: Term) =
     tpe map (id => id.kind match {
       case "type variable" => new Identifier(id.literal, "variable", id.ns)
-      case "variable" => new Identifier(id.literal, "predicate", id.ns)
+      case "variable" => new Identifier(id.literal, "predicate variable", id.ns)
       case _ => id
     })
   
@@ -76,7 +76,7 @@ object TypeInference {
   def unmark(tpe: Term) =
     tpe map (id => id.kind match {
       case "variable" => new Identifier(id.literal, "type variable", id.ns)
-      case "predicate" => new Identifier(id.literal, "variable", id.ns)
+      case "predicate variable" => new Identifier(id.literal, "variable", id.ns)
       case _ => id
     })
 

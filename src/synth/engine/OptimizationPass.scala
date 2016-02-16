@@ -3,7 +3,6 @@ package synth.engine
 import java.io.{FileReader, BufferedReader}
 import com.mongodb.DBObject
 import com.mongodb.util.JSON
-import examples.Paren.BreakDown.Interpreter
 import report.DevNull
 import semantics.TypeTranslation.{TypingSugar, Environment}
 import syntax.AstSugar._
@@ -45,7 +44,7 @@ object OptimizationPass {
     implicit val cc = new DisplayContainer
 
     implicit val a = new Recorder()(examples.Paren.env)
-    implicit val p = examples.Paren.BreakDown.prover
+    implicit val p = (new examples.Paren.BreakDown.Interpreter()(examples.Paren.scope, examples.Paren.env)).prover
 
     ui.CLI.getBlocks(inf) /**/ take 1 /**/ map
         (_ |> JSON.parse |> (_.asInstanceOf[DBObject].get("term")) andThen_
@@ -293,27 +292,31 @@ object OptimizationPass {
     // Loop Direction Part
     //---------------------
 
+    def possibleDirections(x: Term, y: Term) = {
+      val < = TV("<")
+      List((Dir.FWD, ~(< :@(y,x))), (Dir.BWD, ~(< :@(x,y))))
+    }
+      
     // TODO currently just prints the results
     def inferLoopDirections(program: Term) {
-      val < = TV("<")
       
       program.nodes find (_ =~ ("fix", 1)) map (_.subtrees.head) map LambdaCalculus.isAbs foreach {
         case Some((theta :: vars, body)) => 
           println(s"$theta    $vars")
           val queries =
-          body.nodes map (LambdaCalculus.isAppOf(_, theta)) collect {
-            case Some(args) if args.length == vars.length =>
-              println(args)
-              val aenv = 
-                TypeTranslation.decl(rec.scope, args flatMap (TypedLambdaCalculus.contextDecl(program, _)) toMap)
-              val dirAttempts = args zip vars flatMap { 
-                case (x,y) => List((Dir.FWD, ~(< :@(y,x))), (Dir.BWD, ~(< :@(x,y)))) map {
-                 case (dir, goal) => Attempt(y, dir, Compound(surroundingGuards(program, x).get, goal)) 
-                } 
-              }
-              (aenv, dirAttempts)
-          }
-  
+            body.nodes map (LambdaCalculus.isAppOf(_, theta)) collect {
+              case Some(args) if args.length == vars.length =>
+                println(args)
+                val aenv = 
+                  TypeTranslation.decl(rec.scope, args flatMap (TypedLambdaCalculus.contextDecl(program, _)) toMap)
+                val dirAttempts: List[Attempt] = args zip vars flatMap { 
+                  case (x,y) => possibleDirections(x,y) map {
+                   case (dir, goal) => Attempt(y, dir, Compound(surroundingGuards(program, x).get, goal)) 
+                  } 
+                }
+                (aenv, dirAttempts)
+            }
+    
           val pa = prover ++ (queries map (_._1))
           val attempts = queries flatMap (_._2)
   

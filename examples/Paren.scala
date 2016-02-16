@@ -298,34 +298,6 @@ object Paren {
 
     import synth.engine.TacticApplicationEngine.{instapod, fixer, fixee, ctx, slasher}
 
-    import synth.engine.TacticApplicationEngine
-    
-    trait InvokeProver extends TacticApplicationEngine {
-      override lazy val prover = Paren.BreakDown.prover
-
-      override def invokeProver(pod: Pod): Unit = {
-        Paren.BreakDown.invokeProver(List(), pod.obligations.conjuncts, List(pod), logf)
-      }
-    }
-    
-    class Interpreter(implicit scope: Scope, env: Environment) extends TacticApplicationEngine with InvokeProver with CollectStats {
-      import TacticApplicationEngine._
-
-      override def pods(implicit s: State): PartialFunction[(Term, List[Term]), Pod] = {
-        case (L("A"), List(~(j))) => APod(j)
-        case (L("B"), List(~(j0), ~(j1))) => BPod(j0, j1)
-        case (L("C"), List(~(j0), ~(j1), ~(j2))) => CPod(j0, j1, j2)
-      }
-
-      val A = TV("A")
-      val B = TV("B")
-      val C = TV("C")
-      val P1 = TV("P₁")
-      val P2 = TV("P₂")
-      val P3 = TV("P₃")
-      override val prototypes = Map(A → (A:@(? ∩ P1)), B → (B:@(? ∩ P1, ? ∩ P2)), C → (C:@(? ∩ P1, ? ∩ P2, ? ∩ P3)))
-    }
-
     def emit(term: Term)(implicit scope: Scope) = Explicate.explicateHoist(term)
 
     def preformat(doc: Map[String, AnyRef], extrude: Extrude) = doc get "term" match {
@@ -588,29 +560,64 @@ object Paren {
     }
 
 
-    val prover = {
-      import synth.proof._
 
-      implicit val env = Paren.env
-      implicit val scope = env.scope
+    import synth.engine.TacticApplicationEngine
+    import synth.proof.{Prover, Assistant}
+    
+    trait InvokeProver extends TacticApplicationEngine {
+      override lazy val prover: Prover = prover(List())
+        
+      def prover(pods: Iterable[Pod]) = {
+        import synth.proof._
+  
+        implicit val env = Paren.env
+        implicit val scope = env.scope
+  
+        val toR = TotalOrderPod(R)
+        val toJ = TotalOrderPod(J, <)
+        val idxJ = new IndexArithPod(J, toJ.<, succ)
+        val partJ = PartitionPod(J, <, J0, J1)
+        val partJ0 = PartitionPod(J0, <, K0, K1)
+        val partJ1 = PartitionPod(J1, <, K2, K3)
+        val partK0 = PartitionPod(K0, <, L0, L1)
+        val partK1 = PartitionPod(K1, <, L2, L3)
+        val partK2 = PartitionPod(K2, <, L4, L5)
+        val offsets = List(J0, J1, K0, K1, K2, K3, L0, L1, L2, L3, L4, L5) map (OffsetsPod(_, idxJ))
+        val nilNR = NilPod(N, R)
+        val minJR = MinPod(J, R, toR.<)
+        val minNR = MinPod(N, R, toR.<)
+  
+        new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, partK0, partK1, partK2, minJR, minNR, nilNR) ++ offsets ++ pods, verbose = Prover.Verbosity.ResultsOnly)
+      }
+      override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
+      
+      def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
+        (new Assistant()(env)).invokeProver(assumptions, goals, new SimplePattern(min :@ ?))(prover(pods))
+      }    
+    }
+    
+    class Interpreter(implicit scope: Scope, env: Environment) extends TacticApplicationEngine with InvokeProver with CollectStats {
+      import TacticApplicationEngine._
 
-      val toR = TotalOrderPod(R)
-      val toJ = TotalOrderPod(J, <)
-      val idxJ = new IndexArithPod(J, toJ.<, succ)
-      val partJ = PartitionPod(J, <, J0, J1)
-      val partJ0 = PartitionPod(J0, <, K0, K1)
-      val partJ1 = PartitionPod(J1, <, K2, K3)
-      val partK0 = PartitionPod(K0, <, L0, L1)
-      val partK1 = PartitionPod(K1, <, L2, L3)
-      val partK2 = PartitionPod(K2, <, L4, L5)
-      val nilNR = NilPod(N, R)
-      val minJR = MinPod(J, R, toR.<)
-      val minNR = MinPod(N, R, toR.<)
+      override def pods(implicit s: State): PartialFunction[(Term, List[Term]), Pod] = {
+        case (L("A"), List(~(j))) => APod(j)
+        case (L("B"), List(~(j0), ~(j1))) => BPod(j0, j1)
+        case (L("C"), List(~(j0), ~(j1), ~(j2))) => CPod(j0, j1, j2)
+      }
 
-      new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, partK0, partK1, partK2, minJR, minNR, nilNR), verbose = Prover.Verbosity.ResultsOnly)
+      val A = TV("A")
+      val B = TV("B")
+      val C = TV("C")
+      val P1 = TV("P₁")
+      val P2 = TV("P₂")
+      val P3 = TV("P₃")
+      override val prototypes = Map(A → (A:@(? ∩ P1)), B → (B:@(? ∩ P1, ? ∩ P2)), C → (C:@(? ∩ P1, ? ∩ P2, ? ∩ P3)))
     }
 
+
     def invokeProver(assumptions: Iterable[Term], goals: Iterable[Term], pods: Iterable[Pod]=List(), logf: AppendLog=DevNull): Unit = {
+      new Interpreter()(scope, env).invokeProver(assumptions.toList, goals.toList, pods.toList)
+      /*
       import synth.proof._
       import synth.pods._
       import semantics.Trench
@@ -624,22 +631,8 @@ object Paren {
       implicit val scope = env.scope
 
       val a = new Assistant
-
-      val toR = TotalOrderPod(R)
-      val toJ = TotalOrderPod(J, <)
-      val idxJ = new IndexArithPod(J, toJ.<, succ)
-      val partJ = PartitionPod(J, <, J0, J1)
-      val partJ0 = PartitionPod(J0, <, K0, K1)
-      val partJ1 = PartitionPod(J1, <, K2, K3)
-      val partK0 = PartitionPod(K0, <, L0, L1)
-      val partK1 = PartitionPod(K1, <, L2, L3)
-      val partK2 = PartitionPod(K2, <, L4, L5)
-      val nilNR = NilPod(N, R)
-      val minJR = MinPod(J, R, toR.<)
-      val minNR = MinPod(N, R, toR.<)
-
-      val p = new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, partK0, partK1, partK2, minJR, minNR, nilNR) ++ pods, verbose = Prover.Verbosity.ResultsOnly)
-
+      val p = prover(pods)
+      
       val commits =
         for (goals <- goals map (List(_))) yield {
         //for (goals <- List(goals)) yield {
@@ -667,7 +660,7 @@ object Paren {
       println("=" * 80)
       Trench.display(results, "◦")*/
 
-      if (!(results.toList forall (_.root == "valid"))) System.exit(1)
+      if (!(results.toList forall (_.root == "valid"))) System.exit(1)*/
     }
 
 

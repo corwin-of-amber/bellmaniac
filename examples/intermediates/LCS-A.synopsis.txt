@@ -16,10 +16,11 @@ Stratify "/" (fixee 🄰) 🄰 ψ
  Slice (find 🄸 θ) (⟨`I₀, `I₁⟩ ⟨`?⟩),
  Slice (find 🄹 θ 2) (⟨`I₀, `I₁⟩ ⟨`?⟩),
  Slice (find 🄻 θ) (⟨`?⟩ ⟨`J₀, `J₁⟩),
- Slice (find 🄼 θ) (⟨`?⟩ ⟨`J₀, `J₁⟩)⟩
+ Slice (find 🄼 θ) (⟨`?⟩ ⟨`J₀, `J₁⟩)⟩ exactly
+
 ⟨Distrib "/" 🄶, Distrib "/" 🄹, Distrib "/" 🄼⟩
 ⟨Slice (find 🄶 θ 2) (⟨`I₀, `I₁⟩ ⟨`?⟩),
- Slice (find 🄷 θ 2) (⟨`I₀, `I₁⟩ ⟨`?⟩)⟩
+ Slice (find 🄷 θ 2) (⟨`I₀, `I₁⟩ ⟨`?⟩)⟩ exactly
 ⟨Distrib "/" 🄵, Distrib "/" 🄶, Distrib "/" 🄷,
  Distrib "/" 🄹, Distrib "/" 🄽⟩
 

@@ -59,23 +59,30 @@ object LCS {
 
   trait InvokeProver extends TacticApplicationEngine {
     
-    override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
-    
-    def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
+    override lazy val prover: Prover = prover(List())
+
+    def prover(pods: List[Pod]) = {
       import synth.pods._
 
       val toR = TotalOrderPod(R)
       val toI = TotalOrderPod(I)
       val toJ = TotalOrderPod(J)
-      val idxI = IndexArithPod(I, toI.<)
-      val idxJ = IndexArithPod(J, toJ.<)
-      val partI = PartitionPod(I, toI.<, I0, I1)
-      val partJ = PartitionPod(J, toJ.<, J0, J1)
+      val idx = List(IndexArithPod(I, toI.<),
+                     IndexArithPod(J, toJ.<))
+      val part = List(PartitionPod(I, toI.<, I0, I1),
+                       PartitionPod(J, toJ.<, J0, J1))
+      val offset = List(OffsetsPod(I0, idx(0)), OffsetsPod(I1, idx(0)), 
+                        OffsetsPod(J0, idx(1)), OffsetsPod(J1, idx(1)))
 
-      val p = new Prover(List(NatPod, TuplePod, toR, toI, toJ, idxI, idxJ, partI, partJ) ++ pods, Prover.Verbosity.ResultsOnly)
-
-      (new Assistant).invokeProver(assumptions, goals, new SimplePattern(min :@ ?))(p)
+      new Prover(List(NatPod, TuplePod, toR, toI, toJ) ++ idx ++ part ++ offset ++ pods, Prover.Verbosity.ResultsOnly)
     }    
+
+    override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
+    
+    def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
+      (new Assistant).invokeProver(assumptions, goals, new SimplePattern(min :@ ?))(prover(pods))
+    }
+    
   }
   
   class Interpreter(implicit scope: Scope) extends TacticApplicationEngine with InvokeProver with CollectStats {

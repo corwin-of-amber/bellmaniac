@@ -75,6 +75,7 @@ object AstSugar {
     def ⨁(that: Term) = TI("⨁"):@(term, that)
     def ⨀(that: Term) = TI("⨀"):@(term, that)
     def =:=(that: Term) = TI("=")(term, that)
+    def <(that: Term) = TI("<"):@(term, that)
     
     def :@(that: Term*) = @:(term)(that:_*).foldLeft
     def :@(these: List[Term]) = @:(term)(these:_*).foldLeft

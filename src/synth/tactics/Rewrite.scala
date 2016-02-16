@@ -19,6 +19,7 @@ import semantics.pattern.ExactMatch
 import semantics.TypeTranslation.Declaration
 import semantics.pattern.Matched
 import synth.pods._
+import semantics.pattern.DownCastCoercion
 
 
 
@@ -26,9 +27,12 @@ object Rewrite {
   
   import syntax.Piping._
   
-  class Rewrite(val fromTo: List[(Term, Term)])(implicit env: Environment) {
+  class Rewrite(val fromTo: List[(Term, Term)], val opts: Rewrite.Options=Rewrite.Options.default)(implicit env: Environment) {
     
-    private val ematch = fromTo map { case (from, to) => (new ExactMatch(from), to) }
+    private val ematch = fromTo map { case (from, to) => opts.withDownCast match {
+      case true => (new ExactMatch(from) with DownCastCoercion, to) 
+      case false => (new ExactMatch(from), to) 
+    } }
     
     def apply(term: Term)(implicit env: Environment): Option[Term] = apply(term, Some(term))
     
@@ -36,7 +40,7 @@ object Rewrite {
       implicit val scope = env.scope
       val matches = 
         for ((from, to) <- ematch; 
-             m <- (within flatMap from.findInBodies_cast) |-- (warnIfEmpty(_, from.pattern, within)))
+             m <- (within flatMap from.findInBodies) |-- (warnIfEmpty(_, from.pattern, within)))
           yield (m, TypedTerm.preserveBoth(m, Binding.prebind(to)))
       Some(TypeInference.infer(TypedTerm.replaceDescendants(term, matches))._2)
     }
@@ -63,9 +67,16 @@ object Rewrite {
   }
   
   object Rewrite {
-    def apply(from: Term, to: Term)(implicit env: Environment) = new Rewrite(List((from, to)))
-    def apply(equation: Term)(implicit env: Environment) = new Rewrite(List(splitEq(equation)))
-    def apply(equations: Iterable[Term])(implicit env: Environment) = new Rewrite(equations map splitEq toList)
+    case class Options(val withDownCast: Boolean=true)
+    object Options { val default = Options() }
+    
+    def apply(from: Term, to: Term)(implicit env: Environment): Rewrite = apply(from, to, Options.default)
+    def apply(equation: Term)(implicit env: Environment): Rewrite = apply(equation, Options.default)
+    def apply(equations: Iterable[Term])(implicit env: Environment): Rewrite = apply(equations, Options.default)
+
+    def apply(from: Term, to: Term, opts: Options)(implicit env: Environment) = new Rewrite(List((from, to)), opts)
+    def apply(equation: Term, opts: Options)(implicit env: Environment) = new Rewrite(List(splitEq(equation)), opts)
+    def apply(equations: Iterable[Term], opts: Options)(implicit env: Environment) = new Rewrite(equations map splitEq toList, opts)
     def splitEq(equation: Term) = {
       if (equation =~ ("=", 2)) (equation.subtrees(0), equation.subtrees(1))
       else throw new Exception(s"expected an equation of the form 'from = to', got '${equation toPretty}")
@@ -73,8 +84,11 @@ object Rewrite {
   }
 
   implicit class PodRewrite(x: Rewrite.type)(implicit env: Environment) {
-    def apply(pod: Pod) = Rewrite(pod.program.split(Prelude.program.root))
-    def apply(pods: Iterable[Pod]) = Rewrite(pods flatMap (_.program.split(Prelude.program.root)))
+    import Rewrite.Options
+    def apply(pod: Pod): Rewrite = apply(pod, Options.default)
+    def apply(pods: Iterable[Pod]): Rewrite = apply(pods, Options.default)
+    def apply(pod: Pod, opts: Options) = Rewrite(pod.program.split(Prelude.program.root), opts)
+    def apply(pods: Iterable[Pod], opts: Options) = Rewrite(pods flatMap (_.program.split(Prelude.program.root)), opts)
   }
   
   

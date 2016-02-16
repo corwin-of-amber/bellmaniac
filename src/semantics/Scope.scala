@@ -32,7 +32,7 @@ object Domains {
 
 
 
-class Domains {
+class Domains extends Iterable[Identifier] {
 
   import Domains._
   import AstSugar.{T,TreeBuild}
@@ -40,6 +40,8 @@ class Domains {
 
   var hierarchy = new Tree(⊤, List(new Tree(⊥)))
 
+  def iterator = hierarchy.nodes map (_.root) filterNot (s => s == ⊤ || isEmpty(s)) iterator
+  
   def findSortHie(sort: Identifier) = hierarchy.nodes find (_.root == sort)
   
   private def hie_⊥ = findSortHie(⊥) getOrElse {assert(false, "⊥ is missing!") ; null}
@@ -78,6 +80,8 @@ class Domains {
   
   def masters = mastersHie map (_.root)
   def mastersHie = hierarchy.subtrees
+  
+  def leaves = hierarchy.nodes filter (_.subtrees exists (s => isEmpty(s.root))) map (_.root) filterNot isEmpty
   
   def getMastersOf(sort: Identifier) =
     if (sort == ⊤) List(⊤)

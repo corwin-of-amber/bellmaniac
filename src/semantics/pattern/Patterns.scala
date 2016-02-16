@@ -9,7 +9,7 @@ import semantics.TypePrimitives
 
 
 
-class ExactMatch(val pattern: Term)(implicit env: Environment) {
+class ExactMatch(val pattern: Term)(implicit val env: Environment) {
   
   implicit val scope = env.scope
   
@@ -30,26 +30,22 @@ class ExactMatch(val pattern: Term)(implicit env: Environment) {
   def matchInclTypes(term: Term): Boolean = matchInclTypes(pattern, term, top=true)
   
   def find(term: Term) = term.nodes filter matchInclTypes
-
   def findInBodies(term: Term) = nodesInBodies(term) filter matchInclTypes
-
-  /*
-   * Cast: meaning that a pattern will match a term with a tighter type at the top
-   * E.g. (f :: J -> J -> R)  will match  (f :: ((J × J) ∩ <) -> R)
-   */
-  
-  def matchInclTypes_cast(term: Term): Boolean = 
-    isCompatible(term) && matchInclTypes(TypedTerm.preserveBoth(term, pattern), term, top=true)
-
-  def find_cast(term: Term) = term.nodes filter matchInclTypes_cast
-
-  def findInBodies_cast(term: Term) = nodesInBodies(term) filter matchInclTypes_cast
-    
 
   def nodesInBodies(t: Term): Stream[Term] = t #:: {subtreesExceptBinders(t).toStream flatMap nodesInBodies}
 
   def subtreesExceptBinders(t: Term) =
     if (t =~ ("↦", 2) || (t =~ (":", 2))) t.subtrees.tail else t.subtrees
+}
+
+/*
+ * Down-cast: meaning that a pattern will match a term with a tighter type at the top
+ * E.g. (f :: J -> J -> R)  will match  (f :: ((J × J) ∩ <) -> R)
+ */
+trait DownCastCoercion extends ExactMatch {
+
+  override def matchInclTypes(term: Term): Boolean = 
+    isCompatible(term) && matchInclTypes(TypedTerm.preserveBoth(term, pattern), term, top=true)
 
   val shape = env.typeOf(pattern) map TypePrimitives.shape
   def isCompatible(term: Term) = (env.typeOf(term) map TypePrimitives.shape) == shape  

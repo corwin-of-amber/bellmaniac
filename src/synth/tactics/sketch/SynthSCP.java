@@ -13,7 +13,10 @@ import sketch.compiler.ast.core.FieldDecl;
 import sketch.compiler.ast.core.Function;
 import sketch.compiler.ast.core.Function.LibraryFcnType;
 import sketch.compiler.ast.core.Package;
+import sketch.compiler.ast.core.exprs.ExprArrayInit;
 import sketch.compiler.ast.core.exprs.ExprFunCall;
+import sketch.compiler.ast.core.exprs.ExprLocalVariables;
+import sketch.compiler.ast.core.exprs.ExprVar;
 import sketch.compiler.ast.core.stmts.*;
 import sketch.compiler.ast.core.typs.StructDef;
 import sketch.compiler.ast.core.typs.StructDef.StructFieldEnt;
@@ -90,6 +93,12 @@ public class SynthSCP extends FEReplacer
             arr[i] = (byte)s.charAt(i);
         return new String(arr, encoding);
     }
+    
+    private <A> List<A> singletonList(A a) { 
+    	List<A> l = new ArrayList<>();
+    	l.add(a);
+    	return l;
+    }
 
 	public Object visitFunction(Function func)
 	{
@@ -101,7 +110,7 @@ public class SynthSCP extends FEReplacer
             else {
                 calls = new LinkedList<>();
                 super.visitFunction(func);
-                out.println("/* {" + value + ": " + toJson(calls) + "} */");
+                out.println("/* {" + value + ": " + toJson(singletonList(calls)) + "} */");
             }
         }
 
@@ -137,15 +146,21 @@ public class SynthSCP extends FEReplacer
 		out.flush();*/
 		return func;
 	}
-
+	
     @Override
     public Object visitExprFunCall(ExprFunCall funCall)
     {
         String sort = sorts.get(funCall.getName());
-        if (sort != null)
-            calls.add(sort);
+        if (sort != null) {
+        	switch (funCall.getParams().get(0).toString()) {
+        	case "i + 1": calls.add(offset(sort, -1));  break; /* the offset is negated. this is not a typo */
+        	case "i - 1": calls.add(offset(sort, +1));  break;
+        	default:      calls.add(sort);
+        	}            
+        }
         if (funCall.getName().equals("Scope_2d")) {
-            boolean[][] mat = twoDim(parseArray(funCall.getParams().get(0).toString()), 4);
+        	int n = leafSorts.size();
+            boolean[][] mat = twoDim(parseArray(funCall.getParams().get(0).toString()), 3*n);
             boolean lt = funCall.getParams().get(1).toString() .equals( "1" );
             areas.add(area(mat));
             if (lt) areas.add("<");
@@ -174,14 +189,35 @@ public class SynthSCP extends FEReplacer
         return mat;
     }
 
+    private final int OFFSET_RANGE = 3;
+    private final int OFFSET_START = -1;
+    
+    private String offset(String sort, int offset) {
+    	if (offset == 0) return sort;
+    	else if (offset < 0) return sort + "~" + sort + "-" + (-offset);
+    	else return sort + "~" + sort + "+" + offset;
+    }
+    
+    private String leaf(int id)
+    {
+    	String sort = leafSorts.get(id / OFFSET_RANGE);
+    	int offset = -(id % OFFSET_RANGE + OFFSET_START);
+    	return offset(sort, offset);
+    }
+    
     private List<List<String>> area(boolean[][] mat)
     {
         List<List<String>> area = new ArrayList<>();
-        for (int i = 0; i < mat.length; i++)
-            for (int j = 0; j < mat[i].length; j++)
+        for (int i = 0; i < mat.length; i++) {
+            for (int j = 0; j < mat[i].length; j++) {
+            	System.out.print((mat[i][j] ? 1 : 0) + " ");
                 if (mat[i][j]) {
-                    area.add(Arrays.asList(leafSorts.get(i), leafSorts.get(j)));
+                    area.add(Arrays.asList(leaf(i), leaf(j)));
+
                 }
+            }
+            System.out.println();
+        }
         return area;
     }
 

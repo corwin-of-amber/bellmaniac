@@ -5,17 +5,13 @@ import semantics.Prelude._
 import semantics.TypePrimitives._
 import semantics.TypedLambdaCalculus._
 import semantics.TypedTerm._
-
 import scala.collection.mutable.ListMap
 import scala.collection.JavaConversions._
-
 import com.mongodb.util.JSON
 import com.mongodb.BasicDBList
-
 import semantics.TranslationError
 import semantics.TypeTranslation.TypingSugar
 import semantics.pattern.SimplePattern
-
 import syntax.AstSugar._
 import syntax.{Unify, Strip, Identifier}
 import syntax.Piping._
@@ -26,8 +22,10 @@ import semantics.transform.{Escalate, Explicate}
 import synth.proof.Assistant
 import synth.pods.{ConsPod, Pod}
 import synth.pods.TacticalError
-
 import report.data.Cached
+import syntax.Scheme
+import syntax.Scheme.SimplePredicateSymbol
+import semantics.TypedScheme.Template
 
 
 
@@ -54,19 +52,24 @@ object Synth {
 
     val * = TI("*")
 
-    //if (false)
+    val scopegen = new ScopeGen(scope)
+    val out = new SketchOutput
+    val scopedecl = scopegen() map (out(_)) mkString "\n"
+    
+    println(scopedecl)
+    
+    if (false)
     {
-      val pod = APod(J)
-      val f = (SimplePattern(fix(* :- ?)) findOne_! pod.program)(*)
-      val ψ = TypedLambdaCalculus.context(pod.program, f)("ψ")
+      val prog = APod(J).program |> a.compile
+      val f = (SimplePattern(fix(* :- ?)) findOne_! prog)(*)
+      val ψ = TypedLambdaCalculus.context(prog, f)("ψ")
 
       val A = fix(/::(
         f :: ((? x J0 x J0) -> R),
         ($TV ↦ ψ) :: ((? x J0 x J1) -> R),
         ($TV ↦ ψ) :: ((? x J1 x J1) -> R)
-      )) |> a.compile // APod(J).program.subtrees(0) |> a.compile
-      //val AP = (APod(? ∩ TV("P")).program.subtrees(0) :: (? -> typeOf_!(A))) |> a.compile
-      //val BP = BPod(J ∩ TV("P1"), J ∩ TV("P2")).program |> a.compile
+      )) |> a.compile
+      
       val AP = APod(? ∩ TV("P"))
       val BP = BPod(J ∩ TV("P1"), J ∩ TV("P2"))
       val CP = CPod(J ∩ TV("P1"), J ∩ TV("P2"), J ∩ TV("P3"))
@@ -75,17 +78,16 @@ object Synth {
 
       report.console.Console.display(extrude(A))
       report.console.Console.display(extrude(AP.program))
-      //report.console.Console.display(extrude(BP))
 
       val solution = synthesizeFixPod(A, List(AP, BP, CP), X -> R).run()
 
       println(solution mapValues (_.toPretty))
     }
 
-    if (false)
+    if (true)
     {
       val B = (SimplePattern(* :- fix(?)) findOne_! BPod(J0, J1).program)(*) |> a.compile
-      val BP = BPod(J ∩ TV("P1"), J ∩ TV("P2")).program |> a.compile
+      val BP = BPod(? ∩ TV("P1"), ? ∩ TV("P2")).program |> a.compile
 
       val X = K1 x K2
 
@@ -93,20 +95,18 @@ object Synth {
 
       println(solution mapValues (_.toPretty))
     }
-
-    //val solution = new ReadSketchResults apply new BufferedReader( new FileReader("autogen.out") )
-    //println(solution mapValues (_.toPretty))
   }
 
   class Sketch(val skfile: File, val incdirs: List[String]=Sketch.INCPATH) {
     import Sketch._
     import syntax.Nullable._
     
-    val baseDir = new File(System.getenv("BELLMANIA_HOME").opt getOrElse ".") //".")
+    val baseDir = new File(System.getenv("BELLMANIA_HOME").opt getOrElse ".")
     val fe_inc = incdirs flatMap (x => Seq("--fe-inc", new File(baseDir, x).getPath))
+    val fe_codegen = Seq("--fe-custom-codegen", new File(baseDir, CODEGEN).getPath)
     
     val command =
-      Seq(SKETCH, "--slv-lightverif") ++ fe_inc ++ Seq("--fe-custom-codegen", new File(baseDir, CODEGEN).getPath, skfile.getPath)
+      Seq(SKETCH, "--slv-lightverif") ++ fe_inc ++ fe_codegen ++ Seq(skfile.getPath)
 
     def run()(implicit scope: Scope) = {
       cached getOrElse (hash, {
@@ -127,7 +127,7 @@ object Synth {
 
   object Sketch {
     val SKETCH = "sketch"
-    val INCPATH = List(".", "src/synth/tactics/sketch")
+    val INCPATH = List("src/synth/tactics/sketch", "examples/intermediates/sketch/generic")
     val CODEGEN = "ccg.jar"
 
     import report.data.Deserialize._
@@ -253,6 +253,7 @@ object Synth {
     val escalate = new Escalate
     val explicate = new Explicate
     val codegen = new CodeGen
+    val scopegen = new ScopeGen(scope)
 
     val ir0 = f |> escalate.apply |> explicate.apply |> TypedTerm.raw |> TypedLambdaCalculus.simplify
 
@@ -282,6 +283,8 @@ object Synth {
     val outfw = new FileWriter(outf)
     def fprintln(s: String) = outfw.write(s + "\n");
 
+    scopegen() foreach (pre => fprintln(sketch(pre)))
+    
     fprintln(s"""include "scalar.skh";\ninclude "scope.sk";\n\n""")
     fprintln(sketch(code0))
     code1 foreach (code1 => fprintln(sketch(code1)))
@@ -447,6 +450,7 @@ object Synth {
 
   object CodeGen {
     val scalar = TS("scalar")
+    val void = TS("void")
     val some = TI("some")
     val when = TI("when")
     val only = TI("only")
@@ -458,12 +462,107 @@ object Synth {
 
     def codegen(t: Term)(implicit scope: Scope) = new CodeGen apply t
   }
+  
+  
+  class ScopeGen(scope: Scope) {
+    import ScopeGen._
+    import CodeGen._
+    
+    val sorts = scope.sorts.masters ++ (scope.sorts filterNot scope.sorts.isMaster) filterNot isBuiltinSort  /* pretty ad-hoc */
+    val leaves = scope.sorts.leaves filterNot isBuiltinSort
+
+    val partitions = scope.sorts.hierarchy.nodes collect {
+      case T(sup, List(sub1, sub2)) => (sup, sub1.root, sub2.root)
+    }
+    
+    def apply() = {
+      (sorts map decl) ++
+      List(sortsSelector("Scope_subsort", sorts.toList.reverse, List((i) => TI("+")(i, TI(1)), (i) => TI("-")(i, TI(1)))),
+           sortsSelector("Scope_leaf", leaves, List()),
+           facts("Scope_facts"),
+           def_(TypedTerm(TV("W"), N), TI(leaves.length)))
+    }
+    
+    def isBuiltinSort(sort: Identifier) = List(N, R, B) exists (_.root == sort)
+    
+    def decl(sort: Identifier) = {
+      val i = TypedTerm(TI("i"), N)
+      val funhead = def_(TypedTerm(T(sort), B), `()`(i))
+      val fundef = if (scope.sorts.isMaster(sort)) funhead(ret(TI(1))) else funhead;
+      `@_`(TI("Sort")(`""`(T(sort))), leaves.indexOf(sort) match {
+        case idx if idx >= 0 => `@_`(TI("Leaf")(`""`(TI(idx))), fundef)
+        case _ => fundef
+      })
+    }
+    
+    def sortsSelector(name: String, sorts: Iterable[Identifier], shiftops: List[Term => Term]) = {
+      val i = TypedTerm(TI("i"), N)
+      val b = TypedTerm(TI("b"), `[]`(B, TI(shiftops.length)))   // |shiftop| bits
+      val params = (if (shiftops.nonEmpty) List(b) else List()) ++ List(i)
+      def `b[]`(idx: Int) = `[]`(b, TI(idx))
+      def offset(sort: Identifier, op: Term=>Term) = TypedTerm(@:(T(sort), TypedTerm(op(i), N)), B)
+      def offsets(sort: Identifier) = shiftops.zipWithIndex map { case (op, idx) => `b[]`(idx) & offset(sort, op) }
+      selector(name, params, sorts map (sort => TypedTerm(||(T(sort)(i) +: offsets(sort)), B)))
+    }
+    
+    def selector(name: String, params: List[Term], exprs: Iterable[Term]) = {
+      val rettype = typeOf_!(exprs.head)
+      /**/ assume(exprs forall (typeOf_!(_) == rettype)) /**/
+      val fid = TypedTerm(TI(name), rettype) 
+      val ι = TypedTerm(TI("ι"), N)
+      val body = (exprs.zipWithIndex :\ assert_(FALSE)) { 
+        case ((head, idx), tail) => if_(ι =:= TI(idx), ret(head), tail) 
+      }
+      generator(def_(fid, `()`(ι +: params), body))
+    }
+    
+    def facts(name: String): Term = {
+      val i = TyTV("i", N)
+      val j = TyTV("j", N)
+      val < = TV("<")
+      facts(name, partitions map {
+        case (sup, sub1, sub2) =>
+          new Template( List(i.leaf), T(sup)(i) =:= (T(sub1)(i) | T(sub2)(i)) )
+      } toList, partitions map {
+        case (sup, sub1, sub2) =>
+          new Template( List(i.leaf, j.leaf), TypedTerm((T(sub1)(i) & T(sub2)(j)) -> <(i, j), B) )
+      } toList)
+    }
+    
+    def facts(name: String, unary: List[Scheme], binary: List[Scheme]) = {
+      val n = TyTV("n", N)
+      val p = TyTV("p", N)
+      val q = TyTV("q", N)
+      val assumeUnary = unary map (s => assume_(s(p)))
+      val assumeBinary = binary map (s => assume_(s(p, q)))
+      generator(
+          def_(TypedTerm(TI(name), void), `()`(n), 
+              for_(p, `()`(TI(0), n), `;`(assumeUnary :+
+                  for_(q, `()`(TI(0), n), `;`(assumeBinary) ))
+              )
+          )
+      )
+    }
+  }
+  
+  object ScopeGen {
+    val if_ = TI("if")
+    val for_ = TI("for")
+    val assert_ = TI("assert")
+    val assume_ = TI("assume")
+    val generator = TI("generator")
+    val `@_` = TI("@_")
+    val `""` = TI("\"\"")
+    val `[]` = TI("[]")
+    val -> = TI("->")
+  }
 
 
 
   class SketchOutput {
 
     import CodeGen._
+    import ScopeGen._
     import TypedTerm.typeOf_!
 
     val mnemonics = new Mnemonics {
@@ -483,9 +582,19 @@ object Synth {
       case T(def_.root, List(f, T(`()`.root, params))) =>
         try s"${typ(typeOf_!(f))} ${mne(f)}(${params map param mkString ", "});"
         finally mnemonics release (params map (_.leaf))
+      case T(def_.root, List(v, init)) =>
+        s"${typ(typeOf_!(v))} ${mne(v)} = ${apply(init)};"
       case T(`;`.root, stmts) => stmts map apply mkString "\n"
       case T(@:.root, f :: args) => s"apply${suf(code, f, args)}(${mne(f)}, ${args map apply mkString ", "})"
       case T(ret.root, List(r)) => s"return ${apply(r)};"
+      case T(if_.root, List(cond, th)) => s"if (${apply(cond)}) ${apply(th)}"
+      case T(if_.root, List(cond, th, el)) => s"if (${apply(cond)}) ${apply(th)}\nelse ${apply(el)}"
+      case T(for_.root, List(va, T(`()`.root, List(from, to)), stmt)) =>
+        try s"for (${typ(typeOf_!(va))} ${mne(va)} = ${apply(from)}; ${mne(va)} < ${apply(to)}; ${mne(va)}++) {\n${indent(apply(stmt))}\n}"
+        finally mnemonics release List(va.leaf)
+      case T(assert_.root, List(prop)) => s"assert(${apply(prop)});"
+      case T(assume_.root, List(prop)) => s"assume(${apply(prop)});"
+      case T(generator.root, List(defn)) => s"generator ${apply(defn)}"
       case T(IntConst(n), Nil) => s"$n"
       case T(v, Nil) => s"${mne(v)}"
       case T(InfixOp(op), List(a, b)) => s"(${apply(a)} $op ${apply(b)})"
@@ -497,6 +606,10 @@ object Synth {
           case List(a, b) => s"${f}2(${apply(a)}, ${apply(b)})"
           case _ => throw new TranslationError(s"invalid usage of 'min'") at code
         }
+      case T(`@_`.root, List(annotation, decl)) => s"@${apply(annotation)} ${apply(decl)}"
+      case T(`""`.root, List(string)) => "\"" + string.leaf.literal.toString + "\""
+      case T(`[]`.root, List(arr,  idx)) => s"${apply(arr)}[${apply(idx)}]"
+      case T(`->`.root, List(a, b)) => apply(~(a) | b)
       case T(f, args) => s"${mne(f)}(${args map apply mkString ", "})"
     }
 
@@ -517,9 +630,11 @@ object Synth {
 
     object Reduction { def unapply(id: Identifier) = if (REDUCT contains id) Some(id) else None }
 
-    def typ(typ: Term) =
+    def typ(typ: Term): String =
       if (typ == scalar) "|scalar|"
       else if (typ == Prelude.B) "bit"
+      else if (typ == void) "void"
+      else if (typ.root == `[]`.root) s"${this.typ(typ.subtrees.head)}[${typ.subtrees.tail map apply mkString ","}]"
       else if (typ.isLeaf) "int"
       else "fun"
 
@@ -545,12 +660,21 @@ object Synth {
 
     def parse(s: String) = JSON.parse(s) |> parseJson
 
+    import Domains._
+    
     def parseJson(json: Any): Any = json match {
+      case +~+(Array(s,p)) => I(p, "predicate") :<: scope.sorts.getMasterOf(I(s))
       case s: String => scope.sorts.findSortHie(I(s)) match
                         { case Some(h) => h.root case _ => V(s); }
       case i: Int => I(i)
       case l: BasicDBList => l.toList map parseJson
     }
+    
+    // - just some string matching sugar
+    object +~+ { def unapply(o: Any) = o match { 
+      case p: String if p.contains('~') => Some(p.split("~", 2))
+      case _ => None
+    } }
 
     /* parse components */
     private def conj(o: Any): Term = o match {
@@ -567,6 +691,7 @@ object Synth {
     private def atom(o: Any): Term = o match {
       case Nil => T(Domains.⊥)
       case l: List[_] => (l map atom) reduce (_ x _)
+      case pred: Domains.Extends => T(pred.sup) ∩ T(pred.sub)
       case id: Identifier => T(id)
     }
   }

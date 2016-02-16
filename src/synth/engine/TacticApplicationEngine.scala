@@ -244,6 +244,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     if (command =~ ("Opt", 0)) return invokeOptimize(s) |> mkState
 
     var within = List(s.program)
+    var opt_withDownCast = Rewrite.Options.default.withDownCast
     def pods(command: Term)(implicit s: State): Iterable[Pod] =
       ConsPod.`⟨ ⟩?`(command) match {
         case Some(commands) => commands flatMap pods
@@ -251,6 +252,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
           case Some((locs, body)) => locs flatMap (loc => pods(body)(s -> evalTerm(loc)))
           case _ => command match {
             case T(`@:`, List(T(`@:`, List(cmd, L("in"))), ~~(terms))) => within = terms ; pods(cmd)
+            case T(`@:`, List(cmd, L("exactly"))) => opt_withDownCast = false ; pods(cmd)
             case _ => this.command(command)
           }
         }
@@ -258,12 +260,13 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
 
     
     val derivatives = resolvePatterns(command)(s) flatMap (pods(_)(s)) map instapod
-
+    val opts = Rewrite.Options(withDownCast=opt_withDownCast)
+    
     if (derivatives.isEmpty) s
     else {
       derivatives filter (_.it |> cert_?) filter (_.obligations != TRUE) foreach invokeProver
 
-      Rewrite(derivatives)(s.program, within) match {
+      Rewrite(derivatives, opts)(s.program, within) match {
         case Some(rw) => mkState(rw)
         case _ => throw new TranslationError("rewrite failed?") at command
       }
@@ -320,9 +323,15 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     val solution = (if (fix) Synth.synthesizeFixPodSubterm(h, subterm, ipods)
                         else Synth.synthesizeFlatPodSubterm(h, subterm, ipods)).incdir(skhDir).run()
     println(solution mapValues (_.toPretty))
+    //System.exit(0)
     val selected = expandedTemplates(solution("selected").root.literal.asInstanceOf[Int])
+    def param(t: Term) = `⟨ ⟩?`(t) match {
+      case None => t
+      case Some(List(j0, T(`∩`, List(j, p)))) => j ∩ T(I(s"${j0}∪${p}", "predicate"))
+      case _ => throw new TacticalError(s"internal error: something unexpected returned from Sketch: ${t.toPretty}")
+    }
     val synthed = selected.replaceDescendants(
-      selected.nodes collect { case n@T(`∩`, List(L("?"), L(k:String))) => (n, solution(k)) } toList)
+      selected.nodes collect { case n@T(`∩`, List(L("?"), L(k:String))) => (n, param(solution(k))) } toList)
     val quadrant = TypePrimitives.curry(TypedTerm.typeOf_!(subterm))._2
     val footprint = TypePrimitives.dom(quadrant) :: evalList(solution.getOrElse("Q", nil))
 
