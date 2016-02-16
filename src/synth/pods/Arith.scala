@@ -82,6 +82,7 @@ class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: S
   val predJ = $TyTI("-1", "function", J -> J)
   val subJ = $TyTI("-", "function", J ->: J ->: J)
   val _0J = $TyTV("0.J", J)
+  val _NJ = $TyTV("N.J", J)
 
   private val X = TV("x")
   private val Y = TV("y")
@@ -108,11 +109,17 @@ class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: S
     _0 ~> { x => ZEROPAT(x) map (x => _0J)})
 
   override val decl = new Declaration(_0J, issuccJ, succJ, predJ, subJ) where (
-    ↓(_0J),
+    ↓(_0J) & ↓(_NJ),
     ∀:( J, x => ~ <(x,_0J) ),
+    ∀:( J, x => ~ <(_NJ, x) ),
     ∀:( J, (x,y) => ~ <(x, subJ:@(x, y)) ),
     ∀:( J, (x,y) => <(_0J,x) -> <(subJ:@(x, y), x) ),
-    ∀:( J, (x,y,z) => issuccJ(x,z) -> (<(x,z) & ~(<(x,y) & <(y,z))) )
+    ∀:( J, (x,y,z) => issuccJ(x,z) -> (<(x,z) & ~(<(x,y) & <(y,z))) ),
+    /* dangerous territory! */
+    ∀:(J, x => ∀:(J, y => ~ <(y,x)) -> (x =:= _0J)),
+    ∀:(J, x => ∀:(J, y => ~issuccJ(y,x)) -> (x =:= _0J)), /* - implied by previous ones, but helps the solver */
+    ∀:(J, x => ∀:(J, y => ~ <(x,y)) -> (x =:= _NJ)),
+    ∀:(J, x => ∀:(J, y => ~issuccJ(x,y)) -> (x =:= _NJ)) /* - implied by previous ones, but helps the solver */
   )
 }
 

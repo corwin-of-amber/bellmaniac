@@ -386,6 +386,8 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term])(impl
       }
     }
     
+    // for ((_, d) <- env.decl; sym <- d.symbols) println(sym)
+    
     val (z3g, fo_base) = TypeTranslation toSmt (smtFactory, List(env))
 
     val start = System.currentTimeMillis
