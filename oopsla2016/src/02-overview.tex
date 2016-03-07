@@ -17,29 +17,33 @@ few steps that an algorithms expert --- whom we will call Richard --- would foll
 generate a provably correct divide-and-conquer implementation of a DP algorithm.
 The code in \Cref{intro:naive} is (part of) a program to compute the recurrence
 shown in \Cref{overview:paren spec}. This recurrence represents a solution
-for the Parenthesis Assignment Problem: given a sequence $a_1\!\cdots a_n$
+for the Parenthesis Assignment Problem, which we will use as a motivating example:
+given a sequence $a_0\!\cdots a_{n-1}$
 of factors, find a minimal-cost placement of parenthesis in the product expression
 assuming that multiplication is associative (but not commutative), that the cost
 of reading $a_i$ is given by $x_i$, and that the cost for multiplying
-$\Pi(a_{(i+1)..k})$ by $\Pi(a_{(k+1)..j})$ is given by $w_{ikj}$.
-We will use this as a motivating example.
+$\Pi(a_{i..(k-1)})$ by $\Pi(a_{k..(j-1)})$ is given by $w_{ikj}$.
+The element $G_{ij}$ is then the lowest cost for parenthesizing $a_{i..(j-1)}$,
+with $G_{0n}$ being the overall optimum.
 
 \begin{figure}[b]
-\begin{tabular}{@{\hspace{-1pt}}r@{~}l@{}}
+\begin{tabular}{@{\hspace{-4pt}}r@{~}l@{}}
 \begin{tikzpicture}[x=4.1mm,y=4.1mm,baseline=(center), remember picture]
   \coordinate(center) at (3,3);
-  \draw (6,0) -- (6,6) -- (0,6);
-  \foreach \i in {0,1,2,3,4,5} {
-    \draw (6,\i) -- (5-\i,\i); \draw[black!25!white] (5-\i,\i) -- (0,\i);
-    \draw (\i,6) -- (\i,5-\i); \draw[black!25!white] (\i,5-\i) -- (\i,0);
+  \def\n{7}  % actually n+1 but let's not be nitpicky
+  \draw[black!25!white] (\n,1) |- (0,0) |- (1,\n);
+  \draw (\n,1) -- (\n,\n) -- (1,\n);
+  \foreach \i [evaluate=\i] in {2-1,...-1,\n-1} {
+    \draw[black!25!white] (0,\i) -- (\n-\i,\i); \draw (\n,\i) -- (\n-\i,\i); 
+    \draw[black!25!white] (\i,0) -- (\i,\n-\i); \draw (\i,\n) -- (\i,\n-\i);
   }
   %\draw[step=1] (0,0) grid (6,6);
-  \draw[ultra thick] (4,4) rectangle +(1,1);
-  \node[circle,fill=BrickRed,inner sep=0,minimum size=1mm](Gij) at (4.5,4.5) {};
-  \fill[black,opacity=0.1] (0,6) rectangle ++(1,-1) rectangle ++(1,-1) rectangle ++(1,-1) rectangle ++(1,-1) rectangle ++(1,-1) rectangle ++(1,-1);
-  \fill[blue,opacity=0.2] (1,4) rectangle (4,5);
-  \fill[blue,opacity=0.2] (4,1) rectangle (5,4);
-  \node[anchor=south east](G) at (0,6) {\small$G$};
+  \draw[ultra thick] (5,5) rectangle +(1,1);
+  \node[circle,fill=BrickRed,inner sep=0,minimum size=1mm](Gij) at (5.5,5.5) {};
+  \fill[black,opacity=0.1] (1,\n) rectangle ++(1,-1) rectangle ++(1,-1) rectangle ++(1,-1) rectangle ++(1,-1) rectangle ++(1,-1) rectangle ++(1,-1);
+  \fill[blue,opacity=0.2] (2,5) rectangle (5,6);
+  \fill[blue,opacity=0.2] (5,2) rectangle (6,5);
+  \node[anchor=south east](G) at (0,\n) {\small$G$};
   \draw[->] (G.east) -- +(1.5,0) node[anchor=west] {\small $j$};
   \draw[->] (G.south) -- +(0,-1.5) node[anchor=north] {\small $i$};
 \end{tikzpicture}
@@ -57,7 +61,6 @@ $
 \end{array}
 $
 \end{tabular}
-\vspace{5pt}
 \caption{Recurrence equation and cell-level dependencies.}
 \label{overview:paren spec}
 \end{figure}
@@ -65,8 +68,8 @@ $
 \begin{paragraph}{Iterative Algorithm.}
 Using a standard dynamic programming method, our algorithm expert Richard would compute this recurrence
 with an iterative program by understanding the dependency pattern:
-to compute the $\underset{i<k<j}\min(\cdots)$ expression in \Cref{overview:paren spec} and find the optimal
-value for $k$, the algorithm needs information from all cells below and to the left of $G_{ij}$.
+to compute the $\min_{i<k<j}(\cdots)$ expression in \Cref{overview:paren spec}
+the algorithm needs to enumerate $k$ and gather information from all cells below and to the left of $G_{ij}$.
 In particular, each value $G_{ij}$ is computed from other values $G_{i'j'}$ with higher
 row indexes $i'>i$ and lower column indexes ~$j'<j$. 
 Therefore, considering $G$ as a two-dimensional array, it can be filled in a single sweep from left to right and from bottom
@@ -80,8 +83,8 @@ to top, as done in \Cref{overview:iterative}.
 \renewcommand\arraystretch{1.3}
 \begin{algorithmic}
   \ForLine{$i=1..n$}  $G_{(i+1)i} := x_i$    \Head{Initialize}
-  \For{$i=1..n$}          \Head{Compute}
-    \For{$j=(i+1)..n$}
+  \For{$i=(n-2)..0$}          \Head{Compute}
+    \For{$j=(i+2)..n$}
       \State $G_{ij} := \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
     \EndFor
   \EndFor
@@ -97,7 +100,7 @@ to top, as done in \Cref{overview:iterative}.
 
 \newcommand\plusoneocd{\raisebox{.5pt}{$\scriptstyle+1$}}
 
-\algrenewtext{Procedure}{\hspace{-3mm}{\bf procedure}~}  % hach to make proc header slighly less indented
+\algrenewtext{Procedure}{\hspace{-3mm}{\bf procedure}~}  % hack to make proc header slighly less indented
 
 \begin{paragraph}{Divide-and-Conquer Algorithm.}
 
@@ -107,8 +110,8 @@ to top, as done in \Cref{overview:iterative}.
 \begin{tikzpicture}[baseline=(n/2), q/.style={font=\relsize{1.3}}, pale/.style={color=black!25!white}]
   \draw (0,2) -- (2,2) -- (2,0);
   \foreach \i in {0,1} {
-    \draw (\i,2) -- (\i, 1-\i); \draw[pale] (\i, 1-\i) -- (\i,0);
-    \draw (2,\i) -- (1-\i, \i); \draw[pale] (1-\i, \i) -- (0,\i);
+    \draw[pale] (\i,0) -- (\i, 1-\i); \draw (\i,2) -- (\i, 1-\i);
+    \draw[pale] (0,\i) -- (1-\i, \i); \draw (2,\i) -- (1-\i, \i);
   }
   %\draw (0,0) grid (2,2);
   \node[q] at (.5,1.5) {1};   \node[q] at (1.5,1.5) {2};
@@ -155,17 +158,22 @@ In Bellmania, this is accomplished by applying the {\sf Slice} tactic,
 illustrated graphically at the top of \Cref{overview:slice-stratify-synth}.
 {\em Tactics} are transformation steps that manipulate the program,
 and represent a high-level refinement concept.
-The partitions are labeled $J_0,J_1$. The table is square, so we may use
-them for both row and column index ranges.
-Slicing gives the analog of the specification in \Cref{overview:logical-slice-stratify}({\it i}).
-The expression inside $\min\langle\cdots\rangle$ is shortened for space,
-but it is the same as in \Cref{overview:iterative}.
+In order to escape the need to reason about concrete array indices,
+Bellmania provides an abstract view where
+the partitions are labeled $J_0,J_1$. The table is square, so these
+designate both row and column index ranges.
+Due to the structure of the problem, namely $i\!<\!j$, it turns out that
+the bottom-left quadrant (\qbox3 in the figure) is empty.
+Slicing therefore produces three partitions, transforming the specification
+as shown in \Cref{overview:logical-slice-stratify}({\it i}).
+\coa{should be noted that the base case of the recurrence is skipped here; rationalize later?}
 
 Following the same reasoning as in the iterative case, computing \qbox1
 (the top-left quadrant)
 does not depend on any of the other computations. Richard applies the
 {\sf Stratify} tactic, which encodes exactly this intuition: it separates
-an independent computation step as a separate loop.
+an independent computation step as a separate loop and enforces an order
+on the computations.
 This is equivalent to rewriting the specification as in \Cref{overview:logical-slice-stratify}({\it ii}):
 the first computation is given a special name $G^{\tinyqbox1}$, then the following
 computations read data either from $G^{\tinyqbox1}$ (when the indices are in \qbox1)
@@ -174,12 +182,12 @@ is part of the Bellmania language and will be defined formally in \Cref{lang}.
 Bellmania checks the data dependencies and verifies that the transformation
 is sound.
 
-Repeating {\sf Stratify} would result in a four-step computation
+Repeating {\sf Stratify} would result in a three-step computation
 as seen in \Cref{overview:chain}, from which Richard can obtain the program in \Cref{overview:breakdown}
 (only the first two steps are shown; remaining steps are analogous).
-This already gives some performance gain, since the compututations \qbox2 and \qbox3
-can now run in parallel. However, this is not what Richard wants; so he
-changes the development of this procedure, which he calls ``A'', to produce
+This already gives some performance gain, since the computations \qbox1 and \qbox4
+can now run in parallel. However, this is not Richard's goal;
+so he continues to refine this procedure ``A'' towards
 a recursive divide-and-conquer algorithm.
 \end{paragraph}
 
@@ -187,7 +195,7 @@ a recursive divide-and-conquer algorithm.
 \begin{figure}
 \[\renewcommand\arraystretch{1.3}
   \begin{array}{@{}l@{}}
-    \textsf{Slice} \quad i:\langle J_0|J_1\rangle \quad j:\langle J_0|J_1\rangle \hfill (i)\\
+    \textsf{Slice} \quad i,j:\langle J_0\times J_0 | J_0\times J_1 | J_1\times J_1\rangle     \hfill (i)\\
     ~~\forall i,j\in\qbox1.~ G_{ij} = \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj} \\
     ~~\forall i,j\in\qbox2.~ G_{ij} = \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj} \\
     ~~\forall i,j\in\qbox4.~ G_{ij} = \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj} \\
@@ -230,58 +238,27 @@ a recursive divide-and-conquer algorithm.
 \renewcommand\arraystretch{1.3}
 \begin{algorithmic}
 \Procedure{A{\larger{[}}$G${\larger{]}}}{}\EndProcedure
-  \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox1}
-    \For{$j=1..\frac{m}{2}$} 
-      \State \hspace{-.5cm}$G_{ij} :=
-        \begin{array}{@{}l@{~}l} 
-          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, 
-                        \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
-        \end{array}$
+  \For{$i=n..0 \cap J_0$}    \Head{Compute \qbox1}
+    \For{$j=(i\!+\!2)..n \cap J_0$} 
+      \State $G_{ij} :=
+          \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
     \EndFor
   \EndFor
-  \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox2}
-    \For{$j=\frac{m}{2}\plusoneocd..m$}
-      \State \hspace{-.5cm}$G_{ij} :=
-        \begin{array}[t]{@{}l@{~}l} 
-          \min\langle & \underset{0\leq q<j}\min ~ G_{iq} + \yw{qji}, 
-                        \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
-        \end{array}$
+  \For{$i=n..0 \cap J_1$}    \Head{Compute \qbox4}
+    \For{$j=(i\!+\!2)..n \cap J_1$} 
+      \State $G_{ij} :=
+          \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
     \EndFor
   \EndFor
-  \State $\vdots$ \Head{Compute \qbox3}
+  \For{$i=n..0 \cap J_0$}    \Head{Compute \qbox2}
+    \For{$j=(i\!+\!2)..n \cap J_1$}
+      \State $G_{ij} :=
+          \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
+    \EndFor
+  \EndFor
 \end{algorithmic}
 \caption{\label{overview:breakdown}
    Simplified Arbiter --- Sliced and Stratified}
-\end{algorithm}
-
-\begin{algorithm}
-\renewcommand\arraystretch{1.3}
-\begin{algorithmic}
-\Procedure{A{\larger{[}}$G${\larger{]}}}{}\EndProcedure
-  \State A\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}$\big] \Head{Compute \qbox1}
-  \For{$i=1..\frac{n}{2}$}    \Head{Compute \qbox2}
-    \For{$j=\frac{m}{2}\plusoneocd..m$}
-      \State $G_{ij} :=
-        \begin{array}[t]{@{}l@{~}l} 
-          \min\langle & \underset{0\leq q<\frac{m}{2}}\min ~ G_{iq} + \yw{qji}~\rangle \\         
-        \end{array}$
-          \Comment{(left)}
-    \EndFor
-  \EndFor
-  \For{$i=1..\frac{n}{2}$}
-    \For{$j=\frac{m}{2}\plusoneocd..m$}
-      \State $G_{ij} :=
-        \begin{array}[t]{@{}l@{~}l} 
-          \min\langle G_{ij}, & \underset{\frac{m}{2}\leq q<j}\min ~ G_{iq} + \yw{qji}, \\
-                      & \underset{0\leq p<i}\min ~ G_{pj} + \xw{pij}~\rangle \\         
-        \end{array}$
-          \Comment{(right)}
-    \EndFor
-  \EndFor
-  \State $\vdots$
-\end{algorithmic}
-\caption{\label{overview:further-breakdown}
-   Simplified Arbiter --- Sliced Even More}
 \end{algorithm}
 
 
@@ -299,7 +276,6 @@ a recursive divide-and-conquer algorithm.
 \bigskip(missing figure)\bigskip
 \else
 \input{gfx/overview-slice-stratify-synth}
-\vspace{-2mm}
 \fi
 \caption[caption]{\label{overview:slice-stratify-synth}
   Overview of tactic semantics in Bellmania. }
@@ -307,39 +283,26 @@ a recursive divide-and-conquer algorithm.
 
 
 \medskip
-At this point, Richard notices that {\it Compute \qbox1} is just a smaller version of
-the original {\it Compute}; so following {\sf Stratify} \qbox1, he invokes {\sf Synth}, which automatically
-synthesizes a recursive call A\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}$\big]
-(presented using abstract index ranges as $A^{I_0J_0}$).
+At this point, Richard notices that {\it \qbox1} is just a smaller version of
+the entire array $G$; he invokes another tactic called {\sf Synth}, which automatically
+synthesizes a recursive call A\big[$G^{\qbox1}$\big]
+(presented using abstract index ranges as $A^{J_0}$).
 
-The other steps require some further algebraic manipulation.
-Observe that the computation of \qbox2 is {\bf not} equivalent to
-A\big[$G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$], 
-because when $\frac{m}{2} \leq j < m$, the range $0\leq q < j$ leads to
-some accesses $G_{iq}$ lying outside of \qbox2.
+Similarly, {\it \qbox4} is a smaller version of $G$, this time with
+indices from $J_1$. {\sf Synth} figures it out automatically as well,
+synthesizing a call A\big[$G^{\tinyqbox4}$\big]. The computation of
+\qbox2 is essentially different, so Richard gives it a new name, ``B'',
+which becomes a new synthesis task.
 
-Richard addressed this problem by splitting the range of $q$ using the {\sf Slice}
-tactic again, effectively breaking the original $\min\langle\cdots\rangle$ into two:
-one where $0\leq q < \frac{m}{2}$,
-and one where $\frac{m}{2}\leq q < j$. 
-He uses {\sf Stratify} to organize the loops in the program such that both 
-loops write to the same area, namely \qbox2, where the second loop reads data
-written by the first loop, as shown in \Cref{overview:further-breakdown}.
-It is important to notice that the first loop only reads from \qbox1, 
-while the second loop only reads from \qbox2.
-
-The computation of \qbox2:(right) is now a true copy of A,
-with sub-matrix $G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$ (with the small caveat,
-that A has to be changed to include the term $G_{ij}$ in the $\min\langle~\rangle$ expression).
-Again, Bellmania synthesizes the sub-call and proves the equivalence.
-Running {\sf Synth} on \qbox2:(left) will reveal that it is a new computation,
-to which Richard gives the name ``B''. 
-
-After repeating
-the same reasoning steps to \qbox3 and \qbox4,
-Richard finally has the version in \Cref{overview:recursive-A}.
-The base case (when $G$ is small) is added automatically by the Bellmania compiler.
-The specific size bound needs to be tuned for performance.\footnote{The auto-tuning step is not implemented in the current version.}
+Applying the same strategy will eventually lead Richard to further
+break down and transform the computation of B into four recursive
+sub-computations, 
+further improving the locality of the resulting algorithm until
+a true divide-and-conquer solution is obtained.
+And finishing the development, Bellmania generates code for
+all procedures encountered through it. In this case, three recursive procedures
+are generated. The base case of the recursion is when the region
+becomes small enough to just run the loop version.\footnote{The auto-tuning step is not implemented in the current version.}
 
 
 \begin{algorithm}
@@ -348,28 +311,14 @@ The specific size bound needs to be tuned for performance.\footnote{The auto-tun
 \Procedure{A{\larger{[}}$G${\larger{]}}}{}\EndProcedure
   \If{$G$ {\it is very small}} {\it run iterative version}
   \Else
-  \State A\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}$\big] \Head{Compute \qbox1}
-  \State B\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}, 
-                G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$\big]    \Head{Compute \qbox2}
-  \State A\big[$G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$\big]
-  \State C\big[$G_{(0..\frac{n}{2})(0..\frac{m}{2})}, 
-                G_{(\frac{n}{2}..n)(0..\frac{m}{2})}$\big]    \Head{Compute \qbox3}
-  \State A\big[$G_{(\frac{n}{2}..n)(0..\frac{m}{2})}$\big]
-  \State B\big[$G_{(\frac{n}{2}..n)(0..\frac{m}{2})}, 
-                G_{(\frac{n}{2}..n)(\frac{m}{2}..m)}$\big]    \Head{Compute \qbox4}
-  \State C\big[$G_{(0..\frac{n}{2})(\frac{m}{2}..m)}, 
-                G_{(\frac{n}{2}..n)(\frac{m}{2}..m)}$\big]
-  \State A\big[$G_{(0..\frac{n}{2})(\frac{m}{2}..m)}$\big]
+  \State A\big[$G^{\tinyqbox1}$\big] \Head{Compute \qbox1}
+  \State A\big[$G^{\tinyqbox4}$\big] \Head{Compute \qbox4}
+  \State B\big[$G^{\tinyqbox1}, G^{\tinyqbox4}, G^{\tinyqbox2}$\big] \Head{Compute \qbox2}
   \EndIf
 \end{algorithmic}
 \caption{\label{overview:recursive-A}
-   Simplified Arbiter --- Recursive Version}
+   Parenthesis --- Recursive Version}
 \end{algorithm}
-
-Richard must then use the same strategy to further break down and
-transform the computations of B and C, each into four recursive sub-computations, 
-further improving the locality of the resulting algorithm.
-Eventually, through these transformations, he can succeed in breaking the computation of $G$ into recursive sub-computations leading to a true divide-and-conquer algorithm. 
 
 As is well illustrated by the example, this line of reasoning can get quite complicated for most dynamic programming algorithms, 
 and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered the technique. 

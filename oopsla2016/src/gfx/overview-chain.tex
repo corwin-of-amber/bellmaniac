@@ -1,7 +1,7 @@
 \begin{tikzpicture}[>=latex,x=6mm,y=6mm,
     every path/.style={step=1},
     every node/.style={inner sep=.5pt},
-    init data/.style={pattern=north west lines, pattern color=green!50!black},
+    init data/.style={pattern=horizontal lines, pattern color=green!50!black},
     block/.style={rectangle,draw,very thick,fill=Orange, fill opacity=0.2, inner sep=0}]
     
   \def\dx{1.75cm}
@@ -40,5 +40,5 @@
                               \node(4) at (1.5,.5) {4};
   \draw (s.south) edge[->,out=-40,in=-130] (2.-120);
   \coordinate (s) at (.8,0);
-  \node[inner sep=0 ] at (2.5,1) {\steparrow};
+
 \end{tikzpicture}
