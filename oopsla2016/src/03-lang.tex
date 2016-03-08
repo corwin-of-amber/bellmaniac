@@ -5,16 +5,58 @@
 \newcommand\semp[1]{[\![{#1}]\!]}
 \newcommand\fix{\operatorname{fix}}
 
-We first set up a formal language that we will use to describe computations and reason about them.
-Bellmania uses the same language for specifications and for programs.  Its core is the polymorphic
+For the purpose of manipulating programs and reasoning about them,
+we first set up a small language that can easily express our specifications,
+including intermediate ones, and can also be translated into executable
+code in a straightforward fashion. We choose a functional language
+setting, where scalar types are array indices ($i, j, k : J$ in the example)
+and values stored in the arrays, typically real numbers ($G_{ij} : \R$ in the example).
+Arrays are then encoded as functions, or arrow types, mapping index
+values to real values (e.g. $G : J^2\to\R$). We want to have a notion of
+array elements that are uninitialized, so we assume every scalar type
+contains the special value $\bot$, corresponding to an undefined value.
+
+Our language should be able to express operations such as \textsf{Slice}
+from the previous section. To achieve this, we introduce 
+\newterm{predicate abstraction} over the index types, by extending the
+type system with subtyping and \newterm{refinement types}. An index
+type $J$ can be partitioned into subtypes $\langle J_0 \,|\, J_1\rangle$
+(two or more), which define predicates $J_0,J_1 : J\to\B$ (where $\B$ is the Boolean type)
+and the refined types $\widehat{J}_0=\{v\,{:}\,J \,|\, J_0(v)\}$
+and $\widehat{J}_1=\{v\,{:}\,J \,|\, J_1(v)\}$, which become subtypes of G.
+Usually, we can omit the ``hat'' and use $J_0$ as a synonym for $\widehat{J}_0$ 
+when its clear from the context that it designates a type. 
+We would then provide types for sub-arrays, e.g. 
+$G^{\raisebox{-2pt}{\tinyqbox{2}}} : J_0\times J_1 \to \R$.
+
+To refer to a region of a given array, we define a \newterm{guard}
+operator, which is parameterized by subtypes of the indices,
+for example $G^{\raisebox{-2pt}{\tinyqbox{2}}} = [G]_{J_0\times J_1}$.
+To combine computations on different parts of the array, we use a lifting
+of the ternary operator (known as {\tt ?:} or {\tt ite}) to functions,
+where the condition is implied by the operands; e.g.
+\[
+G=G^{\tinyqbox1} \big/ G^{\tinyqbox2} \big/ G^{\tinyqbox4} = 
+\lambda ij.
+\begin{cases}
+  G^{\tinyqbox1}_{ij} & i,j\in J_0 \\
+  G^{\tinyqbox2}_{ij} & i\in J_0 \land j\in J_1 \\
+  G^{\tinyqbox4}_{ij} & i,j\in J_1 \\
+\end{cases}
+\]
+
+\coa{More formal discussion starts here}
+
+We set up a formal language based on the polymorphic
 $\lambda$-calculus, that is, simply typed $\lambda$-calculus with universally quantified type variables 
 (also known as \newterm{System F}).
 
 We write abstraction terms as $(v:\T)\mapsto e$, where $\T$ is the type of the argument $v$ and $e$ is
 the body, instead of the traditional notation $\lambda(v:\T).\,e$, mainly due to aesthetic reasons
 but also because we hope this will look more familiar to intended users.
-Curried functions $(v_1:\T_1)\mapsto (v_2:\T_2) \mapsto \cdots \mapsto (v_n:\T_n) \mapsto e$ are abbreviated 
-as $(v_1:\T_1)\cdots(v_n:\T_n)\mapsto e$.
+Curried functions $(v_1\,{:}\,\T_1)\mapsto (v_2\,{:}\,\T_2) \mapsto \cdots \mapsto (v_n\,{:}\,\T_n) \mapsto e$ are abbreviated 
+as $(v_1\,{:}\,\T_1)\cdots(v_n\,{:}\,\T_n)\mapsto e$. Argument types may be omitted when
+they can be inferred from the body.
 
 The semantics differ slightly from that of traditional functional languages: arrow types $\T_1\to\T_2$
 are interpreted as {\bf mappings} from values of type $\T_1$ to values of type $\T_2$. Algebraically,
@@ -43,7 +85,8 @@ The core language is augmented with the following intrinsic operators:
       {}[f]_{P_1\times P_2\times \cdots P_n} = \overline{x} \mapsto [f\,\overline{x}]_{\bigwedge P_i(x_i)}
     \end{array}\]
   where $\overline{x} = x_1 \cdots x_n$. This second form can be used to
-  refer to quadrants of an array; for example, in \Cref{overview:quadrants-abstract}, $\qbox2 \equiv [G]_{J_0\times J_1}$.
+  refer to quadrants of an array; in this form, it always produces a term of
+  type $\square\to\mathcal{R}$, where $\mathcal{R}$ is the domain of $f$.
   \item A slash operator $/$~:     \vspace{-2pt}
   \[\renewcommand\arraystretch{1.5}
     \begin{array}{ll}
