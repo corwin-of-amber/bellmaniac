@@ -1,4 +1,3 @@
-\vspace{-3mm}
 \section{A Unified Language}
 \label{lang}
 
@@ -139,7 +138,7 @@ called \newterm{qualifiers}, which are defined over the base types.
 Contradictory to the general use of refinement types, the purpose of these qualifiers is not to
 check a program for safety and reject ill-typed program, but rather to serve as annotations for
 tactics, to convey information to the solver for use in the proof, and later to help the compiler
-to properly schedule parallel computations.
+to properly emit memory access and parallelization primitives.
 
 More specifically, typing $f : \{v:\T_1 ~|~ P(v)\}\to\T_2$ would mean that $f\,x$
 can only be defined where $P(x)$ is true; otherwise, $f\,x=\bot$. 
@@ -183,17 +182,15 @@ obtained from it by removing all qualifiers.
 \tikz[baseline=(E.base)]\node(E)[rectangle,draw=black!20!white,rounded corners=.7em] {\bf Example.};
 }
 \examplePar
-The inputs $\xw{}$, $\yw{}$ to the Simplified Arbiter (\Cref{overview:arbiter spec}) can be typed using these droplets:
+The array $G$ computed in the Parenthesis example (\Cref{overview:paren spec}) can be typed using:
 \[
 \begin{array}{l}
-  \xw{} : ((I\times I)\cap{<})\to J\to\R \\
-  \yw{} : ((J\times J)\cap{<})\to I\to\R
+  G : ((J\times J)\cap{<}) \to \R \\
 \end{array}
 \]
 
-This states that $w\,p\,i\,j$ is only defined for $p<i$. It doesn't {\em force} it to be defined,
-as it is still a partial function. This property is in fact useful: we now have a mechanism for
-specifying that some schedules are impossible, by setting the respective $w\,p\,i\,j=\bot$!
+This states that $G\,i\,j$ is only defined for $i<j$. It doesn't {\em force} it to be defined,
+as it is still a partial function.
 
 \subsubsection*{Typing Rules}
 
@@ -367,18 +364,17 @@ inferences:
 \exampleTitle  \begin{comment}\subsection{Example}\end{comment}
 
 \noindent
-The specification of the Simplified Arbiter (\Cref{overview:arbiter spec}) will be written as
+The specification of the Parenthesis problem (\Cref{overview:paren spec}) will be written as
 
 \vspace{-5mm}
 \[
   \renewcommand\arraystretch{1.5}
   \begin{array}{@{}l@{}l@{}l@{}}
-    \lspan3{\xw{} : ((I\times I)\cap{<})\to J\to\R} \\
-    \lspan3{\yw{} : ((J\times J)\cap{<})\to I\to\R} \\
-    G ~=~ \fix \theta\,i\,j\mapsto{}
-      & \lspan2{\big[0\big]_{i=j=0} \,\Big/~ \big[\yw{0j0}\big]_{i=0} \,\Big/~ \big[\xw{0i0}\big]_{j=0} \,\Big/} \\
-      & \min~\langle~ & \min p\mapsto\theta_{pj}+\xw{pij}, \\
-      & & \min q\mapsto\theta_{iq}+\yw{qji} ~\rangle
+    \lspan2{x : J \to \R} \\
+    \lspan2{w : J^3 \to \R} \\
+    G ~=~ \fix~(\theta:J^2\,{\cap}\,{<}\to\R)\,i\,j \mapsto{}
+      & \big[x_i\big]_{i+1=j} ~\Big/ \\
+      & \min k\mapsto\theta_{ik}+\theta_{kj}+w_{ikj}
   \end{array}
 \]
 
@@ -386,7 +382,8 @@ We use $f_{xy}$
 as a more readable alternative typography for $f\,x\,y$,
 where $f$ is a function and $x$, $y$ are its arguments.
 
-Note that the ranges for $\min p$ and $\min q$ are implicit, from the types of
-$\xw{}$, $\yw{}$: \[\xw{pij}\neq\bot\implies p<i \quad \mbox{and} \quad \yw{qji}\neq\bot\implies q<j\]
+Note that the range for $\min k$ is implicit, given the type of
+$\theta$: 
+\[\theta_{ik}\neq\bot\implies i<k \quad \mbox{and} \quad \theta_{kj}\neq\bot\implies k<j\]
 
 \hrule
