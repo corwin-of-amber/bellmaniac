@@ -21,8 +21,7 @@ Assoc min
  Stratify min (fixee 🄲) ⟨🅁, 🅃⟩ ψ⟩
 Stratify min (fixee 🄰) ⟨🄸, 🄺⟩ ψ
 
-⟨🄸 🅂 🅉 🄶̲ ↦ SynthAuto (fixer .) . ... ψ,
- 🄼 🄿 🅆 🄳̲ ↦ SynthAuto (fixer .) . C ψ ⟩
+🄸 🅂 🅉 🄶̲ 🄼 🄿 🅆 🄳̲ ↦ SynthAuto . ... ψ
 /*
 ⟨Synth (fixee 🄸) 🄸 (B `K₀ `K₃) (ctx 🄸 ψ) ⟨`K₀×K₀,`K₀×K₃,`K₃×K₃⟩,
  Synth (fixee 🄼) 🄼 (C `K₀ `K₂ `K₃) (ctx 🄼 ψ) ⟨`K₀×K₂,`K₀×K₃,`K₂×K₃⟩,

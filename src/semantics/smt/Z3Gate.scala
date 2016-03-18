@@ -174,15 +174,27 @@ class Z3Gate(implicit guidelines: SmtGuidelines=SmtGuidelines.default) {
   // Solver part
   // -----------
 
+  def mkSolver = {
+    val s = ctx mkSolver()
+    val p = ctx mkParams()
+    if (!guidelines.fullSaturate)
+      p.add("smt.mbqi", false)
+    
+    p.add("soft_timeout", 10 * 60 * 1000 /*ms*/)
+    //p.add("smt.macro_finder", true)
+    s.setParameters(p)
+    s
+  }
+  
   def solve(assumptions: List[BoolExpr], goals: List[BoolExpr], verbose: Boolean=false) =
     if (verbose)
-      Z3Gate.solveAndPrint(assumptions, goals)
+      Z3Gate.solveAndPrint(mkSolver, assumptions, goals)
     else      
-      Z3Gate.solve(assumptions, goals)
+      Z3Gate.solve(mkSolver, assumptions, goals)
       
   def solveAndPrint(assumptions: List[BoolExpr], goals: List[BoolExpr]) = solve(assumptions, goals, true)
   
-  def solve(assumptions: List[BoolExpr], goal: Iterable[Sequent]) = Z3Gate.solve(assumptions, goal)
+  def solve(assumptions: List[BoolExpr], goal: Iterable[Sequent]) = Z3Gate.solve(mkSolver, assumptions, goal)
 }
 
 
@@ -195,15 +207,6 @@ object Z3Gate {
   // -----------
 
   import Z3Sugar.ctx
-  
-  def mkSolver = {
-    val s = ctx mkSolver()
-    val p = ctx mkParams()
-    //p.add("soft_timeout", 1000)
-    //p.add("smt.macro_finder", true)
-    s.setParameters(p)
-    s
-  }
   
   object ProverStatus extends Enumeration {
     type ProverStatus = Value
@@ -230,16 +233,17 @@ object Z3Gate {
   
   import ProverStatus._
 
-  def solve(assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
-    val s = mkSolver
+  // -----------
+  // Solver part
+  // -----------
+
+  def solve(s: Solver, assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
     save(assumptions, goals)
     assumptions foreach (s.add(_))
     goals map (checkAndPrint(s, _))
   }
   
-  def solveAndPrint(assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
-    val s = mkSolver
-    
+  def solveAndPrint(s: Solver, assumptions: List[BoolExpr], goals: List[BoolExpr]) = {
     for (a <- assumptions) {
       println(s" * $a")
       s add a
@@ -252,8 +256,7 @@ object Z3Gate {
     }
   }
 
-  def solve(assumptions: List[BoolExpr], goals: Iterable[Sequent])(implicit d: DummyImplicit)  = {
-    val s = mkSolver
+  def solve(s: Solver, assumptions: List[BoolExpr], goals: Iterable[Sequent])(implicit d: DummyImplicit)  = {
     save(assumptions, goals)
     assumptions foreach (s.add(_))
     goals map (check(s, _))
@@ -337,7 +340,7 @@ object Z3Gate {
   
   def standardize(smt: String) = {
     def declare_sort(smt: String) = Pattern.compile(raw"\((declare-sort .*?)\)") matcher smt replaceAll "($1 0)"
-    def implies(smt: String) = smt.replace("implies", "=>")  // TODO word boundaries
+    def implies(smt: String) = Pattern.compile(raw"\bimplies\b") matcher smt replaceAll "=>"
     smt |> declare_sort |> implies
   }
 }
@@ -346,7 +349,7 @@ object Z3Gate {
 case class Sequent(negative: List[BoolExpr], positive: BoolExpr)
   
 
-class SmtGuidelines(val fullSaturate: Boolean=false)
+class SmtGuidelines(val fullSaturate: Boolean=true)
 object SmtGuidelines { val default = new SmtGuidelines }
 
 class SmtException(msg: String) extends Exception(msg) { 

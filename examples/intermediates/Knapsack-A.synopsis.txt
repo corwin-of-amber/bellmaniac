@@ -10,7 +10,8 @@ Stratify "/" (fixee 🄰) 🄰 (ctx 🄰 ψ)
 Stratify "/" (fixee 🄰) 🄰 (ctx 🄰 ψ)
 Stratify "/" (fixee 🄰) 🄰 (ctx 🄰 ψ)
 
-⟨Slice (find 🄼 θ) (`? ⟨`J₀, `J₁⟩),   Slice (find 🄶 θ) ⟨`I₀×?, `I₁×J₀, `I₁×J₁⟩⟩
+Slice (find 🄼 θ) (`? ⟨`J₀, `J₁⟩) in 🄼
+Slice (find 🄶 θ) ⟨`I₀×?, `I₁×J₀, `I₁×J₁⟩ in 🄶
 ⟨Distrib "/" 🄼 (find 🄼 (θ / θ)),    Distrib "/" 🄶 (find 🄶 (θ / ?))⟩
 ⟨SlashToReduce max ⟨🄾,🄿⟩,           SlashToReduce max ⟨🄶,🄷,🄸⟩⟩
 

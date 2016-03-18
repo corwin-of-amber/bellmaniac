@@ -17,6 +17,8 @@ object Domains {
   val ⊤ = TOP
   val ⊥ = BOT
   
+  def isEmptySort(sort: Identifier) = sort == ⊥ || sort.ns == ⊥
+    
   class Extends(val sub: Identifier, val sup: Identifier) {}
   
   implicit class SubsortAssoc(private val sup: Identifier) extends AnyVal {
@@ -40,7 +42,7 @@ class Domains extends Iterable[Identifier] {
 
   var hierarchy = new Tree(⊤, List(new Tree(⊥)))
 
-  def iterator = hierarchy.nodes map (_.root) filterNot (s => s == ⊤ || isEmpty(s)) iterator
+  def iterator = hierarchy.nodes map (_.root) filterNot (s => s == ⊤ || isEmptySort(s)) iterator
   
   def findSortHie(sort: Identifier) = hierarchy.nodes find (_.root == sort)
   
@@ -81,7 +83,7 @@ class Domains extends Iterable[Identifier] {
   def masters = mastersHie map (_.root)
   def mastersHie = hierarchy.subtrees
   
-  def leaves = hierarchy.nodes filter (_.subtrees exists (s => isEmpty(s.root))) map (_.root) filterNot isEmpty
+  def leaves = hierarchy.nodes filter (_.subtrees exists (s => isEmptySort(s.root))) map (_.root) filterNot isEmptySort
   
   def getMastersOf(sort: Identifier) =
     if (sort == ⊤) List(⊤)
@@ -96,8 +98,6 @@ class Domains extends Iterable[Identifier] {
 
   def isMaster(sort: Identifier) = masters contains sort
 
-  def isEmpty(sort: Identifier) = sort == ⊥ || sort.ns == ⊥
-  
   def supers(sort: Identifier) = {
     def f(t: Tree[Identifier]): List[Identifier] = 
       if (t.root == sort) List(t.root)
@@ -197,7 +197,7 @@ class Scope extends AsJson {
   override def asJson(container: SerializationContainer) =
     container.list(sorts.masters ++ (
         for (master <- sorts.mastersHie; sup <- master.nodes; sub <- sup.subtrees 
-             if !sorts.isEmpty(sub.root)) yield container.list(List(sub.root, sup.root))))
+             if !Domains.isEmptySort(sub.root)) yield container.list(List(sub.root, sup.root))))
 }
 
 object Scope {

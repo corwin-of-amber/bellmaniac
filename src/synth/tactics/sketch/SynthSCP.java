@@ -84,7 +84,11 @@ public class SynthSCP extends FEReplacer
 	private Map<Integer,String> leafSorts = new TreeMap<>();
     private List<String> calls = new LinkedList<>();
     private List<Object> areas = new LinkedList<>();
+    private List<Integer> offsets = null;
 
+    private Map<String, List<String>> paramSorts = new TreeMap<>();
+    private Map<String, List<Integer>> paramOffsets = new TreeMap<>();
+    
     private String encode(String s) { return encode(s, StandardCharsets.UTF_8); }
     private String encode(String s, Charset encoding) {
         /* String in Sketch is a bit messed up, it's actually bytes */
@@ -99,6 +103,20 @@ public class SynthSCP extends FEReplacer
     	l.add(a);
     	return l;
     }
+    
+    /**
+     * Writes parameters (stored in paramSorts and paramOffsets) to standard output.
+     */
+    private void produceParameters() {
+        for (Entry<String,List<String>> kv : paramSorts.entrySet()) {
+        	List<String> value = kv.getValue();
+        	List<Integer> offsets = paramOffsets.get(kv.getKey());
+        	if (offsets != null) {
+        		for (int d : offsets) value.add(offset(value.get(0), d));  // TODO all members of value
+        	}
+        	out.println("/* {" + kv.getKey() + ": " + toJson(singletonList(value)) + "} */");
+        }
+    }
 
 	public Object visitFunction(Function func)
 	{
@@ -108,16 +126,26 @@ public class SynthSCP extends FEReplacer
             if (value.contains(":"))
                 out.println("/* {" + value + "} */");
             else {
-                calls = new LinkedList<>();
-                super.visitFunction(func);
-                out.println("/* {" + value + ": " + toJson(singletonList(calls)) + "} */");
+            	calls = new LinkedList<>();
+	            super.visitFunction(func);
+	            paramSorts.put(value, calls);
             }
         }
 
+		for (Annotation ann : func.getAnnotation("OffsetsForParam")) {
+            out.println("/*" + func.getName() + "*/");
+            String value = encode(ann.contents());
+            offsets = null;
+            super.visitFunction(func);
+            if (offsets != null) paramOffsets.put(value, offsets);
+		}
+		
         for (Annotation ann : func.getAnnotation("Inv")) {
             out.println("/*" + func.getName() + "*/");
             areas = new LinkedList<>();
             super.visitFunction(func);
+            if (areas.isEmpty())
+            	out.println("/* WARN: Invariant '" + encode(ann.contents()) + "' is empty */");
             out.println("/* {" + encode(ann.contents()) + ": " + toJson(areas) + "} */");
         }
 
@@ -152,17 +180,33 @@ public class SynthSCP extends FEReplacer
     {
         String sort = sorts.get(funCall.getName());
         if (sort != null) {
+        	if (!calls.contains(sort))
+        		calls.add(sort);
+        	/*
         	switch (funCall.getParams().get(0).toString()) {
-        	case "i + 1": calls.add(offset(sort, -1));  break; /* the offset is negated. this is not a typo */
+        	case "i + 1": calls.add(offset(sort, -1));  break; // the offset is negated. this is not a typo 
         	case "i - 1": calls.add(offset(sort, +1));  break;
         	default:      calls.add(sort);
-        	}            
+        	}*/
+        }
+        if (funCall.getName().equals("offsets")) {
+        	boolean[] bits = parseArray(funCall.getParams().get(0).toString());
+        	offsets = new ArrayList<>();
+        	assert(bits.length == 2);  // @@@
+        	if (bits[0]) offsets.add(-1);
+        	if (bits[1]) offsets.add(+1);
         }
         if (funCall.getName().equals("Scope_2d")) {
         	int n = leafSorts.size();
             boolean[][] mat = twoDim(parseArray(funCall.getParams().get(0).toString()), 3*n);
             boolean lt = funCall.getParams().get(1).toString() .equals( "1" );
             areas.add(area(mat));
+            if (lt) areas.add("<");
+        }
+        else if (funCall.getName().equals("Scope_2d_easier")) {
+            boolean[][] mat = twoDim(parseArray(funCall.getParams().get(0).toString()), 3);  /* should be number of parameters in sketch */
+            boolean lt = funCall.getParams().get(1).toString() .equals( "1" );
+            areas.add(areap(mat));
             if (lt) areas.add("<");
         }
         return super.visitExprFunCall(funCall);
@@ -198,11 +242,16 @@ public class SynthSCP extends FEReplacer
     	else return sort + "~" + sort + "+" + offset;
     }
     
-    private String leaf(int id)
+    private String leaf(int idx)
     {
-    	String sort = leafSorts.get(id / OFFSET_RANGE);
-    	int offset = -(id % OFFSET_RANGE + OFFSET_START);
+    	String sort = leafSorts.get(idx / OFFSET_RANGE);
+    	int offset = -(idx % OFFSET_RANGE + OFFSET_START);
     	return offset(sort, offset);
+    }
+    
+    private String param(int idx)
+    {
+    	return "P" + "₁₂₃".charAt(idx);
     }
     
     private List<List<String>> area(boolean[][] mat)
@@ -213,6 +262,23 @@ public class SynthSCP extends FEReplacer
             	System.out.print((mat[i][j] ? 1 : 0) + " ");
                 if (mat[i][j]) {
                     area.add(Arrays.asList(leaf(i), leaf(j)));
+
+                }
+            }
+            System.out.println();
+        }
+        return area;
+    }
+
+
+    private List<List<String>> areap(boolean[][] mat)
+    {
+        List<List<String>> area = new ArrayList<>();
+        for (int i = 0; i < mat.length; i++) {
+            for (int j = 0; j < mat[i].length; j++) {
+            	System.out.print((mat[i][j] ? 1 : 0) + " ");
+                if (mat[i][j]) {
+                    area.add(Arrays.asList(param(i), param(j)));
 
                 }
             }
@@ -235,6 +301,7 @@ public class SynthSCP extends FEReplacer
 
         for (FieldDecl field : spec.getVars())
         {
+        	System.out.println("Field --- " + field.getNames());
             field.accept(this);
         }
 
@@ -254,6 +321,9 @@ public class SynthSCP extends FEReplacer
                 oldFunc.accept(this);
             }
         }
+        
+        produceParameters();
+        
         printLine("/* END PACKAGE " + spec.getName() + "*/");
         return spec;
     }

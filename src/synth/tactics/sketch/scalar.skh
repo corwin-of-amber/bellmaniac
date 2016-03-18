@@ -25,6 +25,8 @@ bit      lt0(int a, int b) { return a < b; }
 
 /* minimum */
 
+int min2i(int a, int b) { return (a > b) ? b : a; }
+
 |scalar| min2(|scalar| a, |scalar| b) {
   //return ( a.supp && (!b.supp || a.val < b.val) ) ? a : b;  /* AssertionError! */
   //if ( a.supp && (!b.supp || a.val < b.val) ) return a; else return b; /* this is slightly slower */
@@ -54,6 +56,8 @@ void minz(int n, ref |scalar| acc, fun fn) {
 }
 
 /* maximum */
+
+int max2i(int a, int b) { return (a > b) ? a : b; }
 
 |scalar| max2(|scalar| a, |scalar| b) {
   if ( b.supp && (!a.supp || b.val > a.val) ) a = b;

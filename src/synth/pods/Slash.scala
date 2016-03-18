@@ -52,8 +52,8 @@ class OffsetsPod(val J: Term, val arith: IndexArithPod)(implicit scope: Scope) e
     ~`J-1`(arith._NJ),
     //∀:(U, x => ∀:(U, y => ~arith.issuccJ(x,y)) -> (~`J-1`(x))),
     
-    ∀:(U, x => `J∪J-1`(x) <-> (J(x) | `J-1`(x))),
-    ∀:(U, x => `J∪J+1`(x) <-> (J(x) | `J+1`(x)))
+    ∀:(U, x => `J∪J+1`(x) <-> (J(x) | `J+1`(x))),
+    ∀:(U, x => `J∪J-1`(x) <-> (J(x) | `J-1`(x)))
 
     // - this seems to diverge:
     //∀:(U, x => `J-1`(x) <-> (J(arith.succJ(x)) & ↓(arith.succJ:@x) & (arith.issuccJ:@(x,arith.succJ:@x)) ))

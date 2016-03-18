@@ -26,6 +26,8 @@ import synth.tactics.{SliceAndDicePod, SlicePod, Synth}
 import synth.engine.OptimizationPass.DependencyAnalysis
 import synth.engine.OptimizationPass.FixpointLoopAnalysis
 import ui.CLI
+import syntax.transform.TreeSubstitution
+import syntax.transform.GenTreeSubstitution
 
 
 
@@ -323,7 +325,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     val solution = (if (fix) Synth.synthesizeFixPodSubterm(h, subterm, ipods)
                         else Synth.synthesizeFlatPodSubterm(h, subterm, ipods)).incdir(skhDir).run()
     println(solution mapValues (_.toPretty))
-    //System.exit(0)
+
     val selected = expandedTemplates(solution("selected").root.literal.asInstanceOf[Int])
     def param(t: Term) = `⟨ ⟩?`(t) match {
       case None => t
@@ -332,8 +334,9 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     }
     val synthed = selected.replaceDescendants(
       selected.nodes collect { case n@T(`∩`, List(L("?"), L(k:String))) => (n, param(solution(k))) } toList)
+    val paramSubst = new GenTreeSubstitution(solution map { case (k,v) => (TI(k), ((_:Term) => param(v))) } toList)
     val quadrant = TypePrimitives.curry(TypedTerm.typeOf_!(subterm))._2
-    val footprint = TypePrimitives.dom(quadrant) :: evalList(solution.getOrElse("Q", nil))
+    val footprint = TypePrimitives.dom(quadrant) :: evalList(paramSubst(solution.getOrElse("Q", nil)))
 
     (synthed, footprint)
   }

@@ -114,12 +114,12 @@ class IndexArithPod(val J: Term, val < : Term, val succ: Term)(implicit scope: S
     ∀:( J, x => ~ <(_NJ, x) ),
     ∀:( J, (x,y) => ~ <(x, subJ:@(x, y)) ),
     ∀:( J, (x,y) => <(_0J,x) -> <(subJ:@(x, y), x) ),
-    ∀:( J, (x,y,z) => issuccJ(x,z) -> (<(x,z) & ~(<(x,y) & <(y,z))) ),
+    ∀:( J, (x,y,z) => issuccJ(x,z) -> (<(x,z) & ~(<(x,y) & <(y,z))) )
     /* dangerous territory! */
-    ∀:(J, x => ∀:(J, y => ~ <(y,x)) -> (x =:= _0J)),
-    ∀:(J, x => ∀:(J, y => ~issuccJ(y,x)) -> (x =:= _0J)), /* - implied by previous ones, but helps the solver */
-    ∀:(J, x => ∀:(J, y => ~ <(x,y)) -> (x =:= _NJ)),
-    ∀:(J, x => ∀:(J, y => ~issuccJ(x,y)) -> (x =:= _NJ)) /* - implied by previous ones, but helps the solver */
+    //∀:(J, x => ∀:(J, y => ~ <(y,x)) -> (x =:= _0J)),
+    //∀:(J, x => ∀:(J, y => ~issuccJ(y,x)) -> (x =:= _0J)), /* - implied by previous ones, but helps the solver */
+    //∀:(J, x => ∀:(J, y => ~ <(x,y)) -> (x =:= _NJ)),
+    //∀:(J, x => ∀:(J, y => ~issuccJ(x,y)) -> (x =:= _NJ)) /* - implied by previous ones, but helps the solver */
   )
 }
 

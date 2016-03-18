@@ -52,7 +52,7 @@ object Synth {
 
     val * = TI("*")
 
-    val scopegen = new ScopeGen(scope)
+    val scopegen = new ScopeGen(examples.LCS.scope)
     val out = new SketchOutput
     val scopedecl = scopegen() map (out(_)) mkString "\n"
     
@@ -84,7 +84,7 @@ object Synth {
       println(solution mapValues (_.toPretty))
     }
 
-    if (true)
+    if (false)
     {
       val B = (SimplePattern(* :- fix(?)) findOne_! BPod(J0, J1).program)(*) |> a.compile
       val BP = BPod(? ∩ TV("P1"), ? ∩ TV("P2")).program |> a.compile
@@ -104,9 +104,10 @@ object Synth {
     val baseDir = new File(System.getenv("BELLMANIA_HOME").opt getOrElse ".")
     val fe_inc = incdirs flatMap (x => Seq("--fe-inc", new File(baseDir, x).getPath))
     val fe_codegen = Seq("--fe-custom-codegen", new File(baseDir, CODEGEN).getPath)
+    val slv = Seq("--slv-lightverif", "--slv-simiters", "50", "--beopt:simstopsize", "200")
     
     val command =
-      Seq(SKETCH, "--slv-lightverif") ++ fe_inc ++ fe_codegen ++ Seq(skfile.getPath)
+      Seq(SKETCH) ++ slv ++ fe_inc ++ fe_codegen ++ Seq(skfile.getPath)
 
     def run()(implicit scope: Scope) = {
       cached getOrElse (hash, {
@@ -293,6 +294,7 @@ object Synth {
     {
       for ((_, i) <- code1.zipWithIndex)
         fprintln(s"""@Param("selected: $i") int _${i}_(int n) { return n; }""")
+      fprintln("generator int nparams() { return 3; }");
 
       val alts = code1.zipWithIndex map { case (_, i) => s"f_$i(_${i}_(n), Context_JJR, theta, i, j)" }
 
@@ -467,9 +469,13 @@ object Synth {
   class ScopeGen(scope: Scope) {
     import ScopeGen._
     import CodeGen._
+    import Domains.{⊤,isEmptySort}
     
-    val sorts = scope.sorts.masters ++ (scope.sorts filterNot scope.sorts.isMaster) filterNot isBuiltinSort  /* pretty ad-hoc */
-    val leaves = scope.sorts.leaves filterNot isBuiltinSort
+    val masters = scope.sorts.masters filterNot isBuiltinSort 
+    val sorts =  (scope.sorts.hierarchy.bfs map (_.root) filterNot   /* notice BFS order */
+                  (s => s == ⊤ || isEmptySort(s) || isBuiltinSort(s)) toList) 
+    val leaves = scope.sorts.leaves filterNot isBuiltinSort toList
+    val leavesByMaster = leaves.toList groupBy scope.sorts.getMasterOf
 
     val partitions = scope.sorts.hierarchy.nodes collect {
       case T(sup, List(sub1, sub2)) => (sup, sub1.root, sub2.root)
@@ -477,20 +483,46 @@ object Synth {
     
     def apply() = {
       (sorts map decl) ++
-      List(sortsSelector("Scope_subsort", sorts.toList.reverse, List((i) => TI("+")(i, TI(1)), (i) => TI("-")(i, TI(1)))),
+      List(sortsSelector("Scope_subsort", sorts.toList.reverse, List()), //List((i) => TI("+")(i, TI(1)), (i) => TI("-")(i, TI(1)))),
            sortsSelector("Scope_leaf", leaves, List()),
            facts("Scope_facts"),
+           def_(TypedTerm(TV("N"), N), TI(0)),  /* must be initialized by harness */
            def_(TypedTerm(TV("W"), N), TI(leaves.length)))
     }
     
     def isBuiltinSort(sort: Identifier) = List(N, R, B) exists (_.root == sort)
     
+    def nonnegative(i: Int) = if (i >= 0) Some(i) else None
+    def nonnegative_!(i: Int) = assume(i >= 0)
+    
     def decl(sort: Identifier) = {
-      val i = TypedTerm(TI("i"), N)
-      val funhead = def_(TypedTerm(T(sort), B), `()`(i))
-      val fundef = if (scope.sorts.isMaster(sort)) funhead(ret(TI(1))) else funhead;
-      `@_`(TI("Sort")(`""`(T(sort))), leaves.indexOf(sort) match {
-        case idx if idx >= 0 => `@_`(TI("Leaf")(`""`(TI(idx))), fundef)
+      val i = TyTV("i", N)
+      val d = TyTV("d", N ->: N ->: N)
+
+      val master = scope.sorts.getMasterOf(sort)
+      val parts = leavesByMaster(master)
+      val masterIdx = masters.indexOf(master) |-- nonnegative_!
+      val leafIdx = leaves.indexOf(sort) |> nonnegative
+      val partIdx = parts.indexOf(sort) |> nonnegative
+      
+      val head = def_(TypedTerm(T(sort), B), `()`(i))
+      val body = if (scope.sorts.isMaster(sort)) TI(1)
+        else partIdx match {
+          case Some(idx) => &&(
+            ((idx > 0)               -->  TI("≥")(i, d(TI(masterIdx), TI(idx))))  ++
+            ((idx < parts.length-1)  -->  TI("<")(i, d(TI(masterIdx), TI(idx+1)))) ++
+            ((idx == parts.length-1) -->  TI("<")(i, sizeCutoffExpr))
+          )
+          case _ => scope.sorts.findSortHie(sort) match {
+            case Some(hie) => ||(hie.subtrees map (_.root) map (T(_)(i)))
+            case None => void
+          }
+        }
+      
+      val fundef = head(ret(body))
+
+      `@_`(TI("Sort")(`""`(T(sort))), leafIdx match {
+        case Some(idx) => `@_`(TI("Leaf")(`""`(TI(idx))), fundef)
         case _ => fundef
       })
     }
@@ -536,12 +568,27 @@ object Synth {
       val assumeUnary = unary map (s => assume_(s(p)))
       val assumeBinary = binary map (s => assume_(s(p, q)))
       generator(
-          def_(TypedTerm(TI(name), void), `()`(n), 
-              for_(p, `()`(TI(0), n), `;`(assumeUnary :+
-                  for_(q, `()`(TI(0), n), `;`(assumeBinary) ))
+          def_(TypedTerm(TI(name), N), `()`(n),
+              ret(sizeCutoffExpr)
+              /*
+              `;`(
+                  for_(p, `()`(TI(0), n), `;`(assumeUnary :+
+                      for_(q, `()`(TI(0), n), `;`(assumeBinary) ))
+                  ),
+                  ret(n)
               )
+              */
           )
       )
+    }
+    
+    def sizeCutoffExpr = {
+      val d = TyTV("d", N ->: N ->: N)
+      val max2i = TyTV("max2i", N ->: N ->: N)
+      (leavesByMaster map {
+        case (master, leaves) => d(TypedTerm(TI(masters.indexOf(master)), N), TypedTerm(TI(leaves.length), N))
+      }
+      reduce (max2i(_, _)))
     }
   }
   
@@ -555,6 +602,10 @@ object Synth {
     val `""` = TI("\"\"")
     val `[]` = TI("[]")
     val -> = TI("->")
+    
+    implicit class -->(private val cond: Boolean) extends AnyVal {
+      def -->[A](a: A) = if (cond) List(a) else List.empty
+    }
   }
 
 
@@ -576,13 +627,16 @@ object Synth {
       (if (typeOf_!(code) == B) "b" else "") + args.length
         
     def apply(code: Term): String = code match {
-      case T(def_.root, List(f, T(`()`.root, params), body)) =>
-        try s"${typ(typeOf_!(f))} ${mne(f)}(${params map param mkString ", "}) {\n${indent(apply(body))}\n}"
-        finally mnemonics release (params map (_.leaf))
-      case T(def_.root, List(f, T(`()`.root, params))) =>
+      case T(def_.root, List(f, T(`()`.root, params))) =>                                    // type f(params);
         try s"${typ(typeOf_!(f))} ${mne(f)}(${params map param mkString ", "});"
         finally mnemonics release (params map (_.leaf))
-      case T(def_.root, List(v, init)) =>
+      case T(def_.root, List(f, T(`()`.root, params), body@T(ret.root, List(_)))) =>         // type f(params) { return expr; }
+        try s"${typ(typeOf_!(f))} ${mne(f)}(${params map param mkString ", "}) { ${apply(body)} }"
+        finally mnemonics release (params map (_.leaf))
+      case T(def_.root, List(f, T(`()`.root, params), body)) =>                              // type f(params) {↵ -block- ↵}
+        try s"${typ(typeOf_!(f))} ${mne(f)}(${params map param mkString ", "}) {\n${indent(apply(body))}\n}"
+        finally mnemonics release (params map (_.leaf))
+      case T(def_.root, List(v, init)) =>                                                    // type v = init;
         s"${typ(typeOf_!(v))} ${mne(v)} = ${apply(init)};"
       case T(`;`.root, stmts) => stmts map apply mkString "\n"
       case T(@:.root, f :: args) => s"apply${suf(code, f, args)}(${mne(f)}, ${args map apply mkString ", "})"
@@ -619,7 +673,8 @@ object Synth {
       s"""${prologue map apply mkString "\n\n"}\n\ninclude "harness.sk";\n"""
     }
 
-    val INFIX = Map(I("=") -> "==", I("<") -> "<", I(">") -> ">", I("∧") -> "&&", I("∨") -> "||")
+    val INFIX = Map(I("=") -> "==", I("<") -> "<", I(">") -> ">", I("≥") -> ">=", I("≤") -> "<=", 
+                    I("∧") -> "&&", I("∨") -> "||")
     val PREFIX = Map(I("¬") -> "!")
 
     object InfixOp { def unapply(id: Identifier) = INFIX get id }
@@ -678,6 +733,7 @@ object Synth {
 
     /* parse components */
     private def conj(o: Any): Term = o match {
+      case Nil => TRUE  /* empty conjunction? */
       case l :: ps => (disj(l) /: ps)((l,p) => l map (_ ∩ atom(p))) match {
         case List(one) => one
         case many => ConsPod.`⟨ ⟩`(many)

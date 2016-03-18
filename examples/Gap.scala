@@ -198,7 +198,7 @@ object Gap {
         case (L("C"), List(~(j0), ~(j1), ~(k))) => CPod(j0, j1, k)
       }
       
-      override val skhDir = "examples/intermediates/sketch/Gap"
+      //override val skhDir = "examples/intermediates/sketch/Gap"
       
       val A = TV("A")
       val B = TV("B")

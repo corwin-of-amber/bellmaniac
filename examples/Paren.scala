@@ -50,13 +50,14 @@ object Paren {
   scope.sorts.declare(K1 :<: J0)
   scope.sorts.declare(K2 :<: J1)
   scope.sorts.declare(K3 :<: J1)
+  
   scope.sorts.declare(L0 :<: K0)
   scope.sorts.declare(L1 :<: K0)
   scope.sorts.declare(L2 :<: K1)
   scope.sorts.declare(L3 :<: K1)
   scope.sorts.declare(L4 :<: K2)
   scope.sorts.declare(L5 :<: K2)
-
+  
   scope.sorts.cork()
 
   def A = TV("A")
@@ -582,12 +583,12 @@ object Paren {
         val partK0 = PartitionPod(K0, <, L0, L1)
         val partK1 = PartitionPod(K1, <, L2, L3)
         val partK2 = PartitionPod(K2, <, L4, L5)
-        val offsets = List(J0, J1, K0, K1, K2, K3, L0, L1, L2, L3, L4, L5) map (OffsetsPod(_, idxJ))
+        val offsets = List(J0, J1, K0, K1, K2, K3 /*, L0, L1, L2, L3, L4, L5*/) map (OffsetsPod(_, idxJ))
         val nilNR = NilPod(N, R)
         val minJR = MinPod(J, R, toR.<)
         val minNR = MinPod(N, R, toR.<)
   
-        new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, partK0, partK1, partK2, minJR, minNR, nilNR) ++ offsets ++ pods, verbose = Prover.Verbosity.ResultsOnly)
+        new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, partK0, partK1, partK2, minJR, minNR, nilNR) /*++ offsets*/ ++ pods, verbose = Prover.Verbosity.ResultsOnly)
       }
       override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
       
