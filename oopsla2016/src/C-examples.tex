@@ -1,32 +1,252 @@
-\section{Example Development}
+\section{Examples}
 
-The following example shows in more detail the first phase of the development
-for the Simplified Arbiter test case,
-to give the reader a flavor of the technique and the way the system
-does reasoning.
+Many aspects of Bellmania are best illustrated via examples.
+While the main sections include many such examples,
+some more elaborated ones may prove useful and interesting.
+
+\subsection{Development of Parenthesis (with diagrams)}
+\label{annex:example:paren}
+
+The running example from \Cref{intro,overview} has a total of three subroutines, which we label A, B, and C.
+As promised, we include original design diagrams by the technique's authors taken from~\cite{PPoPP16/Chowdhury}.
+The blocks (triangles) in the diagrams represent intermediate steps of the computation.
+Below each diagram, we show a transcript of what the user has to type in when using Bellmania
+to carry out the same development.
+
+Boxed letters in the scripts are used to refer to sub-terms of the current program
+(in \Cref{tactics} we used boxed digits, but in the actual UI we use letters
+because there are more of them).
+Reading the scripts in a non-interactive setting might be hard since the reader cannot
+observe the program; they are listed here just to give an idea of the size and structure.
+The supplementary material contains some screenshots of an interactive session.
+
+\newcommand\xw[1]{w^x_{#1}}
+\newcommand\yw[1]{w^y_{#1}}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=.15\textwidth]{img/par-A.pdf}
+\end{center}
+%
+\begin{transcript}
+Slice (find ($\theta \mapsto {?}$)) ($?$ $\langle J_0\times J_0, J_0\times J_1, J_1\times J_1\rangle$)\\
+Stratify "/" (fixee $\lbox A$) $\lbox A$ $\psi$ \\
+Stratify "/" (fixee $\lbox A$) $\lbox A$ $\psi$ \\
+$\lbox A$ $\lbox B$ $\lbox C$ $\mapsto$ SynthAuto . ... $\psi$
+\end{transcript}
+\caption{\label{annex:Paren-A}
+Development of subroutine A of the Parenthesis problem as conceptually described in~\cite{PPoPP16/Chowdhury} (top) and using Bellmania (bottom).}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=.3\textwidth]{img/par-B.pdf}
+\end{center}
+%
+\begin{transcript}
+Slice f $\langle?\times K_0\times K_2, ?\times K_0\times K_3, ?\times K_1\times K_2, ?\times K_1\times K_3\rangle$ \\
+$\lbox D$ $\mapsto$ Stratify "/" (fixee .) . $\psi$ \\
+$\lbox C$ $\mapsto$ Stratify "/" (fixee .) . $\psi$ \\
+$\lbox E$ $\mapsto$ Stratify "/" (fixee .) . $\psi$
+
+\begin{tabular}{@{}l@{~}l@{}}
+$\langle$ & Slice (find  ($k \mapsto {?}$)) $\langle K_0, K_1, K_2, K_3\rangle$, \\
+& Slice (find  ($k \mapsto {?}$)) $\langle K_1, K_2, K_3\rangle$, \\
+& Slice (find  ($k \mapsto {?}$)) $\langle K_0, K_1, K_2\rangle$ $\rangle$
+\end{tabular}
+
+Distrib min \\
+Assoc min
+
+\begin{tabular}{@{}l@{~}l@{}}
+$\langle$ & Stratify min (fixee $\lbox A$) $\langle \lbox G, \lbox J\rangle$ $\psi$, \\
+& Stratify min (fixee $\lbox B$) $\langle \lbox M, \lbox O\rangle$ $\psi$, \\
+& Stratify min (fixee $\lbox C$) $\langle \lbox R, \lbox T\rangle$ $\psi$ $\rangle$
+\end{tabular}\\
+Stratify min (fixee $\lbox A$) $\langle \lbox{\,I\,}, \lbox K\rangle$ $\psi$
+
+$\lbox{\,I\,}$ $\lbox S$ $\lbox Z$ $\underline{\lbox G}$ 
+$\lbox M$ $\lbox P$ $\lbox W$ $\underline{\lbox D}$
+$\mapsto$ SynthAuto . ... $\psi$
+\end{transcript}
+\caption{\label{annex:Paren-B}
+Same, for subroutine B of Parenthesis.}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=.3\textwidth]{img/par-B.pdf}
+\end{center}
+%
+\begin{transcript}
+Slice (find ($i \mapsto {?}$)) $\langle L_0\times L_4, L_0\times L₅, L_1\times L_4, L_1\times L_5\rangle$ \\
+Let "/" (slasher $\lbox A$) $\lbox A$ $\psi$ \\
+Let "/" (slasher $\lbox A$) $\lbox A$ $\psi$ \\
+Let "/" (slasher $\lbox A$) $\lbox A$ $\psi$ \\
+Slice (findAll ($k \mapsto {?}$)) $\langle L_2, L_3\rangle$
+
+Distrib min \\
+Assoc min
+
+\begin{tabular}{@{}l@{~}l@{}}
+$\langle$ & Let min (slasher $\lbox A$) $\langle\lbox E, \lbox G\rangle$ $\psi$, \\
+& Let min (slasher $\lbox B$) $\langle\lbox H,\lbox J\rangle$ $\psi$, \\
+& Let min (slasher $\lbox C$) $\langle\lbox K,\lbox M\rangle$ $\psi$, \\
+& Let min (slasher $\lbox D$) $\langle\lbox N,\lbox P\rangle$ $\psi$ $\rangle$
+\end{tabular}
+
+$\lbox A$ $\lbox B$ $\lbox C$ $\lbox D$
+$\lbox E$ $\lbox F$ $\lbox G$ $\lbox H$ 
+$\mapsto$ SynthAuto . ... $\psi$
+\end{transcript}
+\caption{Same, for subroutine C of Parenthesis}
+\end{figure}
+
+\vfill
+
+\subsection{Qualified Type Inference}
+\label{annex:example:type inference}
+
+We provide an example of how qualifiers are inferred in program terms.
+
+\medskip
+\exampleTitle
+
+\noindent Assume that:
+\begin{itemize}
+ \item $I$, $T$ are types
+ \item $\widehat{I}_0 : I\to\B$ is a unary qualifier
+ \item $0:T$ is a constant
+ \item $\S$ a type variable, 
+\end{itemize}
+ 
+Consider the term $(f:I_0\to\S)\,i\mapsto f\,i\,i ~/~ 0$.
+The first step of Hindley-Milner inference will induce the following type shapes through unification:
+
+\begin{tikzpicture}[node distance=1em]
+  \node(farg) {$(f:I\to\S)$};
+  \node(iarg)[right=of farg] {$i$};
+  \node(mapsto)[right=of iarg] {$\mapsto$};
+  \node(f)[right=of mapsto] {$f$};
+  \node(i1)[right=of f] {$i$};
+  \node(i2)[right=of i1] {$i$};
+  \node(slash)[right=of i2] {$\big/$};
+  \node(zero)[right=of slash] {$0$};
+  \node(l0)[coordinate,below=1mm of farg] {};
+  \node(l1)[coordinate,below=4.5mm of l0] {};
+  \node(l2)[coordinate,below=3.5mm of l1] {};
+  \node(l3)[coordinate,below=3.5mm of l2] {};
+  \node(l4)[coordinate,below=3.5mm of l3] {};
+  \def\ytip{2pt}
+  \draw (l0 -| farg.west) -- +(0,-\ytip) -| (l0 -| farg.east) node[pos=0.25,below] {\tiny $I\to I\to T$};
+  \draw (l0 -| iarg.west) -- +(0,-\ytip) -| (l0 -| iarg.east) node[pos=0.25,below] {\tiny $I$};
+  \draw (l0 -| f.west) -- +(0,-\ytip) -| (l0 -| f.east) node[pos=0.5,anchor=23,inner xsep=0] {\tiny $I\to I\to T$};
+  \draw (l0 -| i1.west) -- +(0,-\ytip) -| (l0 -| i1.east) node[pos=0.25,below] {\tiny $I$};
+  \draw (l0 -| i2.west) -- +(0,-\ytip) -| (l0 -| i2.east) node[pos=0.25,below] {\tiny $I$};
+  \draw (l0 -| zero.west) -- +(0,-\ytip) -| (l0 -| zero.east) node[pos=0.25,below] {\tiny $T$};
+  \draw (l1 -| f.west) -- +(0,-\ytip) -| (l1 -| i1.east) node[pos=0.25,below] {\tiny $I\to T$};
+  \draw (l2 -| f.west) -- +(0,-\ytip) -| (l2 -| i2.east) node[pos=0.25,below] {\tiny $T$};
+  \draw (l3 -| f.west) -- +(0,-\ytip) -| (l3 -| zero.east) node[pos=0.25,below] {\tiny $T$};
+  \draw (l4 -| farg.west) -- +(0,-\ytip) -| (l4 -| zero.east) node[pos=0.25,below] {\tiny $(I\to I\to T)\to I\to T$};
+  
+  % numerals!
+  \node[yshift=-1pt] at (farg.north east) {\tiny 0};
+  \node at (iarg.north east) {\tiny 0};
+  \node at (i1.north east) {\tiny 1};
+  \node at (i2.north east) {\tiny 2};
+  \node at (f.north east) {\tiny 1};
+\end{tikzpicture}
+
+Superscript numerals denote different occurrences of the same variable.
+In this case, the type variable $\S$ has been assigned $I\to T$.
+
+The process would have stopped here if it weren't for the qualifier $I_0$ used in the type for $f$.
+At this point we can use type refinements to get more accurate types for $f$ and $i$
+in the body of the function term.
+%
+\newcommand\oops[1]{^{\,^{\mbox{\tiny #1}}}}
+\[
+\frac{f:I_0\to I\to T, ~ i:I ~~\vdash~~ f\oops1 : I\to I\to T}
+     {f:I_0\to I\to T, ~ i:I ~~\vdash~~ f\oops1 : I_0\to I\to T}
+ \]
+ 
+Notice that $(I\to I\to T)\sqcap (I_0\to I\to T) = I_0\to I \to T$. Truthfully, in this case this is quite a trivial result.
+
+\smallskip
+Let $\Gamma = \{f:I_0\to I\to T, ~ i:I\}$.
+%
+\[
+\frac{\begin{array}{rcl} \Gamma & \vdash & (f\oops1\,i\oops1) : I\to T, 
+                                        ~~ f\oops1: I_0\to I\to T,      
+                                        ~~ i\oops1 : I                 \end{array}}
+     {\begin{array}{rcl} \Gamma & \vdash & (f\oops1\,i\oops1) : I\to T, 
+                                        ~~ f\oops1: I_0\to I\to T,      
+                                        ~~ i\oops1 : I_0
+     \end{array} }
+     \]
+
+The types of $f\oops1$ and $f\oops1\,i\oops1$ have not changed, but the type of $i\oops1$ was lowered to $I_0$.
+
+\medskip
+After applying the typing rules similarly to all the sub-terms, we get the inferred types as shown:
+
+\begin{tikzpicture}[node distance=1em]
+  \node(farg) {$(f:I_0\to\S)$};
+  \node(iarg)[right=of farg] {$i$};
+  \node(mapsto)[right=of iarg] {$\mapsto$};
+  \node(f)[right=of mapsto] {$f$};
+  \node(i1)[right=of f] {$i$};
+  \node(i2)[right=of i1] {$i$};
+  \node(slash)[right=of i2] {$\big/$};
+  \node(zero)[right=of slash] {$0$};
+  \node(l0)[coordinate,below=1mm of farg] {};
+  \node(l1)[coordinate,below=4.5mm of l0] {};
+  \node(l2)[coordinate,below=3.5mm of l1] {};
+  \node(l3)[coordinate,below=3.5mm of l2] {};
+  \node(l4)[coordinate,below=3.5mm of l3] {};
+  \def\ytip{2pt}
+  \draw (l0 -| farg.west) -- +(0,-\ytip) -| (l0 -| farg.east) node[pos=0.25,below] {\tiny $I_0\to I\to T$};
+  \draw (l0 -| iarg.west) -- +(0,-\ytip) -| (l0 -| iarg.east) node[pos=0.25,below] {\tiny $I$};
+  \draw (l0 -| f.west) -- +(0,-\ytip) -| (l0 -| f.east) node[pos=0.5,anchor=23,inner xsep=0] {\tiny $I_0\to I\to T$};
+  \draw (l0 -| i1.west) -- +(0,-\ytip) -| (l0 -| i1.east) node[pos=0.25,below] {\tiny $I_0$};
+  \draw (l0 -| i2.west) -- +(0,-\ytip) -| (l0 -| i2.east) node[pos=0.25,below] {\tiny $I$};
+  \draw (l0 -| zero.west) -- +(0,-\ytip) -| (l0 -| zero.east) node[pos=0.25,below] {\tiny $T$};
+  \draw (l1 -| f.west) -- +(0,-\ytip) -| (l1 -| i1.east) node[pos=0.25,below] {\tiny $I_0\to T$};
+  \draw (l2 -| f.west) -- +(0,-\ytip) -| (l2 -| i2.east) node[pos=0.25,below] {\tiny $T$};
+  \draw (l3 -| f.west) -- +(0,-\ytip) -| (l3 -| zero.east) node[pos=0.25,below] {\tiny $T$};
+  \draw (l4 -| farg.west) -- +(0,-\ytip) -| (l4 -| zero.east) node[pos=0.25,below] {\tiny $(I_0\to I\to T)\to I\to T$};
+\end{tikzpicture}
+
+\medskip
+\hrule
+\vfill
+
+\pagebreak
+\subsection{Simplified Arbiter}
+
+To give another example of a development for a different problem, we provide a simplified version of the Gap problem (\Cref{evaluation}), which we call the Simplified Arbiter.
+Two processes $x$ and $y$ must be scheduled to run $n$ and $m$ seconds,
+respectively, on a single processor, using one-second slots.
+Execution starts at $t=0$. The cost for scheduling the slots $[a..b)$ of $x$ after
+having scheduled slots $[0..c)$ of $y$
+is given by $\xw{abc}$, and the cost for schedulting the slots $[a..b)$ of $y$
+after scheduling $[0..c)$ of $x$ is given by $\yw{abc}$.
 
 In Bellmania language, the Simplified Arbiter example is specified by
-a base case $\Psi$ corresponding to {\it Initialize}, and a computation
-part corresponding to {\it Compute}.
+a base case $\Psi$ and a computation
+part $A^{IJ}$, where $I$ and $J$ are row and column index sets, respectively.
 
-\begin{equation}
+\[
   \renewcommand\arraystretch{1.5}
-  \begin{array}{@{}l@{}l@{}l@{}}
-    \Psi ~=~ & \fix \Big(\theta\,i\,j\mapsto
-	              [0]_{i=j=0} ~\big/~ [\yw{0j0}]_{i=0} ~\big/~ [\xw{0i0}]_{j=0}\Big)
-  \end{array}
-\end{equation}
-
-\begin{equation}
-  \renewcommand\arraystretch{1.2}
   \begin{array}{@{}l@{}l@{}c@{}c@{}l@{}l@{}}
+    \Psi ~=~ & \lspan5{\fix \Big(\theta\,i\,j\mapsto
+	              [0]_{i=j=0} ~\big/~ [\yw{0j0}]_{i=0} ~\big/~ [\xw{0i0}]_{j=0}\Big)} \\
     A^{^{IJ}} ~=~ 
 	      & \psi\mapsto \fix \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
 	      & & ^{^{(I)}} & ^{^{(J)}} & & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
 	      & & & & & \min \vtyped q J \mapsto\theta_{iq}+w'_{qji} ~\rangle
   \end{array}
-  \label{tactics:arbiter phase A}
-\end{equation}
+\]
 
 Vertical typeset was used to save some horizontal space, but $\vtyped v\T$
 should be read as just $v:\T$.
@@ -45,33 +265,11 @@ After Richard applies {\sf Slice}, he gets the four quadrants $I_0\times J_0$, $
 The program is just about to
 grow quite large; to make such terms easy to read and refer to, we provide
 boxed letters as labels for sub-terms, using them as abbreviations where they
-occur in the larger expression.
-
-\makeatletter
-\newcommand{\quadrants@normal}[4]{
-  \renewcommand\arraystretch{1.5}
-   \begin{array}{c|c}
-     #1 & #2 \\ \hline
-     #3 & #4
-   \end{array}}
-\newcommand{\quadrants@small}[4]{
-  \renewcommand\arraystretch{0.9}
-   \begin{array}{@{~}c@{~}|@{~}c@{~}}
-     \scriptstyle #1 & \scriptstyle #2 \\ \hline
-     \scriptstyle #3 & \scriptstyle #4
-   \end{array}}
-\newcommand\quadrants{\@ifstar\quadrants@small\quadrants@normal}
-\makeatother
+occur in the larger expression
 
 In addition, to allude to the reader's intuition, expressions of the form
 $a/b/c/d$ will be written as $\quadrants*{a}{b}{c}{d}$ when the slices
 represent quadrants.
-
-\makeatletter
-\newcommand{\lbox@small}[1]{ {\setlength{\fboxsep}{1pt}\fbox{\small #1}} }
-\newcommand{\lbox@tiny}[1]{ {\setlength{\fboxsep}{1pt}\fbox{\tiny #1}} }
-\newcommand\lbox{\@ifstar\lbox@tiny\lbox@small}
-\makeatother
 
 \begin{tacticbox}{Slice}
   \begin{array}{@{} l  l @{}}
@@ -115,15 +313,15 @@ represent quadrants.
 
 \begin{tacticbox}{Stratify[with Padding]}
   \begin{array}{@{} l @{} l @{}}
-    f ~=~ \quadrants*{\lbox*A}{\dot\psi}{\dot\psi}{\dot\psi}
-         & \mbox{\small ({\it recall that } $\dot\psi=\theta\mapsto\psi$)} \\
+    f ~=~ \quadrants*{\lbox*A}{\lifted\psi}{\lifted\psi}{\lifted\psi}
+         & \mbox{\small ({\it recall that } $\lifted\psi=\theta\mapsto\psi$)} \\
     g ~=~ z\mapsto\quadrants*{z}{\lbox*{B}}{\lbox*C}{\lbox*D} &
     \qquad\psi=\psi
   \end{array}
 \end{tacticbox}
 
 \begin{equation}
-  A^{^{IJ}} =~ \psi\mapsto \fix \quadrants{\lbox A}{\dot\psi}{\dot\psi}{\dot\psi} ~\applt~ \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\lbox C}{\lbox D}
+  A^{^{IJ}} =~ \psi\mapsto \fix \quadrants{\lbox A}{\lifted\psi}{\lifted\psi}{\lifted\psi} ~\applt~ \psi\mapsto\fix\quadrants{\lifted\psi}{\lbox B}{\lbox C}{\lbox D}
   \label{evaluation:stratify A 1}
 \end{equation}
 
@@ -139,21 +337,21 @@ and $\lbox C$ (see \Cref{overview:slice-stratify-synth}). We do not list the app
 \begin{equation}
   \renewcommand\arraystretch{1.5}
   \begin{array}{l@{}l}
-    A^{^{IJ}} =~ \psi\mapsto{} & \fix \quadrants{\lbox A}{\dot\psi}{\dot\psi}{\dot\psi} ~\applt~ 
-                 \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} ~\applt \\
-               & \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\lbox C}{\dot\psi} ~\applt~
-                 \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\dot\psi}{\lbox D}
+    A^{^{IJ}} =~ \psi\mapsto{} & \fix \quadrants{\lbox A}{\lifted\psi}{\lifted\psi}{\lifted\psi} ~\applt~ 
+                 \psi\mapsto\fix\quadrants{\lifted\psi}{\lbox B}{\lifted\psi}{\lifted\psi} ~\applt \\
+               & \psi\mapsto\fix\quadrants{\lifted\psi}{\lifted\psi}{\lbox C}{\lifted\psi} ~\applt~
+                 \psi\mapsto\fix\quadrants{\lifted\psi}{\lifted\psi}{\lifted\psi}{\lbox D}
   \end{array}
 \end{equation}
 
 \begin{tacticbox}{Synth}
 	\begin{array}{@{}l@{}c@{}c@{}l@{}l}
        \lspan5{h_1= \lbox A} \\
-       \lspan5{h_{2,3,4}=\dot\psi} \\
+       \lspan5{h_{2,3,4}=\lifted\psi} \\
 	   f_1 = \theta\,& i & j & \mapsto\min\,\langle~ & \psi_{ij} \\
 	      & ^{^{(I_0)}} & ^{^{(J_0)}} & & \min \vtyped p {I_0} \mapsto\theta_{pj}+w_{pij}, \\
 	      & & & & \min \vtyped q {J_0} \mapsto\theta_{iq}+w'_{qji} ~\rangle \\
-	   \lspan5{f_{2,3,4} = \dot\psi}
+	   \lspan5{f_{2,3,4} = \lifted\psi}
    \end{array}
 \end{tacticbox}
 
@@ -161,16 +359,16 @@ and $\lbox C$ (see \Cref{overview:slice-stratify-synth}). We do not list the app
   \renewcommand\arraystretch{1.5}
   \begin{array}{l@{}l}
     A^{^{IJ}} =~ \psi\mapsto{} & \quadrants{A^{^{I_0J_0}}_\psi\!\!\!}{\psi}{\psi}{\psi} ~\applt~ 
-                 \psi\mapsto\fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} ~\applt \\
-               & \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\lbox C}{\dot\psi} ~\applt~
-                 \psi\mapsto\fix\quadrants{\dot\psi}{\dot\psi}{\dot\psi}{\lbox D}
+                 \psi\mapsto\fix\quadrants{\lifted\psi}{\lbox B}{\lifted\psi}{\lifted\psi} ~\applt \\
+               & \psi\mapsto\fix\quadrants{\lifted\psi}{\lifted\psi}{\lbox C}{\lifted\psi} ~\applt~
+                 \psi\mapsto\fix\quadrants{\lifted\psi}{\lifted\psi}{\lifted\psi}{\lbox D}
   \end{array}
   \label{fix A}
 \end{equation}
 
 We note that $\fix f_1=A^{^{I_0J_0}}_\psi$ are identical (up to $\beta$-reduction),
 which is the whole reason $f_1$ was chosen. Also, we took the liberty
-to simplify $\fix\dot\psi$ into $\psi$ --- although this is not necessary --- just to display
+to simplify $\fix\lifted\psi$ into $\psi$ --- although this is not necessary --- just to display
 a shorter term.
 
 \medskip
@@ -238,7 +436,7 @@ lies within \lbox2 ($q\in J_1$). The same reasoning is applied to the other quad
 
 \begin{tacticbox}{Let[$\reduce$]}
   \begin{array}{@{} r @{} l @{}}
-    e[\square] ={} & \quadrants{\dot\psi}{\theta\,i\,j\mapsto\square}{\dot\psi}{\dot\psi} \\
+    e[\square] ={} & \quadrants{\lifted\psi}{\theta\,i\,j\mapsto\square}{\lifted\psi}{\lifted\psi} \\
     \overline a ={} & \psi_{ij}, ~\min \vtyped q{J_0}\mapsto \theta_{iq}+w'_{qji} \\
     \overline b ={} & \min \vtyped p I \mapsto\theta_{pj}+w_{pij}, \\
                     & \min \vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji}
@@ -249,8 +447,8 @@ lies within \lbox2 ($q\in J_1$). The same reasoning is applied to the other quad
   \renewcommand\arraystretch{1.2}
   \begin{array}{r @{} l @{} c @{} c @{} l @{} l}
     \lspan6{
-    \quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} =
-      \fix\left(\lbox E \applt z\mapsto\quadrants{\dot\psi}{\lbox F}{\dot\psi}{\dot\psi}\right) 
+    \quadrants{\lifted\psi}{\lbox B}{\lifted\psi}{\lifted\psi} =
+      \fix\left(\lbox E \applt z\mapsto\quadrants{\lifted\psi}{\lbox F}{\lifted\psi}{\lifted\psi}\right) 
     } \\[1.5em]
     ~\lbox E ={} &
       \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
@@ -274,8 +472,8 @@ lies within \lbox2 ($q\in J_1$). The same reasoning is applied to the other quad
 
 \begin{tacticbox}{Stratify[with Padding]}
   \begin{array}{@{} l @{}}
-    f ~=~ \quadrants*{\dot\psi}{\lbox*E}{\dot\psi}{\dot\psi} \\
-    g ~=~ z\mapsto\quadrants*{\dot\psi}{\lbox*F}{\dot\psi}{\dot\psi}
+    f ~=~ \quadrants*{\lifted\psi}{\lbox*E}{\lifted\psi}{\lifted\psi} \\
+    g ~=~ z\mapsto\quadrants*{\lifted\psi}{\lbox*F}{\lifted\psi}{\lifted\psi}
     \qquad\psi=\psi
   \end{array}
 \end{tacticbox}
@@ -284,9 +482,9 @@ lies within \lbox2 ($q\in J_1$). The same reasoning is applied to the other quad
   \renewcommand\arraystretch{1.2}
   \begin{array}{r @{} l @{} c @{} c @{} l @{} l}
     \lspan6{
-    \fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} =
-      \fix\quadrants{\dot\psi}{\lbox E}{\dot\psi}{\dot\psi} \applt
-      \psi\mapsto\fix\quadrants{\dot\psi}{\lbox F}{\dot\psi}{\dot\psi}
+    \fix\quadrants{\lifted\psi}{\lbox B}{\lifted\psi}{\lifted\psi} =
+      \fix\quadrants{\lifted\psi}{\lbox E}{\lifted\psi}{\lifted\psi} \applt
+      \psi\mapsto\fix\quadrants{\lifted\psi}{\lbox F}{\lifted\psi}{\lifted\psi}
     } \\[1.5em]
     ~\lbox E ={} &
       \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
@@ -317,30 +515,30 @@ Define
 \begin{tacticbox}{Synth}
   \begin{array}{@{} l @{} c @{} c @{} l @{} l @{}}
     \lspan5{h_2 = \lbox E} \\
-    \lspan5{h_{1,3,4} = \dot\psi} \\
+    \lspan5{h_{1,3,4} = \lifted\psi} \\
     f_2 = 
       \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
              & ^{^{(I_0)}} & ^{^{(J_1)}} &
                                           & \min \vtyped q {J_0} \mapsto\theta_{iq}+w'_{qji}\rangle \\
-    \lspan5{f_{1,3,4} = \dot\psi}
+    \lspan5{f_{1,3,4} = \lifted\psi}
   \end{array}
 \end{tacticbox}
 
 \begin{tacticbox}{Synth}
   \begin{array}{@{} l @{} c @{} c @{} l @{} l @{}}
     \lspan5{h_2 = \lbox F} \\
-    \lspan5{h_{1,3,4} = \dot\psi} \\
+    \lspan5{h_{1,3,4} = \lifted\psi} \\
     f_2 = 
       \theta & i & j & \mapsto\min\langle & \psi_{ij}, \\
              & ^{^{(I_0)}} & ^{^{(J_1)}} &
                                           & \min \vtyped p {I_0} \mapsto\theta_{pj}+w_{pij}, \\
              & & &                        & \min \vtyped q {J_1} \mapsto\theta_{iq}+w'_{qji}\rangle \\
-    \lspan5{f_{1,3,4} = \dot\psi}
+    \lspan5{f_{1,3,4} = \lifted\psi}
   \end{array}
 \end{tacticbox}
 
 \begin{equation}
-  \fix\quadrants{\dot\psi}{\lbox B}{\dot\psi}{\dot\psi} ~=~
+  \fix\quadrants{\lifted\psi}{\lbox B}{\lifted\psi}{\lifted\psi} ~=~
     \quadrants{\psi}{B^{^{I_0J_0J_1}}_\psi\!\!\!\!}{\psi}{\psi} ~\applt~
     \psi\mapsto\quadrants{\psi}{A^{^{I_0J_1}}_\psi\!\!\!}{\psi}{\psi}
   \label{fix B}
@@ -350,7 +548,7 @@ Define
 In a similar manner, we will obtain the following:
 
 \begin{equation}
-  \fix\quadrants{\dot\psi}{\dot\psi}{\lbox C}{\dot\psi} ~=~
+  \fix\quadrants{\lifted\psi}{\lifted\psi}{\lbox C}{\lifted\psi} ~=~
     \quadrants{\psi}{\psi}{C^{^{I_0I_1J_0}}_\psi\!\!\!\!}{\psi} ~\applt~
     \psi\mapsto\quadrants{\psi}{\psi}{A^{^{I_1J_0}}_\psi\!\!\!}{\psi}
   \label{fix C}
@@ -373,7 +571,7 @@ And ---
 
 \begin{equation}
   \begin{array}{@{} l @{} l @{}}
-    \fix\quadrants{\dot\psi}{\dot\psi}{\dot\psi}{\lbox D} ~=~ &
+    \fix\quadrants{\lifted\psi}{\lifted\psi}{\lifted\psi}{\lbox D} ~=~ &
       \quadrants{\psi}{\psi}{\psi}{B^{^{I_1J_0J_1}}_\psi\!\!\!\!} ~\applt~
       \psi\mapsto\quadrants{\psi}{\psi}{\psi}{C^{^{I_0I_1J_1}}_\psi\!\!\!} \\
     &
@@ -484,3 +682,4 @@ The read and write regions are already encoded in the types of $A$, $B$, $C$ in
 \medskip
 \hrule
 \bigskip
+

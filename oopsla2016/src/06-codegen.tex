@@ -1,7 +1,22 @@
 \section{Code Generation}
 \label{codegen}
 
-We built a compiler for programs in Bellmania language that generates efficient C++ code parallelized with Intel Cilk constructs. The compiler (1) figures out directions of loops for fixed point computations by inferring the dependency constraints~\cite{JACM67/Karp} from the available type information using an SMT solver, (2) uses type information to parallelize non-conflicting function calls and loops inside a function, (3) lifts conditionals via simple interval analysis to optimize the loop bounds and performs some traditional compiler transformations to reduce the number of iterations and comparisons, and (4) identifies loops that read non-contiguous memory blocks and applies copy optimization~\cite{ASPLOS91/Lam} automatically to better utilize caches. Examples of generated code are included in the supplemental material with this submission.
+We built a compiler for programs in Bellmania language that generates efficient C++ code parallelized with Intel Cilk constructs. The compiler uses type information from the development to improve the
+quality of generated code. From the types of sub-terms corresponding
+to array indices, the compiler extracts information about what region
+of the array is read by each computation, and from the types of $\lambda$-bound index variable it constructs loops that write to
+the appropriate regions. The compiler utilizes the SMT solver to infer dependency constraints as in~\cite{JACM67/Karp},
+and figures out the direction of each loop (ascending or descending). 
+In addition, inter-quadrant dependencies can be used to determine which computations can be run in parallel (at the granularity of
+function calls) based on a fork-join model;
+two calls are considered non-conflicting if each write region is disjoint from the others' read and write regions.
+Disjointness can be decided using propositional logic through the predicate abstraction induced by type qualifiers.
+
+The compiler also employs more traditional optimization techniques
+to further simplify the code and improve its running time:
+(1) lifts conditionals to loop bounds via simple interval analysis, %to optimize the loop bounds and performs some traditional compiler %transformations to reduce the number of iterations and comparisons,
+(2) eliminates redundant iterations and comparisons that can be resolved at compile time,
+and (3) identifies loops that read non-contiguous memory blocks and applies copy optimization~\cite{ASPLOS91/Lam} automatically to better utilize caches. Examples of generated code are included in the supplemental material with this submission.
 
  
 %Use Cilk for parallelization - references later

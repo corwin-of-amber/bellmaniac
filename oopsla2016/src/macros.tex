@@ -1,28 +1,13 @@
-
 % author comment macros
-\newcommand\authornote[3]{{\color{#2} \footnote{\color{#2} {#1}: {#3}}}}
-\newcommand\todo[1]{{\color{NavyBlue} \footnote{\color{NavyBlue} TODO: {#1}}}}
+%\newcommand\authornote[3]{{\color{#2} \footnote{\color{#2} {#1}: {#3}}}}
+%\newcommand\todo[1]{{\color{NavyBlue} \footnote{\color{NavyBlue} TODO: {#1}}}}
 
 \newcommand\asolar[1]{\authornote{AS}{BrickRed}{#1}}  % Armando
 \newcommand\cel[1]{\authornote{CL}{OliveGreen}{#1}}   % Charles
 \newcommand\rch[1]{\authornote{RC}{RoyalPurple}{#1}}  % Rezaul
 \newcommand\pga[1]{\authornote{PG}{RawSienna}{#1}}    % Pramod
 \newcommand\coa[1]{\authornote{SI}{NavyBlue}{#1}}     % Shachar
-
-% Armando hack
-\newif\ifarmando
-
-\ifluatex
-\directlua{
-    if not (arg == nil) then
-      for i,v in pairs(arg) do
-        if (v == "armando") then
-          tex.print("\string\\armandotrue")
-        end
-      end
-    end
-  }
-\fi
+\newcommand\rsc[1]{\authornote{RS}{Brown}{#1}}        % Rohit
 
 % This makes \Cref{..} to equations just look like this: (4.4)
 \Crefname{equation}{}{} \crefname{equation}{}{}
@@ -46,6 +31,8 @@
 \DeclarePairedDelimiter\ceil{\lceil}{\rceil}
 \DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
 
+\newcommand\applt{\textrm{{\scriptsize\,}\guillemotright{\scriptsize\,}}}  % application from the left
+
 \newcommand\exampleTitle{
 \bigskip\noindent
 \begin{tikzpicture}
@@ -53,8 +40,23 @@
     node(e)[draw,rectangle,rounded corners=.7em,right] {\bf Example};
   \draw (e) -- (\columnwidth,0);
 \end{tikzpicture}%
+\nopagebreak%
 \medskip%
 }
+
+\newenvironment{transcript}{\bgroup\sf\setlength{\parskip}{2mm}}{\egroup}
+
+% \lbox{A}   -- small boxed letter
+% \lbox*{A}  -- tiny boxed letter
+\makeatletter
+\newcommand{\lbox@small}[1]{ {\setlength{\fboxsep}{1pt}\fbox{\rm\small #1}} }
+\newcommand{\lbox@tiny}[1]{ {\setlength{\fboxsep}{1pt}\fbox{\rm\tiny #1}} }
+\newcommand\lbox{\@ifstar\lbox@tiny\lbox@small}
+\makeatother
+
+\pgfdeclarelayer{background layer}
+\pgfdeclarelayer{foreground layer}
+\pgfsetlayers{background layer,main,foreground layer}
 
 \newcommand{\hide}[1]{} 
 \newcommand{\C}[1]{\lstinline!#1!}
@@ -62,8 +64,6 @@
 \newcommand{\spmd}{\textsc{spmd}}
 \newcommand{\cegis}{\textsc{cegis}}
 \newcommand{\Sketch}{\textsc{Sketch}}
-\newcommand{\lang}{\textsc{SyntRec}}
-\newcommand{\constr}{\textsc{guc}}
 \hyphenation{spmd cegis Sketch MSL Jacobi}
 
 \newcommand{\constraintenv}{\Sigma}

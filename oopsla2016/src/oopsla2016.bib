@@ -3,8 +3,7 @@
  author = {Bellman, Richard Ernest},
  title = {Dynamic Programming},
  year = {2003},
- isbn = {0486428095},
- publisher = {Dover Publications, Incorporated},
+ publisher = {Dover Publications, Incorporated}
 } 
 
 % Book that motivates the use of DP
@@ -16,8 +15,17 @@
   title     = {Biological Sequence Analysis: Probabilistic Models of Proteins and
                Nucleic Acids},
   publisher = {Cambridge University Press},
-  year      = {1998},
-  isbn      = {0-521-62971-3}
+  year      = {1998}
+}
+
+% Hindley-Milner (well actually just Milner)
+@article{78/Milner,
+  author = {Robin Milner},
+  title = {A theory of type polymorphism in programming},
+  journal = {Journal of Computer and System Sciences},
+  volume = {17},
+  pages = {348--375},
+  year = {1978}
 }
 
 % Liquid Types
@@ -70,7 +78,7 @@
 % DTRE (Similar to KIDS; a Specware predecessor)
 @INPROCEEDINGS{CPS91/Blaine,
     author = {Lee Blaine and Allen Goldberg},
-    title = {DTRE - A Semi-Automatic Transformation System},
+    title = {{DTRE} - A Semi-Automatic Transformation System},
     booktitle = {Constructing Programs from Specifications},
     year = {1991},
     pages = {165--204},
@@ -95,7 +103,6 @@
  booktitle = {Proceedings of the 2010 ACM/IEEE International Conference for High Performance Computing, Networking, Storage and Analysis},
  series = {SC '10},
  year = {2010},
- isbn = {978-1-4244-7559-9},
  pages = {1--11},
  numpages = {11}
 } 
@@ -111,6 +118,29 @@
  pages = {101--113},
  numpages = {13}
 }
+
+% Cache-oblivious
+@inproceedings{FOCS99/Frigo,
+ author = {Frigo, Matteo and Leiserson, Charles E. and Prokop, Harald and Ramachandran, Sridhar},
+ title = {Cache-Oblivious Algorithms},
+ booktitle = {Proceedings of the 40th Annual Symposium on Foundations of Computer Science},
+ series = {FOCS '99},
+ year = {1999},
+ pages = {285--}
+} 
+
+% Cache-adaptive
+@inproceedings{SODA14/Bender,
+ author = {Bender, Michael A. and Ebrahimi, Roozbeh and Fineman, Jeremy T. and Ghasemiesfeh, Golnaz and Johnson, Rob and McCauley, Samuel},
+ title = {Cache-adaptive Algorithms},
+ booktitle = {Proceedings of the Twenty-Fifth Annual ACM-SIAM Symposium on Discrete Algorithms},
+ series = {SODA '14},
+ year = {2014},
+ location = {Portland, Oregon},
+ pages = {958--971},
+ numpages = {14}
+} 
+
 
 % first DP paper based on serial recursive divide-and-conquer (LCS, FW-APSP, etc.)
 @inproceedings{SODA06/Chowdhury,
@@ -301,9 +331,15 @@
   year      = {2015}
 }
 
+% Coq - there is no single paper which is "the" Coq paper
+@misc{COQ,
+  title = {The {Coq} Proof Assistant, reference manual},
+  note   = {\url{https://coq.inria.fr/refman}}
+}
+
 % Why3 - verification with tactics and SMT
 @inproceedings{ESOP13/Filliatre,
-  author = {Filliâtre, Jean-Christophe and Paskevich, Andrei},
+  author = {Filli\^atre, Jean-Christophe and Paskevich, Andrei},
   booktitle = {ESOP},
   pages = {125-128},
   publisher = {Springer},
@@ -337,3 +373,28 @@
  pages = {63--74},
  numpages = {12}
 } 
+
+% Autogen: Rezaul's latest and greatest
+@inproceedings{PPoPP16/Chowdhury,
+  author = {Chowdhury, Rezaul and Ganapathi, Pramod and Tithi, Jesmin Jahan and Bachmeier, Charles and Kuszmaul, Bradley C. and Leiserson, Charles E. and Solar-Lezama, Armando and Tang, Yuan},
+  title = {AUTOGEN: Automatic Discovery of Cache-oblivious Parallel Recursive Algorithms for Solving Dynamic Programs},
+  booktitle = {Proceedings of the 21st ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming},
+ series = {PPoPP '16},
+  year = {2016},
+  conference = {PPoPP},
+  location = {Barcelona, Spain},
+  pages = {10}
+}
+
+% Evan and Ras on synthesizing DP
+@inproceedings{OOPSLA11/Pu,
+  author    = {Yewen Pu and
+               Rastislav Bod{\'{\i}}k and
+               Saurabh Srivastava},
+  title     = {Synthesis of first-order dynamic programming algorithms},
+  booktitle = {Proceedings of the 26th Annual {ACM} {SIGPLAN} Conference on Object-Oriented
+               Programming, Systems, Languages, and Applications, {OOPSLA} 2011,
+               part of {SPLASH} 2011, Portland, OR, USA, October 22 - 27, 2011},
+  pages     = {83--98},
+  year      = {2011}
+}

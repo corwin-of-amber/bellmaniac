@@ -1,25 +1,23 @@
 \section{Introduction}
 \label{intro}
 
-Software synthesis aims to close the gap between descriptions of software
-components, such as algorithms and systems, and their implementations
-as computer programs using some programming language having some operational
-semantics. Descriptions can occur as logical specifications, pseudo-code,
-input-output examples, etc., and are at a much higher level than the
-intended implementation, especially when considering performance-optimal
-implementations, because optimizing code often involves introducing many
-low-level details into the program.
+\newcommand\ForLine[1]{\State\algorithmicfor~{#1} \algorithmicdo~}
+\newcommand\Head[1]{\Comment{ {\it #1} ~~}}
 
-A prominant example for the impedance between high-level description and
-low-level implementation can be seen in high-performance dynamic programming algorithms.
-These programs are mostly memory-bound, so efficient utilization of memory
-caches is crucial to achieving good performance, sometimes resulting in $10\times$
-speedup, which can make the difference between feasible and infeasible.
+Software synthesis aims to close the gap between descriptions of software components, such as algorithms and systems, and their implementations as computer programs. Dynamic Programming (DP) algorithms offer a prominent example of how large this gap can be. For instance, consider  
+\Cref{intro:naive}, which correspond to the well known DP algorithm to compute the optimal parenthesization for a chain of matrix multiplications. 
+
+The algorithm computes an $n\times n$ region of a DP table $G$ via a simple row-major order. This algorithm is simple, but a direct C implementation of it will be 
+$50\times$ slower than the best manually optimized implementation. 
+One reason for this poor performance is the high rate of cache misses incurred by reading the ranges $G_{ik}$ and $G_{kj}$, $i<k<j$, repeatedly for every iteration of the loops on $i$ and $j$. Memory reads dominate the running time of this algorithm, so high speedups can be gained by localizing memory access.
+
 
 \begin{algorithm}[t]
+\renewcommand\arraystretch{1.3}
 \begin{algorithmic}
-  \For{$i=n..1$}
-    \For{$j=i..n$}
+  \ForLine{$i=1..n$}  $G_{i(i+1)} := x_i$    \Head{Initialize}
+  \For{$i=(n-2)..0$}          \Head{Compute}
+    \For{$j=(i+2)..n$}
       \State $G_{ij} := \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
     \EndFor
   \EndFor
@@ -28,22 +26,15 @@ speedup, which can make the difference between feasible and infeasible.
    A na\"ive loop implementation}
 \end{algorithm}
 
-%# and are usually accompanied by an intended
-% language of programs through a grammar (cite SyGuS) or a skeleton (cite Sketch).
 
-To give an idea, the loop in \Cref{intro:naive} computes an $n\times n$
-region of a DP table $G$ via a simple row-major order. This order is
-loyal to the dependencies between different elements of $G$, but
-performs rather poorly due to a high rate of cache misses incurred by
-reading the ranges $G_{ik}$ and $G_{kj}$, $i<k<j$, repeatedly for every
-iteration of the loops on $i$ and $j$.
-The state-of-the-art solution to this problem uses a \newterm{divide and conquer}
-approach, that will be explained shortly. An excerpt of the pseudo-code for such
-an implementation is shown in \Cref{intro:divide-and-conquer}.
+The state-of-the-art implementation uses a \newterm{divide and conquer} approach both to improve memory performance and to increase the asymptotic degree of parallelism~\cite{IPDPS15/Tithi}. An excerpt of the pseudo-code for such an implementation is shown in \Cref{intro:divide-and-conquer}. In the optimized version, the programmer has to determine a number of low-level details, including the correct order of calls---some of which can be run in parallel---as well as some rather involved index arithmetic. When implemented in C++, the full version is, in fact, more than ten times longer than the na\"ive one and considerably more complicated. It is also much more difficult to verify, since the programmer would have to provide invariants and contracts for a much larger set of loops and possibly recursive functions. Parallelism only adds to the complexity of this task.
+
+
 
 \begin{algorithm}[b!]
+\fontsize{9}{10}   % being sneaky!
 \begin{algorithmic}
-  \State A[$1..n$], ~where:
+  \State A[$1..n$], ~where: \hfill{\normalsize (\textit{snippet})}
   \Procedure{A{\larger{[}}$s..e${\larger{]}}}{}
 	\If{$e-s < b$}
 	  \For{$i=e..s$}
@@ -51,6 +42,7 @@ an implementation is shown in \Cref{intro:divide-and-conquer}.
 	      \State $G_{ij} := \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
 	    \EndFor
 	  \EndFor
+    \vspace{-5pt}
 	\Else
 	  \State A$\big[ s..\floor{\frac{s+e}{2}} \big]$
 	  \State A$\big[ \floor{\frac{s+e}{2}}{+}1..e \big]$
@@ -72,69 +64,49 @@ an implementation is shown in \Cref{intro:divide-and-conquer}.
   \EndProcedure
 \end{algorithmic}
 \caption{\label{intro:divide-and-conquer}
-   An optimized divide-and-conquer version (\textit{snippet})}
+   An optimized divide-and-conquer version}
 \end{algorithm}
 
-It is easy enough to see that the optimized version requires a high level of
-sophistication and a large amount of low-level details, e.g. recursive procedures,
-the correct order in which calls should be made, and rather involved index
-arithmetics. The full version is, in fact, more than ten times longer than the
-na\"ive one and immeasurably more complicated. We present an approach that addresses
-the high impedance between these versions, making the transition between the na\"ive
-and the optimal easier and more manageable, without sacrificing performance and while
-providing strong correctness guarantees.
 
-\coa{not sure this paragraph applies here anymore}
-There are two broad categories of software synthesis techniques: 
-\emph{inductive} approaches, which generalize from concrete values or execution traces, and \emph{deductive} approaches, which derive an implementation from a specification through deductive reasoning steps. Inductive synthesis has been the focus of renewed interest thanks to the discovery of techniques that leverage SAT/SMT solvers to symbolically represent and search very large spaces of possible programs~\cite{APLAS09/Solar-Lezama, PLDI11/Gulwani, Onward13/Torlak}, and the use of counterexample-guided inductive synthesis (CEGIS), which allows one to leverage inductive techniques to find programs that satisfy more general specifications. Deductive techniques, however, still hold some important advantages over inductive approaches; in particular, their scalability is not limited by the power of a checking oracle, because the correctness of the implementation is guaranteed by construction.
 
-\begin{figure}
-  \centering
-  \begin{tikzpicture}[
-      h/.style={minimum height=1.75em}, 
-      tallh/.style={minimum height=3.1em}, 
-      doubleh/.style={minimum height=3.5em+2mm}, 
-      fullw/.style={minimum width=5cm}, 
-      halfw/.style={minimum width=2.4cm},
-      75w/.style={minimum width=1.15cm},
-      every node/.style={align=center}]
-    \node[draw, h, fullw](tae) {Tactic Application Engine};
-    \node[draw, h, fullw, above=2mm of tae](dp) {Divide-and-Conquer Tactic Library};
-    \node[draw, tallh, halfw, below=2mm of tae.south west, anchor=north west](verif) {Verifier \\ {\small (SMT)}};
-    \node[draw, tallh, halfw, below=2mm of tae.south east, anchor=north east](comp) {Compiler \\ {\small (C++, cilk)}};
-    \draw (dp.south) -- (tae.north);
-    \draw (tae.south -| verif.north) -- (verif.north);
-    \draw (tae.south -| comp.north) -- (comp.north);
-    
-    \node[draw, doubleh, left=4mm of dp.north west, anchor=north east](ui) {Frontend \\ UI};
-    \draw (dp.west) -- (dp.west -| ui.east);
-    \draw (tae.west) -- (tae.west -| ui.east);
-    
-    \node[draw, tallh, right=4mm of comp](exe) {Exec. \\ Code};
-    \draw[double] (comp) -- (exe);
-  \end{tikzpicture}
-\caption{\label{intro:design}
-  Overall design of Bellmania.}
-\end{figure}
 
-%In this paper, we present a new approach to interactive deductive synthesis based on \emph{solver-aided tactics} that preserves the benefits of deductive synthesis techniques but reduces the burden on the user by relying on two important innovations: (a) the use of inductive synthesis to discover important details of the low-level steps needed to achieve a transformation, (b) the use of a type system based on predicate abstraction (liquid types) that associates semantic information with program terms, enabling automated verification of the validity of a transformation. Both of these innovations rely on aggressive use of SMT solvers to discharge complex proof obligations that would otherwise have to be discharged interactively with significant manual effort. 
+In this paper, we present a new system called Bellmania\footnote{Named so as a tribute to Richard Bellman.}, which allows an expert to interactively generate parallel divide-and-conquer implementations of dynamic programming algorithms, which are provably correct relative to a high-level specification of the code in \Cref{intro:naive}. We show that the resulting implementations are, on average, $16\times$ faster than the original versions and within $22\%$ from a high-performance hand crafted implementation, with speedups as high as $46\times$.
+Their structure will also make them \newterm{cache oblivious}~\cite{FOCS99/Frigo} and \newterm{cache adaptive}~\cite{SODA14/Bender}, just like the hand crafted implementations are.
 
-In this paper, we describe the Bellmania\footnote{Named after Richard Bellman.} system (\Cref{intro:design}), which contains a generic
-core --- called the \newterm{Tactic Application Engine} ---
-on top of which a library of \newterm{tactics} specific to dynamic programming
-is built. The library contains enough tactics to successfully develop a
-family of problems, so that the user of the system does not need to change
-or extend the library; the user only applies tactics by issuing commands
-through a GUI and watching the program evolve. The TAE has a back-end that
-verifies conjectures, and is in charge of making sure that
-tactic applications represent valid rewritings of the program. Finally, the
-programs created this way are transferred to a compilation back-end, where
-some automatic static analysis is applied and then executable code is
-emitted.
 
-%We believe the approach has the potential to be generally applicable to a variety of synthesis problems, but in this paper, we focus on a particular domain of \emph{divide-and-conquer dynamic programming} algorithms. Specifically, we have developed a system called \emph{Bellmania} that uses solver-aided tactics specialized for this domain to help an algorithm designer derive divide-and-conquer dynamic programming algorithms from a high-level specification. 
-As we illustrate in the next section, the domain of divide-and-conquer dynaming programming is challenging not just as a synthesis target, but also for human experts. Therefore, in addition to serving as a test bed for a new synthesis approach and design, the development of Bellmania is a significant achievement in itself,
-allowing the developments of implementations for more algorithms of this class.
+Bellmania is a deductive synthesis system in the tradition of systems like Kids~\cite{TSE90/Smith}, and more recently Fiat~\cite{POPL15/Delaware}. 
+These systems derive an implementation from a specification in a correct-by-construction manner by applying a sequence of deductive reasoning steps. Thanks to the correct-by-construction approach, the potentially complex final artifact does not have to be independently verified, making the approach ideal for potentially complex implementations like the ones we target. 
+
+Traditionally, the major shortcoming of deductive synthesis has been the effort required of the user in order to guide the derivation process towards a correct solution. In this work, we reduce this effort using three core techniques. 
+First, we show that a small number of domain specific tactics, combined with a new notation to jointly describe the specification and the implementation, can enable the derivation to be described succinctly at a high-level of abstraction. Secondly, we show the value of incorporating an SMT solver into the derivation process; in particular, we can afford to use tactics that are only correct when some side conditions hold, where these conditions are potentially complex logical assertions, without having to burden the user with proving those premises. Finally, we show that by incorporating \emph{solver-based inductive synthesis},
+which generalizes from concrete values and execution traces, into the derivation process, we can automate away many low-level decisions, allowing for shorter, simpler derivations. We use the term \emph{solver-aided tactics} to refer to this combination of solver-based inductive synthesis and solver-checked premises within a tactic.
+
+Overall, the paper makes the following contributions. 
+\begin{itemize}
+\item A new formalism used to describe a wide class of dynamic programming algorithms, capable of bridging the gap between the high-level specification and the divide-and-conquer implementation of them.
+
+\item An interesting application of refinement types for tracking dependencies between sub-computations, making it possible to automatically generate parallel implementations from it.
+
+\item The idea of using \emph{solver-aided tactics}, demonstrating their applicability and utility in the derivation of divide-and-conquer dynamic programming implementations. 
+
+\item A suite of solver-aided tactics for dynamic programming and an overview of the proofs of their soundness, assuming only the soundness of the underlying SMT solver. 
+
+\item A description of Bellmania, the first system capable of generating provably correct implementations of di\-vide-and-conquer dynamic programming. Our evaluation shows that the code it generates is comparable to manually tuned implementations written by experts in terms of performance.
+\end{itemize}
+
+Dynamic Programming is central to many important domains ranging from logistics to computational biology --- e.g.,~a recent textbook \cite{DurbinEdKr98} lists 11 applications of DP in bioinformatics just in its introductory chapter, with many more in chapters that follow. Increasing performance and reliability of DP implementations can therefore have significant impact. More generally, we believe that this work serves as an important test case for a new approach to combining inductive and deductive synthesis which could have an impact beyond this domain. 
+
+
+
+%==============================================
+
+
+
+%In this paper, we present a new approach to interactive deductive synthesis based on \emph{solver-aided tactics} that preserves the benefits of deductive synthesis techniques but reduces the burden on the user by relying on two important innovations: (a) the use of inductive synthesis to discover important details of the low-level steps needed to achieve a transformation, (b) the use of a type system based on predicate abstraction (liquid types) that associates semantic information with program terms, enabling automated verification of the validity of a transformation. Both of these innovations rely on extensive use of SMT solvers to discharge complex proof obligations that would otherwise have to be discharged interactively with significant manual effort. 
+
+
+\begin{comment}
+
 
 Our work on solver-aided tactics builds on prior work on the StreamBit project~\cite{PLDI05/Solar-Lezama}, which
 introduced the idea of transformation rules with missing details that can be inferred by a symbolic search procedure, as
@@ -145,8 +117,9 @@ typing in the context of deductive synthesis:
 (b) The solver can prove validity of side conditions that ensure the soundness of each individual transformation, 
 (c) the tactics can leverage information from \newterm{logically qualified types} in the program in
     order to guide the transformation. 
-The flexibility of being able to rely on the solver to check the validity of transformations means that we do not have to be conservative when checking if a transformation can be applied.
-In addition, the reliance on the synthesizer to fill in parameters and proof details means that the user has to type less and has less chance for error.
+Being able to rely on the solver to check the validity of transformations gives greater flexibility when designing such transformations. 
+It means that we do not have to be conservative when stating preconditions.
+In addition, the reliance on the synthesizer to fill in parameters and proof details means that the user has to type less and has fewer chances to make mistakes.
 
 Overall, we make the following contributions.
 \begin{itemize}
@@ -161,6 +134,13 @@ Overall, we make the following contributions.
   at the point when the tactic is applied.
 \item We show that the side conditions can be effectively translated into first-order closed
   formulas, and verified automatically by SMT solvers.
-\item We demonstrates the first system capable of generating provably correct implementations of divide-and-conquer implementations from a high-level description of the algorithm. 
+\item We demonstrate the first system capable of generating provably correct implementations of divide-and-conquer implementations from a high-level description of the algorithm. 
 \item We measure the performance of automatically generated code and show that it is comparable to manually tuned reference implementations written by experts.
 \end{itemize}
+
+
+\end{comment}
+
+
+%We believe the approach has the potential to be generally applicable to a variety of synthesis problems, but in this paper, we focus on a particular domain of \emph{divide-and-conquer dynamic programming} algorithms. Specifically, we have developed a system called \emph{Bellmania} that uses solver-aided tactics specialized for this domain to help an algorithm designer derive divide-and-conquer dynamic programming algorithms from a high-level specification. 
+

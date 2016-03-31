@@ -1,30 +1,16 @@
 \section{Overview}
 \label{overview}
 
-Most readers are likely familiar with the Dynamic Programming (DP) technique of Richard Bellman~\cite{03/Bellman:DP} to construct an optimal solution to a problem by combining together optimal solutions to many overlapping sub-problems. The key to DP is to exploit the overlap in order to explore otherwise exponential-sized problem spaces in polynomial time. Dynamic programs are usually described through recurrence relations that specify how the cells in a DP table must be filled using solutions already computed for other cells, but recent research has shown that it is possible to achieve order-of-magnitude performance improvements over this standard implementation approach by developing \emph{divide-and-conquer}  implementation strategies that recursively
-partition the space of subproblems into smaller subspaces (see, e.g., \cite{IPDPS15/Tithi}).   For example, Tithi \etal{} have shown that for classical DP problems such as Floyd-Warshall, the parallel divide-and-conquer implementation is  8x faster  across a range of problem sizes compared with a parallel tiled implementation thanks to the better temporal locality and the additional optimization opportunities exposed by partitioning~\cite{IPDPS15/Tithi}. These performance differences matter because  DP is central to many important domains ranging from logistics to computational biology; as an illustrative example, a recent textbook \cite{DurbinEdKr98} on biological sequence analysis lists 11 applications of DP in bioinformatics just in its introductory chapter, with many more in chapters that follow. 
+Most readers are likely familiar with the Dynamic Programming (DP) technique of Richard Bellman~\cite{03/Bellman:DP} to construct an optimal solution to a problem by combining together optimal solutions to many overlapping sub-problems. The key to DP is to exploit the overlap and reuse computed values to explore exponential-sized solution spaces in polynomial time. Dynamic programs are usually described through recurrence relations that specify how to decompose sub-problems, and is typically implemented using a DP table where each cell holds the computed solution for one of these sub-problems. The table can be filled by visiting each cell once in some predetermined order, but recent research has shown that it is possible to achieve order-of-magnitude performance improvements over this standard implementation approach by developing \emph{divide-and-conquer}  implementation strategies that recursively
+partition the space of subproblems into smaller subspaces~\cite{IPDPS15/Tithi,SODA14/Bender,SODA06/Chowdhury,SPAA08/Chowdhury,TOCS10/Chowdhury,TCBB10/Chowdhury}. 
 
-\newcommand{\xidx}{i}
-\newcommand{\yidx}{j}
-\newcommand{\xw}[1]{w^x_{#1}}
-\newcommand{\yw}[1]{w^y_{#1}}
-
-%To set up the premises, we are going to explain how an algorithms expert---we will call him Richard---would go about designing such an implementation by hand.
-%We will then show how he will be able to do it more easily using Bellmania.
-
-To illustrate the key concepts undelying Bellmania, we will walk through the first
-few steps that an algorithms expert --- whom we will call Richard --- would follow to
-generate a provably correct divide-and-conquer implementation of a DP algorithm.
-The code in \Cref{intro:naive} is (part of) a program to compute the recurrence
-shown in \Cref{overview:paren spec}. This recurrence represents a solution
-for the Parenthesis Assignment Problem, which we will use as a motivating example:
-given a sequence $a_0\!\cdots a_{n-1}$
-of factors, find a minimal-cost placement of parenthesis in the product expression
-assuming that multiplication is associative (but not commutative), that the cost
+Before delving into how Bellmania supports the process of generating such an implementation, it is useful to understand how a traditional iterative implementation works. For this, we will use the 
+optimal parenthesization algorithm from the introduction (\Cref{intro:naive}). The problem description is as follows: given a sequence of factors $a_0\!\cdots a_{n-1}$, 
+the goal is to discover a minimal-cost placement of parentheses in the product expression
+assuming that multiplication is associative but not commutative. The cost
 of reading $a_i$ is given by $x_i$, and that the cost for multiplying
-$\Pi(a_{i..(k-1)})$ by $\Pi(a_{k..(j-1)})$ is given by $w_{ikj}$.
-The element $G_{ij}$ is then the lowest cost for parenthesizing $a_{i..(j-1)}$,
-with $G_{0n}$ being the overall optimum.
+$\Pi(a_{i..(k-1)})$ by $\Pi(a_{k..(j-1)})$ is given by $w_{ikj}$. The specification of the algorithm is shown in \Cref{overview:paren spec}; 
+the values $x_i$ and  $w_{ikj}$ are inputs to the algorithm, and the output is a table $G$, where each element $G_{ij}$ is the lowest cost for parenthesizing $a_{i..(j-1)}$, with $G_{0n}$ being the overall optimum.
 
 \begin{figure}[b]
 \begin{tabular}{@{\hspace{-4pt}}r@{~}l@{}}
@@ -34,8 +20,10 @@ with $G_{0n}$ being the overall optimum.
   \draw[black!25!white] (\n,1) |- (0,0) |- (1,\n);
   \draw (\n,1) -- (\n,\n) -- (1,\n);
   \foreach \i [evaluate=\i] in {2-1,...-1,\n-1} {
-    \draw[black!25!white] (0,\i) -- (\n-\i,\i); \draw (\n,\i) -- (\n-\i,\i); 
-    \draw[black!25!white] (\i,0) -- (\i,\n-\i); \draw (\i,\n) -- (\i,\n-\i);
+    \draw[black!25!white] (0,\i) -- (\n-\i,\i); 
+    \draw[black!25!white] (\i,0) -- (\i,\n-\i); 
+    \draw (\n,\i) -- (\n-\i,\i); 
+    \draw (\i,\n) -- (\i,\n-\i);
   }
   %\draw[step=1] (0,0) grid (6,6);
   \draw[ultra thick] (5,5) rectangle +(1,1);
@@ -55,8 +43,8 @@ $
 	G_{ij} ~=~ \\
 	~
 	\begin{cases}
-		~~x_i                        & i+1=j \\
-	    \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj} & i+1<j
+		~~x_i                        & i{+}1=j \\
+	    \underset{i<k<j}\min ~ G_{ik} {+} G_{kj} {+} w_{ikj} & i{+}1<j
 	\end{cases}
 \end{array}
 $
@@ -66,32 +54,16 @@ $
 \end{figure}
 
 \begin{paragraph}{Iterative Algorithm.}
-Using a standard dynamic programming method, our algorithm expert Richard would compute this recurrence
+Using the standard dynamic programming method, anyone who has  read \cite{09/CLRS} would compute this recurrence
 with an iterative program by understanding the dependency pattern:
 to compute the $\min_{i<k<j}(\cdots)$ expression in \Cref{overview:paren spec}
 the algorithm needs to enumerate $k$ and gather information from all cells below and to the left of $G_{ij}$.
 In particular, each value $G_{ij}$ is computed from other values $G_{i'j'}$ with higher
-row indexes $i'>i$ and lower column indexes ~$j'<j$. 
+row indexes $i'>i$ and lower column indexes $j'<j$. 
 Therefore, considering $G$ as a two-dimensional array, it can be filled in a single sweep from left to right and from bottom
-to top, as done in \Cref{overview:iterative}.
+to top, as done in \Cref{intro:naive}.
 \end{paragraph}
 
-\newcommand\ForLine[1]{\State\algorithmicfor~{#1} \algorithmicdo~}
-\newcommand\Head[1]{\Comment{ {\it #1} ~~}}
-
-\begin{algorithm}
-\renewcommand\arraystretch{1.3}
-\begin{algorithmic}
-  \ForLine{$i=1..n$}  $G_{(i+1)i} := x_i$    \Head{Initialize}
-  \For{$i=(n-2)..0$}          \Head{Compute}
-    \For{$j=(i+2)..n$}
-      \State $G_{ij} := \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
-    \EndFor
-  \EndFor
-\end{algorithmic}
-\caption{\label{overview:iterative}
-   Iterative Parenthesis}
-\end{algorithm}
 
 
 
@@ -103,19 +75,31 @@ to top, as done in \Cref{overview:iterative}.
 \algrenewtext{Procedure}{\hspace{-3mm}{\bf procedure}~}  % hack to make proc header slighly less indented
 
 \begin{paragraph}{Divide-and-Conquer Algorithm.}
+To illustrate the main concepts underlying Bellmania and the key ideas in deriving divide-and-conquer implementations, 
+we will walk through the first
+few steps that an algorithms expert --- whom we will call Richard --- would follow using Bellmania to generate a provably correct divide-and-conquer implementation of the optimal parenthesization algorithm.
+
+In the Bellmania development model, Richard will start with the specification from \Cref{overview:paren spec}, and progressively manipulate it to get the specification in a form that reflects the recursive structure of the divide-and-conquer implementation. At any step in the transformation, Bellmania can generate code from the partially transformed specification. Code generated from the initial specification will yield an implementation like \Cref{intro:naive}, whereas generating code from the fully transformed specification will yield the divide-and-conquer implementation that we want.
+In the rest of the text, we will use the term \newterm{program} to refer to any of the partially transformed specifications.
+
+
+
 
 \begin{figure}
 \centering
 \begin{tabular}{c@{\hspace{.5in}}c}
 \begin{tikzpicture}[baseline=(n/2), q/.style={font=\relsize{1.3}}, pale/.style={color=black!25!white}]
-  \draw (0,2) -- (2,2) -- (2,0);
-  \foreach \i in {0,1} {
-    \draw[pale] (\i,0) -- (\i, 1-\i); \draw (\i,2) -- (\i, 1-\i);
-    \draw[pale] (0,\i) -- (1-\i, \i); \draw (2,\i) -- (1-\i, \i);
-  }
-  %\draw (0,0) grid (2,2);
+  % this code draws a grid with the bottom-left paler
+  %\draw (0,2) -- (2,2) -- (2,0);
+  %\foreach \i in {0,1} {
+  %  \draw[pale] (\i,0) -- (\i, 1-\i); \draw (\i,2) -- (\i, 1-\i);
+  %  \draw[pale] (0,\i) -- (1-\i, \i); \draw (2,\i) -- (1-\i, \i);
+  %}
+  % but this might be confusing. let's just paint
+  % a regular 2x2 grid
+  \draw (0,0) grid (2,2);
   \node[q] at (.5,1.5) {1};   \node[q] at (1.5,1.5) {2};
-  \node[q,pale] at (.5, .5) {3};   \node[q] at (1.5, .5) {4};
+  \node[q] at (.5, .5) {3};   \node[q] at (1.5, .5) {4};
   \node(O)[above left] at (0,2) {$0$};
   \node(m/2)[above] at (1,2) {$\frac{n}{2}$};
   \node(m)[above] at (2,2) {$n$};
@@ -136,45 +120,31 @@ to top, as done in \Cref{overview:iterative}.
   \draw (O.south west |- n.160) -- (O.south west |- n/2.220);
 \end{tikzpicture}
 & 
-$\begin{array}{l}\qbox1 \rightsquigarrow \qbox2 \\
-\qbox4 \rightsquigarrow \qbox2 \end{array}$
+$\begin{array}{l}
+  \qbox2 \mbox{\textit{ depends on }} \qbox1 \\[2pt]
+  \qbox2 \mbox{\textit{ depends on }} \qbox4 \\ 
+  \\
+  (\,\qbox3\mbox{\textit{ is empty}})
+\end{array}$
 \end{tabular}
 \vspace{5pt}
 \caption{\label{overview:quadrants}
-  Dividing a two-dimensional array into quadrants; the dependencies are shown on the right.}
+  Dividing a two-dimensional array into quadrants; the dependencies for the case of the running example are shown on the right.}
 \end{figure}
 
-Divide-and-conquer is a common algorithm development pattern (\cite{09/CLRS}, chapter 4) that has recently
-been applied to DP \cite{SODA06/Chowdhury,SPAA08/Chowdhury,TOCS10/Chowdhury,TCBB10/Chowdhury}.
-This approach has the benefit of yielding cache-oblivious implementations by
-increasing memory locality while preserving parallelism. With divide-and-conquer,
-the DP table is partitioned into regions, and each region is expressed as a sub-problem
-to be solved.
 
-We will now describe how Richard approaches the running example using Bellmania.
-He would like to partition the two-di\-men\-sio\-nal array $G$ into
-quadrants, as illustrated in \Cref{overview:quadrants}.
-In Bellmania, this is accomplished by applying the {\sf Slice} tactic,
-illustrated graphically at the top of \Cref{overview:slice-stratify-synth}.
-{\em Tactics} are transformation steps that manipulate the program,
-and represent a high-level refinement concept.
-In order to escape the need to reason about concrete array indices,
-Bellmania provides an abstract view where
-the partitions are labeled $J_0,J_1$. The table is square, so these
-designate both row and column index ranges.
-Due to the structure of the problem, namely $i\!<\!j$, it turns out that
-the bottom-left quadrant (\qbox3 in the figure) is empty.
-Slicing therefore produces three partitions, transforming the specification
-as shown in \Cref{overview:logical-slice-stratify}({\it i}).
-\coa{should be noted that the base case of the recurrence is skipped here; rationalize later?}
+\Cref{overview:slice-stratify-synth} provides a visual description of the initial stages of the transformation process. The figure includes block diagrams illustrating how the program at a given stage in the transformation will compute its output table from its input. For example, the first row corresponds to the program before any transformations take place, i.e.~the initial specification. At this stage, the program involves a single loop nest that reads from the entire array and writes to the entire array; solid arrows in the diagram denote data dependency. The transformation from one stage to the next, the dashed arrows, is performed by the application of  \newterm{tactics} that represent a high-level refinement concept. 
 
-Following the same reasoning as in the iterative case, computing \qbox1
+As a first step in the transformation, Richard would like to partition the two-di\-men\-sio\-nal array $G$ into quadrants, as illustrated in \Cref{overview:quadrants}. In Bellmania, the partition is accomplished by applying the {\sf Slice} tactic, illustrated graphically at the top of \Cref{overview:slice-stratify-synth}. In order to escape the need to reason about concrete array indices, Bellmania provides an abstract view where
+the partitions are labeled $J_0,J_1$. The effect of {\sf Slice} is shown in text in \Cref{overview:logical-slice-stratify}$(a)$ --- the figure trades accuracy for succinctness by omitting the base case of the recurrence for now. Due to the structure of the problem, namely $i\!<\!j$, 
+the bottom-left quadrant (\qbox3 in \Cref{overview:quadrants}) is empty.
+Slicing therefore produces only three partitions.
+
+
+The computation of \qbox1
 (the top-left quadrant)
-does not depend on any of the other computations. Richard applies the
-{\sf Stratify} tactic, which encodes exactly this intuition: it separates
-an independent computation step as a separate loop and enforces an order
-on the computations.
-This is equivalent to rewriting the specification as in \Cref{overview:logical-slice-stratify}({\it ii}):
+does not depend on any of the other computations, so Richard applies the
+{\sf Stratify} tactic, which separates an independent computation step as a separate loop. This is equivalent to rewriting the specification as in \Cref{overview:logical-slice-stratify}({\it b}):
 the first computation is given a special name $G^{\tinyqbox1}$, then the following
 computations read data either from $G^{\tinyqbox1}$ (when the indices are in \qbox1)
 or from $G$ (otherwise), which is denoted by $G^{\tinyqbox1}\!/G$. The ``$/\,$'' operator
@@ -182,25 +152,25 @@ is part of the Bellmania language and will be defined formally in \Cref{lang}.
 Bellmania checks the data dependencies and verifies that the transformation
 is sound.
 
-Repeating {\sf Stratify} would result in a three-step computation
-as seen in \Cref{overview:chain}, from which Richard can obtain the program in \Cref{overview:breakdown}
-(only the first two steps are shown; remaining steps are analogous).
-This already gives some performance gain, since the computations \qbox1 and \qbox4
-can now run in parallel. However, this is not Richard's goal;
-so he continues to refine this procedure ``A'' towards
-a recursive divide-and-conquer algorithm.
+Repeating {\sf Stratify} results in a three-step computation,
+as seen in \Cref{overview:slice-stratify-synth}$(c)$, from which Richard can obtain the program in \Cref{overview:breakdown}.
+This already gives some performance gain, since computations of \qbox1 and \qbox4 can now run in parallel.
+Bellmania is capable of sound reasoning about parallelism, using knowledge encoded
+via types of sub-terms, showing that two threads are race-free when they work on different regions
+of the table.
+This is handled automatically by the code generator.
 \end{paragraph}
 
 
 \begin{figure}
 \[\renewcommand\arraystretch{1.3}
   \begin{array}{@{}l@{}}
-    \textsf{Slice} \quad i,j:\langle J_0\times J_0 | J_0\times J_1 | J_1\times J_1\rangle     \hfill (i)\\
+    \textsf{Slice} \quad i,j:\langle J_0\times J_0 \,|\, J_0\times J_1 \,|\, J_1\times J_1\rangle     \hfill (a)\\
     ~~\forall i,j\in\qbox1.~ G_{ij} = \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj} \\
     ~~\forall i,j\in\qbox2.~ G_{ij} = \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj} \\
     ~~\forall i,j\in\qbox4.~ G_{ij} = \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj} \\
     %
-    \textsf{Stratify} ~ \qbox1 \hfill (ii)\\
+    \textsf{Stratify} ~ \qbox1 \hfill (b)\\
     %
     ~~\forall i,j\in\qbox1.~ G^{\tinyqbox1}_{ij} = \underset{i<k<j}\min ~ G^{\tinyqbox1}_{ik} + G^{\tinyqbox1}_{kj} + w_{ikj} \\
     ~~\forall i,j\in\qbox2.~ G_{ij} = \underset{i<k<j}\min ~ (G^{\tinyqbox1}\!/G)_{ik} + (G^{\tinyqbox1}\!/G)_{kj} + w_{ikj} ~~ \\
@@ -215,43 +185,24 @@ a recursive divide-and-conquer algorithm.
 \newcommand\steparrowwidth{3mm}
 \newcommand\steparrow{\includegraphics[width=\steparrowwidth]{img/arrow}}
 
-\begin{figure}
-\centering
-\ifarmando
-\bigskip(missing figure)\bigskip
-\else
-\input{gfx/overview-chain}
-\fi
-\caption[caption]{\label{overview:chain}
-  Stratified computation for Parenthesis. \\[.2em]
-  The array is initially empty except for the hatched area that is
-  filled by {\it Initialize}.
-  Shaded areas indicate the region that is read at each step.
-  The arrows point at the quadrant that is written to. }
-\end{figure}
-
-\newcommand\applytactic[1]{{\tt >} \sf #1}
-\newcommand\applytacticnode[1]{\node[right,align=left] at (3,1) {\applytactic{#1}}}
-
-
-\begin{algorithm}
+\begin{algorithm}[b]
 \renewcommand\arraystretch{1.3}
 \begin{algorithmic}
 \Procedure{A{\larger{[}}$G${\larger{]}}}{}\EndProcedure
-  \For{$i=n..0 \cap J_0$}    \Head{Compute \qbox1}
-    \For{$j=(i\!+\!2)..n \cap J_0$} 
+  \For{$i=(n{-}2)..0 \cap J_0$}    \Head{Compute \qbox1}
+    \For{$j=(i{+}2)..n \cap J_0$} 
       \State $G_{ij} :=
           \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
     \EndFor
   \EndFor
-  \For{$i=n..0 \cap J_1$}    \Head{Compute \qbox4}
-    \For{$j=(i\!+\!2)..n \cap J_1$} 
+  \For{$i=(n-2)..0 \cap J_1$}    \Head{Compute \qbox4}
+    \For{$j=(i{+}2)..n \cap J_1$} 
       \State $G_{ij} :=
           \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
     \EndFor
   \EndFor
-  \For{$i=n..0 \cap J_0$}    \Head{Compute \qbox2}
-    \For{$j=(i\!+\!2)..n \cap J_1$}
+  \For{$i=(n{-}2)..0 \cap J_0$}    \Head{Compute \qbox2}
+    \For{$j=(i{+}2)..n \cap J_1$}
       \State $G_{ij} :=
           \underset{i<k<j}\min ~ G_{ik} + G_{kj} + w_{ikj}$
     \EndFor
@@ -272,40 +223,26 @@ a recursive divide-and-conquer algorithm.
 
 \begin{figure}
 \centering
-\ifarmando
-\bigskip(missing figure)\bigskip
-\else
 \input{gfx/overview-slice-stratify-synth}
-\fi
 \caption[caption]{\label{overview:slice-stratify-synth}
-  Overview of tactic semantics in Bellmania. }
+  Overview of tactic semantics in Bellmania.}
 \end{figure}
 
 
 \medskip
-At this point, Richard notices that {\it \qbox1} is just a smaller version of
+At this point, Richard notices that $G^{\tinyqbox1}$ is just a smaller version of
 the entire array $G$; he invokes another tactic called {\sf Synth}, which automatically
-synthesizes a recursive call A\big[$G^{\qbox1}$\big]
+synthesizes a recursive call A\big[$G^{\tinyqbox1}$\big]
 (presented using abstract index ranges as $A^{J_0}$).
 
-Similarly, {\it \qbox4} is a smaller version of $G$, this time with
+Similarly, $G^{\tinyqbox4}$ is also a smaller version of $G$, this time with
 indices from $J_1$. {\sf Synth} figures it out automatically as well,
-synthesizing a call A\big[$G^{\tinyqbox4}$\big]. The computation of
-\qbox2 is essentially different, so Richard gives it a new name, ``B'',
-which becomes a new synthesis task.
+synthesizing a call A\big[$G^{\tinyqbox4}$\big]. The remaining part,
+$G^{\tinyqbox2}$, is essentially different, so Richard gives it a new name, ``B'',
+which becomes a new synthesis task.%
+\footnote{Richard's choice of names is consistent with the literature.}
 
-Applying the same strategy will eventually lead Richard to further
-break down and transform the computation of B into four recursive
-sub-computations, 
-further improving the locality of the resulting algorithm until
-a true divide-and-conquer solution is obtained.
-And finishing the development, Bellmania generates code for
-all procedures encountered through it. In this case, three recursive procedures
-are generated. The base case of the recursion is when the region
-becomes small enough to just run the loop version.\footnote{The auto-tuning step is not implemented in the current version.}
-
-
-\begin{algorithm}
+\begin{algorithm}[b]
 \renewcommand\arraystretch{1.3}
 \begin{algorithmic}
 \Procedure{A{\larger{[}}$G${\larger{]}}}{}\EndProcedure
@@ -320,27 +257,102 @@ becomes small enough to just run the loop version.\footnote{The auto-tuning step
    Parenthesis --- Recursive Version}
 \end{algorithm}
 
+
+Applying the same strategy will eventually lead Richard to further
+break down and transform the computation of B into multiple recursive
+sub-computations, %\rch{B makes eight recursive function calls to update the four quadrants. So it reduces to eight recursive sub-computations, right?}, 
+further improving the locality of the resulting algorithm until
+a true divide-and-conquer solution is obtained.
+Bellmania generates code for
+all procedures encountered throughout the development. In this case, three recursive procedures
+are generated. The base case of the recursion is when the region
+becomes small enough to just run the loop version.\footnote{The optimal  base case size of the region can be found by auto-tuning (taken as an input in the current version of the compiler)}
+
 As is well illustrated by the example, this line of reasoning can get quite complicated for most dynamic programming algorithms, 
 and producing a correct divide-and-conquer algorithm for a given dynamic programming problem is considered quite difficult even by the researchers who originally pioneered the technique. 
-Fortunately, the reasoning can be mechanized in Bellmania, which allows
-Richard and other algorithm designers to produce an implementation of this algorithm
-as well as a {\bf machine-checked proof} of correctness
-through a series of high-level tactic application.
+Fortunately, Bellmania is able to mechanize most of the technical details,
+allowing Richard and other algorithm designers to focus on their area of expertise,
+try different strategies,
+and eventually produce a \emph{certified} implementation of the algorithm.
 
-Overall, it took Richard only about 10 steps to construct \Cref{overview:recursive-A},
-and a total of 26 steps to construct all three steps of the Simplified Arbiter,
-comprising an implementation that is 10$\times$ faster than a parallel
-\Cref{overview:iterative} generated by a state-of-the-art parallelizing compiler.
-The user is greatly assisted by tactics like {\sf Synth}, that carry out the monotonic
+Overall, it took Richard only 4 steps to construct \Cref{overview:recursive-A},
+and a total of 30 steps to construct all three phases of the Parenthesis algorithm,
+comprising an implementation that is 46$\times$ faster than a parallel implementation of
+\Cref{intro:naive} using a state-of-the-art parallelizing compiler.
+The user is greatly assisted by tactics like {\sf Synth}, which carries out the monotonic
 and error-prone task of choosing the right parameters for each recursive call; also,
 mistakes are identified early in the development thanks to automatic verification,
 saving hours of debugging later on.
+The resulting code is much easier to maintain, because the artifact is not just
+the optimized C++ code, but also the Bellmania specification and the script
+that encodes the optimization strategy.
 
 Once a divide-and-conquer algorithm is found, generating an optimal implementation still requires some additional work, such as finding the right point at which to switch to an iterative algorithm to leverage SIMD parallelism as well as low-level tuning and compiler optimization;
 these steps are performed by more traditional compiler optimization techniques
 as discussed in \Cref{codegen}.
 
-In the following sections, we describe the different components of Bellmania. 
-The system utilizes \newterm{solver-aided tactics} to manipulate a given specification
-and generate provably correct pseudo-code; 
-this approach is demonstrated by engineering specialized tactics for the domain of divide-and-conquer DP.
+
+\subsection*{System Design}
+
+\begin{figure}
+  \centering
+  
+  \begin{tikzpicture}[
+      h/.style={minimum height=1.75em}, 
+      tallh/.style={minimum height=3.1em}, 
+      doubleh/.style={minimum height=3.5em+2mm}, 
+      fullw/.style={minimum width=5cm}, 
+      halfw/.style={minimum width=2.4cm},
+      75w/.style={minimum width=1.15cm},
+      every node/.style={align=center}]
+    \node[draw, h, fullw](tae) {Tactic Application Engine};
+    \node[draw, h, fullw, above=2mm of tae](dp) {\fontsize{9.5}{11}\selectfont Divide-and-Conquer Tactic Library};
+    \node[draw, tallh, halfw, below=2mm of tae.south west, anchor=north west](verif) {Verifier \\ {\small (SMT)}};
+    \node[draw, tallh, halfw, below=2mm of tae.south east, anchor=north east](comp) {Compiler \\ {\small (C++, cilk)}};
+    \draw (dp.south) -- (tae.north);
+    \draw (tae.south -| verif.north) -- (verif.north);
+    \draw (tae.south -| comp.north) -- (comp.north);
+    
+    \node[draw, doubleh, left=4mm of dp.north west, anchor=north east](ui) {Frontend \\ UI};
+    \draw (dp.west) -- (dp.west -| ui.east);
+    \draw (tae.west) -- (tae.west -| ui.east);
+    
+    \node[draw, tallh, right=4mm of comp](exe) {Exec. \\ Code};
+    \draw[double] (comp) -- (exe);
+  \end{tikzpicture}
+\caption{\label{overview:design}
+  Overall design of Bellmania.}
+\end{figure}
+
+The design of the Bellmania system (\Cref{overview:design}) contains a generic
+core --- called the \newterm{Tactic Application Engine} (TAE) ---
+on top of which a library of \newterm{tactics} specific to dynamic programming
+is built. While it is possible to extend the library, it already contains enough tactics to successfully develop algorithms for a
+family of problems, so that the user of the system only needs to apply existing tactics by issuing commands
+through a GUI and watching the program evolve. The TAE has a back-end that
+verifies conjectures, and is in charge of making sure that
+tactic applications represent valid rewritings of the program. Finally, the
+programs created this way are transferred to a compilation back-end, where
+some automatic static analysis is applied and then executable (C++) code is emitted.
+
+The trusted core is small, comprising of: (a) a type checker (see \Cref{lang:types}), 
+(b) a term substitution procedure (see \Cref{tactics}),
+(c) a formula simplifier (see \Cref{automated:simplification}),
+(d) the SMT solver, and
+(e) the compiler.
+
+\begin{figure}
+\begin{transcript}
+Slice (find ($\theta \mapsto {?}$)) ($?$ $\langle J_0\times J_0, J_0\times J_1, J_1\times J_1\rangle$)\\
+Stratify "/" (fixee $\lbox A$) $\lbox A$ $\psi$ \\
+Stratify "/" (fixee $\lbox A$) $\lbox A$ $\psi$ \\
+$\lbox A$ $\lbox B$ $\lbox C$ $\mapsto$ SynthAuto . ... $\psi$
+\end{transcript}
+\caption{\label{overview:script}
+  Bellmania script used to generate \Cref{overview:recursive-A}.}
+\end{figure}
+
+An example for the concrete syntax is shown in \Cref{overview:script}.
+A full listing of the scripts for our running examples,
+as well as screenshots of the UI, can be found
+in \Cref{annex:example:paren}.

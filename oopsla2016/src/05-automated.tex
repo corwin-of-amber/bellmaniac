@@ -1,11 +1,11 @@
-\section{Automated Proofs}
+\section{Automating Proofs}
 
 This section describes the encoding of proof obligations in (many-sorted) first-order logic,
-and the ways by which type information is used in discharging them.
+and the ways in which type information is used in discharging them.
 
 Each base type is associated with a sort. The qualifiers are naturally encoded
 as predicate symbols with appropriate sorts. In the following paragraphs, we
-use a type and its associated sort interchangebly, and the meaning should be clear
+use a type and its associated sort interchangeably, and the meaning should be clear
 from the context.
 
 Each free variable and each node in the formula syntax tree are assigned two
@@ -36,13 +36,13 @@ to first-order logic as
 \begin{paragraph}{First-class functions.}
 When a function is being used as an argument in an application term, 
 we take its arrow type $\T\to\S$ and create a \newterm{faux sort} $F_{\T\to\S}$,
-an operator $@ : F_{\T\to\S}\to\T\to\S$, and the \newterm{extensionality axiom} ---
+an ``apply'' operator $@ : F_{\T\to\S}\to\T\to\S$, and the \newterm{extensionality axiom} ---
 \begin{equation}
 \forall \alpha\alpha'.~ \big(\forall\beta.~ @(\alpha,\beta)=@(\alpha',\beta)\big)\limplies \alpha=\alpha'
 \label{automated:extensionality}
 \end{equation}
 
-And for each such function symbol $f^k:\T\to\S$ used as argument, create its 
+Then for each such function symbol $f^k:\T\to\S$ used as argument, we create its 
 \newterm{reflection} $f^0:F_{\T\to\S}$ defined by
 \begin{equation}
 \forall \overline\alpha.~~@(f^0,\overline\alpha)=f^k(\overline\alpha)
@@ -50,8 +50,8 @@ And for each such function symbol $f^k:\T\to\S$ used as argument, create its
 \end{equation}
 \end{paragraph}
 
-\vspace{-8mm}
 \subsection{Simplification}
+\label{automated:simplification}
 
 When $f$,$g$ of the goal $f=g$, are abstraction terms, the above can be simplified by
 introducing $k$ fresh variables, $\overline x=x_1\cdots x_k$, and writing the goal as
@@ -62,10 +62,7 @@ theory representing the goal, making SMT solving feasible.
 
 Moreover, if the goal has the form $f\,t_1 = f\,t_2$ (e.g. {\sf Stratify}, \Cref{tactics}) it may
 be worth trying to prove that $t_1::\T = t_2::\T$, where $f:\T\to\S$.
-This trivially entails the goal and is much easier to prove. 
-%To understand why
-%this is a common case, consider \eqref{evaluation:stratify A 1} below: 
-%notice how $g$ does not modify the quadrant from which $f$ reads.
+This trivially entails the goal and is (usually) much easier to prove. 
 
 Another useful technique is common subexpression elimination, which is quite standard
 in compiler optimizations. Tactic applications tend to create copies of terms, so

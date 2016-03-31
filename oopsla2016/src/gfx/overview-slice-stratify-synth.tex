@@ -1,18 +1,26 @@
 \newcommand\stimes{\!\times\!}
+
+\newcommand\applytactic[1]{{\tt >} \sf #1}
+\newcommand\applytacticnode[1]{\node[right,align=left] at (1,1) {\applytactic{#1}}}
+
+\newcommand\rjust[1]{ \node at (7.5cm, 1) {#1}; }
+
 \begin{tikzpicture}[>=latex,x=6mm,y=6mm,
     every path/.style={step=1},
     every node/.style={inner sep=.5pt},
     init data/.style={pattern=north west lines, pattern color=green!50!black},
-    block/.style={rectangle,draw,very thick,fill=Orange, fill opacity=0.2, inner sep=0},
+    block/.style={rectangle,rounded corners=3pt,draw,dotted,fill=Orange, fill opacity=0.1, inner sep=2pt},
     knob/.style={midway,draw,fill=white,midway,inner sep=1.25pt}]
     
-  \def\dx{1.75cm}
+  \def\dx{1.9cm}
   \def\dy{1.75cm}
   
   % -------------------------------------------------------
 
   \draw (0,0) rectangle (2,2);
-  \node(s)[block,fit={(0,0) (2,2)}] {};
+  \begin{pgfonlayer}{background layer}
+    \node(s)[block,fit={(0,0) (2,2)}] {};
+  \end{pgfonlayer}
   \node[inner sep=3mm](0) at (1,1) {0};
 
   \node[inner sep=0] at (2.5,1) {\steparrow};
@@ -21,18 +29,25 @@
 
   \draw (0,0) rectangle (2,2);
   \node[inner sep=3mm](0) at (1,1) {0$'$};
-  \draw (s.70) edge[->,out=20] (0);
+  \draw (s.70) edge[->,out=20] node[above,inner sep=2pt] {$_{A^{^J}}$} (0);
 
-  \applytacticnode{Slice \\ \quad $i,j : \langle J_0\stimes J_0 \,|\, J_0\stimes J_1 \,|\, J_1\stimes J_1 \rangle$};
+  \tikzset{yshift=-.75*\dy,xshift=-\dx}
 
-  \tikzset{yshift=-\dy,xshift=-\dx}
+  \applytacticnode{Slice ~ $i,j : \langle J_0\stimes J_0 \,|\, J_0\stimes J_1 \,|\, J_1\stimes J_1 \rangle$};
+  \draw[->,dashed] (0.5,1.5) -- (0.5,0.5);
+
+  \tikzset{yshift=-.75*\dy}
     
   % -------------------------------------------------------
+
+  \rjust{$(a)$}
 
   \draw (0,0) grid (2,2);
   \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
   \node(3) at (.5, .5) {3};   \node(4) at (1.5, .5) {4};
-  \node(s)[block,fit={(0,0) (2,2)}] {};
+  \begin{pgfonlayer}{background layer}
+    \node(s)[block,fit={(0,0) (2,2)}] {};
+  \end{pgfonlayer}
 
   \node[inner sep=0] at (2.5,1) {\steparrow};
 
@@ -42,20 +57,26 @@
   \node(1) at (.5,1.5) {\primeocd 1};   \node(2) at (1.5,1.5) {\primeocd 2};
                                         \node(4) at (1.5, .5) {\primeocd 4};
   \draw (s.70) edge[->,out=20] (1);
-  \draw (s.70) edge[->,out=20] (2);
-  \draw (s.70) edge[->,out=20] (4);
+  \draw (s.70) edge[->,out=22] (2);
+  \draw (s.70) edge[->,out=15] (4);
+
+  \tikzset{yshift=-.75*\dy,xshift=-\dx}
 
   \applytacticnode{Stratify \qbox1};
+  \draw[->,dashed] (0.5,1.5) -- (0.5,0.5);
+
+  \tikzset{yshift=-.75*\dy}
 
   % -------------------------------------------------------
-  \setlength\baselineskip{15pt}  
 
-  \tikzset{yshift=-\dy,xshift=-\dx}
+  \rjust{$(b)$}
 
   \draw (0,0) grid (2,2);
-  \node(s)[block,fit={(0,1) (1,2)}] {};
   \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
   \node(3) at (.5, .5) {3};   \node(4) at (1.5, .5) {4};
+  \begin{pgfonlayer}{background layer}
+    \node(s)[block,fit={(0,1) (1,2)}] {};
+  \end{pgfonlayer}
 
   \node[inner sep=0] at (2.5,1) {\steparrow};
 
@@ -65,7 +86,9 @@
   \node(1) at (.5,1.5) {\primeocd 1};   \node(2) at (1.5,1.5) {2};
                                         \node(4) at (1.5,.5) {4};
   \draw (s.70) edge[->,out=20] (1);
-  \node(s)[block,fit={(0,0) (2,2)}] {};
+  \begin{pgfonlayer}{background layer}
+    \node(s)[block,fit={(0,0) (2,2)}] {};
+  \end{pgfonlayer}
   
   \node[inner sep=0] at (2.5,1) {\steparrow};
 
@@ -77,16 +100,21 @@
   \draw (s.70) edge[->,out=20] (2);
   \draw (s.70) edge[->,out=20] (4);
   
+  \tikzset{yshift=-.75*\dy,xshift=-2*\dx}
+
   \applytacticnode{Stratify \qbox4};
-  %\applytacticnode{Synth $\circ ~~ \dashrightarrow A^{I_0J_0}$ \\ 
-  %    \applytactic{Stratify \qbox2}};
-  
-  \tikzset{yshift=-\dy,xshift=-2*\dx}
+  \draw[->,dashed] (0.5,1.5) -- (0.5,0.5);
+ 
+  \tikzset{yshift=-.75*\dy}
 
   % -------------------------------------------------------
 
+  \rjust{$(c)$}
+
   \draw (0,0) grid (2,2);
-  \node(s)[block,fit={(0,1) (1,2)}] {};
+  \begin{pgfonlayer}{background layer}
+    \node(s)[block,fit={(0,1) (1,2)}] {};
+  \end{pgfonlayer}
   \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
   \node(3) at (.5, .5) {3};   \node(4) at (1.5, .5) {4};
 
@@ -97,8 +125,10 @@
   \draw (0,0) grid (2,2);
   \node(1) at (.5,1.5) {\primeocd 1};   \node(2) at (1.5,1.5) {2};
                                         \node(4) at (1.5, .5) {4};
-  \draw (s.70) edge[->,out=20,shorten >=4pt] node[knob,circle] {} (1.center);
-  \node(s)[block,fit={(1,0) (2,1)}] {};
+  \draw (s.70) edge[->,out=20,shorten >=4pt] (1.center);
+  \begin{pgfonlayer}{background layer}
+    \node(s)[block,fit={(1,0) (2,1)}] {};
+  \end{pgfonlayer}
   
   \node[inner sep=0] at (2.5,1) {\steparrow};
 
@@ -107,8 +137,10 @@
   \draw (0,0) grid (2,2);
   \node(1) at (.5,1.5) {\primeocd 1};  \node(2) at (1.5,1.5) {2};
                                        \node(4) at (1.5,.5) {\primeocd 4};
-  \draw (s.-70) edge[->,out=-20,in=-130,shorten >=4pt,looseness=1.2] node[knob,diamond] {} (4.center);
-  \node(s)[block,fit={(0,0) (2,2)}] {};
+  \draw (s.-70) edge[->,out=-20,in=-130,shorten >=4pt,looseness=1.2] (4.center);
+  \begin{pgfonlayer}{background layer}
+    \node(s)[block,fit={(0,0) (2,2)}] {};
+  \end{pgfonlayer}
 
   \node[inner sep=0] at (2.5,1) {\steparrow};
 
@@ -117,16 +149,57 @@
   \draw (0,0) grid (2,2);
   \node(1) at (.5,1.5) {\primeocd 1};  \node(2) at (1.5,1.5) {\primeocd 2};
                                        \node(4) at (1.5,.5) {\primeocd 4};
-  \draw (s.70) edge[->,out=20,shorten >=4pt] node[knob,isosceles triangle,rotate=90] {} (2.center);
+  \draw (s.70) edge[->,out=20,shorten >=4pt] (2.center);
 
-  \tikzset{xshift=-3.75*\dx,yshift=-.75*\dy}
+  \tikzset{xshift=-3*\dx,yshift=-.7*\dy}
 
-  \applytacticnode{Synth {\tikz\node[knob,circle] {};} ~~ $\dashrightarrow A^{J_0}$ 
-      \qquad
-      \applytactic{Synth $\diamond$} $~~ \dashrightarrow A^{J_1}$};
+  \applytacticnode{Synth \qbox{1$'$\!} \qbox{2$'$\!} \qbox{4$'$\!}};
+  \draw[->,dashed] (0.5,1.5) -- (0.5,0.4);
 
-  \tikzset{yshift=-.3*\dy}
+  \tikzset{yshift=-.8*\dy}
 
-  \applytacticnode{Synth {\tikz\node[knob,isosceles triangle,rotate=90] {};} ~~ $\longrightarrow B^{J_0J_1}$};
+  % -------------------------------------------------------
+
+  \rjust{$(d)$}
+
+  \draw (0,0) grid (2,2);
+  \begin{pgfonlayer}{background layer}
+    \node(s)[block,fit={(0,1) (1,2)}] {};
+  \end{pgfonlayer}
+  \node(1) at (.5,1.5) {1};   \node(2) at (1.5,1.5) {2};
+  \node(3) at (.5, .5) {3};   \node(4) at (1.5, .5) {4};
+
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};   \node(2) at (1.5,1.5) {2};
+                                        \node(4) at (1.5, .5) {4};
+  \draw (s.70) edge[->,out=20,shorten >=4pt] node[above,inner sep=2pt] {$_{A^{^{J_0}}}$} (1.center);
+  \begin{pgfonlayer}{background layer}
+    \node(s)[block,fit={(1,0) (2,1)}] {};
+  \end{pgfonlayer}
+  
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};  \node(2) at (1.5,1.5) {2};
+                                       \node(4) at (1.5,.5) {\primeocd 4};
+  \draw (s.-70) edge[->,out=-20,in=-130,shorten >=4pt,looseness=1.2] node[below,inner sep=2pt] {$^{A^{J_1}}$} (4.center);
+  \begin{pgfonlayer}{background layer}
+    \node(s)[block,fit={(0,0) (2,2)}] {};
+  \end{pgfonlayer}
+
+  \node[inner sep=0] at (2.5,1) {\steparrow};
+
+  \tikzset{xshift=\dx}
+  
+  \draw (0,0) grid (2,2);
+  \node(1) at (.5,1.5) {\primeocd 1};  \node(2) at (1.5,1.5) {\primeocd 2};
+                                       \node(4) at (1.5,.5) {\primeocd 4};
+  \draw (s.70) edge[->,out=20,shorten >=4pt] node[above,inner sep=2pt] {$_{B^{^{J_0J_1}}}$} (2.center);
 
 \end{tikzpicture}

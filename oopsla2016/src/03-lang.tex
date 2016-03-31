@@ -5,13 +5,13 @@
 \newcommand\fix{\operatorname{fix}}
 
 For the purpose of manipulating programs and reasoning about them,
-we first set up a small language that can easily express our specifications,
-including intermediate ones, and can also be translated into executable
-code in a straightforward fashion. We choose a functional language
-setting, where scalar types are array indices ($i, j, k : J$ in the example)
+we first set up a small language that can easily express our programs (that is,
+partially transformed specifications), and can also be translated to executable
+code in a straightforward fashion. We choose a functional
+setting, with scalar types for array indices ($i, j, k : J$ in the example)
 and values stored in the arrays, typically real numbers ($G_{ij} : \R$ in the example).
-Arrays are then encoded as functions, or arrow types, mapping index
-values to real values (e.g. $G : J^2\to\R$). We want to have a notion of
+Arrays are encoded as functions, or arrow types, mapping indices
+to values (e.g. $G : J^2\to\R$). We want to have a notion of
 array elements that are uninitialized, so we assume every scalar type
 contains the special value $\bot$, corresponding to an undefined value.
 
@@ -20,11 +20,11 @@ from the previous section. To achieve this, we introduce
 \newterm{predicate abstraction} over the index types, by extending the
 type system with subtyping and \newterm{refinement types}. An index
 type $J$ can be partitioned into subtypes $\langle J_0 \,|\, J_1\rangle$
-(two or more), which define predicates $J_0,J_1 : J\to\B$ (where $\B$ is the Boolean type)
-and the refined types $\widehat{J}_0=\{v\,{:}\,J \,|\, J_0(v)\}$
-and $\widehat{J}_1=\{v\,{:}\,J \,|\, J_1(v)\}$, which become subtypes of G.
+(two or more), meaning that we define predicates $\widehat{J}_0,\widehat{J}_1 : J\to\B$ (where $\B$ is the Boolean type)
+and the refinement types $J_0=\{v\,{:}\,J \,|\, \widehat{J}_0(v)\}$
+and $J_1=\{v\,{:}\,J \,|\, \widehat{J}_1(v)\}$, which become subtypes of $J$.
 Usually, we can omit the ``hat'' and use $J_0$ as a synonym for $\widehat{J}_0$ 
-when its clear from the context that it designates a type. 
+when it is clear from the context that it designates a type. 
 We would then provide types for sub-arrays, e.g. 
 $G^{\raisebox{-2pt}{\tinyqbox{2}}} : J_0\times J_1 \to \R$.
 
@@ -32,8 +32,9 @@ To refer to a region of a given array, we define a \newterm{guard}
 operator, which is parameterized by subtypes of the indices,
 for example $G^{\raisebox{-2pt}{\tinyqbox{2}}} = [G]_{J_0\times J_1}$.
 To combine computations on different parts of the array, we use a lifting
-of the ternary operator (known as {\tt ?:} or {\tt ite}) to functions,
+of the ternary condition operator (known as {\tt ?:}) to functions,
 where the condition is implied by the operands; e.g.
+(\Cref{overview:quadrants})
 \[
 G=G^{\tinyqbox1} \big/ G^{\tinyqbox2} \big/ G^{\tinyqbox4} = 
 \lambda ij.
@@ -44,11 +45,12 @@ G=G^{\tinyqbox1} \big/ G^{\tinyqbox2} \big/ G^{\tinyqbox4} =
 \end{cases}
 \]
 
-\coa{More formal discussion starts here}
-
-We set up a formal language based on the polymorphic
+\bigskip
+\begin{paragraph}{Formal set-up}The Bellmania language is based on the polymorphic
 $\lambda$-calculus, that is, simply typed $\lambda$-calculus with universally quantified type variables 
 (also known as \newterm{System F}).
+The following subsections contain formal definitions for language constructs.
+\end{paragraph}
 
 We write abstraction terms as $(v:\T)\mapsto e$, where $\T$ is the type of the argument $v$ and $e$ is
 the body, instead of the traditional notation $\lambda(v:\T).\,e$, mainly due to aesthetic reasons
@@ -77,11 +79,12 @@ The core language is augmented with the following intrinsic operators:
     \[\semp{\fix f} ~=~ \theta \textrm{ ~ s.t. ~ } \semp f\,\theta=\theta\]
   we assume that recurrences given in specifications are well-defined, 
   such that $\semp f$ has a single fixed point.
-  In other words, we ignore nonterminating computations.
-  \item A guard operator $[\,]_{_\square}\,$, which comes in two flavors:
+  In other words, we ignore nonterminating computations ---
+  we assume that the user provides only terminating recurrences in specifications.%\rsc{This sounds like we have a way of figuring out if a computation is non-terminating. Do we? Can we get rid of this last statement?}
+  \item A guard operator $[\,]_{_\square}\,$, which comes in two flavors: 
   \[\begin{array}{l}
       [x]_{\mathit{cond}} = \begin{cases}x & \mathit{cond} \\ \bot & \lnot\mathit{cond}\end{cases} \\
-      {}[f]_{P_1\times P_2\times \cdots P_n} = \overline{x} \mapsto [f\,\overline{x}]_{\bigwedge P_i(x_i)}
+      {}[f]_{P_1\times P_2\times \cdots P_n} = \overline{x} \mapsto [f\,\overline{x}]_{\bigwedge P_i(x_i)} 
     \end{array}\]
   where $\overline{x} = x_1 \cdots x_n$. This second form can be used to
   refer to quadrants of an array; in this form, it always produces a term of
@@ -100,29 +103,32 @@ The core language is augmented with the following intrinsic operators:
   they are free to access the entire domain of $\psi$.
 \end{itemize}
 
-In our concrete syntax, function application takes precedence over $/$,
-and the bodies of $\mapsto$ spans as far as possible.
+In our concrete syntax, function application and $\fix$ take precedence over $/$,
+and the body of $\mapsto$ spans as far as possible (like $\lambda v$ in $\lambda$-calculus).
 
 \subsection{Primitives}
 
 The standard library contains some common primitives:
 
+\newcommand\forallT{\forall\T\!.~}
+\newcommand\forallTS{\forall\T\S\!.~}
+
+
 \begin{itemize}
   \item $\R$, a type for real numbers; $\N$ for natural numbers; $\B$ for Boolean true/false.
-  \item ${=} : \T\to\T\to\B$, always interpreted as equality.
-  \item ${+}, {-} : \T\to\T\to\T$, polymorphic binary operators.
-  \item ${<} : \T\to\T\to\B$, a polymorphic order relation.
-  \item $cons : \T\to(\N\to\T)\to(\N\to\T), nil : \N\to\T$, list constructors.
-  \item $\min, \max, \Sigma : (\T\to\S)\to\S$, reduction (aggregation) operators
+  \item ${=} : \forallT \T\to\T\to\B$, always interpreted as equality.
+  \item ${+}, {-} : \forallT \T\to\T\to\T$, polymorphic binary operators.
+  \item ${<} : \forallT \T\to\T\to\B$, a polymorphic order relation.
+  \item $cons : \forallT \T\to(\N{\to}\T)\to(\N{\to}\T), nil : \forallT \N\to\T$, list constructors.
+  \item $\min, \max, \Sigma : \forallTS (\T\to\S)\to\S$, reduction (aggregation) operators
     on ordered/unordered collections. The collection is represented by a mapping $f : \T\to\S$,
     so that e.g. \[\semp{\min f} = \min \big\{\semp{f}\,v \;\big|\; v\in\semp{\T}, \semp{f}\,v\neq\bot\big\}\]
-    The collections are expected to be finite.
+    The collections are assumed to be finite.
 \end{itemize}
 
 \subsection{Additional Notation}
-\newcommand\applt{\textrm{{\scriptsize\,}\guillemotright{\scriptsize\,}}}
 
-We also adopt some syntactic sugar to make complex terms more managable:
+We also adopt some syntactic sugar to make complex terms more manageable:
 
 \begin{itemize}
   \item $x \applt f ~=~ f\,x$ for application from the left.
@@ -131,14 +137,15 @@ We also adopt some syntactic sugar to make complex terms more managable:
 \end{itemize}
 
 \subsection{Types and Type Qualifiers}
+\label{lang:types}
 
 We extend the type system with predicate abstraction in the form of logically qualified data types 
 (Liquid Types~\cite{PLDI08/Rondon}). These are refinement types restricted via a set of abstraction predicates,
 called \newterm{qualifiers}, which are defined over the base types.
-Contradictory to the general use of refinement types, the purpose of these qualifiers is not to
-check a program for safety and reject ill-typed program, but rather to serve as annotations for
+Contrary to the general use of refinement types, the purpose of these qualifiers is not to
+check a program for safety and reject ill-typed programs, but rather to serve as annotations for
 tactics, to convey information to the solver for use in the proof, and later to help the compiler
-to properly emit memory access and parallelization primitives.
+properly emit memory access and parallelization primitives.
 
 More specifically, typing $f : \{v:\T_1 ~|~ P(v)\}\to\T_2$ would mean that $f\,x$
 can only be defined where $P(x)$ is true; otherwise, $f\,x=\bot$. 
@@ -154,32 +161,33 @@ limit the use of qualifiers, allowing only the following forms:
 
 \begin{itemize}
   \item $\{v:\T ~|~ P(v)\}$, abbreviated as $\T\cap P$. When the signature of $P$ is known (which is
-  almost always), it is enough to write $P$.
+  usually the case), it is enough to write $P$.
   \item $\{v:\T ~|~ P(v)\land Q(v)\}$, abbreviated as $\T\cap P\cap Q$, or just $P\cap Q$. This extends
   to any number of conjuncts of the same form.
-  \item $(x : \T_2) \to \{v:\T_2 ~|~ R(x,v)\} \to \T_3$, abbreviated as $\big((\T_1\times\T_2)\cap R\big)\to\T_3$.
-  The qualifier argument $x$ must be the preceding argument; this extends to predicates of
+  \item $(x : \T_1) \to \{v:\T_2 ~|~ R(x,v)\} \to \T_3$, abbreviated as $\big((\T_1\times\T_2)\cap R\big)\to\T_3$.
+  The qualifier argument $x$ {\bf must} be the preceding argument; this extends to predicates of
   any arity (that is, a $k$-ary predicate in a qualifier is applied to the $k$
   arguments to the left of it, including the one where it appears).
 \end{itemize}
 
 
 \medskip  
-The type refinement operators $\cap$ and $\times$ may be composed to create \newterm{droplets},
+The type refinement constructors $\cap$ and $\times$ may be composed to create \newterm{droplets},
 using the abstract syntax in \Cref{lang:droplets}.
-Note that the language does not define tuple types; hence there is no distinction between curried and uncurried function types.
+Note that the language does not include tuple types; hence all function types are
+implicitly curried, even when using $\times$.
 Droplets can express conjunctions of qualifiers,
 as long as their argument sets are either disjoint or contained, but not overlapping;
 for example, \[x:\{v:\T_1~|~P(v)\}\to \{v:\T_2~|~Q(v)\land R(x,v)\}\to\T_3\] can be written as
 $\big((P\times Q)\cap R\big)\to\T_3$, but \[x:\T_1\to y:\{v:\T_2~|~R(x,v)\} \to \{v:\T_3~|~R(y,v)\}\to\T_4\]
-cannot be represented as a droplet.
+cannot be represented as a droplet, except by extending the vocabulary of qualifiers.
 
 As with any refinement type system, we define the \newterm{shape} of a droplet to be the raw type
 obtained from it by removing all qualifiers.
 
 \newcommand\examplePar{%
 \vspace{1pt}\noindent\hspace{-2pt}%
-\tikz[baseline=(E.base)]\node(E)[rectangle,draw=black!20!white,rounded corners=.7em] {\bf Example.};
+\tikz[baseline=(E.base)]\node(E)[rectangle,draw=black!40!white,rounded corners=.7em] {\bf Example.};
 }
 \examplePar
 The array $G$ computed in the Parenthesis example (\Cref{overview:paren spec}) can be typed using:
@@ -223,12 +231,12 @@ this translates into:
 %
 \[\T_1<:\T ~\land~ \S_1<:\S ~~\Rightarrow~~ (\T_1\to\S_1) <: (\T\to\S)\]
 
-In this case, the type constructor $\to$ is {\bf covariant} in both arguments.\footnote{This is different from classical view, and holds in this case because we interpret functions as \emph{mappings}.}
+In this case, the type constructor $\to$ is {\bf covariant} in both arguments.\footnote{This is different from classical view, and holds in this case because we chose to interpret functions as \emph{mappings} (see beginning of this section).}
 With this in mind, a function $g:(\T\to\S)\to \S_2$ can be called with an argument $a: \T_1\to\S_1$,
 by regular subtyping rules, and $g\,a : \S_2$.
 
-When the argument's type is not a subtype, but has the same shape as that of the expected type,
-it is \newterm{coerced} to the required type by restricting the values to the desired proper subset.
+When the argument's type is not a subtype of the expected type, but has the same shape,
+it is \newterm{coerced} to the required type by restricting values to the desired proper subset.
 %
 \[\mbox{For }h:\T\to\S \qquad \semp{h\,a} ~=~ \semp{h}\big(\semp{a} :: \T\big)\]
 
@@ -240,29 +248,31 @@ Where $::$ is defined as follows:
 
 \medskip
 We extend our abstract syntax with an explicit \newterm{cast operator}
-$t::\T$ following this semantics. Notice that the second case of $[\,]_{_\square}\,$
-can be defined as syntactic sugar for $::$,
-$[t]_{_\square} = t :: \square\to \_$, where $\_$ is a fresh
-type variable to be inferred.
+$t::\T$ following this semantics. Notice that this is not the same as $t:\T$, which is a \emph{type judgement}.
 
 \subsubsection*{Type Inference}
 
-Base types are inferred normally as in a classical Hindley-Milner type system.
+Base types are inferred normally as in a classical Hindley-Milner type system~\cite{78/Milner}.
 The operators (\Cref{lang:operators}) behave like polymorphic
 constants with the following types:
 \[\renewcommand\arraystretch{1.5}
   \begin{array}{c}
-    {\fix} : (\T\to\T)\to\T \qquad {/} : \T\to\T\to\T \\
-    (::\T) : \mathrm{shape}[\T]\to\mathrm{shape}[\T]
+    {\fix} ~:~ \forallT ~(\T\to\T)\to\T \qquad 
+    {/} ~:~ \forallT ~\T\to\T\to\T \\
+    (::\T) ~:~ \mathrm{shape}[\T]\to\mathrm{shape}[\T]
   \end{array}\]
 
-Any type variables occurring in type expressions are resolved at that
-stage. In particular, it means that type variables are always assigned raw types.
+As for $[\,]_{_\square}$, for all typing purposes the first variant is a no-op, and the second variant
+is just syntactic sugar for $:: \square\to\_$\,,
+where \,$\_$\, is a fresh type variable.
 
-Qualifiers are also inferred by essentially propagating them up and down the syntax tree.
+Any type variables occurring in type expressions are resolved at that
+stage through unification. In particular, it means that type variables are always assigned raw types.
+
+Qualifiers are also inferred by propagating them up and down the syntax tree.
 Since the program already typechecks once the base types are in place, the problem is no longer
 one of finding {\em valid} annotations, but rather of {\em tightening} them as much as possible
-without introducing semantics-changing coercions. For example, $(f :: I\to(I\cap P))\,i$ may
+without introducing semantics-changing coercions. For example, the term $(f :: I\to(I\cap P))\,i$ may
 be assigned the type $I$, but it can also be assigned $I\cap P$ without changing its semantics.
 
 Qualifiers are propagated by defining a \newterm{type intersection} operator $\sqcap$ that
@@ -288,12 +298,12 @@ qualifiers that cannot be expressed in droplets are discarded.
   \multirow{2}{1cm}[-2em]{\begin{tikzpicture}\draw (0,0) -- ++(-1mm,0) -- ++(0,-10.2em) {} node[midway,anchor=base,xshift=-3mm,rotate=90] {Core language} -- ++(1mm,0);\end{tikzpicture}} &
   \typerule{e=v \qquad \Gamma,v:\T_1\vdash e:\T_0}
            {\Gamma,v:\T_1 ~\vdash~ e:\T_0\sqcap\T_1} &
-  \typerule{e=e_1\,e_2 \qquad \Gamma \vdash e:\T, ~ e_1:\T_1, ~ e_2:\T_2\to\S_2}
+  \typerule{e=e_1\,e_2 \qquad \Gamma \vdash e:\T, ~ e_1:\T_1\to\S_1, ~ e_2:\T_2}
            {\renewcommand\arraystretch{1.2}
             \begin{array}[t]{@{}l@{}l@{}}
-              \Gamma ~\vdash~ & e:\T\sqcap\S_2,  \quad
-                                e_1:\T_1\sqcap\T_2, \\
-                              & e_2:(\T_1\to\T)\sqcap(\T_2\to\S_2)
+              \Gamma ~\vdash~ & e:\T\sqcap\S_1,  \quad
+                                e_2:\T_1\sqcap\T_2, \\
+                              & e_1:(\T_1\to\S_1)\sqcap(\T_2\to\T)
             \end{array}} & \\
   &
   \cspan2{
@@ -321,19 +331,23 @@ qualifiers that cannot be expressed in droplets are discarded.
 \]
 \caption{\label{lang:type refinement rules}
   Type refinement rules, for inferring qualifiers in sub-expressions.}
+  \vspace{2mm}
 \end{figure*}
 
 Note that two syntactically identical terms in different sub-trees may be assigned
 different types by this method. This is a desirable property, as (some) context information
 gets encoded in the type that way.
 
-\examplePar Let $I_0\subseteq I$ be a unary predicate, and $0:T$ a constant.
-The expression $f\,(i:I_0)\mapsto f\,i\,i ~/~ 0$ will induce the following type
+The interested reader can find an example of how type inference is applied in \Cref{annex:example:type inference}.
+
+\begin{comment}
+\medskip
+\examplePar Say $I$, $T$ are types, $\widehat{I}_0 : I\to\B$ a qualifier, $\S$ a type variable, $0:T$ a constant.
+The term $(f:I_0\to\S)\,i\mapsto f\,i\,i ~/~ 0$ will induce the following type
 inferences:
 
-\hspace*{\fill}
 \begin{tikzpicture}[node distance=1em]
-  \node(farg) {$(f:I_0\to\_)$};
+  \node(farg) {$(f:I_0\to\S)$};
   \node(iarg)[right=of farg] {$i$};
   \node(mapsto)[right=of iarg] {$\mapsto$};
   \node(f)[right=of mapsto] {$f$};
@@ -358,8 +372,11 @@ inferences:
   \draw (l3 -| f.west) -- +(0,-\ytip) -| (l3 -| zero.east) node[pos=0.25,below] {\tiny $T$};
   \draw (l4 -| farg.west) -- +(0,-\ytip) -| (l4 -| zero.east) node[pos=0.25,below] {\tiny $(I_0\to I\to T)\to I\to T$};
 \end{tikzpicture}
-\hspace*{\fill}
+%\hspace*{\fill}
 
+\noindent
+In this case, the type variable $\S$ has been assigned $I\to T$.
+\end{comment}
 
 \exampleTitle  \begin{comment}\subsection{Example}\end{comment}
 
@@ -368,21 +385,22 @@ The specification of the Parenthesis problem (\Cref{overview:paren spec}) will b
 
 \vspace{-5mm}
 \[
-  \renewcommand\arraystretch{1.5}
+  \renewcommand\arraystretch{1.2}
   \begin{array}{@{}l@{}l@{}l@{}}
     \lspan2{x : J \to \R} \\
     \lspan2{w : J^3 \to \R} \\
-    G ~=~ \fix~(\theta:J^2\,{\cap}\,{<}\to\R)\,i\,j \mapsto{}
+    G ~=~ \fix~(\theta:J^2_<\to\R)\,i\,j \mapsto{}
       & \big[x_i\big]_{i+1=j} ~\Big/ \\
       & \min k\mapsto\theta_{ik}+\theta_{kj}+w_{ikj}
   \end{array}
 \]
 
-We use $f_{xy}$
+$J^2_{<}$ is used here as an abbreviation for $(J{\times}J)\,{\cap}\,{<}$.
+We also use $f_{xy}$
 as a more readable alternative typography for $f\,x\,y$,
 where $f$ is a function and $x$, $y$ are its arguments.
 
-Note that the range for $\min k$ is implicit, given the type of
+Note that the range for $k$ in $\min k\mapsto\cdots$ is implicit, given the type of
 $\theta$: 
 \[\theta_{ik}\neq\bot\implies i<k \quad \mbox{and} \quad \theta_{kj}\neq\bot\implies k<j\]
 

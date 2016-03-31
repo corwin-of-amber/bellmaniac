@@ -1,8 +1,34 @@
 \section{Empirical Evaluation}
+\label{evaluation}
 
-We implemented our technique and used it to generate cache-oblivious
+We implemented our technique and used it to generate ca\-che-oblivious
 divide-and-conquer implementations of three algorithms that were used as
 benchmarks in \cite{IPDPS15/Tithi}, and a few others.
+
+\begin{figure}
+\vspace{-5mm}
+\[
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}l@{}l@{}l@{}}
+    \lspan3{w^x : ((I\times I)\cap{<})\to J\to\R} \\
+    \lspan3{w^y : ((J\times J)\cap{<})\to I\to\R} \\
+    G ~=~ \fix \theta\,i\,j\mapsto{}
+      & \lspan2{\big[0\big]_{i=j=0} \,\Big/~ \big[w^y_{0j0}\big]_{i=0} \,\Big/~ \big[w^x_{0i0}\big]_{j=0} \,\Big/} \\
+      & \min~\langle~ & \theta_{(i-1)(j-1)}+c_{ij}, \\
+      & & \min p\mapsto\theta_{pj}+w^x_{pij}, \\
+      & & \min q\mapsto\theta_{iq}+w^y_{qji} ~\rangle
+  \end{array}
+\]
+\vspace{-5mm}
+\caption{\label{evaluation:gap spec}
+  Specifications for the Gap problem.}
+\end{figure}
+
+\begin{paragraph}{Parenthesis problem.} Our running example; Compute
+an optimal placement of parentheses in a long chain of multiplication, e.g. of matrices, where the inputs
+are cost functions $x_i$ for accessing the $i$-th element and
+$w_{ikj}$ for multiplying elements $[i,k)$ by elements $[k,j)$.
+\end{paragraph}
 
 \begin{paragraph}{Gap problem.}
 A generalized minimal edit distance problem. Given two input strings 
@@ -10,15 +36,9 @@ $\overline{x}=x_1\cdots x_m$ and $\overline{y}=y_1\cdots y_n$,
 compute the cost of transforming $x$ into $y$ by any combination of the
 following steps:
   (i) Replacing $x_i$ with $y_j$, at cost $c_{ij}$,
-  (ii) Deleting $x_{p+1}\cdots x_q$, at cost $\xw{pq}$,
-  (iii) Inserting $y_{p+1}\cdots y_q$ in $\overline{x}$, at cost $\yw{pq}$.
-\end{paragraph}
-
-\begin{paragraph}{Parenthesis problem.} Compute
-an optimal placements of parenthesis in a long chain of multiplication, e.g. of matrices, where the input is
-are cost functions $x_i$ for accessing the $i$-th element and
-$w_{ikj}$ for multiplying elements $[i,k)$ by elements $[k,j)$.
-The corresponding recurrence is shown in \Cref{evaluation:paren spec}.
+  (ii) Deleting $x_{p+1}\cdots x_q$, at cost $w^x_{pq}$,
+  (iii) Inserting $y_{p+1}\cdots y_q$ in $\overline{x}$, at cost $w^y_{pq}$.
+The corresponding recurrence is shown in \Cref{evaluation:gap spec}.
 \end{paragraph}
 
 \begin{paragraph}{Protein Accordion Folding problem.} A protein can be viewed
@@ -37,35 +57,40 @@ We also exercised our system on a number of textbook problems:
 the Longest Common Subsequence (LCS) problem, the Knapsack problem,
 and the Bitonic Traveling Salesman problem.
 
-\begin{figure}
-\vspace{-5mm}
-\[
-  \renewcommand\arraystretch{1.2}
-  \begin{array}{@{}l@{}l}
-    \lspan2{x :: J\to\R} \\
-    \lspan2{w :: (J\times J\times J)\to\R} \\
-    E ~=~ \fix \theta\,i\,j\mapsto{}
-      & {\big[x_{ij}\big]_{i+1=j} ~\Big/} 
-       \min k\mapsto\theta_{ik}+\theta_{kj}+w_{ikj} \\
-  \end{array}
-\]
-\vspace{-5mm}
-\caption{\label{evaluation:paren spec}
-  Specifications for the Parenthesis problem.}
-\end{figure}
+\subsection{Estimation of User Effort}
+\label{evaluation:effort}
 
+Because Bellmania is an interactive system, we try to give a measure as to how much effort a typical user has to invest
+to complete a development for the DP algorithms that comprise our test suite.
+To get an idea of how domain experts think about the problem, we consult~\cite{PPoPP16/Chowdhury},
+where descriptions are conveniently provided in the form of data-flow diagrams for each step of computation.
+We compare the sizes of these diagrams, which we call ``conceptual size'', with the number of tactics
+required to derive the respective implementation in Bellmania.
+The results of the comparison are given in \Cref{evaluation:user effort}, where ``\# phases''
+indicates how many recursive subroutines are included in the algorithm description 
+(and in the respective development) and the two other column give the development size and conceptual size
+of each benchmark.
+The development size is within $2\times$ of the conceptual size in most cases.
 
+A sample diagram and Bellmania transcript for the running example are included in the supplemental material.
+
+\subsection{Implementation Details}
 The tactic application engine is implemented in Scala. We implemeted a prototype
 IDE using HTML5 and AngularJS, which communicates with the engine by sending
 and receiving program terms serialized as JSON. Our system supports using either
 Z3 or CVC4 as the back-end SMT solver for discharging proof obligations required
 for soundness proofs. Synthesis of recursive calls is done by translating the
-program to Sketch, which employs CEGIS to find the correct assignment to parameters.
+program to \Sketch{}, which solves a the correct assignment to type parameters.
 To argue for the feasibility of our system, we include
-solver running time for the verification of the three most used tactics,
-as well as time required for Sketch synthesis, in \Cref{evaluation:solving time}.
+SMT solver running time for the verification of the three most used tactics (figures are for CVC4),
+as well as time required for \Sketch{} synthesis, in \Cref{evaluation:solving time}.
 We consider an average delay of \textasciitilde 10 seconds to be reasonable, even for an interactive
-environment such as Bellmania. 
+environment such as Bellmania.
+
+Tactics are implemented as small Scala classes. It is possible for
+the more advanced user to extend the library by writing such classes.
+To give an idea, on top of the generic TAE the {\sf Stratify} tactic was coded in 12 lines of Scala,
+including the functionality that breaks a function $h$ into two functions $f$ and $g$.
 
 The compiler for programs in Bellmania is implemented in 
 Python and generates C++ code containing Intel Cilk constructs for parallelization.
@@ -83,7 +108,63 @@ instead of recursion. It can be seen from the table that our implementation
 performs close to the manually optimized code and can be optimized further by 
 hand. Figure~\ref{fig:gap} depicts the performance of these implementations 
 on one sample instance
-as a function of problem size, and shows the scalability of our technique. %ROHIT:scalability of what:the technique or the code?
+as a function of problem size, and shows the scalability of the generated code. 
+
+\newcommand\isum[1]{\pgfmathparse{int(#1)}\pgfmathresult}
+
+\begin{table}
+\centering
+\begin{tabular}{|l|r|rr@{\quad}|r@{\quad}|r@{\quad}|}
+  \cline{2-4}
+  \multicolumn{1}{c|}{} &    & \multicolumn{1}{c|}{\small Bellmania} & \multicolumn{1}{c|}{\small Conceptual} \\
+  \multicolumn{1}{c|}{} & \# phases & \multicolumn{1}{c|}{\# tactics} & \multicolumn{1}{c|}{size} \\
+  \hline
+  {\bf Paren               }  &   3   &   \isum{4 + 14 + 12}   &   \isum{4 + 9 + 9}   \\
+  \hline
+  {\bf Gap                 }  &   3   &   \isum{19 + 17 + 17}  &   \isum{9 + 9 + 9}   \\
+  \hline
+  {\bf Protein           }  &   4   &   \isum{10 + 11 + 12 + 14} &   \isum{5 + 7 + 7 + 9}  \\
+  \hline
+  {\bf LCS                 }  &   1   &   5             &   5   \\
+  \hline
+  {\bf Knapsack            }  &   2   &   \isum{25 + 24}       &    \isum{7 + 9}\\
+  \hline
+  {\bf Bitonic             }  &   3   &   \isum{11 + 10 + 11}  &    \isum{5 + 5 + 6} \\
+  \hline
+\end{tabular}
+\caption{\label{evaluation:user effort}
+  Sizes of synthesis scripts compared to conceptual problem size (see \Cref{evaluation:effort}).}
+\end{table}
+
+\begin{table}
+\centering
+\renewcommand\a{({\it i})}    % relax! it's only for this figure
+\renewcommand\b{({\it ii})}
+\renewcommand\c{({\it iii})}
+\begin{tabular}{|l|rr@{\quad}r@{\quad}|r@{\quad}|}
+  \cline{2-5}
+  \multicolumn{1}{c|}{} & \multicolumn{3}{c|}{\small Verification} & \multicolumn{1}{@{\,}c@{\,}|}{\small Synthesis} \\
+  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\sf Slice} & \multicolumn{1}{c|}{\sf Stratify} & \multicolumn{1}{c|}{\sf Synth} & \multicolumn{1}{c|}{Sketch} \\
+  \hline
+  {\bf Paren               }  &  0.9  &  8.7   &   0.9  &  24.5     \\
+  \hline
+  {\bf Gap                 }  &  0.6  &  6.8   &   1.4  &  11.6     \\
+  \hline
+  {\bf Protein             }  &  0.9  &  3.8   &   0.7  &  9.5     \\
+  \hline
+  {\bf LCS                 }  &  0.9  &  1.9   &   0.5  &  3.2     \\
+  \hline
+  {\bf Knapsack            }  &  0.3  &  1.9   &   0.4  &  5.3     \\
+  \hline
+  {\bf Bitonic             }  &  0.9  &  7.2   &   0.6  &  10.1     \\
+  \hline
+\end{tabular}
+\caption{\label{evaluation:solving time}
+  Average proof search time for proof obligations and avegrage synthesis
+  time for {\sf Synth} parameters (seconds).}
+\end{table}
+
+
 
 \begin{table}
 \centering
@@ -91,11 +172,11 @@ as a function of problem size, and shows the scalability of our technique. %ROHI
     \cline{2-5}
   \multicolumn{1}{c|}{} & \multicolumn{4}{c|}{\scriptsize Speedup w.r.t parallel LOOPDP on 6 cores}  \\
   \multicolumn{1}{c|}{} & \multicolumn{4}{c|}{\scriptsize   CPU (12 workers), B=64}  \\
-  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{~~\sf N~~} & \multicolumn{1}{c|}{~~\sf CO\_Opt~~} & \multicolumn{1}{c|}{~~~\sf COZ~~~} & \multicolumn{1}{c|}{\sf AUTO}  \\
-  \hline
-  {\bf Gap}  & 16384 & 21x & 34x & 30x\\
+  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{~~N~~} & \multicolumn{1}{c|}{CO\_Opt} & \multicolumn{1}{c|}{~~COZ~~} & \multicolumn{1}{c|}{AUTO}  \\
   \hline
   {\bf Parenthesis}  & 16384  & 32x & 50x & 46x\\
+  \hline
+  {\bf Gap}  & 16384 & 21x & 34x & 30x\\
   \hline
   {\bf Protein} & 16384  & 2.2x & 2.6x & 1.4x \\
   \hline
@@ -109,38 +190,6 @@ as a function of problem size, and shows the scalability of our technique. %ROHI
 \caption{\label{evaluation:cppruntimes}
   Performance of different C++ implementations}
 \end{table}
-
-
-\begin{table}
-\centering
-\renewcommand\a{({\it i})}    % relax! it's only for this figure
-\renewcommand\b{({\it ii})}
-\renewcommand\c{({\it iii})}
-\begin{tabular}{|l|r|rr@{\quad}r@{\quad}|r@{\quad}|}
-  \cline{2-6}
-%  \multicolumn{1}{c|}{} &    & \multicolumn{4}{c|}{\small Average solving time ({\it s})}  \\
-  \multicolumn{1}{c|}{} &    & \multicolumn{3}{c|}{\small Verification} & \multicolumn{1}{@{\,}c@{\,}|}{\small Synthesis} \\
-  \multicolumn{1}{c|}{} & \# & \multicolumn{1}{c|}{\sf Slice} & \multicolumn{1}{c|}{\sf Stratify} & \multicolumn{1}{c|}{\sf Synth} & \multicolumn{1}{c|}{Sketch} \\
-  \hline
-  {\bf Gap                 }  &  3  &  1.5  &  6.4   &   0.2  &  8     \\
-  \hline
-  {\bf Paren               }  &  3  &  0.8  &  16.5   &   0.8  &  11.2     \\
-  \hline
-  {\bf Accordion           }  &  4  &  0.6  &  3.8   &   0.4  &  6.1     \\
-  \hline
-  {\bf LCS                 }  &  1  &  0.2  &  1.5   &   0.4  &  3.1     \\
-  \hline
-  {\bf Knapsack            }  &  2  &  0.3  &  1.6   &   0.4  &  4.6     \\
-  \hline
-  {\bf Bitonic             }  &  3  &  0.7  &  1.9   &   0.7  &  6.4     \\
-  \hline
-\end{tabular}
-\caption{\label{evaluation:solving time}
-  Average proof search time for proof obligations and avegrage synthesis
-  time for {\sf Synth} parameters (seconds).}
-\end{table}
-
-
 
 \begin{figure}
 \resizebox{8cm}{!}{
