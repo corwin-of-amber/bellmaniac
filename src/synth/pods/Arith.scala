@@ -14,6 +14,9 @@ trait Pod {
   val obligations = Prelude.program
 }
 
+trait PromisePod extends Pod {
+  def compute(): Pod
+}
 
 class TacticalError(msg: String) extends TraceableException(msg) {}
 

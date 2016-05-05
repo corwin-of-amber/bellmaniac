@@ -49,7 +49,7 @@ class Extrude(val ops: Set[Identifier]) {
   }
 
   def dotAbove(id: Identifier) =
-    new Identifier(id.literal + "̇", id.kind, id.ns)
+    new Identifier(id.literal + "̂", id.kind, id.ns)
 
 }
 

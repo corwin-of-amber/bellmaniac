@@ -30,6 +30,7 @@ import com.mongodb.BasicDBList
 import semantics.TypeTranslation
 import report.data.SerializationError
 import java.io.File
+import java.io.PrintStream
 
 
 
@@ -59,8 +60,9 @@ object CLI {
     val extrude = new Extrude(Set(I("/"), cons.root))
 
     import collection.JavaConversions._
-    
-    def interpretElement(json: DBObject): DBObject = {
+    import TacticApplicationEngine.State
+        
+    def interpretElement(json: DBObject, progress: DBObject => Unit): DBObject = {
       try {
         implicit val scope = json.get("scope") andThen_ (Scope.fromJson, { throw new SerializationError("scope not found", json) }) // examples.Paren.env.scope)
         implicit val env = TypeTranslation.subsorts(scope) //examples.Paren.env
@@ -70,8 +72,7 @@ object CLI {
           case check: DBObject =>
             val term = Formula.fromJson(check)
             val result = TypeInference.infer(term)._2
-            cc.map(Map("term" -> result,
-                       "display" -> Rich.display(extrude(result))))
+            serialize(result)
           case _ => json.get("tactic") match {
             case tactic: DBObject =>
               val tae = mkTae(routines)
@@ -80,20 +81,19 @@ object CLI {
                   tae.mkState(tactic |> Formula.fromJson)
                 }
                 else {
-                  json.get("term") andThen_ ((tae.transform(_:DBObject, json)),
+                  json.get("term") andThen_ (tae.transform(_:DBObject, json, progress=(s: State) => progress(serialize(s))),
                       { throw new SerializationError("tactic: missing 'term' key", json) })
                 }
-              cc.map(Map("term" -> result.program,
-                         "display" -> Rich.display(result.ex)))
+              serialize(result)
             case _ => json.get("program") match {
               case prog: String =>
                 val term = json.get("term") andThen_ (Formula.fromJson, { throw new SerializationError("program: missing 'term' key", json) })
                 val tae = mkTae(routines)
                 println(s"scope: ${scope.sorts}")
                 tae.display(tae.mkState(term))
-                cc.map(Map())
+                cc.map()
               case _ =>
-                new BasicDBObject("error", "unrecognized JSON element")append("json", json)
+                new BasicDBObject("error", "unrecognized JSON element") append ("json", json)
             }
           }
         }
@@ -103,20 +103,34 @@ object CLI {
           cc.map(Map("error" -> "exception", "message" -> e.toString, "stack" -> stack(e)))
       }
     }
+    
+    def serialize(state: State) =
+      cc.map(Map("term" -> state.program,
+                 "display" -> Rich.display(state.ex)))
 
+    def serialize(program: Term) =
+      cc.map(Map("term" -> program,
+                 "display" -> Rich.display(extrude(program))))
+    
+    def reportProgress(json: DBObject)(implicit out: PrintStream) {
+      out.println(cc.map("progress" -> json))
+      out.println()
+    }
+    
     def repl(blocks: Stream[String]): Unit = {
+      implicit val out = System.out
       for (blk <- blocks) {
         val json = JSON.parse(blk).asInstanceOf[DBObject]
         if (json != null) {
           if (ui.Config.config.debugOnly()) {
-            interpretElement(json).get("stack") andThen (System.err.println, ())
+            interpretElement(json, reportProgress).get("stack") andThen (System.err.println, ())
           }
           else {
             val (result, outs) =
               if (ui.Config.config.debug())
-                (Console.withOut(System.err) { interpretElement(json) }, "")
+                (Console.withOut(System.err) { interpretElement(json, reportProgress) }, "")
               else
-                report.console.Console.andOut { interpretElement(json) }
+                report.console.Console.andOut { interpretElement(json, reportProgress) }
             println(result)
           }
         }

@@ -26,9 +26,10 @@ trait SerializationContainer {
     elements map any foreach { case x: Object => l.add(x) case x => ??? }
     l
   }
-  def map[A <: AnyRef](elements: Map[String,A]) = {
+  def map[A <: AnyRef](elements: Iterable[(String,A)]) = {
     (new BasicDBObject /: elements) { case (d, (k,v)) => d.append(k, anyRef(v)) }
   }
+  def map[A <: AnyRef](elements: (String,A)*): BasicDBObject = map(elements)
   def flatten(jsons: Stream[DBObject]) = jsons flatMap {
     case l: BasicDBList => l map (_.asInstanceOf[DBObject])
     case item => Some(item)

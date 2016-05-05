@@ -108,10 +108,12 @@ object Bitonic {
     
     override implicit lazy val prover: Prover = prover(List())
     
-    override def invokeProver(pod: Pod) { invokeProver(List(), pod.obligations.conjuncts, List(pod)) }
     def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
-      val a = new Assistant
-      a.invokeProver(assumptions, goals, new SimplePattern(min :@ ?))
+      (new Assistant).invokeProver(assumptions, goals, new SimplePattern(max :@ ?))(prover(pods))
+    }
+
+    override def invokeProver(pod: Pod) {
+      invokeProver(List(), pod.obligations.conjuncts, List(pod)) 
     }
   }
   

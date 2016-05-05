@@ -9,11 +9,9 @@ bit[2] d_bits(int dom, int i);
 int d(int dom, int i) { int sum = 0; for (int k = 0; k < i; k++) { bit[2] b = d_bits(dom, k); sum += 2*b[1]+b[0]; } return sum; }
 
 
-
-pragma options "--bnd-mbits 6";    /* this is needed because hole is multiplied by 4 */
-
-generator bit Scope_subsort_offset(int _u, bit b, int i) {
-    return Scope_subsort(_u, i) || (b && Scope_subsort(_u, i + 1));
+generator bit Scope_subsort_offset(int _u, bit[2] b, int i) {
+    return Scope_subsort(_u, i) || (b[0] && Scope_subsort(_u, i + 1))
+                                || (b[1] && Scope_subsort(_u, i - 1));
 }
 
 
@@ -70,7 +68,7 @@ int K = 3;
 
 bit Scope_2d_easier(bit[K,K] t, bit lt, int i, int j) {
   bit acc = false;
-  int k = 3; //nparams();
+  int k = nparams();
   for (int p = 0; p < k; ++p)
     for (int q = 0; q < k; ++q)
       if (t[p,q])

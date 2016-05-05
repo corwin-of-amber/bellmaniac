@@ -30,6 +30,10 @@ class Mnemonics {
   def release(ids: Iterable[Identifier]) = mnemonics --= ids
   def --=(ids: Iterable[Identifier]) = mnemonics --= ids
 
+  def reserve(lit: String) { mnemonics += (syntax.AstSugar.$_ -> lit); }
+  def reserve(lits: String*) { lits map reserve }
+  def reserve(idlit: (Identifier, String)) { mnemonics += idlit }
+
   def normalize(id: Identifier): String = normalize(id.literal.toString)
 
   def normalize(s: String) = {

@@ -233,6 +233,19 @@ class SynthPod(val h: Term, val subterm: Term, val synthed: Term, val impl: Term
 object SynthPod {
   def apply(h: Term, subterm: Term, synthed: Term, impl: Term, ψ: Term,
                area: List[Term])(implicit scope: Scope) = new SynthPod(h, subterm, synthed, impl, ψ, area)
+  
+  /**
+   * Placeholder pod is used while synthesis is running.
+   * It uses a question mark to denote the hole that will be filled by synthesis.
+   */
+  abstract class Placeholder(h: Term, subterm: Term, ψ: Term)(implicit scope: Scope) extends PromisePod {
+    val new_h = TypedTerm.replaceDescendant(h, (subterm, ? -: (TI("..."))))
+  
+    override val program =
+      fix(h) =:= (new_h :@ ψ)
+      
+    override val obligations = Prelude.TRUE
+  }
 }
 
 

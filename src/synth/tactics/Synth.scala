@@ -497,7 +497,6 @@ object Synth {
     
     def decl(sort: Identifier) = {
       val i = TyTV("i", N)
-      val d = TyTV("d", N ->: N ->: N)
 
       val master = scope.sorts.getMasterOf(sort)
       val parts = leavesByMaster(master)
@@ -583,7 +582,6 @@ object Synth {
     }
     
     def sizeCutoffExpr = {
-      val d = TyTV("d", N ->: N ->: N)
       val max2i = TyTV("max2i", N ->: N ->: N)
       (leavesByMaster map {
         case (master, leaves) => d(TypedTerm(TI(masters.indexOf(master)), N), TypedTerm(TI(leaves.length), N))
@@ -603,6 +601,8 @@ object Synth {
     val `[]` = TI("[]")
     val -> = TI("->")
     
+    val d = $TyTV("d", N ->: N ->: N)
+    
     implicit class -->(private val cond: Boolean) extends AnyVal {
       def -->[A](a: A) = if (cond) List(a) else List.empty
     }
@@ -620,6 +620,8 @@ object Synth {
       override def isIdentifierPart(c: Character) = c < 0x100 && super.isIdentifierPart(c)
     }
 
+    mnemonics.reserve(ScopeGen.d ~> "d")
+    
     def mne(id: Identifier) = mnemonics.get(id)
     def mne(t: Term) = mnemonics.get(t.leaf)
 

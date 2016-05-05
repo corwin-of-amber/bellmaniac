@@ -159,12 +159,14 @@ object Piping {
   implicit class PiedPiper[X,Y](private val f: X => Y) extends AnyVal {
     def |>:(x: X) = f(x)
     def |>>:(xs: Iterable[X]) = xs map f
+    def +|[Z](g: X => Z) = (x: X) => { f(x); g(x) }
   }
 
   implicit class IterablePiper[X](private val x: Iterable[X]) extends AnyVal {
     def |>>[Y](f: X => Y) = x map f
   }
 
+  def noop(x: Any) = {}  /* sometimes useful as "/dev/null" */
 }
 
 

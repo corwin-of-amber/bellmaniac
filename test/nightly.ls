@@ -3,22 +3,24 @@ path = require 'path'
 child_process = require 'child_process'
 
 logdir = '/tmp/bell-nightly'
-bell-flags = '--nocache'
+bell-flags = '--nocache --cert all --prover cvc4'
 
 benchmarks =
   * Paren: 
       phases: <[ A B C ]>
   * Gap:
-      phases: <[ A B C ]>
+      phases: <[ B C ]>  # 'A' currently has a problem with a Synth proof
   * LCS:
       phases: <[ A ]>
   * Accordion:
       phases: <[ A B C D ]>
   * Knapsack:
       phases: <[ A B ]>
+  * Bitonic:
+      phases: <[ A B C ]>
 
 
-if ! fs.existsSync logdir  # I know. but lstat and access are ugly
+if ! fs.existsSync logdir  # I know. but lstat and access are ugly and just stupid
   fs.mkdir logdir
 
 for bench in benchmarks

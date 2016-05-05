@@ -192,10 +192,14 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       val ψ = ctx_?(h, ψ_)
       fixer_?(s.program, h) match {
         case Some(fx) =>  // @@@ repeating code from previous case...
-          val (synthed, footprint) = invokeSynthesis(fx, h, templates, fix=true)
-          val impl = Synth.Alignment.stripProg(evalTerm(synthed))
-          def fillin(command: Term) = command.replaceDescendants(command.nodes collect { case t if t =~ (".",0) => (t,s.cursor) case t if t =~ ("...",0) => (t,encaps(synthed)) }  toList)
-          List(new SynthPod(fx.subtrees(0), h, encaps(synthed) :- impl, impl, ψ, footprint) with PodOrigin { override val tactic = fillin(command) })
+          List(new SynthPod.Placeholder(fx.subtrees(0), h, ψ) {
+            def compute() = {
+              val (synthed, footprint) = invokeSynthesis(fx, h, templates, fix=true)
+              val impl = Synth.Alignment.stripProg(evalTerm(synthed))
+              def fillin(command: Term) = command.replaceDescendants(command.nodes collect { case t if t =~ (".",0) => (t,s.cursor) case t if t =~ ("...",0) => (t,encaps(synthed)) }  toList)
+              new SynthPod(fx.subtrees(0), h, encaps(synthed) :- impl, impl, ψ, footprint) with PodOrigin { override val tactic = fillin(command) }
+            }
+          })
         case _ =>
           val (synthed, _) = invokeSynthesis(h, h, templates, fix=false)
           val impl = Synth.Alignment.stripProg(evalTerm(synthed))
@@ -241,7 +245,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     mkState(A)
   }
 
-  def transform(s: State, command: Term): State = {
+  def transform(s: State, command: Term, progress: (State => Unit) = (s) => {}): State = {
 
     if (command =~ ("Opt", 0)) return invokeOptimize(s) |> mkState
 
@@ -268,13 +272,43 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     else {
       derivatives filter (_.it |> cert_?) filter (_.obligations != TRUE) foreach invokeProver
 
-      Rewrite(derivatives, opts)(s.program, within) match {
-        case Some(rw) => mkState(rw)
-        case _ => throw new TranslationError("rewrite failed?") at command
-      }
+      val outcome =
+        zipWithIsLast(fulfill(derivatives)) map { case (derivatives, isLast) =>
+          Rewrite(derivatives, opts)(s.program, within) match {
+            case Some(rw) => mkState(rw) |-- (if (isLast) noop else progress)
+            case _ => /* ignore if not last? */
+              throw new TranslationError("rewrite failed?") at command
+          }
+        }
+      
+      outcome.last
     }
   }
-
+  
+  def fulfill(pod: Instantiated[Pod]) = {
+    pod.it match {
+      case promise: PromisePod => 
+        val pod = promise.compute() |> instapod
+        if (cert_?(pod.it) && pod.obligations != TRUE) invokeProver(pod)
+        pod
+      case _ => pod
+    }
+  }
+  
+  def fulfill(pods: Iterable[Instantiated[Pod]]): Stream[Iterable[Instantiated[Pod]]] = {
+    pods find (_.it.isInstanceOf[PromisePod]) match {
+      case Some(pod) => pods #:: fulfill(pods map ((x) => if (x eq pod) fulfill(pod) else x))
+      case None => Stream(pods).force  // - make sure stream has definite size = 1
+    }
+  }
+  
+  def zipWithIsLast[X](s: Stream[X]): Stream[(X, Boolean)] = s match {
+    case Stream.Empty => Stream.empty
+    case _ => (s.head, s.hasDefiniteSize && s.size == 1) #:: zipWithIsLast(s.tail)
+    // note: not using pattern matching for second case;
+    // this would force computation of s.tail.
+  }
+  
   def cert_?(p: Pod) = {
     val cert = ui.Config.config.cert()
     if (cert contains "all") true
@@ -370,17 +404,24 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     initial( Formula.fromJson(check.asInstanceOf[DBObject]) ) |-- display
   }, { throw new TranslationError("not a valid start element") })
 
-  def transform(s: State, cmd: DBObject)(implicit sc: SerializationContainer): State = cmd match {
-    case l: BasicDBList =>  (s /: (l map (_.asInstanceOf[DBObject])))(transform)
-    case _ => cmd.get("check") orElse cmd.get("tactic") andThen_ (
-      (_:DBObject) |> Formula.fromJson |> (transform(s, _)) |-- {
-        `s'` => if (`s'` ne s) { display(`s'`) }
-      }
-    , s)
+  def transform(s: State, cmd: DBObject)(implicit sc: SerializationContainer): State =
+    transform(s, cmd, (_: State) => {})
+    
+  def transform(s: State, cmd: DBObject, progress: State => Unit)(implicit sc: SerializationContainer): State = {
+    val disp_!= = (`s'`: State) => if (`s'` ne s) { display(`s'`) }
+    cmd match {
+      case l: BasicDBList =>  (s /: (l map (_.asInstanceOf[DBObject])))(transform(_, _, disp_!= +| progress))
+      case _ => cmd.get("check") orElse cmd.get("tactic") andThen_ (
+        (_:DBObject) |> Formula.fromJson |> (transform(s, _, disp_!= +| progress)) |-- disp_!=
+      , s)
+    }
   }
   
   def transform(s: DBObject, cmd: DBObject)(implicit sc: SerializationContainer): State =
-    transform(mkState(s |> Formula.fromJson |> Binding.prebind), cmd)
+    transform(s, cmd, (_: State) => {})
+    
+  def transform(s: DBObject, cmd: DBObject, progress: State => Unit)(implicit sc: SerializationContainer): State =
+    transform(mkState(s |> Formula.fromJson |> Binding.prebind), cmd, progress)
   
   def finalize(s: State) {
     val prog = s.program |> OptimizationPass.foldAllCalls

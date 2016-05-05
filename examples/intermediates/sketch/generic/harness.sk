@@ -13,9 +13,9 @@ bit[2] offsets(bit[2] x) { return x; }
 generator int rank(int t, bit[2] b) { return t*3+b[0]+b[1]; }
 
 @Param("P")  bit P(int i)  { return Scope_subsort(??, i); }
-@Param("P₁") bit P1(int i) { return Scope_subsort_offset(t1, b1()[0], i); }
-@Param("P₂") bit P2(int i) { return Scope_subsort_offset(t2, b2()[0], i); }
-@Param("P₃") bit P3(int i) { return Scope_subsort_offset(t3, b3()[0], i); }
+@Param("P₁") bit P1(int i) { return Scope_subsort_offset(t1, b1(), i); }
+@Param("P₂") bit P2(int i) { return Scope_subsort_offset(t2, b2(), i); }
+@Param("P₃") bit P3(int i) { return Scope_subsort_offset(t3, b3(), i); }
 
 @Inv("Q") bit Q(int i, int j) { return (Scope_2d_easier(/*minimal_4x4*/(??), minimal_1(??), i, j) || X(i,j)); }
 
@@ -28,13 +28,12 @@ generator |scalar| Context_JJR(int i, int j) { return psi(i,j); }
 
 |scalar| bot2d(int i, int j) { return bot; }
 
-#define NAIVE
 //#define EXHAUST_IJ
 
 pragma options "--bnd-unroll-amnt 8";
 
+pragma options "--bnd-mbits 7";    /* this is needed because hole is multiplied by 6 */
 
-#ifdef NAIVE
 
 harness void test1(int n 
 #ifndef EXHAUST_IJ
@@ -46,16 +45,6 @@ harness void test1(int n
   assume n <= 8 && n > 0;
   //N = n;
 
-#else
-
-harness void test1(
-#ifndef EXHAUST_IJ
-                   int i, int j
-#endif
-                   ) {
-  int n = d(0, 4);
-
-#endif
 
 #ifndef EXHAUST_IJ
   assume i < n && i >= 0;
@@ -75,7 +64,7 @@ harness void test1(
 
   minimize(tmax * 4 + bsum);
   */
-  minimize(max2i(t1, max2i(t2, t3)) * 4 + (b1()[0] + b2()[0] + b3()[0]));
+  minimize(max2i(t1, max2i(t2, t3)) * 6 + (b1()[0] + b1()[1] + b2()[0] + b2()[1] + b3()[0] + b3()[1]));
   //minimize(t1 * 4 + b1()[0]);
 
 #ifdef EXHAUST_IJ
