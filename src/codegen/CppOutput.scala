@@ -14,6 +14,15 @@ class CppOutput (implicit scope: Scope) {
     mn.get(new Identifier(s,"?"))
   }
   
+  def exprToFormalParam(e:Expr): String = {
+    e match {
+      case Interval(name: String) =>
+        s"DEFINTERVALFUNC(${mne(name)})"
+      case _ =>
+        ???
+    }
+  }
+  
   def exprToArg(e:Expr): String = {
     e match {
       case Interval(name: String) =>
@@ -62,6 +71,9 @@ class CppOutput (implicit scope: Scope) {
   def repeatChar(char:Char, n: Int) = List.fill(n)(char).mkString
   def addIndent(i:Int,s:String): String = {
     repeatChar('\t',i) + s
+  }
+  def apply(fd : FunDef,indent: Int): String = {
+    s"void ${fd.name}(${fd.args map exprToFormalParam mkString ","}){\n${apply(fd.body,indent+1)}\n}"
   }
   def apply(s: Stmt, indent: Int): String = {
     //Traverse over Stmt and print with appropriate 

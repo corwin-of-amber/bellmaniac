@@ -66,6 +66,8 @@ object Main {
   case class VarB(name: String, lb:Expr, ub: Expr) extends Expr 
   
 
+  case class FunDef (name: String,args: List[Interval],body:Block)
+  
   abstract class Stmt {
     def toPrettyTree : Tree[String] = this match {
       case DefInterval(i, ss, bisect) => ???
@@ -384,6 +386,15 @@ object Main {
     
   val ↦ = TI("↦")
   val `:` = TI(":")
+  def FormulaToFunction(name: String, arg_intervals: List[Interval], ff:Term) : FunDef ={
+    val block = FormulaToFunction(ff) match {
+      case b: Block =>
+        b
+      case s =>
+        Block(List(s))
+    }
+    FunDef(name,arg_intervals,block)
+  }
   
   def FormulaToFunction(ff: Term) : Stmt = {
     //find inputArray
@@ -458,16 +469,24 @@ object Main {
       for (block <- blocks){
         val json = JSON.parse(block).asInstanceOf[BasicDBObject]
         val prg = json.get("term")
+        val style = json.getString("style") 
+        val title = json.getString("program")
+        val r = """(.*)\[(.*)\]$""".r
+        val x = r.findFirstMatchIn(title)
+        val name = s"func${x.get.group(1)}_${style}"
+        val arg_intervals = x.get.group(2).split(",").toList map (a => Interval(a))
+        println(name)
+        println(arg_intervals)
         if (prg != null){
           val ff = Formula.fromJson(prg.asInstanceOf[BasicDBObject])
           println(s"The program is: ${ff.toPretty}")
           val ffwnocolons = stripColons(ff)
           println(ffwnocolons.toPretty)
-          val fundef = FormulaToFunction(ffwnocolons)
+          val fundef = FormulaToFunction(name,arg_intervals,ffwnocolons)
           println(s"The program AST is: ")
           println(fundef)
           val nl = new NestedListTextFormat[String]("  ","  ")()
-          nl.layOut(fundef.toPrettyTree)
+          nl.layOut(fundef.body.toPrettyTree)
           println("\nThe code is:")
           val cppGen = new codegen.CppOutput
           val code = cppGen(fundef,0)
