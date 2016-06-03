@@ -141,7 +141,7 @@ class bmTerm(bmRoot):
         op = self.funct.literal
         if hasattr(self,u"guards"):
             #Assert(self.guards.literal != LT,"Caught you: " + self.__str__() + str(ctx))
-            Assert(op in [OMAX,MIN,MAX,PLUS],"Only OMAX, APPLY can have guards: " + op)
+            Assert(op in [OMAX,MIN,MAX,PLUS,THETA],"Only OMAX, APPLY can have guards: " + op)
         if op in [PSI, THETA]:
             if op == PSI and ("fix" not in ctx or not ctx["fix"]) and len(self.largs[0].subtrees) == 0 and len(self.largs[1].subtrees) == 0:
                 v1 = self.largs[0].literal
@@ -211,6 +211,7 @@ class bmTerm(bmRoot):
                         c.setCode(ctx)
                     return reduce(lambda a,b: op+"(" + a + "," + b + ")" if a != b else a,map(lambda x: x.code,child.consargs))        
                 elif len(psiargs) == 1:
+                    
                     #find all sub-mins and set minEvar to true for them
                     for c in child.consargs:
                         if c not in psiargs and c not in minargs:
@@ -222,6 +223,8 @@ class bmTerm(bmRoot):
                     argsExceptPsi = filter(lambda x: x.literal != APPLY or x.funct.literal not in [PSI,THETA],child.consargs)
                     argsCodeExceptPsi = map(lambda x: x.code, argsExceptPsi)
                     return reduce(lambda a,b: op+"(" + a + "," + b + ")" if remove_comments(a) != remove_comments(b) else remove_comments(a) + a.replace(remove_comments(a),"") + b.replace(remove_comments(b),""),argsCodeExceptPsi)
+                    
+                        
                 else:
                     Assert(False,"can't have more than one psi in a min expression")
             else:
@@ -261,11 +264,19 @@ class bmTerm(bmRoot):
         elif hasattr(self.funct, u"code") and len(self.largs) == 1 and self.largs[0].literal == PSI:
             self.funct.setCode(ctx)
             return self.funct.code
-        elif op == DELTA:
-            Assert(len(self.largs) in [2,3],"must have two arguments")
+        elif op in ["d","v","DELTA"]:
+            Assert(len(self.largs) in [1,2,3],"must have two or three arguments")
             for x in self.largs:
                 x.setCode(ctx)
-            return u"DELTA(" + u",".join([x.code for x in self.largs]) + u")"     
+            return op+u"(" + u",".join([x.code for x in self.largs]) + u")"     
+        elif op == "+1":
+            #+1(a,b) \equiv a+1==b
+            Assert(len(self.largs) ==2,"must have two arguments")
+            l0 = self.largs[0]
+            l1 = self.largs[1]
+            l0.setCode(ctx)
+            l1.setCode(ctx)
+            return u"EQ(" + l0.code +"+1,"+l1.code+u")"  
         else:
             for arg in self.largs:
                 print u"LARGi:",arg.__str__().encode('utf-8') 
@@ -359,15 +370,77 @@ class bmTerm(bmRoot):
                 s0 = vtypes[v].subtrees[0]
                 s1 = vtypes[v].subtrees[1]
                 loopEndPoints[v] = ((defineBegin(s0),defineEnd(s0)),(defineBegin(s1),defineEnd(s1)))
+    def sanitizeGuards(self):
+        toRemove = []
+        for g in self.guardCompStrs:
+            if g[0:6] == "INSET(":
+                [exp,se] = g[6:-1].split(',')
+                #find all subsets of this set se
+                for sub in self.prg.superset:
+                    if self.prg.superset[sub] == se:
+                        gL = "INSET(" + exp + "," + sub + ")"
+                        #import pdb 
+                        #pdb.set_trace()
+                        if gL in self.guardCompStrs:
+                            toRemove.append(g)
+        for g in toRemove:
+            if g in self.guardCompStrs:
+                self.guardCompStrs.remove(g)
     def refineLoopGuards(self,vars,vtypes,loopEndPoints,vars_modif):    
         #initLoopEndPoints(vars,vtypes,loopEndPoints)
         if noLoopGuardOptim:
             return
+       
         if hasattr(self, "guardCompStrs"):
             toRemove = []
+            print "//GUARDS: ",self.guardCompStrs
+            self.sanitizeGuards()
             for g in self.guardCompStrs:
+                
+                if g[0:3] == "EQ(":
+                    [exp,j] = g[3:-1].split(',')
+                    exp = filter(lambda a: a!=')' and a != '(' and a != ' ',exp)
+                    #RTODO: guards EQ(var,exp) not handled
+                    if j in vars and exp.find(PLUS) > 0:
+                        sj = vtypes[j].literal
+                        [i,c] = exp.split(PLUS)
+                        #Assert(c=="1","Only constant 1 supported for now: expression i+1")
+                        if c== "1":
+                            if i in vars and vtypes[i].literal != u"U" and isSet(vtypes[i].literal) and isSet(sj):
+                                si = vtypes[i].literal
+                                if si!=sj and vars.index(i) <vars.index(j) and self.prg.superset[si] == self.prg.superset[sj]:
+                                    #j=i+1 and si, sj are disjoint with one common point at the most and j loops inside i-loop
+                                    #LET i = si.end-1, LET j = sj.begin [and do not remove the guard]
+                                    if loopEndPoints[i][0] == defineBegin(si) and loopEndPoints[i][1] == defineEnd(si):
+                                        loopEndPoints[i] = (defineEnd(si)+"-1",None)
+                                    else:
+                                        refineLP(self.prg.superset,loopEndPoints,i,defineEnd(si)+"-1",defineEnd(si))
+                                    if loopEndPoints[j][0] == defineBegin(sj) and loopEndPoints[j][1] == defineEnd(sj):
+                                        loopEndPoints[j] = (defineBegin(sj),None)
+                                    else:
+                                        refineLP(self.prg.superset,loopEndPoints,i,defineEnd(si)+"-1",defineEnd(si))
+                                    toRemove.append(g)
+                                if si==sj and vars.index(i) <vars.index(j):
+                                    #j=i+1 and i,j are in same set and j loops inside i-loop
+                                    #j loop should become a let stmt and i-loop should go upto end of its set -1
+                                    if loopEndPoints[i][1] == defineEnd(si):
+                                        loopEndPoints[i] = (loopEndPoints[i][0],loopEndPoints[i][1]+"-1")
+                                    else:
+                                        refineLP(self.prg.superset,loopEndPoints,i,defineBegin(si),defineEnd(si)+"-1")
+                                    if loopEndPoints[j][1] == defineEnd(sj):
+                                        loopEndPoints[j] = (i+"+1",None)
+                                    else:
+                                        refineLP(self.prg.superset,loopEndPoints,j,i+"+1",i+"+2")
+                                    toRemove.append(g)
                 if g[0:6] == "INSET(":
                     [exp,se] = g[6:-1].split(',')
+                    #find all subsets of this set se
+                    for sub in self.prg.superset:
+                        if self.prg.superset[sub] == se:
+                            gL = "INSET(" + exp + "," + sub + ")"
+                            if gL in self.guardCompStrs:
+                                toRemove.append(g)
+                            
                     exp = filter(lambda a: a!=')' and a != '(' and a != ' ',exp)
                     se = filter(lambda a: a!=')' and a != '(' and a != ' ',se)
                     if exp in vars and vtypes[exp].literal != u"U" and isSet(vtypes[exp].literal):
@@ -377,119 +450,134 @@ class bmTerm(bmRoot):
                             if loopEndPoints[exp][0] == defineBegin(vtypes[exp].literal) and loopEndPoints[exp][1] == defineEnd(vtypes[exp].literal):
                                 loopEndPoints[exp] = (defineBegin(se),defineEnd(se))
                             else:
-                                refineLP(loopEndPoints,exp,defineBegin(se),defineEnd(se))
+                                refineLP(self.prg.superset,loopEndPoints,exp,defineBegin(se),defineEnd(se))
                             toRemove.append(g) 
+                        if vtypes[exp].literal  == se:
+                            toRemove.append(g) #Useless guard
                     if exp.find(PLUS) > 0:
                         [x,c] = exp.split(PLUS)
-                        Assert(c=="1","Only constant 1 supported for now: expression i+1 or j+1")
+                        #Assert(c=="1","Only constant 1 supported for now: expression i+1 or j+1")
                         #print "guard->loop: ", x, vtypes[x].literal,exp, se, self.prg.superset
-                        if x in vars and vtypes[x].literal != u"U" and isSet(vtypes[x].literal):
-                            #x+1 \in se and (we know) x in sx
-                            sx = vtypes[x].literal
-                            if se != sx and self.prg.superset[sx] == self.prg.superset[se] and sx <se:
-                                if loopEndPoints[x][0] == defineBegin(sx)and loopEndPoints[x][1] == defineEnd(sx):
-                                    loopEndPoints[x] = (defineEnd(sx)+"-1",defineEnd(sx)+"-1")
-                                    toRemove.append(g)
-                                elif loopEndPoints[x][1] == defineEnd(sx) and "+" in loopEndPoints[x][0]:
-                                    [i,d] = loopEndPoints[x][0].split(PLUS)
-                                    Assert(d=="1","Only constant 1 supported for now: expression i+1 or j+1")
-                                    si = vtypes[i].literal
-                                    if i in vars_modif and si == sx:
-                                        #x > i was a guard and now x is constant = defend(sx)-1 so i can't be this value
-                                        if loopEndPoints[i][1] == defineEnd(si):
-                                            loopEndPoints[i] = (loopEndPoints[i][0] ,loopEndPoints[i][1] + "-1")
-                                            loopEndPoints[x] = (defineEnd(sx)+"-1",defineEnd(sx)+"-1")
-                                            print "//SPL CASE:",i,si,x,sx,exp
-                                            #Assert(False,"Debug here")
-                                            toRemove.append(g)
-                                if g not in toRemove:
-                                    refineLP(loopEndPoints,x,defineBegin(se)+u"-1",defineEnd(se)+u"-1")
-                                    toRemove.append(g)
-                            elif se != sx and sx != u"U" and isSet(sx):
-                                refineLP(loopEndPoints,x,defineBegin(se)+u"-1",defineEnd(se)+u"-1")
-                                toRemove.append(g)
-                                '''
-                                se_sup = self.prg.superset[se]
-                                sx_sup = self.prg.superset[sx]
-                                if (se_sup == sx_sup and sx < se):
-                                    #x+1 \in se, x \in sx and se is after sx as an interval
-                                    #x has to be end of sx
-                                    loopEndPoints[x] = (loopEndPoints[x][1]+u"-1",None)
-                                    toRemove.append(g) 
-                                elif (se_sup == sx_sup and se < sx):
-                                    #x+1 \in se, x \in sx and se is before sx as an interval
-                                    #x has to be empty
-                                    loopEndPoints[x] = (None,None)
-                                    toRemove.append(g) 
-                                if (sx_sup in self.prg.superset and self.prg.superset[sx_sup] == se_sup):
-                                    # x : sx < sx_sup < J and x+1 : se < J 
-                                    if se > sx_sup:
-                                        #sx_sup = [ sx? | sx?] _ se
-                                        if not isLeft(sx,sx_sup,self.prg.superset):
-                                            loopEndPoints[x] = (loopEndPoints[x][1]+u"-1",None)
-                                            
-                                        else:
-                                            loopEndPoints[x] = (None,None)
+                        if c=="1":
+                            if x in vars and vtypes[x].literal != u"U" and isSet(vtypes[x].literal):
+                                #x+1 \in se and (we know) x in sx
+                                sx = vtypes[x].literal
+                                if se != sx and self.prg.superset[sx] == self.prg.superset[se] and sx <se:
+                                    if loopEndPoints[x][0] == defineBegin(sx)and loopEndPoints[x][1] == defineEnd(sx):
+                                        loopEndPoints[x] = (defineEnd(sx)+"-1",defineEnd(sx)+"-1")
+                                        toRemove.append(g)
+                                    elif loopEndPoints[x][1] == defineEnd(sx) and "+" in loopEndPoints[x][0]:
+                                        [i,d] = loopEndPoints[x][0].split(PLUS)
+                                        Assert(d=="1","Only constant 1 supported for now: expression i+1 or j+1")
+                                        si = vtypes[i].literal
+                                        if i in vars_modif and si == sx:
+                                            #x > i was a guard and now x is constant = defend(sx)-1 so i can't be this value
+                                            if loopEndPoints[i][1] == defineEnd(si):
+                                                loopEndPoints[i] = (loopEndPoints[i][0] ,loopEndPoints[i][1] + "-1")
+                                                loopEndPoints[x] = (defineEnd(sx)+"-1",defineEnd(sx)+"-1")
+                                                print "//SPL CASE:",i,si,x,sx,exp
+                                                #Assert(False,"Debug here")
+                                                toRemove.append(g)
+                                    if g not in toRemove:
+                                        refineLP(self.prg.superset,loopEndPoints,x,defineBegin(se)+u"-1",defineEnd(se)+u"-1")
+                                        toRemove.append(g)
+                                elif se != sx and sx != u"U" and isSet(sx) and not isSubset(self.prg.superset[sx],se,self.prg.superset):
+                                    if isSubset(self.prg.superset[sx],se,self.prg.superset):
+                                        toRemove.append(g)
                                     else:
-                                        #empty set
+                                        refineLP(self.prg.superset,loopEndPoints,x,defineBegin(se)+u"-1",defineEnd(se)+u"-1")
+                                        toRemove.append(g)
+                                    '''
+                                    se_sup = self.prg.superset[se]
+                                    sx_sup = self.prg.superset[sx]
+                                    if (se_sup == sx_sup and sx < se):
+                                        #x+1 \in se, x \in sx and se is after sx as an interval
+                                        #x has to be end of sx
+                                        loopEndPoints[x] = (loopEndPoints[x][1]+u"-1",None)
+                                        toRemove.append(g) 
+                                    elif (se_sup == sx_sup and se < sx):
+                                        #x+1 \in se, x \in sx and se is before sx as an interval
+                                        #x has to be empty
                                         loopEndPoints[x] = (None,None)
+                                        toRemove.append(g) 
+                                    if (sx_sup in self.prg.superset and self.prg.superset[sx_sup] == se_sup):
+                                        # x : sx < sx_sup < J and x+1 : se < J 
+                                        if se > sx_sup:
+                                            #sx_sup = [ sx? | sx?] _ se
+                                            if not isLeft(sx,sx_sup,self.prg.superset):
+                                                loopEndPoints[x] = (loopEndPoints[x][1]+u"-1",None)
+                                                
+                                            else:
+                                                loopEndPoints[x] = (None,None)
+                                        else:
+                                            #empty set
+                                            loopEndPoints[x] = (None,None)
+                                        toRemove.append(g)
+                                    '''
+                                if se == sx:
+                                    #x+1 and x both are in sx so x ranges from [sx.begin,sx.end-1)
+                                    if loopEndPoints[x][1] == defineEnd(se):
+                                        loopEndPoints[x] = (loopEndPoints[x][0],defineEnd(se)+u"-1")
+                                    else:
+                                        refineLP(self.prg.superset,loopEndPoints,x,defineBegin(se),defineEnd(se)+u"-1")
                                     toRemove.append(g)
-                                '''
-                            if se == sx:
-                                #x+1 and x both are in sx so x ranges from [sx.begin,sx.end-1)
-                                if loopEndPoints[x][1] == defineEnd(se):
-                                    loopEndPoints[x] = (loopEndPoints[x][0],defineEnd(se)+u"-1")
-                                else:
-                                    refineLP(loopEndPoints,x,defineBegin(se),defineEnd(se)+u"-1")
-                                toRemove.append(g)
-                        #if not g in toRemove:
-                        #    print "NOT RESOLVED."
+                            #if not g in toRemove:
+                            #    print "NOT RESOLVED."
                     if exp.find("-") > 0:
                         [x,c] = exp.split("-")
-                        Assert(c=="1","Only constant 1 supported for now: expression i-1 or j-1")
+                        #Assert(c=="1","Only constant 1 supported for now: expression i-1 or j-1")
                         #print "guard->loop: ", x, vtypes[x].literal,exp, se, self.prg.superset
-                        if x in vars and vtypes[x].literal != u"U" and isSet(vtypes[x].literal):
-                            sx = vtypes[x].literal 
-                            #x-1 in se and x in sx
-                            if se != sx and sx != u"U" and isSet(sx):
-                                refineLP(loopEndPoints,x,defineBegin(se)+u"+1",defineEnd(se)+u"+1")
-                                toRemove.append(g)
-                                '''
-                                se_sup = self.prg.superset[se]
-                                sx_sup = self.prg.superset[sx]
-                                if (se_sup == sx_sup and se < sx):
-                                    #x-1 \in se, x \in sx and se is before sx as an interval
-                                    #x has to be start of se
-                                    loopEndPoints[x] = (loopEndPoints[x][0],None)
-                                    toRemove.append(g) 
-                                elif (se_sup == sx_sup and se > sx):
-                                    #x-1 \in se, x \in sx and se is after sx as an interval
-                                    #x has to be empty
-                                    loopEndPoints[x] = (None,None)
-                                    toRemove.append(g) 
-                                if (sx_sup in self.prg.superset and self.prg.superset[sx_sup] == se_sup):
-                                    # x : sx < sx_sup < J and x-1 : se < J 
-                                    if se < sx_sup:
-                                        #se _ sx_sup = [ sx? | sx?] 
-                                        #print "sx,sx_sup: ",sx,sx_sup,self.prg.superset, isLeft(sx,sx_sup,self.prg.superset)
-                                        if isLeft(sx,sx_sup,self.prg.superset):
-                                            loopEndPoints[x] = (loopEndPoints[x][0],None)
-                                        else:
-                                            loopEndPoints[x] = (None,None)
+                        if c == "1":
+                            if x in vars and vtypes[x].literal != u"U" and isSet(vtypes[x].literal):
+                                sx = vtypes[x].literal 
+                                #x-1 in se and x in sx
+                                if se != sx and sx != u"U" and isSet(sx):
+                                    if isSubset(self.prg.superset[sx],se,self.prg.superset):
+                                        toRemove.append(g)
+                                    elif areDisjoint(se,sx,self.prg.superset) == "x<y" and loopEndPoints[x][0] == defineBegin(sx) and loopEndPoints[x][1] ==defineEnd(sx):
+                                        loopEndPoints[x] = (defineBegin(sx),defineEnd(se)+ "+1")
+                                        toRemove.append(g)
                                     else:
-                                        #empty set
+                                        bp()
+                                        refineLP(self.prg.superset,loopEndPoints,x,defineBegin(se)+u"+1",defineEnd(se)+u"+1")
+                                        toRemove.append(g)
+                                    '''
+                                    se_sup = self.prg.superset[se]
+                                    sx_sup = self.prg.superset[sx]
+                                    if (se_sup == sx_sup and se < sx):
+                                        #x-1 \in se, x \in sx and se is before sx as an interval
+                                        #x has to be start of se
+                                        loopEndPoints[x] = (loopEndPoints[x][0],None)
+                                        toRemove.append(g) 
+                                    elif (se_sup == sx_sup and se > sx):
+                                        #x-1 \in se, x \in sx and se is after sx as an interval
+                                        #x has to be empty
                                         loopEndPoints[x] = (None,None)
+                                        toRemove.append(g) 
+                                    if (sx_sup in self.prg.superset and self.prg.superset[sx_sup] == se_sup):
+                                        # x : sx < sx_sup < J and x-1 : se < J 
+                                        if se < sx_sup:
+                                            #se _ sx_sup = [ sx? | sx?] 
+                                            #print "sx,sx_sup: ",sx,sx_sup,self.prg.superset, isLeft(sx,sx_sup,self.prg.superset)
+                                            if isLeft(sx,sx_sup,self.prg.superset):
+                                                loopEndPoints[x] = (loopEndPoints[x][0],None)
+                                            else:
+                                                loopEndPoints[x] = (None,None)
+                                        else:
+                                            #empty set
+                                            loopEndPoints[x] = (None,None)
+                                        toRemove.append(g)
+                                    '''
+                                if se == sx:
+                                    #x-1 and x both are in sx so x ranges from [sx.begin+1,sx.end)
+                                    if loopEndPoints[x][0] == defineBegin(sx):
+                                        loopEndPoints[x] = (defineBegin(se)+u"+1",loopEndPoints[x][1])
+                                    else:
+                                        bp()
+                                        refineLP(self.prg.superset,loopEndPoints,x,defineBegin(se)+u"+1",defineEnd(se))
                                     toRemove.append(g)
-                                '''
-                            if se == sx:
-                                #x-1 and x both are in sx so x ranges from [sx.begin+1,sx.end)
-                                if loopEndPoints[x][0] == defineBegin(sx):
-                                    loopEndPoints[x] = (defineBegin(se)+u"+1",loopEndPoints[x][1])
-                                else:
-                                    refineLP(loopEndPoints,x,defineBegin(se)+u"+1",defineEnd(se))
-                                toRemove.append(g)
-                        if not g in toRemove:
-                            print "NOT RESOLVED."
+                            if not g in toRemove:
+                                print "NOT RESOLVED."
                 if g.find(LT) > 0:
                     pos = g.find(LT)
                     x=g[:pos]
@@ -499,37 +587,37 @@ class bmTerm(bmRoot):
                         posplus = x.find("+")
                         j=x[:posplus]
                         c=x[posplus+1:]
-                        Assert(c=="1","Only 1 supported for x: j+1")
+                        #Assert(c=="1","Only 1 supported for x: j+1")
                         #j+1 < y
-                        
-                        if j in vars:
-                            sj = vtypes[j].literal
-                            sy = vtypes[y].literal
-                            jLoopsBeforey = vars.index(j) < vars.index(y) 
-                            #print "//FOUND var + 1 LT var : ",j,sj,y,sy,jLoopsBeforey, areDisjoint(sj,sy,self.prg.superset)
-                            if (isSubset(sj,sy,self.prg.superset) or sj==sy ) and sj != u"U" and jLoopsBeforey:
-                                #change y appropriately to j+2
-                                #j+1 < y and sj = J1 subset of sy = J
-                                if loopEndPoints[y][0] == defineBegin(sy):
-                                    loopEndPoints[y] = (j+ "+2",loopEndPoints[y][1])
-                                else:
-                                    refineLP(loopEndPoints,y,j+ "+2",loopEndPoints[y][1])
-                                toRemove.append(g)
-                            if sj != sy and areDisjoint(sj,sy,self.prg.superset) == "y<x" :
-                                loopEndPoints[y] = (None,None)
-                                toRemove.append(g)
-                            elif sj != sy and areDisjoint(sj,sy,self.prg.superset) == "x<y" :
-                                refineLP(loopEndPoints,y,j+ "+2",loopEndPoints[y][1])
-                                toRemove.append(g)
-                             
-                            #if sj != sy and areDisjoint(sj,sy,self.prg.superset) == "x<y" and xLoopsBeforey:
+                        if c== "1":
+                            if j in vars:
+                                sj = vtypes[j].literal
+                                sy = vtypes[y].literal
+                                jLoopsBeforey = vars.index(j) < vars.index(y) 
+                                #print "//FOUND var + 1 LT var : ",j,sj,y,sy,jLoopsBeforey, areDisjoint(sj,sy,self.prg.superset)
+                                if (isSubset(sj,sy,self.prg.superset) or sj==sy ) and sj != u"U" and jLoopsBeforey:
+                                    #change y appropriately to j+2
+                                    #j+1 < y and sj = J1 subset of sy = J
+                                    if loopEndPoints[y][0] == defineBegin(sy):
+                                        loopEndPoints[y] = (j+ "+2",loopEndPoints[y][1])
+                                    else:
+                                        refineLP(self.prg.superset,loopEndPoints,y,j+ "+2",loopEndPoints[y][1])
+                                    toRemove.append(g)
+                                if sj != sy and areDisjoint(sj,sy,self.prg.superset) == "y<x" :
+                                    loopEndPoints[y] = (None,None)
+                                    toRemove.append(g)
+                                elif sj != sy and areDisjoint(sj,sy,self.prg.superset) == "x<y" :
+                                    refineLP(self.prg.superset,loopEndPoints,y,j+ "+2",loopEndPoints[y][1])
+                                    toRemove.append(g)
+                                 
+                                #if sj != sy and areDisjoint(sj,sy,self.prg.superset) == "x<y" and xLoopsBeforey:
                                 
                     if x in vars and y in vars :
                         sx = vtypes[x].literal
                         sy = vtypes[y].literal
                         xLoopsBeforey = vars.index(x) < vars.index(y)
                         #print "GUARD ANALYSIS: ", x,"<",y, vars,sx,sy
-                        if getProblem() == "Paren":
+                        if getProblem() in [PAREN]:
                             if sy == u"U" and sx != u"U" and isSet(sx):
                                 sy0 = vtypes[y].subtrees[0]
                                 sy1 = vtypes[y].subtrees[1]
@@ -554,51 +642,73 @@ class bmTerm(bmRoot):
                                     #second x-loop can end at y
                                     loopEndPoints[x] =(lx[0],(lx[1][0],y))
                                     toRemove.append(g) 
-                                
-                        if sx == sy and xLoopsBeforey: 
-                            #you can run y-loop from x+1 to end
-                            if loopEndPoints[y][0] == defineBegin(sy):
-                                loopEndPoints[y] = (x+ u"+1",loopEndPoints[y][1])
-                            else:
-                                refineLP(loopEndPoints,y,x+ u"+1",loopEndPoints[y][1])
-                            toRemove.append(g) 
-                        if sx == sy and not xLoopsBeforey: 
-                            #you can run x-loop from begin to y
-                            #Assert(False,"not supported x<y with y looping before x")
-                            if loopEndPoints[x][1] == defineEnd(sx):
-                                loopEndPoints[x] = (loopEndPoints[x][0],y)
-                            else:
-                                refineLP(loopEndPoints,x,loopEndPoints[x][0],y)
-                            toRemove.append(g) 
-                        if sx != sy and areDisjoint(sx,sy,self.prg.superset) == "x<y":
-                            toRemove.append(g) #trivially satisfied!
-                        if sx != sy and areDisjoint(sx,sy,self.prg.superset) == "y<x":
-                            loopEndPoints[x] = (None,None)
-                            loopEndPoints[y] = (None,None)
-                            toRemove.append(g) #Useless loop!
-                    if g not in toRemove:
-                        import pdb
-                        pdb.set_trace()
+                        if g not in toRemove:        
+                            if sx == sy and xLoopsBeforey: 
+                                #you can run y-loop from x+1 to end
+                                if loopEndPoints[y][0] == defineBegin(sy):
+                                    loopEndPoints[y] = (x+ u"+1",loopEndPoints[y][1])
+                                else:
+                                    refineLP(self.prg.superset,loopEndPoints,y,x+ u"+1",loopEndPoints[y][1])
+                                toRemove.append(g) 
+                            elif (sx == sy or isSubset(sy,sx,self.prg.superset)) and not xLoopsBeforey: 
+                                #you can run x-loop from begin to y
+                                #Assert(False,"not supported x<y with y looping before x")
+                                if loopEndPoints[x][1] == defineEnd(sx):
+                                    loopEndPoints[x] = (loopEndPoints[x][0],y)
+                                else:
+                                    refineLP(self.prg.superset,loopEndPoints,x,loopEndPoints[x][0],y)
+                                toRemove.append(g) 
+                                    
+                            elif sx != sy and areDisjoint(sx,sy,self.prg.superset) == "x<y":
+                                toRemove.append(g) #trivially satisfied!
+                            elif sx != sy and areDisjoint(sx,sy,self.prg.superset) == "y<x":
+                                loopEndPoints[x] = (None,None)
+                                loopEndPoints[y] = (None,None)
+                                toRemove.append(g) #Useless loop!
+                            elif sx!= sy:
+                                #x<y 
+                                if x in vars_modif and not xLoopsBeforey:
+                                    refineLP(self.prg.superset,loopEndPoints,x,defineBegin(sx),y)
+                                    toRemove.append(g)
+                                elif y in vars_modif and xLoopsBeforey:
+                                    refineLP(self.prg.superset,loopEndPoints,y,x+"+1",defineEnd(sy))
+                                    toRemove.append(g)
+                    
+                if g not in toRemove and "BOTTOM" not in g and "w(" not in g:
+                    bp()
             #print "EP:",loopEndPoints
             for g in toRemove:
-                self.guardCompStrs.remove(g)
+                if g in self.guardCompStrs:
+                    self.guardCompStrs.remove(g)
     def processGuards(self,fvranges,boundExpr,ctx):
         # constraining the loopVar using both loopType and guardExpr
         #Use guardComponents and freeVariables to find best bounds and guards
         #(0) Bring guards up in this special Min -> Min case:
-        if boundExpr.isMinMax() and len(boundExpr.largs) == 1 and boundExpr.largs[0].isConsNode() and len(boundExpr.largs[0].consargs) == 2 and boundExpr.largs[0].consargs[0].literal == APPLY and boundExpr.largs[0].consargs[0].funct.literal in [PSI,THETA] and boundExpr.largs[0].consargs[1].isMinMax():
+        if hasattr(boundExpr,"guardCompStrs"):
+            boundExpr.sanitizeGuards()
+        if boundExpr.isMinMax() and len(boundExpr.largs) == 1 and boundExpr.largs[0].isConsNode() and len(boundExpr.largs[0].consargs) == 2 and boundExpr.largs[0].consargs[0].fi() in [PSI,THETA]:
             #move guards from boundExpr.largs[0].consargs[1] to boundExpr if they don't involve the inner literal
-            innerLoop = boundExpr.largs[0].consargs[1]
-            if len(innerLoop.largs) == 1 and innerLoop.largs[0].literal == MAPSTO and len(innerLoop.largs[0].fvranges) ==1:  
-                innerLit = innerLoop.largs[0].fvranges[0][0]
-                innerBE = innerLoop.largs[0].boundExpr
-                for g in innerBE.guardCompStrs:
-                    if innerLit not in g:
-                        #move this g up and remove from here
-                        Assert(hasattr(boundExpr,"guardCompStrs"),"Must have existing guards?")
+            #RTODO: Assert(False,"debug this ")
+            if boundExpr.largs[0].consargs[1].isMinMax():
+                innerLoop = boundExpr.largs[0].consargs[1]
+                if len(innerLoop.largs) == 1 and innerLoop.largs[0].literal == MAPSTO and len(innerLoop.largs[0].fvranges) ==1:  
+                    innerLit = innerLoop.largs[0].fvranges[0][0]
+                    innerBE = innerLoop.largs[0].boundExpr
+                    innerBE.sanitizeGuards()
+                    for g in innerBE.guardCompStrs:
+                        if innerLit not in g:
+                            #move this g up and remove from here
+                            Assert(hasattr(boundExpr,"guardCompStrs"),"Must have existing guards?")
+                            boundExpr.addToGuardCompStrs(g)
+                            innerBE.guardCompStrs.remove(g)
+            elif hasattr(boundExpr.largs[0].consargs[1],"guardCompStrs"):
+                #just a simple node, not a loop. Can bring all these guards up
+                innerNode = boundExpr.largs[0].consargs[1]
+                innerNode.sanitizeGuards()
+                for g in innerNode.guardCompStrs:
+                    if g not in boundExpr.guardCompStrs:
                         boundExpr.addToGuardCompStrs(g)
-                        innerBE.guardCompStrs.remove(g)
-                
+                innerNode.guardCompStrs = []
         #(1) eliminate guards implied by fvranges and ctx["fvranges"]
         if "elim_guards" not in ctx:
             ctx["elim_guards"] =[]
@@ -637,6 +747,7 @@ class bmTerm(bmRoot):
             boundExpr.addToGuardCompStrs(g)
         
         ctx["common_guards"] = commomcomps
+
         loopEndPoints = {}
         
         
@@ -647,7 +758,11 @@ class bmTerm(bmRoot):
         if  LPDEBUG and  hasattr(boundExpr,"guardCompStrs"):
             print "AFTER LP:",vars_modif,filter(lambda g: "elim_guards" not in ctx or (g not in ctx["elim_guards"]),boundExpr.guardCompStrs),[v+" in ("+ unicode(loopEndPoints[v][0]) + "," + unicode(loopEndPoints[v][1]) + ")"  for v in vars]
         return loopEndPoints
-        
+    def fi(self):
+        if self.literal == APPLY:
+            return self.funct.literal
+        else:
+            return self.literal 
     def buildForLoop(self, fvranges, boundExpr, mode, tmpVar,ctx, loopEndPoints):
         # compute the tmpVar using evalExpr in a loop
         op = None
@@ -677,7 +792,8 @@ class bmTerm(bmRoot):
         if boundExpr.isMinMax() and boundExpr.largs[0].isConsNode() and len(boundExpr.largs[0].consargs) >= 2:
             guardedNodeList = (filter(lambda c: hasattr(c,"guardCompStrs"),boundExpr.largs[0].consargs))
             #print "GNL: ",guardedNodeList
-            if len(guardedNodeList) == 1:
+            Assert(len(guardedNodeList) in [1,2],"too many nodes inside a min loop!")
+            if len(guardedNodeList) == 1 and guardedNodeList[0].fi() == MIN:
                 guardedNode = guardedNodeList[0]
                 if "common_guards" in ctx:
                     for g in ctx["common_guards"]:
@@ -691,6 +807,38 @@ class bmTerm(bmRoot):
                     #single guarded node!
                     tVar = guardedNode.strTemp(ctx)
                     ctx["use_tmp"] = tVar
+                #print "GN:",guardedNode.guardCompStrs, tmpVar
+            elif len(guardedNodeList) == 2:
+                for gN in guardedNodeList:
+                    if "common_guards" in ctx:
+                        for g in ctx["common_guards"]:
+                            if g in gN.guardCompStrs:
+                                gN.guardCompStrs = filter(lambda a: a!=g, gN.guardCompStrs)
+                gN0 = guardedNodeList[0] #e1
+                gN1 = guardedNodeList[1] #min(k,e2)
+                if not gN0.isMinMax() and gN1.isMinMax() and gN1.largs[0].fi() == MAPSTO:
+                    tVar = boundExpr.strTemp(ctx)
+                    ctx["use_tmp"] = tVar
+                    gN0.setCode(ctx)
+                    gN0.code = "if ("+gN0.getGuardExpr()+") {\n" + tVar + " = min("+tVar+"," + gN0.code + ");\n}"
+                    #gN0.tempMade = False
+                    #del gN0.preCode
+                    ctx["minevar"] = True
+                    gN1.setCode(ctx)        
+                    ctx["minevar"] = False
+                    ls = [v for (v,r) in filter(lambda (v, r): v not in [THETA, QMARK, PSI], ctx['fvr'])]
+                    boundExpr.preCode = ""
+                    boundExpr.preCode += u"\nTYPE " + tVar + u"= "+arrayAccessStr(self.prg,u"dist", ls)+";\n"
+                    boundExpr.preCode += gN0.code
+                    Assert(not boundExpr.guardCompStrs,"Empty guard components for boundExpr needed")
+                    boundExpr.code = tVar 
+                    #gN1.tempMade = False
+                    #del gN1.preCode
+                    del ctx["use_tmp"] 
+                    #boundExpr.tempMade = True
+                    #import pdb
+                    #pdb.set_trace()
+                #RTODO - decide what to do here, use a common temporary and identify common guards
                 #print "GN:",guardedNode.guardCompStrs, tmpVar
         boundExpr.setCode(ctx)
 
@@ -783,7 +931,7 @@ class bmTerm(bmRoot):
             tdfs = self.getTempDefsStr()
             # Assert(tdfs = u"",u"Temp def shouldn be empty: " + tdfs)
             rs += tdfs
-        
+
         
         if "fix" in ctx and ctx["fix"] and "slashes" in ctx:
             eVar = u""
@@ -804,8 +952,8 @@ class bmTerm(bmRoot):
         if mode in [MIN,MAX]:
             rs += tmpVar + u" = "+mode+"(" + tmpVar + u"," + boundExpr.code + u")"
         elif (mode == FIX or mode == SLASH):
-            if eVar != u"":
-                rs += eVar  + boundExpr.code
+            #if eVar != u"":
+            rs += eVar  + boundExpr.code
         else:
             Assert(False, u"mode not defined: " + mode)
         rs=endStmt(rs) + u"\n"
@@ -835,6 +983,7 @@ class bmTerm(bmRoot):
             Assert(False, "can't have guards but not guardCompStrs: " + self.__str__())
     def getGuardExpr(self):
         Assert(hasattr(self, "guardCompStrs"), "Must have guardCompStrs")
+        self.sanitizeGuards()
         return u" && ".join(self.guardCompStrs)
     
                 
@@ -915,7 +1064,12 @@ class bmTerm(bmRoot):
             if hasattr(self,u"guards") and guardsAllowed and self.getGuardExpr() != u"":
                 if self.parent is not None and self.parent.literal == SLASH and "evar" in ctx and ctx["evar"] != u"":
                     self.code = u"if(" + self.getGuardExpr() + u"){\n" + ctx["evar"] + u"=" + self.code +u";}\n"
+                elif self.fi() == MIN and "use_tmp" in ctx and "fix" in ctx:
+                    self.code = u"if(" + self.getGuardExpr() + u")\n{\n" + self.code +u"\n}"
                 else:
+                    #RTODO: Assert("EQ" not in self.getGuardExpr(),"Debug here now")
+                    import pdb
+                    pdb.set_trace()
                     self.code = u"((" + self.getGuardExpr() + u")?(" + self.code +u"):UNDEF)"
             
         elif self.literal == FIX:
@@ -931,15 +1085,27 @@ class bmTerm(bmRoot):
         elif self.literal in [LT, u'>', u'==', u'!=', AND, u'|']:
             # binary infix operators
             Assert(len(self.subtrees) == 2, "binary infix operators")
+            
             op = self.literal
             if op == AND: 
                 op = u' && '
-            self.code = opInfix(op, self.subtrees, ctx)
-        elif isSet(self.literal):
+            if op == LT and self.subtrees[1].fi() == "-" and self.subtrees[1].literal == APPLY:
+                vi = self.subtrees[0]
+                vj = self.subtrees[1].largs[0]
+                vc = self.subtrees[1].largs[1]
+                if not vi.subtrees and not vj.subtrees and not vc.subtrees and vc.literal == "1":
+                    self.code = vi.literal + "+1<" + vj.literal 
+                    #Assert(False,"debug herE")
+            if not hasattr(self,"code"):
+                self.code = opInfix(op, self.subtrees, ctx)
+        elif isSet(self.literal) or self.literal[0] == BOTTOM:
              # guard computation
              Assert(len(self.subtrees) == 1, "IN SET guard: " + self.__str__())
              self.subtrees[0].setCode(ctx)
-             self.code = defineInSet(self.subtrees[0].code,self.literal)
+             setName = self.literal
+             if setName[0] == BOTTOM:
+                setName = "BOTTOM" + setName[1:]
+             self.code = defineInSet(self.subtrees[0].code,setName)
         elif self.literal == GUARD:
             # guarded expression
             # subtrees[1] is the condition
@@ -975,6 +1141,7 @@ class bmTerm(bmRoot):
                             if hasattr(x, "guards") and g in x.guardCompStrs:
                                 x.guardCompStrs.remove(g)
                                 #print "REMOVING GUARD: " + g
+                
                 x.setCode(ctx)
                 if x.literal != SLASH:
                     if rootSlash and x.code == ctx["evar"]:
@@ -989,6 +1156,7 @@ class bmTerm(bmRoot):
                 self.code = u"NONE"
             else:
                 #compose all the Slash codes
+                #bp()
                 self.code = u""
                 #Assert(len(ctx["slashes"]) == 2, "Only two slash divisions supported based on guards for now")
                 for x in ctx["slashes"]:
@@ -1041,20 +1209,25 @@ class bmTerm(bmRoot):
         if self.parent is not None and hasattr(self.parent, "guards") and  self.parent.guards == self:
             comps = []
             getComponents(self, comps)
+            toRemove = []
+            
             self.parent.guardCompStrs = [g.code for g in comps]
-        
+
         if hasattr(self,"pardep"):
             Assert("curpardep" in ctx, "Can't have been removed by another bazinga!")
             del ctx["curpardep"]
             #self.code = u"YYXX[" + unicode(self.pardep) + u"]{" +self.code + u"}\n" 
         if hasattr(self,"guards"):
-                #Assert(False,"breakpoint")
-                self.code = self.code + "/* " + self.guards.code + " */"
+            #Assert(False,"breakpoint")
+            self.code = self.code # + "/* " + self.guards.code + " */"
             
         
     def isPlus(self):
-        return self.literal == APPLY and self.funct.literal == PLUS
-        
+        return self.isOpApply(PLUS)
+        #return self.literal == APPLY and self.funct.literal == PLUS
+    def isOpApply(self,op):
+        return self.literal == APPLY and self.funct.literal == op
+    
     def getDebug(self):
         if DEBUG:
             if self.parent and self.parent.literal == u'@':

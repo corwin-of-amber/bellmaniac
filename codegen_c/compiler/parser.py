@@ -15,21 +15,25 @@ def main():
     parser.add_argument("--debug", action='store_true')
     parser.add_argument("files", metavar="F", type=str, nargs='+', help="All JSON files")
     args = parser.parse_args()
-    if "Gap" in args.files[0]:
-        setProblem("Gap")
-    elif "Paren" in args.files[0]:
-        setProblem("Paren")
-    elif "Accordion" in args.files[0]:
-        setProblem("Accordion")
-    elif "LCS" in args.files[0]:
-        setProblem("LCS")
+    if GAP in args.files[0]:
+        setProblem(GAP)
+    elif PAREN in args.files[0]:
+        setProblem(PAREN)
+    elif ACCORDION in args.files[0]:
+        setProblem(ACCORDION)
+    elif LCS in args.files[0]:
+        setProblem(LCS)
+    elif BITONIC in args.files[0]:
+        setProblem(BITONIC)
+    elif KNAPSACK in args.files[0]:
+        setProblem(KNAPSACK)
     else:
         Assert(False, "problem name not expected/defined")
     (pdict,prgs) = getBmProgram(args.files)
     #For each loop,rec pair - take superset from rec and put it in loop
     
     unionSS = {}
-    if getProblem() == "Accordion":
+    if getProblem() in  [ACCORDION,BITONIC]:
         for name in pdict:
             addSS(pdict[name]["rec"].superset,unionSS)
         for name in pdict:

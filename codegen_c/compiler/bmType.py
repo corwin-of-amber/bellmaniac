@@ -47,8 +47,10 @@ class bmType(bmRoot):
         
         # first char of sets is a caps
         if self.kind == 'set':
-            Assert(self.literal[0].isupper(), "First char of set in TypeTree must be caps: " + self.literal) 
-        if self.literal != LT:
+            Assert(self.literal[0].isupper() or self.literal[0]==BOTTOM, "First char of set in TypeTree must be caps or BOTTOM: " + self.literal) 
+        if self.literal[0] == BOTTOM:
+            self.ns = None
+        if self.literal != LT :
             Assert(self.ns is None, "ns value is always None in rootType nodes: lit=" + self.literal + ", ns=" + unicode(self.ns))
         
         Assert(typ[u'$'] == 'Tree', "$ value != identifier in bmType: " + typ[u'$'])

@@ -62,7 +62,7 @@ class bmProgram(object):
     def addStateVarsSecond(self, trm):
         if trm.isConsNode():
             trm.setConsArgs()
-        elif trm.literal == u'fix':
+        elif trm.literal == u'fix' and getProblem() == PAREN:
             readSet = getReadSet(trm)
             # print "ReadSet: ",readSet
             refineTypes(trm, readSet) 
@@ -70,6 +70,8 @@ class bmProgram(object):
             self.addStateVarsSecond(child)
         if hasattr(trm, "guards"):
             trm.guards.setCode({})
+            trm.sanitizeGuards()
+            
             
     
     def forPre(self):

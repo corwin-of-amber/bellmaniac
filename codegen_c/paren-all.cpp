@@ -121,7 +121,7 @@ void funcA_loop(DEFINTERVALFUNC(J)){
 			DALdist(i,j) = t520/* i<j */;
 		}
 	}
-
+	
 }
 
 void funcA_rec(DEFINTERVALFUNC(J)){

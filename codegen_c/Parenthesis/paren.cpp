@@ -32,7 +32,7 @@ using namespace std;
 #define PARAM(I) I
 #endif
 #define MAXVAL int(1e9)
-
+#define INITMIN MAXVAL
 /* Min Max and Weight Function */
 //#define min(a,b) (a<b?a:b)
 //#define max(a,b) (a>b?a:b)
@@ -59,6 +59,8 @@ long long B = 64;
 #define DCLdist(i,j) Ddist(i,j)
 #define DBLdist(i,j) Ddist(i,j)
 #define DALdist(i,j) Ddist(i,j)
+#define psi(i,j) Ddist(i,j)
+#define theta(i,j) Ddist(i,j)
 
 
 struct interval {
@@ -70,6 +72,8 @@ struct interval {
 #define SIZE(I) (DEFEND(I)-DEFBEGIN(I))
 #define FOR_FORWARD(i,K) for(TYPE i=DEFBEGIN(K);i<DEFEND(K);i++)
 #define FOR_BACKWARD(i,K) for(TYPE i=DEFEND(K)-1;i>=DEFBEGIN(K);i--)
+#define FOR_FWD(i,b,e) for(TYPE i=b;i<e;i++)
+#define FOR_BWD(i,b,e) for(TYPE i=e-1;i>=b;i--)
 #define FOR_FWD_FWD(i,j,I,J,ZZ) FOR_FORWARD(i,I){FOR_FORWARD(j,J){ZZ}}
 #define FOR_FWD_BWD(i,j,I,J,ZZ) FOR_FORWARD(i,I){FOR_BACKWARD(j,J){ZZ}}
 #define FOR_BWD_FWD(i,j,I,J,ZZ) FOR_BACKWARD(i,I){FOR_FORWARD(j,J){ZZ}}
@@ -82,7 +86,8 @@ struct interval {
 #define FOR_A_loop_1(i,n,m) FOR_VAR_FWD(i,n,m)
 #define FOR_A_loop_2(i,n,m) FOR_VAR_BWD(i,n,m)
 #define FOR_A_loop_3(i,n,m) FOR_VAR_FWD(i,n,m)
-
+#define FOR(i,J) 
+#define PSI(i,j) 
 #define FOR_B_loop_3(i,n,m) FOR_VAR_BWD(i,n,m)
 #define FOR_B_loop_4(i,n,m) FOR_VAR_FWD(i,n,m)
 #define FOR_B_loop_2(i,n,m) FOR_VAR_FWD(i,n,m)
@@ -116,7 +121,7 @@ inline void copy_dist_part(TYPE* V,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
 * Auto-generated Code
 */
 
-#include "../paren-all.cpp"
+#include "../paren-scala.cpp"
 
 #ifdef DEBUG
 void parenthesis() {

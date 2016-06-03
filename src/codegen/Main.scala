@@ -1,7 +1,8 @@
 
 
 package codegen
-
+import org.rogach.scallop.ScallopConf
+import org.rogach.scallop.ScallopOption
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.FileReader
@@ -23,8 +24,18 @@ import semantics.Scope
 import synth.pods.ConsPod
 import report.console.NestedListTextFormat
 import report.console.NestedListTextFormat
+import java.io.BufferedWriter
+import java.io.FileWriter
+import java.io.File
+
 
 object Main {
+  
+  class BaseCommandLineConfig(args: List[String]) extends ScallopConf(args toList) {
+    val filenames = opt[String]("files", default=Some("none")).map((_.split(",").toList))
+    val outputfile = opt[String]("outfile", default=Some("output.cpp"))
+  }
+ 
   
   def isAllDigits(x: String) = x forall Character.isDigit
   
@@ -48,12 +59,7 @@ object Main {
   case class Interval(name: String) extends Expr
   case class GetBound(i: Interval, sel: Lowup) extends Expr
   case class Var(name: String, ii: Interval) extends Expr 
-  //case class FuncPre(name: String) extends Expr
-  //corresponds to existing pre-defined functions like +, min etc
-  //case class FuncDef(vars: List[Expr],body: Expr) extends Expr 
-  //Corresponds to MAPSTO
   case class FunApp(f: String, args: List[Expr]) extends Expr 
-  //f is either FuncPre or FuncDef
   case class Slash(isFunction: Boolean, slashes: List[Expr]) extends Expr 
   case class Guarded(cond: Expr, v: Expr) extends Expr 
   case class MemRead(arrayName: String, indices: List[Expr]) extends Expr
@@ -302,14 +308,18 @@ object Main {
         if (t.root == ctx.inputArray) {
           Block(List())
         }
-        else ???
+        else {
+          println(t)
+          println(ctx.inputArray)
+          ???
+        }
       case P("GUARD", cond, List(v)) =>
         If(FormulaToExpr(cond),FormulaToStmt(v),Block(List()))
       case P("FIX", t, null) =>
         if (ctx.fixVar.isDefined) throw new Exception("FixVar found already")
         else FormulaToStmt(t)(ctx.setFix)
       case T(`@:`.root, List(T(`↦`.root, List(va, body)), arg)) =>
-          if (va.leaf == "?"){
+          if (va.leaf.literal.toString().startsWith("?")){ //
             FormulaToStmt(body)
           }
           else
@@ -398,11 +408,11 @@ object Main {
   
   def addMnemonics(t:Term):Term = {
     val mn = new Mnemonics {
-      override def normalize(s: String) = s
+      //override def normalize(s: String) = s
     }
     def helperMn(t:Term): Term = {
-      val newroot = //if (t.root.kind == "variable") 
-        new Identifier(mn.get(t.root),t.root.kind)// else t.root
+      val newroot = if (t.root.kind == "variable" || t.root.kind == "set") 
+        new Identifier(mn.get(t.root),t.root.kind) else t.root
       TypedTerm.preserve(t, T(newroot,t.subtrees map helperMn))
     }
     helperMn(t)
@@ -438,32 +448,38 @@ object Main {
     
     //val e = E(MemRead("dist"),List(E(Var("i")),E(Var("j"))))
     //println(e)
-    
-    ui.Config(new ui.Config.CLIConfig(args toList))
-    val filename = ui.Config.config.filename()
-    
-    val f = new BufferedReader(
-      if (filename == "-") new InputStreamReader(System.in) else new FileReader(filename))
-
-    val blocks = CLI.getBlocks(f)
-    for (block <- blocks){
-      val json = JSON.parse(block).asInstanceOf[BasicDBObject]
-      val prg = json.get("term")
-      if (prg != null){
-        val ff = Formula.fromJson(prg.asInstanceOf[BasicDBObject])
-        println(s"The program is: ${ff.toPretty}")
-        val ffwnocolons = stripColons(addMnemonics(ff))
-        println(ffwnocolons.toPretty)
-        val fundef = FormulaToFunction(ffwnocolons)
-        println(s"The program AST is: ")
-        println(fundef)
-        val nl = new NestedListTextFormat[String]("  ","  ")()
-        nl.layOut(fundef.toPrettyTree)
-        println()
-      }
-      else{
-        println(s"The program is: null")
+    implicit val scope = examples.Paren.scope
+    println(scope)
+    val cliOpts = new BaseCommandLineConfig(args toList)
+    val outf = new BufferedWriter(new FileWriter (cliOpts.outputfile()))
+    for (filename <- cliOpts.filenames()){
+      val f = new BufferedReader( new FileReader(filename))
+      val blocks = CLI.getBlocks(f)
+      for (block <- blocks){
+        val json = JSON.parse(block).asInstanceOf[BasicDBObject]
+        val prg = json.get("term")
+        if (prg != null){
+          val ff = Formula.fromJson(prg.asInstanceOf[BasicDBObject])
+          println(s"The program is: ${ff.toPretty}")
+          val ffwnocolons = stripColons(ff)
+          println(ffwnocolons.toPretty)
+          val fundef = FormulaToFunction(ffwnocolons)
+          println(s"The program AST is: ")
+          println(fundef)
+          val nl = new NestedListTextFormat[String]("  ","  ")()
+          nl.layOut(fundef.toPrettyTree)
+          println("\nThe code is:")
+          val cppGen = new codegen.CppOutput
+          val code = cppGen(fundef,0)
+          println(code)
+          
+          outf.write(code + "\n")
+        }
+        else{
+          println(s"The program is: null")
+        }
       }
     }
+    outf.close()
   }
 }

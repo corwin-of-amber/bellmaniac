@@ -15,6 +15,12 @@ PNAME = None
 keepTempInMin = True
 noLoopGuardOptim = False
 
+GAP ="Gap"
+PAREN = "Paren"
+ACCORDION = "Accordion"
+LCS = "LCS"
+BITONIC = "Bitonic"
+KNAPSACK = "Knapsack"
 
 def areDisjoint(I,J,superset):
     if topSuperset(I,superset,[]) != topSuperset(J,superset,[]) or I==J:
@@ -36,7 +42,9 @@ def areDisjoint(I,J,superset):
                 return rightEval
             return ""
             
-            
+def bp():
+    import pdb
+    pdb.set_trace()
 def isLeft(M,K,superset):
     Assert(superset[M] == K,"Must be a subset-superset pair M \in K")
     extraSubsets = filter(lambda (J0,J): J0 != M and J == K,superset.iteritems())
@@ -103,7 +111,7 @@ MAPSTO = u"\u21A6"
 MINUS = u'-'
 QMARK = u'?'
 OMAX=u'\u2a01'
-
+BOTTOM=u'\u22a5'
 LT=u"<"
 DELTA=u'\u03b4'
 NEG = u'\u00ac'
@@ -112,7 +120,8 @@ PARLEVEL = u"PARLEVEL"
 MULT = u'\u00d7'
 INTERSECT=u'\u2229'
 
-def refineLP(loopEndPoints,v,newlow,newhigh):
+def refineLP(superset,loopEndPoints,v,newlow,newhigh):
+    print "//(" + loopEndPoints[v][0] + "," + loopEndPoints[v][1] + ") -> (" +newlow + "," + newhigh + ")"
     finallow = "max(" + loopEndPoints[v][0] + "," + newlow + ")" if newlow != loopEndPoints[v][0] else newlow
     finalhigh = "min(" + loopEndPoints[v][1] + "," + newhigh + ")" if newhigh != loopEndPoints[v][1] else newhigh 
     loopEndPoints[v] = (finallow,finalhigh)
@@ -133,7 +142,8 @@ SUBNUMS = {u"\u2080":0,
            u"\u2084":4,
            u"\u2085":5,
            u"\u2086":6,
-           u"w'":u"w_prime"}
+           u"w'":u"w_prime",
+           u'&':AND}
 VARS = [u'i', u'j', u'k', QMARK, PSI, THETA, u'p',u'q']
 
 
@@ -205,7 +215,7 @@ def getAllFVsets(code,fvSets):
             z2 = code[i+6+z1:].find(")")
             K = code[i+7+z1:i+6+z1+z2]
             fvSets.add(K)
-            Assert(isSet(K),"Must be a set: "+ K)
+            Assert(isSet(K) or "BOTTOM" in K,"Must be a set: "+ K)
     
 
 bmTypes = []
@@ -316,6 +326,8 @@ def isComponent(trm):
     if isSet(trm.literal) and len(trm.subtrees) == 1:
         return True
     if trm.literal == LT and len(trm.subtrees) == 2 and trm.subtrees[0].isPlus() and isComponent(trm.subtrees[0]) and len(trm.subtrees[1].subtrees) == 0:
+        return True
+    if trm.literal == LT and len(trm.subtrees) == 2 and trm.subtrees[1].isOpApply("-") and isComponent(trm.subtrees[1]) and len(trm.subtrees[0].subtrees) == 0:
         return True
     if trm.literal == APPLY or trm.literal == NEG :
         return True
