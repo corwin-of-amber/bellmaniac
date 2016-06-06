@@ -1,10 +1,19 @@
 package codegen
+
 import Main._
 import syntax.transform.Mnemonics
 import syntax.Identifier
 import semantics.Scope
 
+import scala.collection.JavaConversions._
+import java.io.BufferedReader
+import java.io.FileReader
+import java.io.BufferedWriter
+
+
+
 class CppOutput (implicit scope: Scope) {
+
   val INFIX = List("&&","+","*","/","%","||","<")
   val REDUCTIONS = List("min","max")
   val mn = new Mnemonics {
@@ -79,17 +88,12 @@ class CppOutput (implicit scope: Scope) {
     //Traverse over Stmt and print with appropriate 
     //Special case for in-fix operators, macros, operator versus function
     val res = s match {
-      case DefInterval(i, ss, bisect) => {
-        bisect match {
-          case LOWER =>
-            addIndent(indent,s"DEF_INTERVAL_STMT_LOWER(${i.name},${ss.name});")
-          case UPPER =>
-            addIndent(indent,s"DEF_INTERVAL_STMT_UPPER(${i.name},${ss.name});")
-        }
-      }
-      case DefVar(v,isInt) => 
-        if (isInt) addIndent(indent,s"int ${v};")
-        else addIndent(indent,s"TYPE ${v};")
+      case DefIntervalSplit(i, ss, whichPart) =>
+        addIndent(indent,s"DEFINTERVALSTMT_${whichPart}(${mne(i.name)}, ${mne(ss.name)});")
+      case DefIntervalUnion(i, (l,u)) =>
+        addIndent(indent,s"DEFINTERVALSTMT_UNION(${mne(i.name)}, ${mne(l.name)}, ${mne(u.name)});")
+      case DefVar(v, typ) => 
+        addIndent(indent,s"${typ} ${v};")
       case Assign(v,e) => 
         addIndent(indent,s"$v = ${exprToCode(e)};")
       case MemWrite(arrayName,indices,rhs) => 
@@ -105,10 +109,25 @@ class CppOutput (implicit scope: Scope) {
       case Block(stmts) =>
         (stmts.map(x =>  apply(x,indent))).mkString("\n")
       case Parallel(i, stmt) =>
-        apply(stmt,indent) + s"/*bazinga $i*/"
+        apply(stmt,indent) + s"    /*bazinga $i*/"
     };
     res
     
   }
      
+}
+
+object CppOutput {
+
+  val PREFACE_PATH = "./src/codegen/templates/preface.cpp"
+  
+  def readPreface(filename: String = PREFACE_PATH) = {
+    val reader = new BufferedReader(new FileReader(filename))
+    reader.lines.iterator.toStream   // can be just 'reader.lines' if we turn on -Xexperimental
+  }
+  
+  def writePrefaceTo(w: BufferedWriter) = {
+    readPreface().foreach(x => { w.write(x); w.newLine() })
+  }
+
 }

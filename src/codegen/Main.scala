@@ -31,12 +31,11 @@ import java.io.File
 
 object Main {
   
-  class BaseCommandLineConfig(args: List[String]) extends ScallopConf(args toList) {
-    val filenames = opt[String]("files", default=Some("none")).map((_.split(",").toList))
+  class CommandLineConfig(args: List[String]) extends ScallopConf(args toList) {
+    val filenames = trailArg[List[String]](required=true) //opt[String]("files", required=true).map((_.split(",").toList))
     val outputfile = opt[String]("outfile", default=Some("output.cpp"))
   }
  
-  
   def isAllDigits(x: String) = x forall Character.isDigit
   
   abstract class Expr
@@ -58,22 +57,24 @@ object Main {
   case class Num(value: Int) extends Expr
   case class Interval(name: String) extends Expr
   case class GetBound(i: Interval, sel: Lowup) extends Expr
-  case class Var(name: String, ii: Interval) extends Expr 
-  case class FunApp(f: String, args: List[Expr]) extends Expr 
-  case class Slash(isFunction: Boolean, slashes: List[Expr]) extends Expr 
-  case class Guarded(cond: Expr, v: Expr) extends Expr 
+  case class Var(name: String, ii: Interval) extends Expr
+  case class FunApp(f: String, args: List[Expr]) extends Expr
+  case class Slash(isFunction: Boolean, slashes: List[Expr]) extends Expr
+  case class Guarded(cond: Expr, v: Expr) extends Expr
   case class MemRead(arrayName: String, indices: List[Expr]) extends Expr
-  case class VarB(name: String, lb:Expr, ub: Expr) extends Expr 
+  case class VarB(name: String, lb:Expr, ub: Expr) extends Expr
   
 
   case class FunDef (name: String,args: List[Interval],body:Block)
   
   abstract class Stmt {
     def toPrettyTree : Tree[String] = this match {
-      case DefInterval(i, ss, bisect) => ???
-      case DefVar(v,isInt) => 
-        if (isInt) new Tree(s"int ${v};")
-        else new Tree(s"TYPE ${v};")
+      case DefIntervalSplit(i, superset, whichPart) =>
+        new Tree(s"${i} = ${whichPart}(${superset});")
+      case DefIntervalUnion(i, (lower, upper)) =>
+        new Tree(s"${i} = UNION(${lower}, ${upper});")
+      case DefVar(v, typ) => 
+        new Tree(s"${typ} ${v};")
       case Assign(v,e) => new Tree(s"$v = $e;")
       case MemWrite(arrayName,indices,rhs) => 
         new Tree(s"$arrayName(${indices.mkString(",")}) = ${rhs};")
@@ -91,9 +92,10 @@ object Main {
         new Tree(s"$i:", List(stmt.toPrettyTree))
     }
   }
-  case class DefInterval(I: Interval, superset: Interval, bisect: Lowup) extends Stmt
-  case class DefVar(v: String,isInt:Boolean) extends Stmt
-  case class Assign(v: String,e:Expr) extends Stmt
+  case class DefIntervalSplit(I: Interval, superset: Interval, whichPart: Lowup) extends Stmt
+  case class DefIntervalUnion(I: Interval, subparts: (Interval, Interval)) extends Stmt
+  case class DefVar(v: String, typ: String) extends Stmt
+  case class Assign(v: String, e:Expr) extends Stmt
   case class MemWrite(arrayName: String,indices: List[Expr],rhs: Expr) extends Stmt
   case class FunctionCall(name: String, params: List[Expr]) extends Stmt
   case class For(v:String,lb:Expr,ub:Expr,dir:Direction,stmts:Stmt) extends Stmt
@@ -291,7 +293,7 @@ object Main {
                                     FormulaToExpr(body)
             )))) 
             val initVar = Var(s"INIT${f.root.literal}".toUpperCase,ivlBody)
-            val blk = Block(List(DefVar(tmpStr, true), Assign(tmpStr, initVar),forStmt )) //TODO: 
+            val blk = Block(List(DefVar(tmpStr, "int"), Assign(tmpStr, initVar),forStmt )) //TODO: 
             ((st,T($TV(tmpStr).root,List())),blk)
           }
           else ???
@@ -383,17 +385,45 @@ object Main {
         throw new Exception("Not analyzed Term: " + ff.root.literal.toString() + "|" + ff.subtrees.size.toString() )
     }
   }
-    
+  
+  def localIntervalDefs(argIntervals: List[Interval])(implicit scope: Scope) : Stmt = {
+    val argIntervalIds = argIntervals map (i => S(i.name))
+    val unions =
+      scope.sorts.mastersHie flatMap { 
+      case T(master, List(T(lower, _), T(upper, _)))  if !(argIntervalIds contains master) && 
+                                                          (argIntervalIds contains lower) && 
+                                                          (argIntervalIds contains upper) =>
+        println(s"${master}  ${argIntervalIds.head}")
+        println(s"${master}   ${upper}   ${lower}")
+        List(DefIntervalUnion(Interval(master.literal.toString), (Interval(lower.literal.toString), (Interval(upper.literal.toString)))))
+      case _ => List()
+      }
+    val splits =
+      argIntervals flatMap { interval =>
+        val hie = scope.sorts.findSortHie(new Identifier(interval.name)).get
+        hie.subtrees match {
+          case x@List(lower, upper) =>
+            x zip List(LOWER, UPPER) map { case (s, w) =>
+              DefIntervalSplit(Interval(s.root.literal.toString), interval, w)
+            }
+          case _ => List()
+        }
+      }
+    Block(unions ++ splits)
+  }
+  
+  implicit class StmtConcat(val stmt: Stmt) extends AnyVal {
+    def toList =  stmt match { case Block(stmts) => stmts   case _ => List(stmt) }
+    def toBlock = stmt match { case b@Block(_)   => b       case _ => Block(List(stmt)) }
+    def ++(next: Stmt) = Block(toList ++ next.toList)
+  }
+  
   val ↦ = TI("↦")
   val `:` = TI(":")
-  def FormulaToFunction(name: String, arg_intervals: List[Interval], ff:Term) : FunDef ={
-    val block = FormulaToFunction(ff) match {
-      case b: Block =>
-        b
-      case s =>
-        Block(List(s))
-    }
-    FunDef(name,arg_intervals,block)
+  def FormulaToFunction(name: String, argIntervals: List[Interval], ff:Term)(implicit scope: Scope) : FunDef = {
+    val pre = localIntervalDefs(argIntervals)
+    val block = FormulaToFunction(ff)
+    FunDef(name, argIntervals, (pre ++ block).toBlock)
   }
   
   def FormulaToFunction(ff: Term) : Stmt = {
@@ -461,8 +491,10 @@ object Main {
     //println(e)
     implicit val scope = examples.Paren.scope
     println(scope)
-    val cliOpts = new BaseCommandLineConfig(args toList)
+    val cliOpts = new CommandLineConfig(args toList)
     val outf = new BufferedWriter(new FileWriter (cliOpts.outputfile()))
+    CppOutput.writePrefaceTo(outf)
+
     for (filename <- cliOpts.filenames()){
       val f = new BufferedReader( new FileReader(filename))
       val blocks = CLI.getBlocks(f)
