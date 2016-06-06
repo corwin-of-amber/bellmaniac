@@ -30,8 +30,11 @@
     "underscore": "*"
   },
   "chromium-args": "--enable-threaded-compositing",
-  "main": "index.html",
+  "main": "repl.html",
   "window": {
     "toolbar": true
+  },
+  "scripts": {
+    "start": "./Bellmania.Frontend.app/Contents/MacOS/nwjs .&"
   }
 }

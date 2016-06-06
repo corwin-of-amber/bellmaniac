@@ -53,7 +53,7 @@
 				<a class="btn btn-default" ng-click="reset()">New</a>
 				<a class="btn btn-default" ng-click="save()">Save</a>
 				<label class="btn btn-default">
-					<input type="file" style="display:none;" accept=".json" ng-model="file" file-change="load()">
+					<input type="file" style="display:none;" accept=".json" file-pick="load(file)">  <!-- @see directive filePick in repl.ls -->
 					Load
 				</label>
 				<a class="btn btn-default" ng-click="runAll()">Run</a>
@@ -83,9 +83,6 @@
 					--><span ng-show="h.error.stackshow" class="stack">{{h.error.stack}}</span>
 				</div>
 			</div>
-			<div class="loading" ng-if="h.loading">
-				<i class="fa fa-circle-o-notch fa-2x fa-pulse"></i>
-			</div>
 			<div class="output-cell" ng-if="h.output" ng-class="{invalid: isInvalid(h)}"
                  ng-mouseenter="$broadcast('turn')">
 				<div class="cell-caption">{{"Out[" + h.id + "]"}}</div>
@@ -113,6 +110,9 @@
 					</div>
 				</div>
 			</div>
+			<div class="loading" ng-if="h.loading">
+				<i class="fa fa-circle-o-notch fa-2x fa-pulse"></i>
+			</div>
 		</div>
 	</div>
 	<template type="text/ng-template" id="display">
@@ -121,7 +121,8 @@
 			<span class="code"
 			 ng-class="mark[1]"
 			 data-tip="{{mark[2]}}"
-			 ng-repeat="mark in parts track by $index">{{mark[0]}}</span>
+			 ng-repeat="mark in parts track by $index",
+                  rich="mark[0]"></span>
 		</compute>
 		<div ng-if="o.vbox" ng-repeat="el in o.vbox">
 			<display o="el"></display>
@@ -137,6 +138,7 @@
 				<display ng-repeat="s in o.tree.subtrees" o="{tree: s}"></display>
 			</li>
 		</ul>
+        <display o="o.progress" ng-if="o.progress"></display>
 		<span class="code" ng-if="o | isString">{{o}}</span>
 	</template>
 </body>

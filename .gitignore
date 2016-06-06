@@ -80,6 +80,10 @@ bower_components
 ### compilation artifacts ###
 *.ls.js
 *.ne.js
+/*.app
 
 ### temporary files ###
 /cache.json
+
+### local configuration ###
+/data/config.json

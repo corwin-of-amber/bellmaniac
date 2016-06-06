@@ -136,6 +136,7 @@ textarea, .CodeMirror-focused {
   color: #227;
   background: #FF9;
   border: 1px solid black;
+  white-space: nowrap;
 }
 
 .annotation {
@@ -154,13 +155,20 @@ ul.c {
   text-indent: -1em;
 }
 ul.c ul.c { margin-left: 0; }
-ul.c li { white-space: nowrap; }
-ul.c li:before {
+ul.c li::before {
   content: "• ";
   font-family: Menlo, monospace;
 }
-ul.c[bullet="◦"] li:before {
+ul.c[bullet="◦"] li::before {
   content: "◦ ";
+}
+
+hat { position: relative; }
+hat::after {
+  content: "^";
+  font-family: CMU Serif, sans-serif;
+  position: absolute;
+  right: -.5em;
 }
 
 .invalid div {
@@ -257,4 +265,9 @@ body.presentMode .CodeMirror {
 
 body.presentMode .tip:hover:before {
   top: -48px;
+}
+
+body.presentMode hat::after {  /* this sucks */
+  bottom: 0;
+  right: -40%;
 }

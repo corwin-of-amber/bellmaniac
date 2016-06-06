@@ -4,7 +4,6 @@ LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*?\|\s*([\s\S]+?)\s*$/
 
 angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapontillo.bootstrap-switch indexedDB]>
   ..config ($indexedDBProvider) !->
-    console.log "config"
     $indexedDBProvider
       .connection 'bell.notebook'
       .upgradeDatabase 1, (event, db, tx) ->
@@ -29,9 +28,14 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
       cellName = "cell-#{thisId}"
       isTactic = thisIdx > 0
 
+      progress = (output) ->
+        $timeout ->
+          calc.output = output.fromJar[-1 to]
+            cleanse output: ..
+      
       success = (output) ->
         $timeout ->
-          calc.output = output.fromJar
+          calc.output = output.fromJar[-1 to]
           calc.fromNearley = output.fromNearley
           calc.scope = output.scope
           calc.routines = output.routines
@@ -72,14 +76,14 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
         bellmaniaParse do
           isTactic: true,
           text: calc.input,
-          term: _.last($scope.history[thisIdx-1].output).value.term
+          term: _.last($scope.history[thisIdx-1].output)?.value?.term
           scope: $scope.history[thisIdx-1].scope
-          routines: $scope.history[thisIdx-1].routines || {}
+          routines: collectRoutines($scope.history)
           verify: $scope.verification
-          , success, error, cellName
+          , success, error, progress, cellName
       else
           # parse as a term
-          bellmaniaParse({isTactic: false, text: calc.input, routines: {}}, success, error, cellName)
+          bellmaniaParse({isTactic: false, text: calc.input, routines: {}}, success, error, progress, cellName)
 
       cm.getInputField().blur()
       $scope.mostRecentId = thisId
@@ -140,20 +144,21 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
       anchor.href = blobURL
       anchor.click()
 
-    $scope.load = ->
-      if ($scope.file)
-        reader = new FileReader();
-        reader.onload = ->
+    $scope.load = (file) ->
+      if file
+        reader = new FileReader()
+         ..onload = ->
           try
             $scope.$apply ->
               loaded = JSON.parse(reader.result)
               $scope.mostRecentId = loaded.mostRecentId
               $scope.history = loaded.history.map (<<< {error: null, output: null})
               db.update-cells!
+              $scope.file = void
           catch {message}
             bootbox.alert(message)
 
-        reader.readAsText($scope.file)
+        reader.readAsText(file)
 
     #------------------
     # Persistence Part
@@ -176,9 +181,7 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
       update-cells: (cells ? $scope.history, cb=->) ->
         records = cells.map @~record
         store <~ @cells
-        store.upsert records .then ->
-          console.log "updated [#{cells.map (.id)}]" ; cb!
-        , @~e
+        store.upsert records .then cb, @~e
       clear: (cb=->) ->
         @cells (.clear!then -> console.log "cleared" ; cb!)
           
@@ -222,7 +225,6 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
         calc.processes = {}
         async.each files, (file, callback) ->
           smt = execFile 'cvc4', ["/tmp/#cellName/#file"], (err, stdout, stderr) ->
-            console.log err, stdout, stderr
             if err? then callback(err, stderr)
             else if stdout == 'unsat\n' then callback()
             else callback(stdout, stderr)
@@ -242,6 +244,11 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
         for name, p of calc.processes
           console.log "killing " + p.pid
           p.kill('SIGINT')
+    
+    collectRoutines = (history) ->
+      {}
+        for h in history
+          if h.routines? then .. <<< h.routines
 
   ..filter "collapse" ->
     lead = -> it.match /^\s*/ .0.length
@@ -256,6 +263,14 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
     template: $ '#display' .html!
     compile: (element) ->
       RecursionHelper.compile(element)
+  ..directive "rich" ->
+    restrict: 'A'
+    link: (scope, element, attrs) -> 
+      scope.$watch attrs.rich, (value) ->
+        if value.hat?
+          element.empty!append ($('<hat>').text(value.hat))
+        else
+          element.text(value)
   ..directive "compute" ($filter) ->
     scope: {}
     transclude: 'element'
@@ -273,22 +288,23 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
           scope[lhs] = v
         , true
         $(clone).insertAfter element
-  ..directive 'fileChange', ->
+        
+  # Adapted from fileChange directive, http://stackoverflow.com/a/35748459/37639
+  ..directive 'filePick', ->
     restrict: 'A',
-    require: 'ngModel',
     scope: {
-      fileChange: '&'
+      filePick: '&'
     },
-    link: (scope, element, attrs, ctrl) ->
+    link: (scope, element, attrs) ->
       onChange = ->
-        ctrl.$setViewValue(element[0].files[0])
-        scope.fileChange()
+        file = element[0].files[0]
+        scope.filePick({file})
+        if file then element.prop('value', '')  # make event fire again next time
 
-      element.on('change', onChange);
+      element.on 'change' onChange
 
-      scope.$on('destroy', ->
+      scope.$on 'destroy' ->
         element.off('change', onChange)
-      )
 
   ..filter "isString" -> _.isString
 
@@ -299,17 +315,19 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
       else if input.tape?
         last-pos = 0
         [text, annot] = input.tape.text.split '\t'
-        reformatType = -> it?.split('->')?.join('→')
+        reformatText = -> 
+          if (mo = /^(.)\u0302$/.exec it)? then {hat: mo.1} else it
+        reformatType = -> it?.replace /->/g '→'
         []
           for [[u,v], mark] in (if input.flag then input.tape.markup else [])
             x = text.substring(last-pos, u)
             y = text.substring(u, v)
             cls = ['tape-mark'] ++ (if mark.type? then ['tip'] else [])
             last-pos = v
-            if x.length then ..push [x]
-            if y.length then ..push [y, cls, reformatType(mark.type)]
+            if x.length then ..push [reformatText(x)]
+            if y.length then ..push [reformatText(y), cls, reformatType(mark.type)]
           x = text.substring(last-pos)
-          if x.length then ..push [x]
+          if x.length then ..push [reformatText(x)]
           if annot?
             ..push [reformatType(annot), ['annotation']]
       else

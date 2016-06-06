@@ -6,19 +6,37 @@ _ = require \lodash
 
 root = exports ? this
 
-readResponseBlocks = (output, parsedInputs) ->
-    for block, blockIdx in output.split(/\n\n+(?=\S)/).filter(-> it)
+readResponseBlocks = (stream, parsedInputs, success, error, progress) ->
+  stream.setEncoding('utf-8')
+  blocks = []
+  buffer = []
+  stream.on \data, (data) !-> 
+    #console.log data + "|"
+    # NAIVE
+    chunks = (buffer.join("") + data).split(/\n\n+/)
+    buffer.splice(0, buffer.length, chunks[0])
+    for chunk in chunks[1 to]
+      process(buffer.join(""))
+      buffer.splice(0, buffer.length, chunk)
+    
+  stream.on \end, !-> success(blocks)
+
+  process = (block) ->
+    if (block = block.trim!)
         try
             outputBlock = JSON.parse(block)
             if (outputBlock.error)
                 throw outputBlock
-            {value: outputBlock}
+            blocks.push {value: outputBlock}
+            progress(blocks)
         catch err
             # add line number from input before re-throwing
             # so that correct line can be highlighted
-            parsedInputs[blockIdx]
-              err.line = (..?check ? ..?tactic)?.line
-            throw err
+            #parsedInputs[blockIdx]
+            #  err.line = (..?check ? ..?tactic)?.line
+            console.error err.stack
+            console.log block
+            #throw err
 
 wrapWith = (term, root) ->
     if (term.root.literal != root.literal)
@@ -32,7 +50,7 @@ wrapWith = (term, root) ->
 #      term:? previous term (AST) if isTactic is true
 #      scope:? previous scope if isTactic is true
 #     }
-root.bellmaniaParse = (input, success, error, name='synopsis') ->
+root.bellmaniaParse = (input, success, error, progress, name='synopsis') ->
 
     parser = new Parser
   
@@ -54,25 +72,39 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
         env = {} <<< process.env <<< configure-env!
         jar = spawn launch[0], launch[1 to] ++ flags ++ <[-]>, {env}
 
-        fromStream = (stream, callback) ->
+        fromStream = (stream, callback, with-progress=false) ->
             stream.setEncoding('utf-8')
             buffer = []
-            stream.on \data, (data) !-> buffer.push(data)
-            stream.on \end, !-> callback(buffer.join(""))
+            stream.on \data, (data) !-> 
+              buffer.push(data)
+              if with-progress then callback(buffer.join(""))
+            stream.on \end, !-> callback(buffer.join(""), true)
 
-        fromStream jar.stdout, (out) !->
+            /*
+        fromStream jar.stdout, (out, is-done) !->
             try
                 output.fromJar = readResponseBlocks out, output.fromNearley
-                success(output)
+                console.log output.fromJar
+                if is-done then success(output)
             catch err
-                error(err, output)
+                if is-done then error(err, output)
+                else console.error err
+        , true
+        */
+        readResponseBlocks jar.stdout, output.fromNearley, (blocks) ->
+          output.fromJar = blocks
+          success(output)
+        , (error) ->
+        , (blocks) -> # progress
+          output.fromJar = blocks
+          progress(output)
 
         fromStream jar.stderr, (err) !->
             if err != ""
                 error({message: err}, output)
 
         # configure global scope, mode, and routines
-        parser.scope = input.scope ? []
+        parser.scope = input.scope ? []  |>  (.[to])
         parser.routines = _.clone(input.routines)
         
         output.fromNearley = _.chain blocks 
@@ -81,11 +113,6 @@ root.bellmaniaParse = (input, success, error, name='synopsis') ->
             # only take the expressions that aren't set declarations or mode switches.
             # these are handled internally by Parser
         .value!
-        #.map((block) ->
-            # wrap each expression in another layer that includes scope
-        #    (block.mode): block
-        #    scope: root.scope
-        #).value!
 
         output.scope = parser.scope
         output.routines = parser.routines
