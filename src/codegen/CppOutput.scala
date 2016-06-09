@@ -99,11 +99,11 @@ class CppOutput (implicit scope: Scope) {
       case MemWrite(arrayName,indices,rhs) => 
         addIndent(indent,s"${mne(arrayName)}(${(indices.map(e=>exprToCode(e))).mkString(",")}) = ${exprToCode(rhs)};")
       case FunctionCall(name,params) =>
-        addIndent(indent,s"func${name}_rec(${(params map exprToArg).mkString(",")});")
+        addIndent(indent,s"${name}(${(params map exprToArg).mkString(",")});")
       case For(v,lb,ub,dir,stmt) =>
         addIndent(indent,s"FOR_${dir}(${v},${exprToCode(lb)},${exprToCode(ub)}){") + s"\n${apply(stmt,indent+1)}\n" + addIndent(indent,"}")
       case If(cond,caseThen,caseElse) =>
-        addIndent(indent,s"if(${cond}){") + apply(caseThen,indent+1) + addIndent(indent,"\n} else {") + apply(caseElse,indent+1) + addIndent(indent,"\n}")
+        addIndent(indent,s"if(${exprToCode(cond)}){\n") + apply(caseThen,indent+1) + "\n" + addIndent(indent,"} else {\n") + apply(caseElse,indent+1) + "\n" + addIndent(indent,"}\n")
       case Fork(stmts) => //TODO: not here, but get parallel number of each stmt and re-organize AST
         ??? //TODO: use cilk primitives as needed 
       case Block(stmts) =>

@@ -40,8 +40,8 @@ using namespace std;
 
 #ifndef NNUM
 #define NNEEDED 1
-long long N = 1000;
-TYPE *dist;
+extern long long N;
+extern TYPE *dist;
 #else
 #define NNEEDED 0
 #define N NNUM
@@ -121,7 +121,8 @@ inline void copy_dist_part(TYPE* V,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
 * Auto-generated Code
 */
 
-#include "../paren-scala.cpp"
+//#include "../paren-scala.cpp"
+void funcA_rec(DEFINTERVALFUNC(J));
 
 #ifdef DEBUG
 void parenthesis() {
@@ -248,7 +249,7 @@ int main(int argc, char *argv[]) {
 	unsigned long long tstart = cilk_getticks();
 	funcA_rec(PARAM(K0));
 	unsigned long long tend = cilk_getticks();
-	cout<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend-tstart);
+	cout<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend-tstart)<<endl;
 	//cout<<"REC\t"<<N<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
 #ifdef DEBUG
 	{

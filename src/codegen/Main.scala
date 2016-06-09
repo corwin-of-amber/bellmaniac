@@ -333,8 +333,9 @@ object Main {
       case P("APPLY",f,args) =>
         if (f.isLeaf && isRoutine(f.leaf)) {
           //A[I,J] etc
+          val style = "rec";
           val name :: params = f.root.literal.toString().split(raw"[\[,\]]").toList;
-          FunctionCall(name,(params map (Interval(_))))
+          FunctionCall(s"func${name}_${style}",(params map (Interval(_))))
         }
         else {
           f match {
@@ -420,10 +421,16 @@ object Main {
   
   val ↦ = TI("↦")
   val `:` = TI(":")
-  def FormulaToFunction(name: String, argIntervals: List[Interval], ff:Term)(implicit scope: Scope) : FunDef = {
-    val pre = localIntervalDefs(argIntervals)
+  
+  def generateBaseCase(name: String,style: String,argIntervals: List[Interval],elseBranch : Stmt) = {
+    If(FunApp("BASE_CONSTRAINT",argIntervals),FunctionCall(s"func${name}_${style}",argIntervals),elseBranch)
+  }
+  
+  def FormulaToFunction(name: String,style: String, argIntervals: List[Interval], ff:Term)(implicit scope: Scope) : FunDef = {
+    val localDefs = localIntervalDefs(argIntervals)
     val block = FormulaToFunction(ff)
-    FunDef(name, argIntervals, (pre ++ block).toBlock)
+    val body = localDefs ++ block
+    FunDef(s"func${name}_${style}", argIntervals, (if (style == "rec") generateBaseCase(name,"loop",argIntervals,body) else body).toBlock)
   }
   
   def FormulaToFunction(ff: Term) : Stmt = {
@@ -505,7 +512,7 @@ object Main {
         val title = json.getString("program")
         val r = """(.*)\[(.*)\]$""".r
         val x = r.findFirstMatchIn(title)
-        val name = s"func${x.get.group(1)}_${style}"
+        val name = x.get.group(1) 
         val arg_intervals = x.get.group(2).split(",").toList map (a => Interval(a))
         println(name)
         println(arg_intervals)
@@ -514,7 +521,7 @@ object Main {
           println(s"The program is: ${ff.toPretty}")
           val ffwnocolons = stripColons(ff)
           println(ffwnocolons.toPretty)
-          val fundef = FormulaToFunction(name,arg_intervals,ffwnocolons)
+          val fundef = FormulaToFunction(name,style,arg_intervals,ffwnocolons)
           println(s"The program AST is: ")
           println(fundef)
           val nl = new NestedListTextFormat[String]("  ","  ")()
