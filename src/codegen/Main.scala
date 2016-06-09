@@ -137,6 +137,10 @@ object Main {
         //AND Expr
         Some(("AND",t.subtrees(0),List(t.subtrees(1))))
       }
+      else if (t =~ ("∨", 2)) { 
+        //OR Expr
+        Some(("OR",t.subtrees(0),List(t.subtrees(1))))
+      }
       else if (t =~ ("program", 1)){//higher level program
         unapply(t.subtrees(0))
       }
@@ -236,6 +240,8 @@ object Main {
         FunApp("<",List(FormulaToExpr(a),FormulaToExpr(b)))
       case P("AND",a:Term, List(b:Term)) =>
         FunApp("&&",List(FormulaToExpr(a),FormulaToExpr(b)))
+      case P("OR",a:Term, List(b:Term)) =>
+        FunApp("||",List(FormulaToExpr(a),FormulaToExpr(b)))
       case P("FIX",t:Term,null) =>
         ???
         //FunApp(FuncPre("FIX"),List(FormulaToExpr(t)))
@@ -454,26 +460,11 @@ object Main {
     else TypedTerm.preserve(t, T(t.root,t.subtrees map stripColons)) 
   }
   
-  def addMnemonics(t:Term):Term = {
-    val mn = new Mnemonics {
-      //override def normalize(s: String) = s
-    }
-    def helperMn(t:Term): Term = {
-      val newroot = if (t.root.kind == "variable" || t.root.kind == "set") 
-        new Identifier(mn.get(t.root),t.root.kind) else t.root
-      TypedTerm.preserve(t, T(newroot,t.subtrees map helperMn))
-    }
-    helperMn(t)
-  }
-  
   def simplifyStmt(stmt: Stmt): Stmt = {
     stmt match {
       case Block(l) => 
         //look at each child - if its a Block itself just lift it up
-        val blockList = l flatMap (s => simplifyStmt(s) match {
-          case Block(l2) => l2
-          case s2 => List(s2)
-         } ) 
+        val blockList = l map simplifyStmt flatMap (_.toList)
         if (blockList.size == 1) blockList.head
         else Block(blockList)
       case Parallel(i, s) => Parallel(i, simplifyStmt(s))
