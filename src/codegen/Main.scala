@@ -27,6 +27,8 @@ import report.console.NestedListTextFormat
 import java.io.BufferedWriter
 import java.io.FileWriter
 import java.io.File
+import semantics.TranslationError
+import report.data.SerializationError
 
 
 object Main {
@@ -129,7 +131,7 @@ object Main {
         val cond = t.subtrees(1);
         Some(("GUARD",cond,List(v)))
       }
-      else if (t =~ ("<", 2)) { 
+      else if (t =~ ("<", 2) || t =~ ("<₁", 2) || t =~ ("<₂", 2)) {     // Oh the subscripts are pretty damn hackish
         //LT Expr
         Some(("LT",t.subtrees(0),List(t.subtrees(1))))
       }
@@ -407,7 +409,7 @@ object Main {
       }
     val splits =
       argIntervals flatMap { interval =>
-        val hie = scope.sorts.findSortHie(new Identifier(interval.name)).get
+        val hie = scope.sorts.findSortHie(new Identifier(interval.name)).getOrElse { throw new TranslationError(s"cannot find type '${interval.name}'") }
         hie.subtrees match {
           case x@List(lower, upper) =>
             x zip List(LOWER, UPPER) map { case (s, w) =>
@@ -487,17 +489,21 @@ object Main {
     
     //val e = E(MemRead("dist"),List(E(Var("i")),E(Var("j"))))
     //println(e)
-    implicit val scope = examples.Paren.scope
-    println(scope)
+    //implicit val scope = examples.Paren.scope
+    //println(scope)
     val cliOpts = new CommandLineConfig(args toList)
     val outf = new BufferedWriter(new FileWriter (cliOpts.outputfile()))
     CppOutput.writePrefaceTo(outf)
 
+    import syntax.Nullable._
+    
     for (filename <- cliOpts.filenames()){
       val f = new BufferedReader( new FileReader(filename))
       val blocks = CLI.getBlocks(f)
       for (block <- blocks){
         val json = JSON.parse(block).asInstanceOf[BasicDBObject]
+        implicit val scope = json.get("scope") andThen_ (Scope.fromJson, examples.Paren.scope)
+            //  { throw new SerializationError("scope not found", json) })  // TODO change to "throw" when all JSONs contain proper scope
         val prg = json.get("term")
         val style = json.getString("style") 
         val title = json.getString("program")
