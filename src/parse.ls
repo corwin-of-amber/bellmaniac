@@ -9,42 +9,62 @@ root = exports ? this
 readResponseBlocks = (stream, parsedInputs, success, error, progress) ->
   stream.setEncoding('utf-8')
   blocks = []
-  buffer = []
+  buffer = ""
+  err-occurred = void
   stream.on \data, (data) !-> 
-    #console.log data + "|"
     # NAIVE
-    chunks = (buffer.join("") + data).split(/\n\n+/)
-    buffer.splice(0, buffer.length, chunks[0])
-    for chunk in chunks[1 to]
-      process(buffer.join(""))
-      buffer.splice(0, buffer.length, chunk)
+    buffer := buffer + data
+    chunks = buffer.split(/\n\n+/)
+    while chunks.length > 1
+      process chunks.shift!
+    buffer := chunks[0]
+    if 0
+      chunks = (buffer.join("") + data).split(/\n\n+/)
+      buffer.splice(0, buffer.length, chunks[0])
+      for chunk in chunks[1 to]
+        process(buffer.join(""))
+        buffer.splice(0, buffer.length, chunk)
     
-  stream.on \end, !-> success(blocks)
+  stream.on \end, !-> if !err-occurred then success(blocks)
 
   process = (block) ->
     if (block = block.trim!)
+        inputBlock = parsedInputs[blocks.length]  # TODO subtract number of progress blocks
         try
             outputBlock = JSON.parse(block)
             if (outputBlock.error)
                 throw outputBlock
-            blocks.push {value: outputBlock}
+            blocks.push {value: outputBlock, emit: emitData inputBlock}
             progress(blocks)
         catch err
             # add line number from input before re-throwing
             # so that correct line can be highlighted
-            #parsedInputs[blockIdx]
-            #  err.line = (..?check ? ..?tactic)?.line
+            # TODO this was broken by the progress feature :(
+            inputBlock
+              err.line = (..?check ? ..?tactic)?.line
             console.error err.stack
             console.log block
-            #throw err
+            err-occurred := err
+            error(err)
 
 wrapWith = (term, root) ->
     if (term.root.literal != root.literal)
         tree(root, [term])
     else
         term
+        
+encapsName = (routine-def) ->
+  fmt-param = ->
+    console.assert it.$ == 'Tree' && it.subtrees.length == 0 && it.root.$ == 'Identifier'
+    it.root.literal
+  params = routine-def.params.map fmt-param .join ','
+  "#{routine-def.name}[#{params}]"
 
-# input is of form
+emitData = (block) ->   # @param block   Parsed input block
+  if block?.kind == 'routine'
+    {name: encapsName(block), style: "loop"}
+  
+# input is of the form
 #     {isTactic: bool,
 #      text: string from codemirror
 #      term:? previous term (AST) if isTactic is true
@@ -68,36 +88,16 @@ root.bellmaniaParse = (input, success, error, progress, name='synopsis') ->
         flags =
             if input.dryRun then <[--dry-run]>
             else if input.verify then <[--cert all --prover null --tmpdir]> ++ [tmpdir]
-            else []
+            else <[--cert none]>
         env = {} <<< process.env <<< configure-env!
         jar = spawn launch[0], launch[1 to] ++ flags ++ <[-]>, {env}
 
-        fromStream = (stream, callback, with-progress=false) ->
+        fromStream = (stream, callback) ->
             stream.setEncoding('utf-8')
             buffer = []
             stream.on \data, (data) !-> 
               buffer.push(data)
-              if with-progress then callback(buffer.join(""))
             stream.on \end, !-> callback(buffer.join(""), true)
-
-            /*
-        fromStream jar.stdout, (out, is-done) !->
-            try
-                output.fromJar = readResponseBlocks out, output.fromNearley
-                console.log output.fromJar
-                if is-done then success(output)
-            catch err
-                if is-done then error(err, output)
-                else console.error err
-        , true
-        */
-        readResponseBlocks jar.stdout, output.fromNearley, (blocks) ->
-          output.fromJar = blocks
-          success(output)
-        , (error) ->
-        , (blocks) -> # progress
-          output.fromJar = blocks
-          progress(output)
 
         fromStream jar.stderr, (err) !->
             if err != ""
@@ -135,7 +135,19 @@ root.bellmaniaParse = (input, success, error, progress, name='synopsis') ->
                             parsedBlock.body
                         else parsedBlock
                     scope: root.scope
-                    
+                    #emit:
+                    #    if parsedBlock.kind == 'routine'
+                    #        {name: encapsName(parsedBlock), style: "loop"}
+
+        # This will read asynchronously from child process' output
+        readResponseBlocks jar.stdout, output.fromNearley, (blocks) ->
+          output.fromJar = blocks
+          success(output)
+        , (err) -> error(err, output)
+        , (blocks) -> # progress
+          output.fromJar = blocks
+          progress(output)
+
         toStream = (stream) ->
             for block in blocks
                 stream.write <| JSON.stringify(block)
@@ -186,16 +198,6 @@ class Parser
         if results.length == 0 then throw {offset: text.length - 1, message: "Unexpected end of expression"}
         assert results.length == 1, "Ambiguous parse (got #{results.length}): #{JSON.stringify(results)}"
         results[0] <<< {@mode, block.line}
-        #if results[0].isRoutine
-        #    toCheck = {}
-        #    for k,v of results[0]
-        #        if k != \isRoutine
-        #            @routines[k] = v
-        #            toCheck = v.body
-        #    toCheck <<< {@mode, block.line, isRoutine: true}
-        #else
-        #    results[0] <<< {@mode, block.line}
-        #        if ..set-mode? then @mode = ..set-mode
     catch err
         err.line = block.line
         throw err

@@ -58,6 +58,7 @@
 				</label>
 				<a class="btn btn-default" ng-click="runAll()">Run</a>
 				<input bs-switch ng-model="verification" type="checkbox" value="checked" switch-label="Verification" switch-inverse="true">
+				<a class="btn btn-default" ng-click="compileAll()">Compile</a>
     		</div>
 		</div>
 		<div ng-repeat="h in history">
@@ -70,7 +71,7 @@
 			<div class="input-cell" ng-init="bind(h)">
 				<div class="cell-caption">{{"In[" + h.id + "]"}}</div>
 				<div class="cell-content">
-                    <textarea ui-codemirror="{ onLoad : wrapper(h) }" ui-codemirror-opts="cmOptions" ng-model="h.input"></textarea>
+                    <textarea ui-codemirror="{ onLoad : cmLoaded(h) }" ui-codemirror-opts="cmOptions" ng-model="h.input"></textarea>
 				</div>
 			</div>
 			<div ng-show="h.error && h.error.msg.length > 0" class="alert alert-danger error">

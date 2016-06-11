@@ -12,50 +12,49 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
   ..controller "Ctrl" ($scope, $timeout, $ngBootbox, $indexedDB) !->
     $scope.verification = true # verify by default
 
-    submitCm = (cm, parent, callback=->) ->
+    submitCm = (cell, callback=->) ->
+      cm = cell.cm
       cm.removeOverlay(cm.currentOverlay)
 
-      calc = parent
-      calc.output = null
-      calc.error = null
-      calc.verifyStatus = null
-      calc.loading = true
+      cell.output = null
+      cell.error = null
+      cell.verifyStatus = null
+      cell.loading = true
       thisIdx = _.findIndex($scope.history, (h) ->
-          h.id == calc.id
+          h.id == cell.id
       )
-      thisId = thisIdx + 1 # "id" of In[] and Out[] start from 1
 
-      cellName = "cell-#{thisId}"
+      cellName = "cell-#{cell.id}"
       isTactic = thisIdx > 0
 
       progress = (output) ->
         $timeout ->
-          calc.output = output.fromJar[-1 to]
+          cell.output = output.fromJar[-1 to]
             cleanse output: ..
       
       success = (output) ->
         $timeout ->
-          calc.output = output.fromJar[-1 to]
-          calc.fromNearley = output.fromNearley
-          calc.scope = output.scope
-          calc.routines = output.routines
+          cell.output = output.fromJar[-1 to]
+          cell.fromNearley = output.fromNearley
+          cell.scope = output.scope
+          cell.routines = output.routines
           
-          cleanse calc
-          db.update-cells [calc]
+          cleanse cell
+          db.update-cells [cell]
 
-          if (thisId == ($scope.history.length))
-            $scope.history.push({id: thisId + 1, input: "", output: null, error: null})
+          if thisIdx == $scope.history.length - 1
+            ui-commands.add-cell-after cell
           if output.isTactic && $scope.verification
-            calc.verifyStatus = "In Progress"
-            $scope.asyncVerify(cellName, calc)
+            cell.verifyStatus = "In Progress"
+            $scope.asyncVerify(cellName, cell)
           else
-            calc.verifyStatus = void
-          calc.loading = false
-          callback(null, calc)
+            cell.verifyStatus = void
+          cell.loading = false
+          callback(null, cell)
 
       error = (err) ->
         $timeout ->
-          calc.error =
+          cell.error =
             msg: err.message
             stack: err.stack
             stackshow: false
@@ -68,14 +67,14 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
               line += 1
             cm.currentOverlay = errorOverlay(cm.getLine(line), offset + 1)
             cm.addOverlay(cm.currentOverlay)
-          calc.loading = false
+          cell.loading = false
           callback(err)
 
       if isTactic
         # parse as a tactic
         bellmaniaParse do
           isTactic: true,
-          text: calc.input,
+          text: cell.input,
           term: _.last($scope.history[thisIdx-1].output)?.value?.term
           scope: $scope.history[thisIdx-1].scope
           routines: collectRoutines($scope.history)
@@ -83,11 +82,10 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
           , success, error, progress, cellName
       else
           # parse as a term
-          bellmaniaParse({isTactic: false, text: calc.input, routines: {}}, success, error, progress, cellName)
+          bellmaniaParse({isTactic: false, text: cell.input, routines: {}}, success, error, progress, cellName)
 
       cm.getInputField().blur()
-      $scope.mostRecentId = thisId
-      $scope.$apply()
+      $scope.mostRecentId = cell.id
 
     if localStorage['bell.presentMode']
       if JSON.parse(that)
@@ -103,17 +101,33 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
 
       #$scope.$watch (-> cell.input), onChange
       $scope.$watch (-> cell.verifyStatus), onChange
+    
+    ui-commands =
+      execute: (cell) -> if cell.input then submitCm cell
+      add-cell-after: (cell) -> $scope.insert-at cell.id
+      delete-cell: (cell) -> $scope.delete-at cell.id - 1
+      goto-next: (cell) -> $scope.history[cell.id]?.cm?.focus!
+      goto-prev: (cell) -> $scope.history[cell.id - 2]?.cm?.focus!
       
+    editor-command = (cmd) -> (cm) -> $scope.$apply -> cmd cm.parent
+    
+    seq = (...fs) -> -> for f in fs then f ...
+    
     $scope.cmOptions = cmOptions()
-    $scope.wrapper = (parent-cell) ->
-      submitCallback = (cm) ->
-        if parent-cell.input then submitCm(cm, parent-cell)
-
-      loadCallback = (cm) ->
+      [e,u] = [editor-command, ui-commands]
+      ..extraKeys =
+        'Cmd-Enter':     seq (e u~execute), \
+                             (e u~goto-next)
+        'Ctrl-Enter':    seq (e u~add-cell-after), \
+                             (e u~goto-next)
+        'Cmd-Backspace': seq (e u~goto-prev), \
+                             (e u~delete-cell)
+          
+    $scope.cmLoaded = (parent-cell) ->
+      (cm) ->
         cm.parent = parent-cell
         parent-cell.cm = cm
-
-      initEditor(submitCallback, loadCallback)
+        initEditor(cm)
 
     $scope.history = [
       {id: 1, input: "", output: null, error: null}
@@ -128,6 +142,17 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
       $scope.history = [
         {id: 1, input: "", output: null, error: null}
       ]
+      
+    $scope.insert-at = (idx) ->
+      for h in $scope.history[idx to]
+        h.id += 1
+      $scope.history.splice idx, 0, \
+        {id: idx + 1, input: "", output: null, error: null}
+        
+    $scope.delete-at = (idx) ->
+      $scope.history.splice idx, 1
+      for h in $scope.history[idx to]
+        h.id -= 1
 
     marshal = ->
       JSON.stringify do
@@ -153,7 +178,8 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
               loaded = JSON.parse(reader.result)
               $scope.mostRecentId = loaded.mostRecentId
               $scope.history = loaded.history.map (<<< {error: null, output: null})
-              db.update-cells!
+              db.clear ->
+                db.update-cells!
               $scope.file = void
           catch {message}
             bootbox.alert(message)
@@ -167,7 +193,7 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
     db =
       cells: (cb) -> $indexedDB.openStore 'cells' cb
       e: (err) -> console.error "indexedDB error; " + e.stack
-      record: (cell) -> {cell.id, cell.input, cell.output, cell.scope, cell.routines, cell.verifyStatus}
+      record: (cell) -> {cell.id, cell.input, cell.fromNearley, cell.output, cell.scope, cell.routines, cell.verifyStatus}
       restore-from: ->
         store <~ @cells
         store.getAll!then (cells) ->
@@ -215,8 +241,26 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
       $timeout ->
         async.eachSeries $scope.history, (h, callback) ->
           if h.input
-            submitCm h.cm, h, callback
+            submitCm h, callback
 
+    $scope.compileAll = ->
+      loop-blocks = []
+      rec-blocks = {}
+      for h in $scope.history
+        if h.output?
+          for block in h.output
+            if block.emit?
+              loop-blocks.push \
+                {term: block.value.term, scope: h.scope, emit: block.emit}
+            else if (r = loop-blocks[*-1])?
+              emit = {} <<< r.emit <<< {style: "rec"}
+              rec-blocks[r.emit.name] = \
+                {term: block.value.term, scope: h.scope, emit}
+              
+      program-blocks = loop-blocks ++ [v for k,v of rec-blocks].reverse!
+      
+      fs.writeFileSync '/tmp/emit.json', (program-blocks.map JSON.stringify .join "\n\n")
+      
     $scope.toggleStackShow = (err) ->
       err.stackshow = !err.stackshow
 
@@ -248,7 +292,9 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
     collectRoutines = (history) ->
       {}
         for h in history
-          if h.routines? then .. <<< h.routines
+          for block in h.fromNearley || []
+            if block.kind == 'routine'
+              ..[block.name] = block
 
   ..filter "collapse" ->
     lead = -> it.match /^\s*/ .0.length

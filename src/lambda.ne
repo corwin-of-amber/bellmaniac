@@ -152,7 +152,7 @@ typeVariable -> identifier {% function(d, loc, reject) {return typeVariable(d[0]
 ####### TOKENS FOR TOKENIZER #######
 ####################################
 
-identifier -> letter idrest {% function(d) {return d[0].concat(d[1]); } %}
+identifier -> letter idrest [']:* {% function(d) {return d[0].concat(d[1]).concat(d[2]); } %}
 	| op {% id %}
     | ".":+ {% function(d) {return d[0].join(""); } %}
 
@@ -170,12 +170,14 @@ letter -> [\uD83C\uDD30-\uDD49] {% id %}    # boxed letters
 
 num -> digit:+ {% function(d) { return parseInt(d[0].join("")); } %}
 
-op -> validStandaloneOpchars {% id %}
-	| opchar opchar:+ {% function(d) { return [d[0]].concat(d[1]).join(""); } %}
+op -> validStandaloneOpchars subscriptDigit:*    {% function(d) { return [d[0]].concat(d[1]).join(""); } %}
+	| opchar opchar:+                            {% function(d) { return [d[0]].concat(d[1]).join(""); } %}
 
 validStandaloneOpchars -> [!%&*+<>?^|~\\\-] {% id %}
 opchar -> validStandaloneOpchars {% id %}
 	| [=#@\:] {% id %}
+
+subscriptDigit -> [\u2080-\u2089]   {% id %}
 
 escaped -> ["] [^"]:* ["] {% function(d) { return d[1].join(""); } %}
 
