@@ -14,7 +14,7 @@ import java.io.BufferedWriter
 
 class CppOutput (implicit scope: Scope) {
 
-  val INFIX = List("&&","+","*","/","%","||","<")
+  val INFIX = List("&&","+","-","*","/","%","||","<")
   val REDUCTIONS = List("min","max")
   val mn = new Mnemonics {
     override def isIdentifierPart(c: Character) = c < 0x100 && super.isIdentifierPart(c)
@@ -119,15 +119,23 @@ class CppOutput (implicit scope: Scope) {
 
 object CppOutput {
 
+  /*
   val PREFACE_PATH = "./src/codegen/templates/preface.cpp"
   
   def readPreface(filename: String = PREFACE_PATH) = {
     val reader = new BufferedReader(new FileReader(filename))
     reader.lines.iterator.toStream   // can be just 'reader.lines' if we turn on -Xexperimental
   }
+  */
+  
+  val PREFACE = """
+#include "preface.h"
+#include "input.h"
+"""
   
   def writePrefaceTo(w: BufferedWriter) = {
-    readPreface().foreach(x => { w.write(x); w.newLine() })
+    w.write(PREFACE); w.newLine();
+    //readPreface().foreach(x => { w.write(x); w.newLine() })
   }
 
 }

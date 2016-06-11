@@ -7,9 +7,14 @@
 #include <ctime>
 #include <cassert>
 #include <iostream>
+#ifdef CILK
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 #include "cilktime.h"
+#else
+#include "cilk_stub.h"
+#endif
+
 using namespace std;
 #ifndef TYPE
 #define TYPE int
@@ -44,8 +49,8 @@ int *X, *Y;
 #define NOP 
 #ifndef NNUM
 #define NNEEDED 1
-long long N = 1000;
-TYPE *dist;
+extern long long N;
+extern TYPE *dist;
 #else
 #define NNEEDED 0
 #define N NNUM
@@ -138,7 +143,9 @@ inline void copy_dist_part(TYPE* V,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
 * Auto-generated Code
 */
 
-#include "..\gap-new2-all.cpp"
+//#include "..\gap-new2-all.cpp"
+void funcA_rec(DEFINTERVALFUNC(I), DEFINTERVALFUNC(J));
+
 
 #ifdef DEBUG
 void print_problem(){
@@ -365,7 +372,7 @@ int main(int argc, char *argv[]) {
 	funcA_rec(PARAM(J),PARAM(J));
 	unsigned long long tend = cilk_getticks();
 	//cout<<"REC\t"<<N<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
-	cout<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend-tstart);
+	cout<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend-tstart)<<endl;
 #ifdef DEBUG
 	{
 		drec = ( TYPE* ) _mm_malloc(N * N * sizeof( TYPE ),ALIGNMENT);
