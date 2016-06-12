@@ -142,6 +142,8 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
       $scope.history = [
         {id: 1, input: "", output: null, error: null}
       ]
+      db.clear ->
+        db.update-cells!
       
     $scope.insert-at = (idx) ->
       for h in $scope.history[idx to]
@@ -200,9 +202,12 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
           if cells.length
             console.log "read #{cells.length} cells"
             cells.for-each cleanse
-            $scope.history = cells[0 to 2]
-            for let cell, i in cells[3 to]
-              $timeout (-> $scope.history.push cell), i*200
+            if cells.length <= 3
+              $scope.history = cells
+            else
+              $scope.history = cells[0 to 2]
+              for let cell, i in cells[3 to]
+                $timeout (-> $scope.history.push cell), i*200
         , @~e
       update-cells: (cells ? $scope.history, cb=->) ->
         records = cells.map @~record

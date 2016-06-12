@@ -7,7 +7,7 @@ root.keywords = ["set", "fix", "/", "+", "×", "∩", "-", "*", ":-"]
 
 ## combinators
 
-root.tree = (root, subtrees) ->
+root.tree = (root, subtrees ? []) ->
     $: \Tree
     root: root
     subtrees: subtrees
@@ -72,11 +72,16 @@ root.variable = (literal) ->
         # console.error <| "Literal " + literal + " is reserved or has been declared as a set."
         void
 
+isPrefixOp = (tree) ->
+  tree.subtrees.length == 0 && tree.root.literal == '¬'
+        
 ## recursive calls; trickle up nulls if any subtree is null
 
 root.abstraction = (par, body) -> par && body && tree(genericIdentifier(\↦), [par, body])
 
-root.application = (lhs, rhs) -> lhs && rhs && tree(genericIdentifier(\@), [lhs, rhs])
+root.application = (lhs, rhs) -> 
+  if isPrefixOp(lhs) then tree(lhs.root, [rhs])
+  else lhs && rhs && tree(genericIdentifier(\@), [lhs, rhs])
 
 root.typeOperation = (op, lhs, rhs) -> op && lhs && rhs && tree(operator(op), [lhs, rhs])
 
@@ -85,5 +90,8 @@ root.functionType = (lhs, rhs) -> lhs && rhs && tree(genericIdentifier(\->), [lh
 root.slashExpression = (lhs, rhs) -> lhs && rhs && tree(operator(\/), [lhs, rhs])
 
 root.fixedExpression = (subj) -> subj && tree(operator(\fix), [subj])
+
+root.guardedExpression = (lhs, rhs) -> 
+  if rhs? then tree(genericIdentifier('|!'), [lhs, rhs]) else lhs
 
 root.cons = (car, cdr) -> application(application(variable(\cons), car), cdr)

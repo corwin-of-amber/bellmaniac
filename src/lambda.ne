@@ -71,6 +71,7 @@ applicationWithInfixExpression -> applicationExpression _ notatedInfixOperator _
 
 applicationWithoutInfixExpression -> applicationOnNonLambdaExpression __ fixedOrRootExpression {% function(d) {return application(d[0], d[2]); } %}
 	| parenthesizedExpression __ lambdaExpression {% function(d) {return application(d[0], d[2]); } %}
+    | variable parenthesizedExpression     {% function(d) {return application(d[0], d[1]); } %}
 	| fixedOrRootExpression {% id %}
 
 applicationOnNonLambdaExpression -> applicationOnNonLambdaExpression __ fixedOrRootExpression {% function(d) {return application(d[0], d[2]); } %}
@@ -101,7 +102,10 @@ listExpression -> leftbracket _ expression (_ comma _ expression):* _ rightbrack
 	return cons(d[2], consHelper(d[3]));
 } %}
 
-parenthesizedExpression -> leftparen expression rightparen {% function(d) {return d[1];} %}
+parenthesizedExpression -> leftparen expression guard:? rightparen {% 
+  function(d) { return guardedExpression(d[1],d[2]);} %}
+
+guard -> _ "|" "_" "{" expression "}" _   {% function(d) { return d[4]; } %}
 
 lambdaExpression -> ( possiblyTypedLambdaParameter __ ):+ arrow _ expression  {%
 	function(d) {
@@ -121,12 +125,13 @@ possiblyTypedLambdaParameter -> variable {% id %}
 		return d[5] && d[1]; } %}
 
 variable -> identifier {% function(d, loc, reject) {return variable(d[0]) || reject; } %}
-    | escaped {% function(d) { return tree(identifier(d[0],'variable')); } %}
+    | escaped     {% function(d) { return tree(identifier(d[0],'variable')); } %}
+    | connective  {% function(d) { return tree(identifier(d[0],'connective')); } %}
 
 integer -> num {% function(d) { return tree(identifier(d[0],'?')); } %}
 
 notatedInfixOperator -> backtick variable backtick {% function(d) {return d[1]; } %}
-	| [+*\-] {% function(d, loc, reject) {return tree(identifier(d[0],'variable')); } %}
+	| [+*\-⨁⨀] {% function(d, loc, reject) {return tree(identifier(d[0],'variable')); } %}
 
 defaultInfixOperator -> "/" {% function(d) {return operator(d[0]); } %}
 
@@ -176,6 +181,8 @@ op -> validStandaloneOpchars subscriptDigit:*    {% function(d) { return [d[0]].
 validStandaloneOpchars -> [!%&*+<>?^|~\\\-] {% id %}
 opchar -> validStandaloneOpchars {% id %}
 	| [=#@\:] {% id %}
+    
+connective -> "¬"  {% id %}
 
 subscriptDigit -> [\u2080-\u2089]   {% id %}
 
