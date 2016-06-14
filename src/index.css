@@ -155,13 +155,16 @@ ul.c {
   text-indent: -1em;
 }
 ul.c ul.c { margin-left: 0; }
-ul.c li::before {
+/*
+ul.c[bullet="•"] li::before {
   content: "• ";
   font-family: Menlo, monospace;
 }
 ul.c[bullet="◦"] li::before {
   content: "◦ ";
+  font-family: Menlo, monospace;
 }
+*/
 
 hat { position: relative; }
 hat::after {
@@ -231,6 +234,32 @@ a.expand-collapse i.fa-caret-right { margin-left: 2px; } /* severe ocd */
 
 .bootstrap-switch * {
   height: auto !important;
+}
+
+.toolbar {
+  background: white;
+  width: 100%;
+}
+
+.toolbar, .toolbar-placeholder {
+  margin-bottom: 15px;
+}
+
+.toolbar-spacer {
+  display: inline-block;
+  width: .5em;
+}
+
+.toolbar.sticky {
+  position: fixed;
+  top: 0;
+  border-bottom: 1px solid #EEE;
+  z-index: 109; /* above CodeMirror */
+}
+
+.btn.active.focus, .btn.active:focus, .btn.focus, 
+.btn:active.focus, .btn:active:focus, .btn:focus {
+  outline: none;
 }
 
 @keyframes sk-circleFadeDelay {

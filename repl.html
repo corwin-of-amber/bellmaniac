@@ -32,6 +32,7 @@
 	<script src="src/parse.ls.js"></script>
 	<script src="src/repl.ls.js"></script>
     <script src="src/compiler/config.ls.js"></script>
+	<script src="src/compiler/codegen.ls.js"></script>
 
 	<link rel="stylesheet" href="node_modules/codemirror/lib/codemirror.css">
 	<link rel="stylesheet" href="node_modules/codemirror/theme/neat.css">
@@ -49,16 +50,20 @@
 		<div>
 			<h1>Bellmania Interface</h1>
 			<p>Press <span class="keystroke">⌘⏎</span> in the code editor to execute code.</p>
-			<div style="margin-bottom: 15px" class="form-inline">
+			<div class="toolbar">
 				<a class="btn btn-default" ng-click="reset()">New</a>
 				<a class="btn btn-default" ng-click="save()">Save</a>
 				<label class="btn btn-default">
 					<input type="file" style="display:none;" accept=".json" file-pick="load(file)">  <!-- @see directive filePick in repl.ls -->
 					Load
 				</label>
-				<a class="btn btn-default" ng-click="runAll()">Run</a>
+                <span class="toolbar-spacer"></span>
+                <a class="btn btn-default" ng-click="rewind()">Rewind</a>
+				<button id="run" class="btn btn-default" ng-click="runAll()">Run</button>
+                <button id="stop" class="btn btn-default" ng-click="stop()">Stop</button>
 				<input bs-switch ng-model="verification" type="checkbox" value="checked" switch-label="Verification" switch-inverse="true">
-				<a class="btn btn-default" ng-click="compileAll()">Compile</a>
+                <span class="toolbar-spacer"></span>
+				<button id="compile" class="btn btn-default" ng-click="compileAll()">Compile</button>
     		</div>
 		</div>
 		<div ng-repeat="h in history">
@@ -93,7 +98,7 @@
 					</div>
 				</div>
 				<div class="cell-indicator" ng-show="$index > 0">
-					<div class="pull-right">
+					<div class="pull-right" title="{{verifyTitle(h)}}">
 						<a class="btn btn-sm verify-icon" ng-hide="isInvalid(h)" ng-class="{'btn-warning': h.verifyStatus === 'In Progress', 'btn-success': h.verifyStatus === 'Success', 'btn-danger': (h.verifyStatus === 'Error' || h.verifyStatus === 'Aborted')}" ng-click="abortVerification(h)">
 							<span ng-show="h.verifyStatus == 'In Progress'">
 								<i class="fa fa-cog fa-spin fa-fw"></i> Verifying...
@@ -112,7 +117,7 @@
 				</div>
 			</div>
 			<div class="loading" ng-if="h.loading">
-				<i class="fa fa-circle-o-notch fa-2x fa-pulse"></i>
+				<i ng-click="stop()" class="fa fa-circle-o-notch fa-2x fa-pulse"></i>
 			</div>
 		</div>
 	</div>
@@ -133,7 +138,7 @@
 				<display o="el"></display>
 			</li>
 		</ul>
-		<ul ng-if="o.tree" class="c" bullet="{{o.bullet}}">
+		<ul ng-if="o.tree" class="c">
 			<li>
 				<display o="o.tree.root"></display>
 				<display ng-repeat="s in o.tree.subtrees" o="{tree: s}"></display>

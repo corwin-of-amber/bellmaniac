@@ -42,8 +42,8 @@ readResponseBlocks = (stream, parsedInputs, success, error, progress) ->
             # TODO this was broken by the progress feature :(
             inputBlock
               err.line = (..?check ? ..?tactic)?.line
-            console.error err.stack
-            console.log block
+            #console.error err.stack
+            #console.log block
             err-occurred := err
             error(err)
 
@@ -55,7 +55,7 @@ wrapWith = (term, root) ->
         
 encapsName = (routine-def) ->
   fmt-param = ->
-    console.assert it.$ == 'Tree' && it.subtrees.length == 0 && it.root.$ == 'Identifier'
+    assert it.$ == 'Tree' && it.subtrees.length == 0 && it.root.$ == 'Identifier'
     it.root.literal
   params = routine-def.params.map fmt-param .join ','
   "#{routine-def.name}[#{params}]"
@@ -63,12 +63,26 @@ encapsName = (routine-def) ->
 emitData = (block) ->   # @param block   Parsed input block
   if block?.kind == 'routine'
     {name: encapsName(block), style: "loop"}
-  
+
+filter-ansi = (.replace(/\x1b\[[0-9;]*m/g, ''))  # removes ANSI escape codes
+
+running-processes =
+  _procs: []
+  started: (proc) -> @_procs.push proc
+  stopped: (proc) -> @_procs[@_procs.indexOf proc] = void
+  kill-all: (with-signal='SIGTERM') ->
+    for proc in @_procs
+      if proc
+        console.log "killing #{proc.pid}"
+        proc.kill with-signal
+    @_procs = []
+
 # input is of the form
-#     {isTactic: bool,
-#      text: string from codemirror
-#      term:? previous term (AST) if isTactic is true
-#      scope:? previous scope if isTactic is true
+#     {text: string from codemirror
+#      term:      previous term (AST)       ⎫
+#      scope:     previous scope            ⎬ for tactics
+#      routines:  defined subroutines       ⎭
+#      verify:    (bool) generate VC (SMT2)
 #     }
 root.bellmaniaParse = (input, success, error, progress, name='synopsis') ->
 
@@ -91,6 +105,7 @@ root.bellmaniaParse = (input, success, error, progress, name='synopsis') ->
             else <[--cert none]>
         env = {} <<< process.env <<< configure-env!
         jar = spawn launch[0], launch[1 to] ++ flags ++ <[-]>, {env}
+          running-processes.started ..
 
         fromStream = (stream, callback) ->
             stream.setEncoding('utf-8')
@@ -101,7 +116,8 @@ root.bellmaniaParse = (input, success, error, progress, name='synopsis') ->
 
         fromStream jar.stderr, (err) !->
             if err != ""
-                error({message: err}, output)
+                console.warn filter-ansi err
+                #error({message: filter-ansi err}, output)
 
         # configure global scope, mode, and routines
         parser.scope = input.scope ? []  |>  (.[to])
@@ -116,17 +132,22 @@ root.bellmaniaParse = (input, success, error, progress, name='synopsis') ->
 
         output.scope = parser.scope
         output.routines = parser.routines
-        output.isTactic = input.isTactic && \
+        output.isTactic = \
             !_.any(output.fromNearley, (block) -> block.kind == \routine)
 
         if output.isTactic
+            if !input.term?
+                throw new Error "Input term is missing"
             term = wrapWith(input.term, identifier(\program, '?'))
-            blocks =
+            blocks = []
                 for parsedBlock in output.fromNearley
-                    tactic: parsedBlock
-                    term: term
-                    scope: root.scope
-                    routines: parser.routines
+                    ..push do
+                        tactic: parsedBlock
+                        term: term
+                        scope: root.scope
+                        routines: parser.routines
+                    
+                    term = undefined # only first block gets 'term'
         else
             blocks =
                 for parsedBlock in output.fromNearley
@@ -135,16 +156,17 @@ root.bellmaniaParse = (input, success, error, progress, name='synopsis') ->
                             parsedBlock.body
                         else parsedBlock
                     scope: root.scope
-                    #emit:
-                    #    if parsedBlock.kind == 'routine'
-                    #        {name: encapsName(parsedBlock), style: "loop"}
 
         # This will read asynchronously from child process' output
-        readResponseBlocks jar.stdout, output.fromNearley, (blocks) ->
+        readResponseBlocks jar.stdout, output.fromNearley
+        , (blocks) ->   # success
           output.fromJar = blocks
+          running-processes.stopped(jar)
           success(output)
-        , (err) -> error(err, output)
-        , (blocks) -> # progress
+        , (err) ->      # error
+          running-processes.stopped(jar)
+          error(err, output)
+        , (blocks) ->   # progress
           output.fromJar = blocks
           progress(output)
 
@@ -164,6 +186,9 @@ root.bellmaniaParse = (input, success, error, progress, name='synopsis') ->
 
     catch err
         error(err)
+
+
+root.bellmaniaParse.abort = -> running-processes.kill-all!
 
 
 class Parser
