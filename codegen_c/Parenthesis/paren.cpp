@@ -10,6 +10,11 @@
 #include <string>
 #include <cassert>
 #include <iostream>
+
+#ifdef __ICC
+#define CILK
+#endif
+
 #ifdef CILK
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
