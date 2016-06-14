@@ -3,6 +3,7 @@
 	<name>bellmania.codegen</name>
 	<comment></comment>
 	<projects>
+		<project>Bellmaniac</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

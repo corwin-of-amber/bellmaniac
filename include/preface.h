@@ -5,11 +5,13 @@
 #include <string>
 #include <cassert>
 #include <iostream>
-/*
+#ifdef CILK
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
+#else
+#include "cilk_stub.h"
+#endif
 #include "cilktime.h"
-*/
 using namespace std;
 #ifndef TYPE
 #define TYPE int
