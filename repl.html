@@ -44,6 +44,7 @@
 </head>
 <body>
 	<div ng-app="app" ng-controller="Ctrl">
+        <div class="flash"><!-- e.g. Loading --></div>
         <div class="toolbox">
             <a ng-click="togglePresent()">Present mode</a>
         </div>
@@ -51,14 +52,14 @@
 			<h1>Bellmania Interface</h1>
 			<p>Press <span class="keystroke">⌘⏎</span> in the code editor to execute code.</p>
 			<div class="toolbar">
-				<a class="btn btn-default" ng-click="reset()">New</a>
-				<a class="btn btn-default" ng-click="save()">Save</a>
-				<label class="btn btn-default">
+				<a id="new" class="btn btn-default" ng-click="reset()">New</a>
+				<a id="save" class="btn btn-default" ng-click="save()">Save</a>
+				<label id="load" class="btn btn-default">
 					<input type="file" style="display:none;" accept=".json" file-pick="load(file)">  <!-- @see directive filePick in repl.ls -->
 					Load
 				</label>
                 <span class="toolbar-spacer"></span>
-                <a class="btn btn-default" ng-click="rewind()">Rewind</a>
+                <a id="rewind" class="btn btn-default" ng-click="rewind()">Rewind</a>
 				<button id="run" class="btn btn-default" ng-click="runAll()">Run</button>
                 <button id="stop" class="btn btn-default" ng-click="stop()">Stop</button>
 				<input bs-switch ng-model="verification" type="checkbox" value="checked" switch-label="Verification" switch-inverse="true">
@@ -68,11 +69,11 @@
 		</div>
 		<div ng-repeat="h in history">
 			<hr ng-if="$index > 0">
-          <!--
+            <!--
 			<div class="row">
 				<span ng-show="isOutdated(h)" class="label label-danger pull-right icon">OUTDATED</span>
 			</div>
-          -->
+            -->
 			<div class="input-cell" ng-init="bind(h)">
 				<div class="cell-caption">{{"In[" + h.id + "]"}}</div>
 				<div class="cell-content">

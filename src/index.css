@@ -9,6 +9,20 @@ div.toolbox a {
   cursor: pointer;    
 }
 
+div.flash {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: yellow;
+  padding: 1px 8px;
+  border: 1px solid;
+  border-top: none;
+}
+div.flash:empty {
+  display: none;
+}
+
 .CodeMirror {
   font-family: Monaco;
   font-size: 12px;
@@ -265,6 +279,18 @@ a.expand-collapse i.fa-caret-right { margin-left: 2px; } /* severe ocd */
 @keyframes sk-circleFadeDelay {
   0%, 39%, 100% { opacity: 0; }
   40% { opacity: 1; }
+}
+
+kbd {   /* Keyboard keys, adapted from http://helplogger.blogspot.co.il/2013/10/css-keyboard-keys-on-blogger.html */
+  border:1px solid gray;
+  background: white;
+  color: #666;
+  box-shadow:.5px 0 .5px 0 #eee, 0 1px 0 1px #ccc, 0 1px 0 1.5px #444;
+  -webkit-border-radius:3px;
+  border-radius:3px;
+  margin:2px 3px;
+  padding:.5px 5px;
+  vertical-align: +1px;
 }
 
 /*

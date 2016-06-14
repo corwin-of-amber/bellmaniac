@@ -13,6 +13,12 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
     $scope.verification = true # verify by default
 
     set-mode = (mode) ->
+      if mode == 'loading'
+        $('.toolbar .btn').addClass 'disabled'
+        $('div.flash').text 'Loading'
+      else
+        $('#new,#save,#load,#rewind').removeClass 'disabled'
+        $('div.flash').empty!
       if mode == 'ready'
         $('#run').removeClass 'disabled'
         $('#stop').addClass 'disabled'
@@ -59,7 +65,6 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
           cell.loading = false
       
       progress = (output) ->
-        console.log "progress Out[#{cell.id}]"
         checkpoint callback
         $timeout ->
           cell.output = output.fromJar[-1 to]
@@ -134,14 +139,12 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
 
     $scope.togglePresent = !->
       $ \body .toggleClass 'presentMode'
+      $scope.history.forEach (.cm.refresh!)  # CodeMirror needs to adapt to font change
       localStorage['bell.presentMode'] = JSON.stringify ($ \body .hasClass 'presentMode')
 
     $scope.bind = (cell) ->
-      onChange = (oldValue, newValue) ->
+      $scope.$watch (-> cell.verifyStatus), (oldValue, newValue) ->
         if oldValue !== newValue then db.update-cells [cell]
-
-      #$scope.$watch (-> cell.input), onChange
-      $scope.$watch (-> cell.verifyStatus), onChange
     
     ui-commands =
       execute: (cell) -> if cell.input then checkpoint.stop = false; submitCm cell
@@ -163,6 +166,9 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
                              (e u~goto-next)
         'Cmd-Backspace': seq (e u~goto-prev), \
                              (e u~delete-cell)
+
+    if process.platform != 'darwin'
+      $('span.keystroke').html('<kbd>Ctrl</kbd>+<kbd>↵</kbd>')
           
     $scope.cmLoaded = (parent-cell) ->
       (cm) ->
@@ -249,6 +255,7 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
       e: (err) -> console.error "indexedDB error; " + e.stack
       record: (cell) -> {cell.id, cell.input, cell.fromNearley, cell.output, cell.scope, cell.routines, cell.verifyStatus}
       restore-from: ->
+        set-mode 'loading'
         store <~ @cells
         store.getAll!then (cells) ->
           if cells.length
@@ -262,6 +269,7 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
                 $scope.history.push cell
                 callback!
               , 200
+            , -> set-mode 'ready'
         , @~e
       update-cells: (cells ? $scope.history, cb=->) ->
         records = cells.map @~record
@@ -407,10 +415,7 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
               rec-blocks[r.emit.name] = \
                 {term: block.value.term, scope: h.scope, emit}
               
-      program-blocks = loop-blocks ++ [v for k,v of rec-blocks].reverse!
-      
-      '/tmp/emit.json'
-        fs.writeFileSync .., (program-blocks.map JSON.stringify .join "\n\n")
+      loop-blocks ++ [v for k,v of rec-blocks].reverse!
         bellmania-codegen .., -> set-mode 'ready'
       
     window.$scope = $scope
