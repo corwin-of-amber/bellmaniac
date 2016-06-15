@@ -1,6 +1,7 @@
 
-
 package codegen
+
+import scala.collection.JavaConversions._
 import org.rogach.scallop.ScallopConf
 import org.rogach.scallop.ScallopOption
 import java.io.BufferedReader
@@ -29,6 +30,7 @@ import java.io.FileWriter
 import java.io.File
 import semantics.TranslationError
 import report.data.SerializationError
+import com.mongodb.DBObject
 
 
 object Main {
@@ -143,6 +145,9 @@ object Main {
         //OR Expr
         Some(("OR",t.subtrees(0),List(t.subtrees(1))))
       }
+      else if (t =~ ("¬", 1)) {
+        Some(("NOT", t.subtrees(0), null))
+      }
       else if (t =~ ("program", 1)){//higher level program
         unapply(t.subtrees(0))
       }
@@ -187,30 +192,31 @@ object Main {
   }
   case class Context (
       val inputArray: Identifier, 
-      val fixVar: Option[Identifier], 
+      val fixVar: Option[Identifier],
+      val loops: Map[String, Direction],
       val insideFix: Boolean = false, 
       val localVars : List[Term] = List(), 
-      val tmpVar: String = "" 
+      val tmpVar: String = ""
       ) {
     def inp (i: Identifier) = {
-        Context(i, fixVar, insideFix,localVars,tmpVar) 
+        Context(i, fixVar, loops, insideFix, localVars, tmpVar) 
       }  
     def fix(v: Identifier) = {
       assert(insideFix && fixVar.isEmpty)
-      Context(inputArray, Some(v), insideFix,localVars,tmpVar) 
+      Context(inputArray, Some(v), loops, insideFix, localVars, tmpVar) 
     }
     def setFix = {
       assert(! insideFix)
-      Context(inputArray, fixVar, true,localVars,tmpVar) 
+      Context(inputArray, fixVar, loops, true, localVars, tmpVar) 
     }
     def + (i: Term) = {
-      Context(inputArray, fixVar, insideFix,localVars :+ i,tmpVar) 
+      Context(inputArray, fixVar, loops, insideFix,localVars :+ i,tmpVar) 
     }
     def ++ (l: List[Term]) = {
-      Context(inputArray, fixVar, insideFix,localVars ++ l,tmpVar) 
+      Context(inputArray, fixVar, loops, insideFix,localVars ++ l,tmpVar) 
     }
     def tmp (s: String) = {
-      Context(inputArray, fixVar, insideFix,localVars,s) 
+      Context(inputArray, fixVar, loops, insideFix,localVars,s) 
     }
   }
   
@@ -244,6 +250,8 @@ object Main {
         FunApp("&&",List(FormulaToExpr(a),FormulaToExpr(b)))
       case P("OR",a:Term, List(b:Term)) =>
         FunApp("||",List(FormulaToExpr(a),FormulaToExpr(b)))
+      case P("NOT",a:Term, _) =>
+        FunApp("!",List(FormulaToExpr(a)))
       case P("FIX",t:Term,null) =>
         ???
         //FunApp(FuncPre("FIX"),List(FormulaToExpr(t)))
@@ -267,7 +275,7 @@ object Main {
         val intv = interval.root.literal.toString();
         FunApp("In", List(Interval(intv),FormulaToExpr(i)))
       case _ =>
-        throw new Exception("Not analyzed Term: " + ff.root.literal.toString() + "|" + ff.subtrees.size.toString() )
+        throw new Exception(s"Unreognized operation: ${ff.root.literal}  (${ff.subtrees.size}-ary ${ff.root.kind})")
     }
   }
   var tmpCtr = 0
@@ -365,7 +373,7 @@ object Main {
                 vars(0).root.literal.toString,
                 GetBound(ivlVar,LOWER),
                 GetBound(ivlVar,UPPER),
-                FWD,
+                FWD,   // direction does not really matter here
                 Assign(tmpStr,FunApp(f.root.literal.toString, List(
                                     Var(tmpStr,ivlBody),
                                     FormulaToExpr(body)
@@ -450,7 +458,7 @@ object Main {
               For(v.leaf.literal.toString,
                   GetBound(iV,LOWER),
                   GetBound(iV,UPPER),
-                  FWD, //TODO: get the right direction from Term
+                  ctx.loops.getOrElse(v.leaf.literal.toString, FWD),
                   inner)
           }
         }
@@ -504,6 +512,8 @@ object Main {
     If(FunApp("BASE_CONSTRAINT",argIntervals),FunctionCall(s"func${name}_${style}",argIntervals),elseBranch)
   }
   
+  var loopDirections: Map[String, Direction] = Map.empty  // it's horrible to have a global for this @@@
+  
   def FormulaToFunction(name: String,style: String, argIntervals: List[Interval], ff:Term)(implicit scope: Scope) : FunDef = {
     val localDefs = localIntervalDefs(argIntervals)
     val blockWOCilk = FormulaToFunction(ff)
@@ -519,7 +529,7 @@ object Main {
     //find inputArray
     ff match {
       case T(`↦`.root,List(v,body)) =>
-        simplifyStmtN(5,FormulaToStmt(body)(Context(v.leaf,None)))
+        simplifyStmtN(5,FormulaToStmt(body)(Context(v.leaf, None, loopDirections)))
       case T(Prelude.program.root,List(body)) => 
         FormulaToFunction(body)
       case T(`:`.root,List(label,body)) =>
@@ -600,7 +610,12 @@ object Main {
     }
   }
   
-  
+  def getMetaData(json: DBObject) {
+    loopDirections = json.toMap map { case (k,v) => k.toString -> v.toString } collect {
+      case (i, "FWD") => i -> FWD
+      case (j, "BWD") => j -> BWD
+    } toMap
+  }
   
   def main(args: Array[String]) {
     
@@ -624,6 +639,7 @@ object Main {
         val prg = json.get("term")
         val style = json.getString("style") 
         val title = json.getString("program")
+        val metadata = json.get("tag") andThen_ (getMetaData, {})
         val r = """(.*)\[(.*)\]$""".r
         val x = r.findFirstMatchIn(title)
         val name = x.get.group(1) 

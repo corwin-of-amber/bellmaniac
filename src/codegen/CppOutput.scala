@@ -3,6 +3,7 @@ package codegen
 import Main._
 import syntax.transform.Mnemonics
 import syntax.Identifier
+import syntax.AstSugar._
 import semantics.Scope
 
 import scala.collection.JavaConversions._
@@ -15,13 +16,12 @@ import java.io.BufferedWriter
 class CppOutput (implicit scope: Scope) {
 
   val INFIX = List("&&","+","-","*","/","%","||","<")
+  val PREFIX = List("!")
   val REDUCTIONS = List("min","max")
   val mn = new Mnemonics {
     override def isIdentifierPart(c: Character) = c < 0x100 && super.isIdentifierPart(c)
   }
-  def mne(s: String): String = {
-    mn.get(new Identifier(s,"?"))
-  }
+  def mne(s: String): String = mn get I(s)
   
   def exprToFormalParam(e:Expr): String = {
     e match {
@@ -61,6 +61,8 @@ class CppOutput (implicit scope: Scope) {
       case FunApp(f: String, args: List[Expr]) =>
         if (INFIX.contains(f) && args.length == 2) 
           s"(${exprToArg(args(0))} $f ${exprToArg(args(1))})"
+        else if (PREFIX.contains(f) && args.length == 1)
+          s"($f${exprToArg(args(0))})"
         else{ 
           /*println("BOO: " +args.length.toString() + " "+ 
               (args.map(x=>exprToCode(x))).toString());*/
@@ -68,7 +70,10 @@ class CppOutput (implicit scope: Scope) {
         }
       //f is either FuncPre or FuncDef
       case Slash(isFunction: Boolean, slashes: List[Expr]) =>
-        ??? //shouldn't be here anymore
+        //  assert(!isFunction)    // TODO this assertion is required; but right now isFunction == true when it's not supposed to be
+        slashes map exprToCode reduceLeftOption 
+          ((x,y) => s"SLASH(${x}, ${y})") getOrElse "UNDEFINED"
+        //??? //shouldn't be here anymore
       case Guarded(cond: Expr, v: Expr) =>
         s"GUARDED(${exprToCode(cond)},${exprToCode(v)})"
       case MemRead(arrayName: String, indices: List[Expr]) =>
