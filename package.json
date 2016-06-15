@@ -32,7 +32,9 @@
   "chromium-args": "--enable-threaded-compositing",
   "main": "repl.html",
   "window": {
-    "toolbar": true
+    "toolbar": true,
+    "height": 700,
+    "width": 700
   },
   "scripts": {
     "start": "./Bellmania.Frontend.app/Contents/MacOS/nwjs .&"

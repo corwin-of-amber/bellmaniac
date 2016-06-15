@@ -46,7 +46,9 @@ bellmania-codegen = (input, callback) ->
   jar.stderr.on 'data' -> console.warn it
 
   jar.on 'close', (code) ->
-    assert code == 0, "Pre-compilation failed (code=#{code})"
+    if code != 0
+      window.alert "Internal error; pre-compilation failed (code=#{code}).\nNo output written."
+      return
     launch = if root.devmode then <[../Bellmania.Codegen/bellgen]> else <[java -jar lib/bellgen.jar]>
     flags = <[ -o ]> ++ [output-filename]
     jar = spawn launch[0], launch[1 to] ++ flags ++ ['/tmp/prog.json'], {env}
@@ -57,7 +59,9 @@ bellmania-codegen = (input, callback) ->
     jar.on 'close', (code) ->
       console.log "Compilation finished (code=#{code})"
       if code == 0
-        window.alert "Output written to '#{output-filename}'"
+        window.alert "Output written to '#{output-filename}'."
+      else
+        window.alert "Internal error; compilation failed (code=#{code}).\nNo output written."
       callback!
 
 

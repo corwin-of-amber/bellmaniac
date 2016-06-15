@@ -1,6 +1,8 @@
+fs = require \fs
 _ = require \lodash
 {execFile} = require \child_process
 LET_RE = /^\s*([\s\S]+?)\s+=\s+([\s\S]+?)\s*?\|\s*([\s\S]+?)\s*$/
+
 
 angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapontillo.bootstrap-switch indexedDB]>
   ..config ($indexedDBProvider) !->
@@ -414,7 +416,7 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
               emit = {} <<< r.emit <<< {style: "rec"}
               rec-blocks[r.emit.name] = \
                 {term: block.value.term, scope: h.scope, emit}
-              
+
       loop-blocks ++ [v for k,v of rec-blocks].reverse!
         bellmania-codegen .., -> set-mode 'ready'
       
