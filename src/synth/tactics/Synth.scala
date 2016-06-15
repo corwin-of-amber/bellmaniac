@@ -122,7 +122,16 @@ object Synth {
 
     def incdir(dir: String) = new Sketch(skfile, dir :: incdirs)
       
-    def hash = { import scala.sys.process._ ; (Seq("md5", "-q", skfile.getPath) !!).stripLineEnd }
+    def hash = {
+      // Can someone explain to me why it is so cumbersome to compute MD5 sum of a file in Java
+      import java.security._
+      import javax.xml.bind.DatatypeConverter
+      val md = MessageDigest.getInstance("MD5")
+      val dis = new DigestInputStream(new FileInputStream(skfile), md)
+      while (dis.read(new Array[Byte](1 << 12)) != -1) {}
+      dis.close()
+      DatatypeConverter.printHexBinary(md.digest())
+    }
     def save(results: Map[String, Term]) = cached += hash -> results
   }
 
@@ -474,6 +483,7 @@ object Synth {
     val masters = scope.sorts.masters filterNot isBuiltinSort 
     val sorts =  (scope.sorts.hierarchy.bfs map (_.root) filterNot   /* notice BFS order */
                   (s => s == ⊤ || isEmptySort(s) || isBuiltinSort(s)) toList) 
+    val sortsByMaster = sorts groupBy scope.sorts.getMasterOf
     val leaves = scope.sorts.leaves filterNot isBuiltinSort toList
     val leavesByMaster = leaves.toList groupBy scope.sorts.getMasterOf
 
