@@ -6,7 +6,7 @@
 #include <cassert>
 #include <iostream>
 
-#ifdef __ICC
+#if defined __ICC || defined __ICL 
 #define CILK
 #endif
 
@@ -22,13 +22,8 @@ using namespace std;
 #define TYPE int
 #endif
 #define ALIGNMENT 64
-#ifdef INTINTERVAL
-#define DEFINTERVALFUNC(I) TYPE I##_begin, TYPE I##_end
-#define DEFINTERVALSTMT(I) TYPE I##_begin, I##_end
-#define DEFBEGIN(I) I##_begin
-#define DEFEND(I) I##_end
-#define PARAM(I) I##_begin, I##_end
-#else
+
+#ifdef STRUCTINTERVAL
 struct interval {
 	TYPE begin;TYPE end;
 };
@@ -37,13 +32,20 @@ struct interval {
 #define DEFBEGIN(I) I.begin
 #define DEFEND(I) I.end
 #define PARAM(I) I
+#else
+#define DEFINTERVALFUNC(I) TYPE I##_begin, TYPE I##_end
+#define DEFINTERVALSTMT(I) TYPE I##_begin, I##_end
+#define DEFBEGIN(I) I##_begin
+#define DEFEND(I) I##_end
+#define PARAM(I) I##_begin, I##_end
+
 #endif
 
 #define MAXVAL int(1e9)
 #define INITMIN MAXVAL
 #define UNDEFINED MAXVAL
 
-inline bool IN(DEFINTERVALFUNC(I), int val) {
+inline bool In(DEFINTERVALFUNC(I), int val) {
 	return ((val) >= DEFBEGIN(I) && (val) < DEFEND(I));
 }
 
@@ -57,17 +59,30 @@ inline bool IN(DEFINTERVALFUNC(I), int val) {
 
 #ifndef NNUM
 #define NNEEDED 1
+#ifndef DEFINEVARS
 long long N = 1000;
 TYPE *dist;
 #else
+extern long long N;
+extern TYPE *dist;
+#endif
+#else
 #define NNEEDED 0
 #define N NNUM
+#ifndef DEFINEVARS
 TYPE dist[((long long)N)*N];
+#else
+extern TYPE dist[((long long)N)*N];
+#endif
 #endif
 
 #ifndef B
 #define BNEEDED 1
+#ifndef DEFINEVARS
 long long B = 64;
+#else
+extern long long B;
+#endif
 #else
 #define BNEEDED 0
 #endif
@@ -121,10 +136,10 @@ inline bool BASE_CONSTRAINT(DEFINTERVALFUNC(a)) {
 	return ((DEFEND(a)-DEFBEGIN(a)) <= B);
 }
 inline bool BASE_CONSTRAINT(DEFINTERVALFUNC(a),DEFINTERVALFUNC(b)) {
-	return (BASE_CONSTRAINT(a) || BASE_CONSTRAINT(b));
+	return (BASE_CONSTRAINT(PARAM(a)) || BASE_CONSTRAINT(PARAM(b)));
 }
 inline bool BASE_CONSTRAINT(DEFINTERVALFUNC(a),DEFINTERVALFUNC(b),DEFINTERVALFUNC(c)) {
-	return (BASE_CONSTRAINT(a) || BASE_CONSTRAINT(b) || BASE_CONSTRAINT(c));
+	return (BASE_CONSTRAINT(PARAM(a)) || BASE_CONSTRAINT(PARAM(b)) || BASE_CONSTRAINT(PARAM(c)));
 }
 
 #define DdistCO(i,j,I,J) V[((j)-DEFBEGIN(J))*B + ((i)-DEFBEGIN(I))]

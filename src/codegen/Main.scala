@@ -87,7 +87,7 @@ object Main {
       case If(cond,caseThen,caseElse) =>
         new Tree(s"if(${cond})", List(caseThen.toPrettyTree, caseElse.toPrettyTree))
       case Fork(stmts) => //TODO: not here, but get parallel number of each stmt and re-organize AST
-        ???
+        new Tree("{fork}", stmts map (_.toPrettyTree) )
       case Block(stmts) =>
         new Tree("{}", stmts map (_.toPrettyTree) )
       case Parallel(i, stmt) =>
@@ -265,7 +265,7 @@ object Main {
         Slash(isFunc,(slashes map FormulaToExpr))
       case P("IN_INTERVAL",interval,List(i)) =>
         val intv = interval.root.literal.toString();
-        FunApp("IN", List(Interval(intv),FormulaToExpr(i)))
+        FunApp("In", List(Interval(intv),FormulaToExpr(i)))
       case _ =>
         throw new Exception("Not analyzed Term: " + ff.root.literal.toString() + "|" + ff.subtrees.size.toString() )
     }
@@ -275,6 +275,76 @@ object Main {
   val minFn = Prelude.min
   val maxFn = Prelude.max
   
+  val reduceFns = List(minFn,maxFn)
+  val reduceFnsStr = List("min","max")
+  /* Predicates in Conditions affecting Bounds */
+
+  def getAndPreds(expr: Expr): List[Expr] = {
+     expr match {
+      case FunApp("&&",List(p1,p2)) => List.concat(getAndPreds(p1), getAndPreds(p2))
+      case _ => List(expr)
+    }
+  }
+  def getOrPreds(expr: Expr): List[Expr] = {
+     expr match {
+      case FunApp("||",List(p1,p2)) => List.concat(getOrPreds(p1), getOrPreds(p2))
+      case _ => List(expr)
+    }
+  }
+  def mLower(l1:Expr,l2:Expr) = {
+    (l1,l2) match {
+      case (null,l2) => l2
+      case (l1,null) => l1
+      case (l1,l2) => FunApp("max",List(l1,l2))
+    }
+  }
+  def mUpper(u1:Expr,u2:Expr) = {
+    (u1,u2) match {
+      case (null,u2) => u2
+      case (u1,null) => u1
+      case (u1,u2) => FunApp("min",List(u1,u2))
+    }
+  }
+  def mergeBounds(b: ((Expr,Expr), (Expr,Expr))): (Expr,Expr) = {
+    b match {
+      case ((l1,u1),(l2,u2)) => (mLower(l1,l2),mUpper(u1,u2))
+      case _ => ??? //Error Handling, shouldn't happen
+    }
+  }
+  def getBoundsFromPred(e:Expr,varStr:String) :(Expr,Expr) = {
+    e match {
+      case FunApp("<",List(Var(i,inti), erhs))if i == varStr => (null,erhs)
+      case FunApp("<",List(elhs,Var(i,inti))) if i == varStr=> (FunApp("+",List(elhs,Num(1))),null)
+      case FunApp("In",List(Interval(intv), Var(i,_))) if (i == varStr)=> 
+        (GetBound(Interval(intv),LOWER),GetBound(Interval(intv),UPPER))
+      case _ => (null,null)
+        
+    }
+  }
+  def crossBounds (xs:List[(Expr,Expr)],ys:List[(Expr,Expr)]): List[((Expr,Expr),(Expr,Expr))] = {
+    var res:List[((Expr,Expr),(Expr,Expr))] = List()
+    for (x <- xs){
+      for(y <- ys){
+        res = res :+ (x,y)
+      }
+    }
+    res
+  }
+  
+  def mergeSplitBounds(b1s: List[(Expr,Expr)],b2s: List[(Expr,Expr)]) : List[(Expr,Expr)] = {
+    crossBounds(b1s, b2s) map   mergeBounds
+  }
+  def getCNFBounds(expr:Expr, i:String): List[List[(Expr,Expr)]] = {
+    val ands = getAndPreds(expr)  
+    val cnf = ands.map(getOrPreds)
+    cnf  map (l => l map ( e => getBoundsFromPred(e,i)))
+  }
+  
+  def getSplitBounds(expr:Expr,i:String) : List[(Expr,Expr)] = {
+    val cnfBounds = getCNFBounds(expr,i)
+    cnfBounds reduceLeft mergeSplitBounds
+  }
+  
   def liftLoops(ff:Term)(implicit ctx:Context) = {
     //find all loops that are at the top level
     //compute definitionStmt and computationStmt for them
@@ -282,7 +352,7 @@ object Main {
     //return {definitionStmt;computationStmt}* block
     //TODO: WHEN can I say that I've found a subtree that is independent and should be computed with a temporary?
     val internals = ff.nodes collect {   
-      case st@P("APPLY",f,List(P("MAPSTO",body,vars))) if (f == minFn || f == maxFn)
+      case st@P("APPLY",f,List(P("MAPSTO",body,vars))) if (reduceFns contains f)
         =>
           //found one
           
@@ -308,7 +378,7 @@ object Main {
     }
     
     (TypedTerm.replaceDescendants(ff,internals map (_._1) toList)(new Scope) //TODO: use the actual scope from JSON
-        ,simplifyStmt(Block(internals map (_._2) toList)))
+        ,simplifyStmtN(5,(Block(internals map (_._2) toList))))
     //simplifyStmt(Block((ff.subtrees map (t => InternalSub(t,ff)))))
   }
  
@@ -436,7 +506,11 @@ object Main {
   
   def FormulaToFunction(name: String,style: String, argIntervals: List[Interval], ff:Term)(implicit scope: Scope) : FunDef = {
     val localDefs = localIntervalDefs(argIntervals)
-    val block = FormulaToFunction(ff)
+    val blockWOCilk = FormulaToFunction(ff)
+    val block = blockWOCilk match {
+      case Block(l) => Block(cilkParallelize(l))
+      case _ => blockWOCilk
+    }
     val body = localDefs ++ block
     FunDef(s"func${name}_${style}", argIntervals, (if (style == "rec") generateBaseCase(name,"loop",argIntervals,body) else body).toBlock)
   }
@@ -445,7 +519,7 @@ object Main {
     //find inputArray
     ff match {
       case T(`↦`.root,List(v,body)) =>
-        simplifyStmt(FormulaToStmt(body)(Context(v.leaf,None)))
+        simplifyStmtN(5,FormulaToStmt(body)(Context(v.leaf,None)))
       case T(Prelude.program.root,List(body)) => 
         FormulaToFunction(body)
       case T(`:`.root,List(label,body)) =>
@@ -461,7 +535,32 @@ object Main {
     }
     else TypedTerm.preserve(t, T(t.root,t.subtrees map stripColons)) 
   }
-  
+  def cilkParallelize(l: List[Stmt]) : List[Stmt]= {
+    l match {
+      case Nil => List()
+      case stmt :: rest => 
+        stmt match {
+          case Parallel(i, s) =>
+            //Find all Parallel statements from rest that are level i and put them in a Fork
+            var parsi : List[Stmt] = List(s)
+            var newrest : List[Stmt] = List()
+            for (pstmt <- rest){
+              pstmt match {
+                case Parallel(iprime,sprime) if (i == iprime) => 
+                  parsi = parsi :+ sprime
+                case _ => 
+                  newrest = newrest :+ pstmt
+              }
+            }
+            Fork(parsi) ::  cilkParallelize(newrest)
+          case _ => 
+            stmt :: cilkParallelize(rest)
+        }
+    }
+  }
+  def simplifyStmtN(n:Int,stmt:Stmt): Stmt = {
+    Function.chain(List.fill(n)(simplifyStmt _))(stmt)
+  }
   def simplifyStmt(stmt: Stmt): Stmt = {
     stmt match {
       case Block(l) => 
@@ -469,9 +568,27 @@ object Main {
         val blockList = l map simplifyStmt flatMap (_.toList)
         if (blockList.size == 1) blockList.head
         else Block(blockList)
+      case Fork(l) => 
+        //look at each child - if its a Block itself just lift it up
+        val blockList = l map simplifyStmt flatMap (_.toList)
+        if (blockList.size == 1) blockList.head
+        else Block(blockList)
       case Parallel(i, s) => Parallel(i, simplifyStmt(s))
+      case For(i,lb,ub,dir,If(cond,caseThen,Block(List()))) => 
+        val spBounds = getSplitBounds(cond,i) map (lu => mergeBounds((lu,(lb,ub))))
+        if (spBounds.length == 1){ 
+          For(i,spBounds.head._1,spBounds.head._2,dir,simplifyStmt(caseThen))
+        }else{
+          Block(spBounds map (b => For(i,b._1,b._2,dir,simplifyStmt(caseThen)) ))
+        }
+      case For(v,lb,ub,dir,Block(stmts :+ MemWrite(an,indices,Guarded(cond,e)))) =>
+        For(v,lb,ub,dir,If(cond,Block(stmts :+ MemWrite(an,indices,e)),Block(List())))
       case For(v,lb,ub,dir,ss) =>   For(v, lb, ub, dir, simplifyStmt(ss))
       case If(cond,caseThen,caseElse) => If(cond, simplifyStmt(caseThen), simplifyStmt(caseElse))
+      case Assign(v1,FunApp(f,List(Var(v2,ii),Guarded(cond,e)))) if ((v1 == v2) &&  (reduceFnsStr contains f))=>
+        If(cond,Assign(v1,FunApp(f,List(Var(v2,ii),e))),Block(List()))
+      
+      /* If last stmt of a for loop is array write then lift the guard*/
       /*case MemWrite(arrayName,indices,rhs) =>
         rhs match {
           case FuncPre(f) =>

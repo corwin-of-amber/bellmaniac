@@ -84,6 +84,13 @@ class CppOutput (implicit scope: Scope) {
   def apply(fd : FunDef,indent: Int): String = {
     s"void ${fd.name}(${fd.args map exprToFormalParam mkString ","}){\n${apply(fd.body,indent+1)}\n}"
   }
+  def cilkForkCode(stmts: List[Stmt],indent: Int) : String = {
+    stmts match {
+      case stmt :: Nil => apply(stmt,indent) + "\n"+ addIndent(indent,"cilk_sync;\n")
+      case stmt :: rest => addIndent(indent,s"cilk_spawn ${apply(stmt,0)};\n") + cilkForkCode(rest,indent)
+      case Nil => ???
+    }
+  }
   def apply(s: Stmt, indent: Int): String = {
     //Traverse over Stmt and print with appropriate 
     //Special case for in-fix operators, macros, operator versus function
@@ -102,10 +109,13 @@ class CppOutput (implicit scope: Scope) {
         addIndent(indent,s"${name}(${(params map exprToArg).mkString(",")});")
       case For(v,lb,ub,dir,stmt) =>
         addIndent(indent,s"FOR_${dir}(${v},${exprToCode(lb)},${exprToCode(ub)}){") + s"\n${apply(stmt,indent+1)}\n" + addIndent(indent,"}")
+      case If(cond,caseThen,Block(List())) =>
+        addIndent(indent,s"if(${exprToCode(cond)}){\n") + apply(caseThen,indent+1) + "\n" + addIndent(indent,"}\n")
       case If(cond,caseThen,caseElse) =>
         addIndent(indent,s"if(${exprToCode(cond)}){\n") + apply(caseThen,indent+1) + "\n" + addIndent(indent,"} else {\n") + apply(caseElse,indent+1) + "\n" + addIndent(indent,"}\n")
       case Fork(stmts) => //TODO: not here, but get parallel number of each stmt and re-organize AST
-        ??? //TODO: use cilk primitives as needed 
+        cilkForkCode(stmts,indent)
+        //??? //TODO: use cilk primitives as needed 
       case Block(stmts) =>
         (stmts.map(x =>  apply(x,indent))).mkString("\n")
       case Parallel(i, stmt) =>
