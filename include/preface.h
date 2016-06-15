@@ -143,13 +143,13 @@ inline bool BASE_CONSTRAINT(DEFINTERVALFUNC(a),DEFINTERVALFUNC(b),DEFINTERVALFUN
 	return (BASE_CONSTRAINT(PARAM(a)) || BASE_CONSTRAINT(PARAM(b)) || BASE_CONSTRAINT(PARAM(c)));
 }
 
-#define DdistCO(i,j,I,J) V[((j)-DEFBEGIN(J))*B + ((i)-DEFBEGIN(I))]
+#define psiCopyOpt(i,j,I,J) V[((j)-DEFBEGIN(J))*B + ((i)-DEFBEGIN(I))]
 
 inline void copy_dist_part(TYPE* V,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
 	for(int i=DEFBEGIN(II);i<DEFEND(II);i++){
 		for(int j=DEFBEGIN(JJ);j<DEFEND(JJ);j++){
 			//cout<<i<<" "<<j<<" "<<(j)-DEFBEGIN(JJ)<<" "<<((i)-DEFBEGIN(II))<<endl;
-			DdistCO(i,j,II,JJ) = Ddist(i,j);
+			psiCopyOpt(i,j,II,JJ) = psi(i,j);
 
 		}
 	}
