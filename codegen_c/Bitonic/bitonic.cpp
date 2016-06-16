@@ -29,7 +29,9 @@ using namespace std;
 #define PARAM(I) I
 #endif
 #define MAXVAL int(1e9)
-
+#ifdef ICC
+#include <mathimf.h>
+#endif
 int N;
 TYPE* px;
 TYPE* py;
