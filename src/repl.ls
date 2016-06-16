@@ -161,12 +161,15 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
     
     $scope.cmOptions = cmOptions()
       [e,u] = [editor-command, ui-commands]
+      [Cmd-Enter, Ctrl-Enter, Cmd-Backspace] =
+        if process.platform == 'darwin' then <[ Cmd-Enter Ctrl-Enter Cmd-Backspace ]>
+        else                                 <[ Ctrl-Enter Alt-Enter Ctrl-Backspace ]>
       ..extraKeys =
-        'Cmd-Enter':     seq (e u~execute), \
+        (Cmd-Enter):     seq (e u~execute), \
                              (e u~goto-next)
-        'Ctrl-Enter':    seq (e u~add-cell-after), \
+        (Ctrl-Enter):    seq (e u~add-cell-after), \
                              (e u~goto-next)
-        'Cmd-Backspace': seq (e u~goto-prev), \
+        (Cmd-Backspace): seq (e u~goto-prev), \
                              (e u~delete-cell)
 
     if process.platform != 'darwin'
@@ -417,8 +420,10 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
               rec-blocks[r.emit.name] = \
                 {term: block.value.term, scope: h.scope, emit}
 
+      outf = (currentFilename ? "output.json").replace(/\.[a-z]+$/, '.cpp').toLowerCase!
+
       loop-blocks ++ [v for k,v of rec-blocks].reverse!
-        bellmania-codegen .., -> set-mode 'ready'
+        bellmania-codegen .., outf, -> set-mode 'ready'
       
     window.$scope = $scope
 

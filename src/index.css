@@ -23,8 +23,13 @@ div.flash:empty {
   display: none;
 }
 
+@font-face {
+    font-family: Quivira;
+    src: url(Quivira.otf);
+}
+
 .CodeMirror {
-  font-family: Monaco;
+  font-family: Monaco,Quivira;
   font-size: 12px;
   height: auto;
 }
@@ -41,7 +46,7 @@ div.flash:empty {
 }
 
 .code {
-  font-family: Monaco;
+  font-family: Monaco,Quivira; /*Monaco;*/
   font-size: 12px;
   /*white-space: pre;*/
 }

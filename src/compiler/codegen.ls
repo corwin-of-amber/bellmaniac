@@ -15,7 +15,7 @@ write-blocks = (blocks) ->
     fs.writeFileSync .., (blocks.map JSON.stringify .join "\n\n")
 
 
-bellmania-codegen = (input, callback) ->
+bellmania-codegen = (input, output-filename, callback) ->
 
   input-filename = 
     if _.isString(input) then input
@@ -28,7 +28,7 @@ bellmania-codegen = (input, callback) ->
   config = get-config!
   tmpdir = config.paths.tmpdir ? "/tmp"
 
-  output-filename = config.output.filename ? path.join tmpdir, 'bell.cpp'
+  output-filename = path.join (config.output.directory ? tmpdir), output-filename
     try
       fs.unlinkSync ..
     catch e
