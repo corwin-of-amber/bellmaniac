@@ -95,7 +95,7 @@ object Main {
       case Parallel(i, stmt) =>
         new Tree(s"$i:", List(stmt.toPrettyTree))
       case FunctionCallWithBody(name,params,body) =>
-        new Tree(s"$name(${params.mkString(",")}){${body.toPrettyTree}};")
+        new Tree(s"$name(${params.mkString(",")})",List(body.toPrettyTree))
       case Verbatim(code) => 
         new Tree(code)
     }
@@ -125,6 +125,19 @@ object Main {
     case MemRead(arrayName: String, indices: List[Expr]) => (indices map getIntervalsUsed).flatten.toSet
     case VarB(name: String, lb:Expr, ub: Expr) => (List(lb,ub) map getIntervalsUsed).flatten.toSet
   }
+  
+  def getVariablesUsed(e: Expr) : Set[String] = e match {
+    case Num(value) => Set()
+    case Interval(name) => Set()
+    case GetBound(Interval(name), sel: Lowup) => Set()
+    case Var(v, Interval(name)) => Set(v)
+    case FunApp(f: String, args: List[Expr]) => (args map getVariablesUsed).flatten.toSet
+    case Slash(isFunction: Boolean, slashes: List[Expr]) => (slashes map getVariablesUsed).flatten.toSet
+    case Guarded(cond: Expr, v: Expr) => (List(cond,v) map getVariablesUsed).flatten.toSet
+    case MemRead(arrayName: String, indices: List[Expr]) => (indices map getVariablesUsed).flatten.toSet
+    case VarB(name: String, lb:Expr, ub: Expr) => (List(lb,ub) map getVariablesUsed).flatten.toSet
+  }
+  
 
   def getIntervalsUsed(s: Stmt) : Set[String] = s match {
     case DefIntervalSplit(Interval(i), superset, whichPart) =>
@@ -329,7 +342,10 @@ object Main {
         if (ctx.inputArray == f.root || ctx.fixVar == Some(f.root)){
           MemRead(ctx.inputArray.literal.toString,(args map FormulaToExpr))
         }
-        else FunApp(f.root.literal.toString, (args map FormulaToExpr))
+        else {
+          println(s"FUNCTION: ${f.root.literal.toString}, FIXVAR: ${ctx.fixVar.toString}")
+          FunApp(f.root.literal.toString, (args map FormulaToExpr))
+        }
       case P("MAPSTO",body,vars) =>
         throw new Exception("MAPSTO in Expr")
         //val vs = (vars map FormulaToExpr);
@@ -398,6 +414,10 @@ object Main {
       case FunApp("<",List(elhs,Var(i,inti))) if i == varStr=> (FunApp("+",List(elhs,Num(1))),null,Seq())
       case FunApp("In",List(Interval(intv), Var(i,_))) if (i == varStr)=> 
         (GetBound(Interval(intv),LOWER),GetBound(Interval(intv),UPPER),Seq())
+      case FunApp("In",List(Interval(intv), FunApp("-",List(Var(i,_),Num(n))) )) if (i == varStr)=> 
+        (FunApp("+",List(GetBound(Interval(intv),LOWER),Num(n))),
+            FunApp("+",List(GetBound(Interval(intv),UPPER),Num(n))),
+            Seq())
       case _ => (null,null,Seq(e) filterNot isTrivial) //Be careful
         
     }
@@ -412,6 +432,7 @@ object Main {
   def getCNFBounds(expr:Expr, i:String): List[List[(Expr,Expr,Seq[Expr])]] = {
     val ands = getAndPreds(expr)  
     val cnf = ands.map(getOrPreds)
+    println("CNF: " + cnf.toString)
     cnf  map (l => l map ( e => getBoundsFromPred(e,i)))
   }
   
@@ -453,7 +474,7 @@ object Main {
     }
     
     (TypedTerm.replaceDescendants(ff,internals map (_._1) toList)(new Scope) //TODO: use the actual scope from JSON
-        ,simplifyStmtN(5,(Block(internals map (_._2) toList))))
+        ,simplifyStmtN(10,(Block(internals map (_._2) toList))))
     //simplifyStmt(Block((ff.subtrees map (t => InternalSub(t,ff)))))
   }
  
@@ -642,7 +663,7 @@ object Main {
     //find inputArray
     ff match {
       case T(`↦`.root,List(v,body)) =>
-        simplifyStmtN(5,FormulaToStmt(body)(Context(v.leaf, None, loopDirections)))
+        simplifyStmtN(10,FormulaToStmt(body)(Context(v.leaf, None, loopDirections)))
       case T(Prelude.program.root,List(body)) => 
         FormulaToFunction(body)
       case T(`:`.root,List(label,body)) =>
@@ -703,25 +724,34 @@ object Main {
         if (blockList.size == 1) blockList.head
         else Block(blockList)
       case Parallel(i, s) => Parallel(i, simplifyStmt(s))
+      case For(i,lb,ub,dir,If(cond,caseThen,Block(List()))) if (!(getVariablesUsed(cond) contains i)) => 
+        If(cond,For(i,lb,ub,dir,caseThen),Block(List()))
       case For(i,lb,ub,dir,If(cond,caseThen,Block(List()))) => 
         val spBounds = getSplitBounds(cond,i) map (lu => mergeBounds(lu,(lb,ub,Seq())))
         def makeBigAnd(conds: Seq[Expr]) = {
           conds reduceOption ((a,b) => FunApp("&&",List(a,b))) getOrElse Var("true",Interval("B"))
         }
         Block(spBounds map {case (l,u,conds) => 
-          val ifStmt = If(makeBigAnd(conds),simplifyStmt(caseThen),Block(List()))
+          val ifStmt = if (conds.isEmpty) simplifyStmt(caseThen) else If(makeBigAnd(conds),simplifyStmt(caseThen),Block(List()))
           For(i,l,u,dir,ifStmt) }) 
       case For(v,lb,ub,dir,Block(stmts :+ MemWrite(an,indices,Guarded(cond,e)))) =>
         For(v,lb,ub,dir,If(cond,Block(stmts :+ MemWrite(an,indices,e)),Block(List())))
       case For(v,lb,ub,dir,ss) =>   For(v, lb, ub, dir, simplifyStmt(ss))
       case If(cond,caseThen,caseElse) => If(cond, simplifyStmt(caseThen), simplifyStmt(caseElse))
       //TODO: reduce min(min to two mins using temp
-      //case  MemWrite(arrayName,indices,FunApp(f1,"")) =>
-          
+      case  MemWrite(arrayName,indices,FunApp(f1,List(FunApp(f2,args :+ Var(t,tt))))) if ((reduceFnsStr contains f1)  && (f2 == "[]") && args.length >= 2 && t.startsWith("tmp")) =>
+        val assignments = args.reverse map (a => Assign(t,FunApp(f1,List(a,Var(t,tt)))))
+        Block(assignments :+ MemWrite(arrayName,indices,Var(t,tt)))
       case Assign(v1,FunApp(f,List(Var(v2,ii),Guarded(cond,e)))) if ((v1 == v2) &&  (reduceFnsStr contains f))=>
         If(cond,Assign(v1,FunApp(f,List(Var(v2,ii),e))),Block(List()))
+      case MemWrite(arrayName,indices,Guarded(cond,e)) => 
+        If(cond,MemWrite(arrayName,indices,e),Block(List()))
+      case MemWrite(arrayName1,indices1,FunApp(f1,List(MemRead(arrayName2,indices2),Guarded(cond,e)))) if ((reduceFnsStr contains f1) && (arrayName1 == arrayName2) && (indices1 == indices2)) => 
+        If(cond,MemWrite(arrayName1,indices1,FunApp(f1,List(MemRead(arrayName2,indices2),e))),Block(List()))
+      case MemWrite(arrayName1,indices1,FunApp(f1,List(FunApp("[]",List(MemRead(arrayName2,indices2),Guarded(cond,e)))) )) if ((reduceFnsStr contains f1) && (arrayName1 == arrayName2) && (indices1 == indices2)) => 
+        If(cond,MemWrite(arrayName1,indices1,FunApp(f1,List(FunApp("[]",List(MemRead(arrayName2,indices2),e))))),Block(List()))
       
-      /* If last stmt of a for loop is array write then lift the guard*/
+        /* If last stmt of a for loop is array write then lift the guard*/
       /*case MemWrite(arrayName,indices,rhs) =>
         rhs match {
           case FuncPre(f) =>
@@ -729,6 +759,8 @@ object Main {
             else stmt
           case _ => stmt
         }*/
+      case FunctionCallWithBody(name,params,Block(l)) =>
+         FunctionCallWithBody(name,params,Block(l map simplifyStmt))
       case _ => stmt
     }
   }
