@@ -98,7 +98,7 @@ TYPE* dloop;
 #define DdistLoop(i,j) dloop[(i)*N+(j)]
 void LCS_orig() {
 	for (int sum=2;sum<=2*N-2;sum++){
-		cilk_for(int i=min(N-1,sum-1); i>=max(1,sum-N+1) ;i--){
+		cilk_for(int i=min(N-1,(long long)(sum-1)); i>=max((long long)1,sum-N+1) ;i--){
 			int j =sum-i;
 			//cout<<i<<" "<<j<<endl;
 			if (IS_UNDEF(DdistLoop(i,j))) {
