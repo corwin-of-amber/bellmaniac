@@ -205,6 +205,7 @@ int main(int argc, char* argv[]){
 	DEFINTERVALSTMT(J);
 	DEFBEGIN(J) = 1;
 	DEFEND(J) = N;
+	cout<<"VERSION\tN\tM\tB\tTime(s)\tLCS-Value"<<endl;
 #ifdef LOOPDP
 	{
 		fillDistLoop();
@@ -212,7 +213,7 @@ int main(int argc, char* argv[]){
 		unsigned long long tstart = cilk_getticks();
 		LCS_orig();
 		unsigned long long tend = cilk_getticks();
-		cout<<"LCS_orig,"<<N<<","<<M<<","<<B<<","<<cilk_ticks_to_seconds(tend-tstart)<<" "<<DdistLoop(N-1,N-1)<<endl;
+		cout<<"LOOPDP\t"<<N<<"\t"<<M<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<"\t"<<DdistLoop(N-1,N-1)<<endl;
 
 	}
 #endif
@@ -222,7 +223,7 @@ int main(int argc, char* argv[]){
 		unsigned long long tstart = cilk_getticks();
 		funcA_rec(PARAM(I),PARAM(J));
 		unsigned long long tend = cilk_getticks();
-		cout<<"funcA,"<<N<<","<<M<<","<<B<<","<<cilk_ticks_to_seconds(tend-tstart)<<endl;
+		cout<<"funcA\t"<<N<<"\t"<<M<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<"\t"<<Ddist(N-1,N-1)<<endl;
 
 	}
 #endif
