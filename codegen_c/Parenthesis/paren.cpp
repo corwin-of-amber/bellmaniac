@@ -146,7 +146,8 @@ int main(int argc, char *argv[]) {
 	unsigned long long tstart = cilk_getticks();
 	funcA_rec(PARAM(K0));
 	unsigned long long tend = cilk_getticks();
-	cout<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend-tstart)<<endl;
+	cout<<"VERSION\tN\tB\tTime(s)"<<endl;
+	cout<<"AUTO"<<N<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
 	//cout<<"REC\t"<<N<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
 #ifdef DEBUG
 	{
@@ -162,7 +163,7 @@ int main(int argc, char *argv[]) {
 		unsigned long long tstart = cilk_getticks();
 		parenthesis();
 		unsigned long long tend = cilk_getticks();
-		cout<<"PAREN\t"<<N<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
+		cout<<"LOOPDP\t"<<N<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
 		checkForError("rec vs paren");
 	}
 	_mm_free(dorig);
