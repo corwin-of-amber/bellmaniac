@@ -31,7 +31,7 @@ import java.io.File
 import semantics.TranslationError
 import report.data.SerializationError
 import com.mongodb.DBObject
-
+import syntax.AstSugar._
 
 object Main {
   
@@ -94,6 +94,10 @@ object Main {
         new Tree("{}", stmts map (_.toPrettyTree) )
       case Parallel(i, stmt) =>
         new Tree(s"$i:", List(stmt.toPrettyTree))
+      case FunctionCallWithBody(name,params,body) =>
+        new Tree(s"$name(${params.mkString(",")}){${body.toPrettyTree}};")
+      case Verbatim(code) => 
+        new Tree(code)
     }
   }
   case class DefIntervalSplit(I: Interval, superset: Interval, whichPart: Lowup) extends Stmt
@@ -107,6 +111,47 @@ object Main {
   case class Fork(stmts:List[Stmt]) extends Stmt//can run these in parallel!
   case class Block(stmts:List[Stmt]) extends Stmt
   case class Parallel(i:Int, s:Stmt) extends Stmt
+  case class FunctionCallWithBody (name: Identifier, params: List[Interval], body:Block) extends Stmt
+  case class Verbatim(code: String) extends Stmt
+  
+  def getIntervalsUsed(e: Expr) : Set[String] = e match {
+    case Num(value) => Set()
+    case Interval(name) => Set(name)
+    case GetBound(Interval(name), sel: Lowup) => Set(name)
+    case Var(v, Interval(name)) => Set(name)
+    case FunApp(f: String, args: List[Expr]) => (args map getIntervalsUsed).flatten.toSet
+    case Slash(isFunction: Boolean, slashes: List[Expr]) => (slashes map getIntervalsUsed).flatten.toSet
+    case Guarded(cond: Expr, v: Expr) => (List(cond,v) map getIntervalsUsed).flatten.toSet
+    case MemRead(arrayName: String, indices: List[Expr]) => (indices map getIntervalsUsed).flatten.toSet
+    case VarB(name: String, lb:Expr, ub: Expr) => (List(lb,ub) map getIntervalsUsed).flatten.toSet
+  }
+
+  def getIntervalsUsed(s: Stmt) : Set[String] = s match {
+    case DefIntervalSplit(Interval(i), superset, whichPart) =>
+      Set(i)
+    case DefIntervalUnion(Interval(i), (lower, upper)) =>
+      Set(i)
+    case DefVar(v, typ) => 
+      Set()
+    case Assign(v,e) => 
+      getIntervalsUsed(e)
+    case MemWrite(arrayName,indices,rhs) => 
+      getIntervalsUsed(rhs)
+    case FunctionCall(name,params) =>
+      ??? //Cannot visit this
+    case For(v,lb,ub,dir,stmt) =>
+      getIntervalsUsed(lb) ++ getIntervalsUsed(ub)  ++ getIntervalsUsed(stmt)
+    case If(cond,caseThen,caseElse) =>
+      getIntervalsUsed(cond) ++ getIntervalsUsed(caseThen) ++ getIntervalsUsed(caseElse)
+    case Fork(stmts) => //TODO: not here, but get parallel number of each stmt and re-organize AST
+      (stmts map getIntervalsUsed).flatten.toSet
+    case Block(stmts) =>
+      (stmts map getIntervalsUsed).flatten.toSet
+    case Parallel(i, stmt) =>
+      getIntervalsUsed(stmt)
+    case Verbatim(code) => Set()
+  }
+
   
   implicit val cc = new DisplayContainer
   
@@ -172,9 +217,13 @@ object Main {
               case Some((f, args)) =>
                 Some(("APPLY",f, args))
               case _ =>
-                isAbs(t) match {
-                  case Some((vars, body)) => 
-                    Some(("MAPSTO",body, vars))
+                isAbsBaz(t) match {
+                  case Some((vars, body, lbls)) => 
+                    val baz = for (x <- lbls if (x =~ ("bazinga",1))) yield x.subtrees(0)
+                    if (baz.isEmpty)
+                      Some(("MAPSTO",body, vars))
+                    else
+                      Some("BAZINGA",baz(0),List((vars :\ body)( _ ↦ _)))
                   case _ =>
                     Some(("NONE END:  " + t.root.literal.toString() + "|" +t.subtrees.size.toString()),null,null)
                 }
@@ -184,6 +233,25 @@ object Main {
     }
   }
   
+    // returns args and body
+  def uncurryb(fun: Term): (List[Term], Term, List[Term]) = {
+    if (fun =~ ("↦", 2))
+      uncurryb(fun.subtrees(1)) match { case (args, body, lbls) => (fun.subtrees(0) :: args, body, lbls) }
+    else if (fun =~ (":", 2)) {
+      val (a,b,c) = uncurryb(fun.subtrees(1))
+      (a,b,fun.subtrees(0) :: c)
+    }
+    else (List(), fun, List())
+  }
+  def isAbsBaz(t: Term): Option[(List[Term], Term, List[Term])] =
+    if (t =~ ("↦", 2)) Some(uncurryb(t))
+    else if (t =~ (":", 2)) {
+      isAbsBaz(t.subtrees(1)) match {
+        case Some((a,b,c)) => Some((a,b,t.subtrees(0) :: c))
+        case _ => None
+      }
+    }
+    else None
   
   object ListP {
     def unapply(t: Term) = {
@@ -313,42 +381,41 @@ object Main {
       case (u1,u2) => FunApp("min",List(u1,u2))
     }
   }
-  def mergeBounds(b: ((Expr,Expr), (Expr,Expr))): (Expr,Expr) = {
-    b match {
-      case ((l1,u1),(l2,u2)) => (mLower(l1,l2),mUpper(u1,u2))
-      case _ => ??? //Error Handling, shouldn't happen
+  def mergeBounds(b1: (Expr,Expr,Seq[Expr]), b2: (Expr,Expr,Seq[Expr])): (Expr,Expr,Seq[Expr]) = {
+    val (l1,u1,s1) = b1
+    val (l2,u2,s2) = b2
+    (mLower(l1,l2),mUpper(u1,u2),s1 ++ s2)
+  }
+  def isTrivial(e:Expr) ={
+    e match {
+      case FunApp("In",List(Interval(ii),Var(j,Interval(jj)))) if (ii == jj) => true
+      case _ => false
     }
   }
-  def getBoundsFromPred(e:Expr,varStr:String) :(Expr,Expr) = {
+  def getBoundsFromPred(e:Expr,varStr:String) :(Expr,Expr,Seq[Expr]) = {
     e match {
-      case FunApp("<",List(Var(i,inti), erhs))if i == varStr => (null,erhs)
-      case FunApp("<",List(elhs,Var(i,inti))) if i == varStr=> (FunApp("+",List(elhs,Num(1))),null)
+      case FunApp("<",List(Var(i,inti), erhs))if i == varStr => (null,erhs,Seq())
+      case FunApp("<",List(elhs,Var(i,inti))) if i == varStr=> (FunApp("+",List(elhs,Num(1))),null,Seq())
       case FunApp("In",List(Interval(intv), Var(i,_))) if (i == varStr)=> 
-        (GetBound(Interval(intv),LOWER),GetBound(Interval(intv),UPPER))
-      case _ => (null,null)
+        (GetBound(Interval(intv),LOWER),GetBound(Interval(intv),UPPER),Seq())
+      case _ => (null,null,Seq(e) filterNot isTrivial) //Be careful
         
     }
   }
-  def crossBounds (xs:List[(Expr,Expr)],ys:List[(Expr,Expr)]): List[((Expr,Expr),(Expr,Expr))] = {
-    var res:List[((Expr,Expr),(Expr,Expr))] = List()
-    for (x <- xs){
-      for(y <- ys){
-        res = res :+ (x,y)
-      }
-    }
-    res
+  def crossBounds[Y] (xs:List[Y],ys:List[Y]): List[(Y,Y)] = {
+    for (x <- xs; y <- ys) yield (x, y)
   }
   
-  def mergeSplitBounds(b1s: List[(Expr,Expr)],b2s: List[(Expr,Expr)]) : List[(Expr,Expr)] = {
-    crossBounds(b1s, b2s) map   mergeBounds
+  def mergeSplitBounds(b1s: List[(Expr,Expr,Seq[Expr])],b2s: List[(Expr,Expr,Seq[Expr])]) : List[(Expr,Expr,Seq[Expr])] = {
+    crossBounds(b1s, b2s) map { case (b1,b2) => mergeBounds(b1,b2) }
   }
-  def getCNFBounds(expr:Expr, i:String): List[List[(Expr,Expr)]] = {
+  def getCNFBounds(expr:Expr, i:String): List[List[(Expr,Expr,Seq[Expr])]] = {
     val ands = getAndPreds(expr)  
     val cnf = ands.map(getOrPreds)
     cnf  map (l => l map ( e => getBoundsFromPred(e,i)))
   }
   
-  def getSplitBounds(expr:Expr,i:String) : List[(Expr,Expr)] = {
+  def getSplitBounds(expr:Expr,i:String) : List[(Expr,Expr,Seq[Expr])] = {
     val cnfBounds = getCNFBounds(expr,i)
     cnfBounds reduceLeft mergeSplitBounds
   }
@@ -441,7 +508,10 @@ object Main {
         loopvars foreach (v => if (! isScalar(v)) 
           throw new Exception("expected scalar variable"))
         val newCtx =  ctxWFix ++ loopvars
-        if (! isScalar(body)) FormulaToStmt(body)(newCtx)
+        println(s"FIXVAR: ${ctxWFix.fixVar},BODY: ${body.toPretty}") 
+        if (! isScalar(body)){ 
+          FormulaToStmt(body)(newCtx)
+        }
         else {
         //check if body has other loops(only immediate ones), if yes,
         //replace those loops with tmp in the expression tree and get Stmts (using FormulaToStmt) for tmp computation
@@ -463,6 +533,7 @@ object Main {
           }
         }
       case P("BAZINGA",baz,List(e)) =>
+        //println(s"BAZ: ${e.toPretty}")
         Parallel(Integer.parseInt(baz.root.literal.toString),FormulaToStmt(e))
       case P("SLASH",null,quads) =>
         Block((quads map FormulaToStmt))
@@ -514,14 +585,56 @@ object Main {
   
   var loopDirections: Map[String, Direction] = Map.empty  // it's horrible to have a global for this @@@
   
+  var copyOptRanges : List[Interval] = List()
+  
+  def addCopyOpt(e: Expr)(implicit ctx: List[String]) : Expr = {
+    e match {
+      case FunApp(f: String, args: List[Expr]) => FunApp(f,(args map addCopyOpt))
+      case Slash(isFunction: Boolean, slashes: List[Expr]) => Slash(isFunction, slashes map addCopyOpt)
+      case Guarded(cond: Expr, v: Expr) => Guarded(addCopyOpt(cond), addCopyOpt(v))
+      case MemRead(arrayName: String, List(Var(i,ii),Var(j,jj))) if (ctx.indexOf(i) > ctx.indexOf(j)) => 
+        copyOptRanges = List(ii,jj) 
+        FunApp(arrayName+ "CopyOpt", List(Var(i,ii),Var(j,jj),Var(ii.name,ii),Var(jj.name,jj)))
+      case _ => e
+    }
+  }
+  
+  def addCopyOpt(block: Stmt) (implicit ctx: List[String]) : Stmt = {
+    block match {
+      case For(v,lb,ub,dir,body) =>
+        For(v,lb,ub,dir,addCopyOpt(body)(ctx :+ v))
+      case Parallel(i,stmt) => Parallel(i,addCopyOpt(stmt))
+      case Block(l) => Block(l map addCopyOpt)
+      case If(cond,caseThen,caseElse) =>
+        If(cond,addCopyOpt(caseThen),addCopyOpt(caseElse))
+      case MemWrite(arrayName,indices,rhs) => 
+        MemWrite(arrayName,indices,addCopyOpt(rhs))
+      case Assign(v, e) => 
+        Assign(v,addCopyOpt(e))
+      case _ => block
+    }
+  }
+  def prepareCopyOpt(s: Stmt): Stmt = {
+    if (!copyOptRanges.isEmpty){
+      val s1 = Verbatim("__declspec(align(ALIGNMENT)) TYPE V[B * B];")
+      val s2 = FunctionCall("copy_dist_part", List(Var("V",Interval("U")),copyOptRanges(0), copyOptRanges(1)))
+      Block(List(s1,s2,s))
+      //
+	    //copy_dist_part(V,PARAM(K1),PARAM(K2));
+    }
+    else s
+      
+  }
   def FormulaToFunction(name: String,style: String, argIntervals: List[Interval], ff:Term)(implicit scope: Scope) : FunDef = {
+    copyOptRanges = List()
     val localDefs = localIntervalDefs(argIntervals)
     val blockWOCilk = FormulaToFunction(ff)
     val block = blockWOCilk match {
       case Block(l) => Block(cilkParallelize(l))
       case _ => blockWOCilk
     }
-    val body = localDefs ++ block
+    val blockWCO = if (style == "loop") prepareCopyOpt(addCopyOpt(block)(List())) else block
+    val body = localDefs ++ blockWCO
     FunDef(s"func${name}_${style}", argIntervals, (if (style == "rec") generateBaseCase(name,"loop",argIntervals,body) else body).toBlock)
   }
   
@@ -557,7 +670,13 @@ object Main {
             for (pstmt <- rest){
               pstmt match {
                 case Parallel(iprime,sprime) if (i == iprime) => 
-                  parsi = parsi :+ sprime
+                  sprime match {
+                    case FunctionCall(f,_) => parsi = parsi :+ sprime
+                    case _ => //Wrap it in a function
+                      parsi = parsi :+  FunctionCallWithBody($I("func"),
+                          getIntervalsUsed(sprime).toList map (a => Interval(a)),sprime.toBlock)
+                  }
+                  
                 case _ => 
                   newrest = newrest :+ pstmt
               }
@@ -585,16 +704,20 @@ object Main {
         else Block(blockList)
       case Parallel(i, s) => Parallel(i, simplifyStmt(s))
       case For(i,lb,ub,dir,If(cond,caseThen,Block(List()))) => 
-        val spBounds = getSplitBounds(cond,i) map (lu => mergeBounds((lu,(lb,ub))))
-        if (spBounds.length == 1){ 
-          For(i,spBounds.head._1,spBounds.head._2,dir,simplifyStmt(caseThen))
-        }else{
-          Block(spBounds map (b => For(i,b._1,b._2,dir,simplifyStmt(caseThen)) ))
+        val spBounds = getSplitBounds(cond,i) map (lu => mergeBounds(lu,(lb,ub,Seq())))
+        def makeBigAnd(conds: Seq[Expr]) = {
+          conds reduceOption ((a,b) => FunApp("&&",List(a,b))) getOrElse Var("true",Interval("B"))
         }
+        Block(spBounds map {case (l,u,conds) => 
+          val ifStmt = If(makeBigAnd(conds),simplifyStmt(caseThen),Block(List()))
+          For(i,l,u,dir,ifStmt) }) 
       case For(v,lb,ub,dir,Block(stmts :+ MemWrite(an,indices,Guarded(cond,e)))) =>
         For(v,lb,ub,dir,If(cond,Block(stmts :+ MemWrite(an,indices,e)),Block(List())))
       case For(v,lb,ub,dir,ss) =>   For(v, lb, ub, dir, simplifyStmt(ss))
       case If(cond,caseThen,caseElse) => If(cond, simplifyStmt(caseThen), simplifyStmt(caseElse))
+      //TODO: reduce min(min to two mins using temp
+      //case  MemWrite(arrayName,indices,FunApp(f1,"")) =>
+          
       case Assign(v1,FunApp(f,List(Var(v2,ii),Guarded(cond,e)))) if ((v1 == v2) &&  (reduceFnsStr contains f))=>
         If(cond,Assign(v1,FunApp(f,List(Var(v2,ii),e))),Block(List()))
       
@@ -643,6 +766,7 @@ object Main {
         val r = """(.*)\[(.*)\]$""".r
         val x = r.findFirstMatchIn(title)
         val name = x.get.group(1) 
+        
         val arg_intervals = x.get.group(2).split(",").toList map (a => Interval(a))
         println(name)
         println(arg_intervals)

@@ -6,5 +6,5 @@
 extern int *X, *Y;
 #define Gap dist
 #define S(i,j) Sn(X[i], Y[j])
-
+#define UNDEF MAXVAL
 #define w_ w_prime
