@@ -791,10 +791,10 @@ object Main {
         val json = JSON.parse(block).asInstanceOf[BasicDBObject]
         implicit val scope = json.get("scope") andThen_ (Scope.fromJson, examples.Paren.scope)
             //  { throw new SerializationError("scope not found", json) })  // TODO change to "throw" when all JSONs contain proper scope
-        val prg = json.get("term")
+        val prg = json.get("term") andThen_ (Formula.fromJson, { throw new SerializationError("program term is missing", json); })
         val style = json.getString("style") 
         val title = json.getString("program")
-        val metadata = json.get("tag") andThen_ (getMetaData, {})
+        json.get("tag") andThen_ (getMetaData, {})
         val r = """(.*)\[(.*)\]$""".r
         val x = r.findFirstMatchIn(title)
         val name = x.get.group(1) 
@@ -802,26 +802,21 @@ object Main {
         val arg_intervals = x.get.group(2).split(",").toList map (a => Interval(a))
         println(name)
         println(arg_intervals)
-        if (prg != null){
-          val ff = Formula.fromJson(prg.asInstanceOf[BasicDBObject])
-          println(s"The program is: ${ff.toPretty}")
-          val ffwnocolons = stripColons(ff)
-          println(ffwnocolons.toPretty)
-          val fundef = FormulaToFunction(name,style,arg_intervals,ffwnocolons)
-          println(s"The program AST is: ")
-          println(fundef)
-          val nl = new NestedListTextFormat[String]("  ","  ")()
-          nl.layOut(fundef.body.toPrettyTree)
-          println("\nThe code is:")
-          val cppGen = new codegen.CppOutput
-          val code = cppGen(fundef,0)
-          println(code)
-          
-          outf.write(code + "\n")
-        }
-        else{
-          println(s"The program is: null")
-        }
+
+        println(s"The program is: ${prg.toPretty}")
+        val ffwnocolons = stripColons(prg)
+        println(ffwnocolons.toPretty)
+        val fundef = FormulaToFunction(name,style,arg_intervals,ffwnocolons)
+        println(s"The program AST is: ")
+        println(fundef)
+        val nl = new NestedListTextFormat[String]("  ","  ")()
+        nl.layOut(fundef.body.toPrettyTree)
+        println("\nThe code is:")
+        val cppGen = new codegen.CppOutput
+        val code = cppGen(fundef,0)
+        println(code)
+        
+        outf.write(code + "\n")
       }
     }
     outf.close()
