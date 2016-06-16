@@ -18,11 +18,8 @@ class CppOutput (implicit scope: Scope) {
   val INFIX = List("&&","+","-","*","/","%","||","<")
   val PREFIX = List("!")
   val REDUCTIONS = List("min","max")
-  val mn = new Mnemonics {
-    override def isIdentifierPart(c: Character) = c < 0x100 && super.isIdentifierPart(c)
-  }
+  import CppOutput._
   def mne(s: String): String = mn get I(s)
-  
   def exprToFormalParam(e:Expr): String = {
     e match {
       case Interval(name: String) =>
@@ -86,8 +83,20 @@ class CppOutput (implicit scope: Scope) {
   def addIndent(i:Int,s:String): String = {
     repeatChar('\t',i) + s
   }
+  def getLambdas(stmt: Stmt,indent: Int): String = {
+    stmt match {
+      case Block(l) => ((l map (a => getLambdas(a,indent))) filter (a=> a != "")) mkString "\n"
+      case Fork(l) => ((l map (a => getLambdas(a,indent))) filter (a=> a != "")) mkString "\n"
+      case If(cond,caseThen,caseElse) => 
+        getLambdas(caseThen,indent) + "\n" + getLambdas(caseElse,indent)
+      case FunctionCallWithBody(name,args,body) => s"void ${mn.get(name)}(${args map exprToFormalParam mkString ","}){\n${apply(body,indent+1)}\n}"
+      case _ => ""
+    }
+  }
   def apply(fd : FunDef,indent: Int): String = {
-    s"void ${fd.name}(${fd.args map exprToFormalParam mkString ","}){\n${apply(fd.body,indent+1)}\n}"
+    //TODO: Add code to output all lambdas
+    
+    getLambdas(fd.body,indent) + s"\nvoid ${fd.name}(${fd.args map exprToFormalParam mkString ","}){\n${apply(fd.body,indent+1)}\n}"
   }
   def cilkForkCode(stmts: List[Stmt],indent: Int) : String = {
     stmts match {
@@ -114,6 +123,8 @@ class CppOutput (implicit scope: Scope) {
         addIndent(indent,s"${name}(${(params map exprToArg).mkString(",")});")
       case For(v,lb,ub,dir,stmt) =>
         addIndent(indent,s"FOR_${dir}(${v},${exprToCode(lb)},${exprToCode(ub)}){") + s"\n${apply(stmt,indent+1)}\n" + addIndent(indent,"}")
+      case If(Var(v,_),caseThen,Block(List())) if (v == "true")=>
+        apply(caseThen,indent)
       case If(cond,caseThen,Block(List())) =>
         addIndent(indent,s"if(${exprToCode(cond)}){\n") + apply(caseThen,indent+1) + "\n" + addIndent(indent,"}\n")
       case If(cond,caseThen,caseElse) =>
@@ -125,6 +136,10 @@ class CppOutput (implicit scope: Scope) {
         (stmts.map(x =>  apply(x,indent))).mkString("\n")
       case Parallel(i, stmt) =>
         apply(stmt,indent) + s"    /*bazinga $i*/"
+      case FunctionCallWithBody(name,params,body) => 
+        apply(FunctionCall(mn.get(name),params),indent)
+      case Verbatim(code) =>
+        addIndent(indent,code+"\n")
     };
     res
     
@@ -142,6 +157,9 @@ object CppOutput {
     reader.lines.iterator.toStream   // can be just 'reader.lines' if we turn on -Xexperimental
   }
   */
+  val mn = new Mnemonics {
+    override def isIdentifierPart(c: Character) = c < 0x100 && super.isIdentifierPart(c)
+  }
   
   val PREFACE = """
 #include "preface.h"

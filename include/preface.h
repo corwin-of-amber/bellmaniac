@@ -49,7 +49,8 @@ inline bool In(DEFINTERVALFUNC(I), int val) {
 	return ((val) >= DEFBEGIN(I) && (val) < DEFEND(I));
 }
 
-inline int GUARDED(bool cond, int val) { return ((cond) ? (val) : UNDEFINED); }
+#define GUARDED(cond,val) ((cond) ? (val) : UNDEFINED) 
+//inline int GUARDED(bool cond, int val) { return ((cond) ? (val) : UNDEFINED); }
 inline int SLASH(int x, int y) { return (x != UNDEFINED) ? x : y; }
 
 #define DEFINTERVALSTMT_LOWER(J0, J)   DEFINTERVALSTMT(J0); DEFBEGIN(J0) = DEFBEGIN(J); DEFEND(J0) = (DEFEND(J) + DEFBEGIN(J))/2;
