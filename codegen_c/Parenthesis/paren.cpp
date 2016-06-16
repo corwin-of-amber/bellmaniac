@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
 		parenthesis();
 		unsigned long long tend = cilk_getticks();
 		cout<<"LOOPDP\t"<<N<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
-		checkForError("rec vs paren");
+		checkForError("AUTO vs LOOPDP");
 	}
 	_mm_free(dorig);
 	_mm_free(drec);
