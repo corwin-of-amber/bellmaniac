@@ -1,8 +1,8 @@
 
 void funcD_loop(DEFINTERVALFUNC(K0),DEFINTERVALFUNC(K1),DEFINTERVALFUNC(K2)){
-	/*__declspec(align(ALIGNMENT)) TYPE V[B * B];
+	__declspec(align(ALIGNMENT)) TYPE V[B * B];
 	copy_dist_part(V,PARAM(K1),PARAM(K2));
-	*/
+	
 
 
 	FOR_D_loop_2(i,DEFBEGIN(K0),DEFEND(K0)){
@@ -10,7 +10,7 @@ void funcD_loop(DEFINTERVALFUNC(K0),DEFINTERVALFUNC(K1),DEFINTERVALFUNC(K2)){
 
 			TYPE t21= DDLdist(i,j);
 			FOR_D_loop_1(k,DEFBEGIN(K2),DEFEND(K2)){
-				t21 = max(t21,DDLdist(j+1,k)/*DdistSimpleV((j+1),k,K1,K2)*/+DELTA(i,j,k)/* INSET(j+1,K1) && INSET(k,K2) */);
+				t21 = max(t21,/*DDLdist(j+1,k)*/DdistSimpleV((j+1),k,K1,K2)+DELTA(i,j,k)/* INSET(j+1,K1) && INSET(k,K2) */);
 			}
 
 			DDLdist(i,j) = t21/* INSET(i,K0) && INSET(j,K1) */;
