@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
 	funcA_rec(PARAM(K0));
 	unsigned long long tend = cilk_getticks();
 	cout<<"VERSION\tN\tB\tTime(s)"<<endl;
-	cout<<"AUTO"<<N<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
+	cout<<"AUTO\t"<<N<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
 	//cout<<"REC\t"<<N<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
 #ifdef DEBUG
 	{

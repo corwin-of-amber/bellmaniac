@@ -245,7 +245,7 @@ int main(int argc, char *argv[]) {
 	funcA_rec(PARAM(J),PARAM(J));
 	unsigned long long tend = cilk_getticks();
 	cout<<"VERSION\tN\tB\tTime(s)"<<endl;
-	cout<<"AUTO"<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend-tstart)<<endl;
+	cout<<"AUTO\t"<<N<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
 #ifdef DEBUG
 	{
 		drec = ( TYPE* ) _mm_malloc(N * N * sizeof( TYPE ),ALIGNMENT);
