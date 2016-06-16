@@ -4,17 +4,20 @@
 
 
 void funcA_loop(DEFINTERVALFUNC(I),DEFINTERVALFUNC(J)){
+	__declspec(align(ALIGNMENT)) TYPE V[B * B];
+
+	copy_dist_part(V,PARAM(I),PARAM(J));
 	FOR_FWD(i,DEFBEGIN(I),DEFEND(I)){
 		FOR_FWD(j,DEFBEGIN(J),DEFEND(J)){
 			int tmp1;
 			tmp1 = INITMIN;
 			FOR_FWD(q,DEFBEGIN(J),min(j,DEFEND(J))){
-				tmp1 = min(tmp1,(theta(i,q) + w(q,j)));
+				tmp1 = min(tmp1,(psi(i,q) + w(q,j)));
 			}
 			int tmp2;
 			tmp2 = INITMIN;
 			FOR_FWD(p,DEFBEGIN(I),min(i,DEFEND(I))){
-				tmp2 = min(tmp2,(theta(p,j) + w_(p,i)));
+				tmp2 = min(tmp2,(psiCopyOpt(p,j,I,J) + w_(p,i)));
 			}
 			tmp2 = min(tmp1,tmp2);
 			tmp2 = min(GUARDED((In(PARAM(I),(i - 1)) && In(PARAM(J),(j - 1))),(psi((i - 1),(j - 1)) + S(i,j))),tmp2);

@@ -343,6 +343,9 @@ object Main {
           MemRead(ctx.inputArray.literal.toString,(args map FormulaToExpr))
         }
         else {
+          if ( f.root.literal.toString == "θ" && ctx.fixVar == None){
+            println("THETA")
+          }
           println(s"FUNCTION: ${f.root.literal.toString}, FIXVAR: ${ctx.fixVar.toString}")
           FunApp(f.root.literal.toString, (args map FormulaToExpr))
         }
@@ -536,7 +539,7 @@ object Main {
         else {
         //check if body has other loops(only immediate ones), if yes,
         //replace those loops with tmp in the expression tree and get Stmts (using FormulaToStmt) for tmp computation
-          val (newBody,tmpStmt) = liftLoops(body)
+          val (newBody,tmpStmt) = liftLoops(body)(newCtx)
           val initOrig = MemWrite(ctx.inputArray.literal.toString,
               (newCtx.localVars map toVar),
               FormulaToExpr(newBody)(newCtx))
