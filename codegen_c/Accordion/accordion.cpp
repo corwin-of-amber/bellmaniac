@@ -316,7 +316,8 @@ int main(int argc, char ** argv) {
 	int finalc = CO_PROTEIN_FOLDING(N);
 
 	unsigned long long tend = cilk_getticks();
-	cout<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend-tstart);
+	cout<<"VERSION\tN\tB\tTime(s)"<<endl;
+	cout<<"AUTO\t"<<N<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
 #ifdef DEBUG
 	S_dp = (int *) _mm_malloc(N * N * sizeof(int), 64);
 	for(int i = 0; i<N; i++)
@@ -326,13 +327,14 @@ int main(int argc, char ** argv) {
 	unsigned long long tstart1 = cilk_getticks();
 	int final = LOOP_PROTEIN_FOLDING(N);
 	unsigned long long tend1 = cilk_getticks();
-	cout<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend1-tstart1);
+	cout<<"LOOPDP\t"<<N<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend1-tstart1)<<endl;
 	if (N<20){
 		printArr(SOF,"SOF:");
 		printArr(S,"AUTO_LOOP:");
 		printArr(S_dp,"LOOPDP:");
 		cout<<endl;
 	}
+	int ctr = 0;
 	for(int i=0;i<N; i++)
 	{
 		for(int j=0;j<N; j++)
@@ -340,10 +342,12 @@ int main(int argc, char ** argv) {
 			if(S[i*N+j]!=S_dp[i*N+j]){
 				cout<<i<<" "<<j<<" "<<S[i*N+j]<<" "<<S_dp[i*N+j]<<endl;
 			}
+			ctr++;
 			assert(S[i*N+j]==S_dp[i*N+j]);
 		}
 
 	}
+	cout<<"Checked "<<ctr<<" values."<<endl;
 	_mm_free(S_dp);
 #endif
 	_mm_free(S);
