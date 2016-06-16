@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <cmath>
 #include <string>
 #include <cassert>
 #include <iostream>
@@ -184,14 +185,18 @@ void checkError(TYPE* BTSPL){
 			}
 		}
 	}
+	cout<<"Checked "<<N*N<<" Values."<<endl;
 }
 
 void bitonicCheck() {
 	//Use px,py to re-compute BitonicTSP locally and check if rec version is correct
-	printBTSP(BTSP);
+	//printBTSP(BTSP);
 	TYPE* BTSPL = ( TYPE* ) _mm_malloc(N * N * sizeof( TYPE ),ALIGNMENT);
+	unsigned long long tstart1 = cilk_getticks();
 	bitonicLoop(BTSPL);
-	printBTSP(BTSPL);
+	unsigned long long tend1 = cilk_getticks();
+	//printBTSP(BTSPL);
+	cout<<"LOOPDP\t"<<N<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend1-tstart1)<<endl;
 	checkError(BTSPL);
 	_mm_free(BTSPL);
 }
@@ -229,13 +234,10 @@ int main(int argc, char *argv[]) {
 
 
 	unsigned long long tstart = cilk_getticks();
-#ifndef LOOPDP
 	funcA_rec(PARAM(K0));
-#else
-	bitonicLoop(BTSP);
-#endif
 	unsigned long long tend = cilk_getticks();
-	cout<<N<<" "<<B<<" "<<cilk_ticks_to_seconds(tend-tstart)<<endl;
+	cout<<"VERSION\tN\tB\tTime(s)"<<endl;
+	cout<<"AUTO\t"<<N<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
 	//May check LOOPDP later here
 #ifdef DEBUG
 	bitonicCheck();
