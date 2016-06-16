@@ -206,6 +206,16 @@ int main(int argc, char* argv[]){
 	DEFBEGIN(J) = 1;
 	DEFEND(J) = N;
 	cout<<"VERSION\tN\tM\tB\tTime(s)\tLCS-Value"<<endl;
+#ifdef CO
+	{
+		fillDist();
+		unsigned long long tstart = cilk_getticks();
+		funcA_rec(PARAM(I),PARAM(J));
+		unsigned long long tend = cilk_getticks();
+		cout<<"AUTO\t"<<N<<"\t"<<M<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<"\t"<<Ddist(N-1,N-1)<<endl;
+
+	}
+#endif
 #ifdef LOOPDP
 	{
 		fillDistLoop();
@@ -217,16 +227,7 @@ int main(int argc, char* argv[]){
 
 	}
 #endif
-#ifdef CO
-	{
-		fillDist();
-		unsigned long long tstart = cilk_getticks();
-		funcA_rec(PARAM(I),PARAM(J));
-		unsigned long long tend = cilk_getticks();
-		cout<<"funcA\t"<<N<<"\t"<<M<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<"\t"<<Ddist(N-1,N-1)<<endl;
 
-	}
-#endif
 #ifdef TEST
 	FOR_FORWARD(i,I){
 		FOR_FORWARD(j,J){
