@@ -25,7 +25,7 @@ div.flash:empty {
 
 @font-face {
     font-family: Quivira;
-    src: url(Quivira.otf);
+    src: url(../res/Quivira.otf);
 }
 
 .CodeMirror {
@@ -145,12 +145,13 @@ textarea, .CodeMirror-focused {
   position: relative;
   cursor: default;
 }
-.tip:hover:before {
+.tip:hover::before {
   content: attr(data-tip);
   position: absolute;
   top: -16px;
-  padding-left: 3ex;
-  padding-right: 1ex;
+  padding-left: .5ex;
+  padding-right: .5ex;
+  text-indent: 0;  /* otherwise inherited from ul.c */
   z-index: 9;
   color: #227;
   background: #FF9;
@@ -170,10 +171,11 @@ ul.c {
   margin-left: 0.5em;
   margin-bottom: 0;
   margin-top: 0;
-  padding-left: 1em;
-  text-indent: -1em;
+  padding-left: 0;
+  /*padding-left: 1em;
+  text-indent: -1em;*/
 }
-ul.c ul.c { margin-left: 0; }
+ul.c ul.c { margin-left: 0; padding-left: 1em; }
 /*
 ul.c[bullet="•"] li::before {
   content: "• ";

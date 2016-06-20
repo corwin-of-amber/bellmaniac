@@ -1,3 +1,10 @@
+
+/* TODO this whole file should be deprecated. But the current repl
+   cannot really handle the examples in Bellmaniac/examples/intermediates/*.synopsis.txt.
+   Would be nice to incorporate this functionality before shutting this down.
+ */
+
+
 _ = require \lodash
 fs = require \fs
 path = require \path

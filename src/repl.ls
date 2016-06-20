@@ -265,16 +265,18 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
         store.getAll!then (cells) ->
           if cells.length
             console.log "read #{cells.length} cells"
-            cells.for-each cleanse
+            #cells.for-each cleanse
             # Start with 3 cells then add the others gradually;
             # Hopefully this makes the ui a bit more responsive
-            $scope.history = _.compact cells[0 to 2]
-            async.eachSeries cells[3 to], (cell, callback) ->
-              $timeout ->
-                $scope.history.push cell
-                callback!
-              , 200
-            , -> set-mode 'ready'
+            $scope.history = _.compact cells#[0 to 2]
+            set-mode 'ready'
+            if 0
+              async.eachSeries cells[3 to], (cell, callback) ->
+                $timeout ->
+                  $scope.history.push cell
+                  callback!
+                , 200
+              , -> set-mode 'ready'
         , @~e
       update-cells: (cells ? $scope.history, cb=->) ->
         records = cells.map @~record
@@ -427,19 +429,6 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
       
     window.$scope = $scope
 
-  ..filter "collapse" ->
-    lead = -> it.match /^\s*/ .0.length
-    (input, indent) ->
-      (""+input).split /\n/ \
-        .filter (-> lead(it) < indent) \
-        .join "\n"
-  ..directive "display" (RecursionHelper) ->
-    restrict: 'E'
-    scope:
-      o: '=o'
-    template: $ '#display' .html!
-    compile: (element) ->
-      RecursionHelper.compile(element)
   ..directive "rich" ->
     restrict: 'A'
     link: (scope, element, attrs) -> 
@@ -448,31 +437,12 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
           element.empty!append ($('<hat>').text(value.hat))
         else
           element.text(value)
-  ..directive "compute" ($filter) ->
-    scope: {}
-    transclude: 'element'
-    link: (scope, element, attrs,
-           ctrl, $transclude) ->
-      expr = attrs.let
-      mo = expr?.match LET_RE
-      if !mo? then throw Error("invalid let '#expr'")
-      [lhs, rhs, filt] = mo[1 to]
-      x = scope.$parent.$parent
-      y = x
-      while y && !y.o?.progress
-        y = y.$parent
-      if !y  # - for efficiency, skip this for in-progress cells
-        x.$on 'turn' -> x.o.flag = 1
-      $transclude (clone, scope) ->
-        scope.$watch "(#{rhs}).flag" ->
-          v = scope.$eval rhs
-          if filt? then v = $filter(filt)(v)
-          scope[lhs] = v
-        #scope.$watch rhs, (v) ->
-        #  if filt? then v = $filter(filt)(v)
-        #  scope[lhs] = v
-        #, true
-        $(clone).insertAfter element
+
+  ..directive 'display' -> 
+    pprint = new PrettyPrint
+    scope: {obj: '&display'}
+    link: (scope, element, attrs, ctrl) ->
+      pprint.render scope.obj() .append-to element
         
   # Adapted from fileChange directive, http://stackoverflow.com/a/35748459/37639
   ..directive 'filePick', ->
@@ -491,32 +461,6 @@ angular.module 'app', <[ RecursionHelper ui.codemirror ui.select ngBootbox frapo
       scope.$on 'destroy' ->
         element.off('change', onChange)
 
-  ..filter "isString" -> _.isString
-
-  ..filter "display" ->
-    f = (input, flag) ->
-      if _.isString input
-        [input]
-      else if input.tape?
-        last-pos = 0
-        [text, annot] = input.tape.text.split '\t'
-        reformatText = -> 
-          if (mo = /^(.)\u0302$/.exec it)? then {hat: mo.1} else it
-        reformatType = -> it?.replace /->/g '→'
-        []
-          for [[u,v], mark] in (if input.flag then input.tape.markup else [])
-            x = text.substring(last-pos, u)
-            y = text.substring(u, v)
-            cls = ['tape-mark'] ++ (if mark.type? then ['tip'] else [])
-            last-pos = v
-            if x.length then ..push [reformatText(x)]
-            if y.length then ..push [reformatText(y), cls, reformatType(mark.type)]
-          x = text.substring(last-pos)
-          if x.length then ..push [reformatText(x)]
-          if annot?
-            ..push [reformatType(annot), ['annotation']]
-      else
-        [JSON.stringify input]
 
 
 # Sticky toolbar polyfill

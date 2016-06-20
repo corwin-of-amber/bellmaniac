@@ -1,6 +1,6 @@
 <html>
 <head>
-	<script src="../web.realtime/reload.js"></script>
+	<script src="node_modules/nwjs-kremlin/reload.js"></script>
     <script>Reload.ignore(/^examples\//, /^data\//, /^cache/, /^bower_components\//);</script>
 
     <meta charset="UTF-8">
@@ -30,6 +30,7 @@
 	<script src="src/parse-utils.ls.js"></script>
 	<script src="src/lambda.ne.js"></script>
 	<script src="src/parse.ls.js"></script>
+    <script src="src/pretty.ls.js"></script>
 	<script src="src/repl.ls.js"></script>
     <script src="src/compiler/config.ls.js"></script>
 	<script src="src/compiler/codegen.ls.js"></script>
@@ -94,10 +95,9 @@
                  ng-mouseenter="$broadcast('turn')">
 				<div class="cell-caption">{{"Out[" + h.id + "]"}}</div>
 				<div class="cell-content">
-					<div class="cell output-well" ng-repeat="cell in h.output | orderBy:'index'">
-						<display o="cell.value"></display>
-					</div>
+                  <div ng-repeat="cell in h.output" display="cell.value"></div>
 				</div>
+                
 				<div class="cell-indicator" ng-show="$index > 0">
 					<div class="pull-right" title="{{verifyTitle(h)}}">
 						<a class="btn btn-sm verify-icon" ng-hide="isInvalid(h)" ng-class="{'btn-warning': h.verifyStatus === 'In Progress', 'btn-success': h.verifyStatus === 'Success', 'btn-danger': (h.verifyStatus === 'Error' || h.verifyStatus === 'Aborted')}" ng-click="abortVerification(h)">
@@ -122,31 +122,5 @@
 			</div>
 		</div>
 	</div>
-	<template type="text/ng-template" id="display">
-        <display ng-if="o.display" o="o.display"></display>
-		<compute ng-if="o.tape" let="parts = o | display">
-			<span class="code"
-			 ng-class="mark[1]"
-			 data-tip="{{mark[2]}}"
-			 ng-repeat="mark in parts track by $index",
-                  rich="mark[0]"></span>
-		</compute>
-		<div ng-if="o.vbox" ng-repeat="el in o.vbox">
-			<display o="el"></display>
-		</div>
-		<ul ng-if="o.list">
-			<li ng-repeat="el in o.list">
-				<display o="el"></display>
-			</li>
-		</ul>
-		<ul ng-if="o.tree" class="c">
-			<li>
-				<display o="o.tree.root"></display>
-				<display ng-repeat="s in o.tree.subtrees" o="{tree: s}"></display>
-			</li>
-		</ul>
-        <display o="o.progress" ng-if="o.progress"></display>
-		<span class="code" ng-if="o | isString">{{o}}</span>
-	</template>
 </body>
 </html>
