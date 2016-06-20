@@ -3,12 +3,14 @@ package ui
 import org.rogach.scallop.ScallopConf
 import org.rogach.scallop.ScallopOption
 import java.io.File
+import org.rogach.scallop.Scallop
 
 
 
 object Config {
   object Sources {
-    var commandLine: Option[CommandLineConfig] = None;
+    var commandLine: Option[CommandLineConfig] = None
+    var jsonStream: Option[JsonStreamConfig] = None
   }
 
   trait CommandLineConfig {
@@ -24,6 +26,10 @@ object Config {
     val filename: ScallopOption[String]
     
     def file() = new File(filename())
+  }
+  
+  trait JsonStreamConfig {
+    val tmpdir: ScallopOption[File]
   }
   
   abstract class BaseCommandLineConfig(args: List[String]) extends ScallopConf(args toList) with CommandLineConfig {
@@ -51,4 +57,25 @@ object Config {
   def tae(args: Array[String]) = { apply(new TAEConfig(args toList)); }
   
   lazy val config = Sources.commandLine getOrElse { new CLIConfig(List.empty) };
+  
+  case class getter[A](op: ScallopOption[A]) extends ScallopOption[A](op.name) { override def get = op.get }
+  case class arbiter[A](op1: () => Option[ScallopOption[A]], op2: ScallopOption[A]) extends ScallopOption[A](op2.name) {
+    override def get = op1() getOrElse op2 get
+  }
+  class overridden[A](name: String, value: Option[A]) extends ScallopOption[A](name) { override def get = value }
+  def overridden[A](name: String, value: Option[A])  = new overridden(name, value)
+  
+  lazy val combinator = new CommandLineConfig {
+    val prover =     getter(config.prover)
+    val cert =       getter(config.cert)
+    val log =        getter(config.log)
+    val tmpdir =     arbiter(() => Sources.jsonStream map (_.tmpdir), config.tmpdir)
+    val opt =        getter(config.opt)
+    val cache =      getter(config.cache)
+    val debug =      getter(config.debug)
+    val debugOnly =  getter(config.debugOnly)
+    val dryRun =     getter(config.dryRun)
+    val filename =   getter(config.filename)
+  }
+      
 }

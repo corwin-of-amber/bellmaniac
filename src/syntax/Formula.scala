@@ -67,7 +67,7 @@ object Formula {
 
   object Assoc extends Enumeration {
     type Assoc = Value
-    val Left, Right, None = Value
+    val Left, Right, Both, None = Value
   }
   import Assoc.Assoc
 
@@ -79,7 +79,7 @@ object Formula {
     }
   }
 
-  class AppOperator(literal: String, priority: Int, assoc: Assoc=Assoc.None) extends InfixOperator(literal, priority, assoc) {
+  class AppOperator(literal: String, priority: Int, assoc: Assoc=Assoc.Left) extends InfixOperator(literal, priority, assoc) {
     override def format(term: AstSugar.Term) = {
       /**/ assume(term.subtrees.length == 2) /**/
       val List(fun, arg) = term.subtrees
@@ -101,16 +101,37 @@ object Formula {
         splitOp(term.subtrees(0).subtrees(1), op) ++ splitOp(term.subtrees(1), op)
       else List(term)
   }
-
+  
+  class AbsOperator(literal: String, priority: Int, assoc: Assoc=Assoc.Right) extends InfixOperator(literal, priority, assoc) {
+    override def format(term: AstSugar.Term) = {
+      /**/ assume(term.subtrees.length == 2) /**/
+      val List(va, body) = term.subtrees
+      if (body.root == literal)  // display i ↦ j ↦ __ as i j ↦ __
+        tape"${display(va, priority, Assoc.Left)} ${display(body, priority, Assoc.Right)}"
+      else
+        super.format(term)
+    }
+  }
+  
+  class GuardOperator(literal: String, priority: Int, assoc: Assoc=Assoc.None) extends InfixOperator(literal, priority, assoc) {
+    override def format(term: AstSugar.Term) = {
+      /**/ assume(term.subtrees.length == 2) /**/
+      val op = if (literal == null) display(term.root) else literal
+      tape"${display(term.subtrees(0), priority, Assoc.Left)} ${op |-| new TermTag(term)}{${display(term.subtrees(1))}}"
+    }
+  }
+  
   def O(literal: String, priority: Int, assoc: Assoc=Assoc.None) =
     new InfixOperator(literal, priority, assoc)
 
   def M(ops: InfixOperator*) = ops map (x => (x.literal, x)) toMap
 
-  val INFIX = M(O("->", 1, Assoc.Right), O("<->", 1), O("∧", 1), O("∨", 1), O("<", 1), O("=", 1), O("↦", 1, Assoc.Right),
-    O(":", 1), O("::", 1), O("/", 1), O("|_", 1), O("|!", 1), O("∩", 1), O("×", 1),
+  val INFIX = M(O("->", 1, Assoc.Right), O("<->", 1), O("∧", 1), O("∨", 1), O("<", 1), O("=", 1),
+    O(":", 1, Assoc.Right), O("::", 1), O("/", 2, Assoc.Both), O("|_", 1), O("∩", 1), O("×", 1),
     O("+", 1), O("-", 1), O("⨁", 1), O("⨀", 1)) ++
-    Map("@" -> new AppOperator("", 1, Assoc.Left))
+    Map("@" -> new AppOperator("", 1, Assoc.Left),
+        "↦" -> new AbsOperator("↦", 1, Assoc.Right),
+        "|!" -> new GuardOperator("|_", 1))
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
 
   class TermTag(val term: Term) extends AnyVal
@@ -123,6 +144,8 @@ object Formula {
       displayQuantifier(term.unfold)
     else if (term =~ (":", 2) && term.subtrees(0) =~ ("let", 0) && term.subtrees(1) =~ ("@", 2) && term.subtrees(1).subtrees(0) =~ ("↦", 2))
       tape"let ${display(term.subtrees(1).subtrees(0).subtrees(0))} := ${display(term.subtrees(1).subtrees(1))} in ${display(term.subtrees(1).subtrees(0).subtrees(1))}"
+    else if (term =~ (":", 2) && term.subtrees(0) =~ ("...", 0))
+      display(term.subtrees(0))  // hidden term
     else
       (if (term.subtrees.length == 2) INFIX get term.root.toString else None)
       match {
@@ -139,7 +162,7 @@ object Formula {
       val d = display(term)
       INFIX get term.root.toString match {
         case Some(op) =>
-          if (op.priority < pri || op.priority == pri && side == op.assoc) d else tape"($d)"
+          if (op.priority < pri || op.priority == pri && (side == op.assoc || op.assoc == Assoc.Both)) d else tape"($d)"
         case _ => d
       }
     }

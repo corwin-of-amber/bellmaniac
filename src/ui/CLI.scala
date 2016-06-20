@@ -31,6 +31,11 @@ import semantics.TypeTranslation
 import report.data.SerializationError
 import java.io.File
 import java.io.PrintStream
+import report.AppendLog
+import report.FileLog
+import synth.engine.OptimizationPass
+import org.rogach.scallop.ScallopOption
+import ui.Config.overridden
 
 
 
@@ -59,19 +64,29 @@ object CLI {
     implicit val cc = new DisplayContainer
     val extrude = new Extrude(Set(I("/"), cons.root))
 
+    var currentState: TacticApplicationEngine.State = null
+    
     import collection.JavaConversions._
     import TacticApplicationEngine.State
         
     def interpretElement(json: DBObject, progress: DBObject => Unit): DBObject = {
       try {
-        implicit val scope = json.get("scope") andThen_ (Scope.fromJson, { throw new SerializationError("scope not found", json) }) // examples.Paren.env.scope)
-        implicit val env = TypeTranslation.subsorts(scope) //examples.Paren.env
+        implicit lazy val scope = json.get("scope") andThen_ (Scope.fromJson, { throw new SerializationError("scope not found", json) }) // examples.Paren.env.scope)
+        implicit lazy val env = TypeTranslation.subsorts(scope) //examples.Paren.env
         val routines = json.get("routines").opt_[DBObject] getOrElse null
-          
+
         json.get("check") match {
           case check: DBObject =>
             val term = Formula.fromJson(check)
             val result = TypeInference.infer(term)._2
+            json.get("emit") match {
+              case emit: DBObject =>
+                val tae = mkTae(routines)
+                val s = tae.mkState(result)
+                tae.display(tae.emit(s, emit.get("name").toString, emit.get("style").toString))
+                currentState = s
+              case _ =>
+            }
             serialize(result)
           case _ => json.get("tactic") match {
             case tactic: DBObject =>
@@ -82,18 +97,49 @@ object CLI {
                 }
                 else {
                   json.get("term") andThen_ (tae.transform(_:DBObject, json, progress=(s: State) => progress(serialize(s))),
-                      { throw new SerializationError("tactic: missing 'term' key", json) })
+                      currentState andThen (tae.transform(_, json, progress=(s: State) => progress(serialize(s))),
+                      { throw new SerializationError("tactic: missing 'term' key", json) }))
                 }
+              currentState = result
               serialize(result)
-            case _ => json.get("program") match {
+            case _ => json.get("program") match {    /* this is a compiled program; display it */
               case prog: String =>
                 val term = json.get("term") andThen_ (Formula.fromJson, { throw new SerializationError("program: missing 'term' key", json) })
                 val tae = mkTae(routines)
                 println(s"scope: ${scope.sorts}")
+                println(s"tag:   ${json.get("tag")}")
                 tae.display(tae.mkState(term))
                 cc.map()
-              case _ =>
-                new BasicDBObject("error", "unrecognized JSON element") append ("json", json)
+              case _ => json.get("term") match {    /* this is an uncompiled program; emit it */
+                case prog: DBObject =>
+                  val term = prog |> Formula.fromJson
+                  json.get("emit") match {
+                    case emit: DBObject =>
+                      val tae = mkTae(routines)
+                      val result = tae.emit(tae.mkState(term), emit.get("name").toString, emit.get("style").toString)
+                      tae.display(result)
+                      serialize(result)
+                    case _ =>
+                      cc.map()
+                  }
+                case _ => json.get("section") match {
+                  case section: String =>
+                    json.get("options") match {
+                      case options: BasicDBObject =>
+                        // TODO tmpdir is hard-coded; other options?
+                        val tmpdirVal = options.getString("tmpdir").opt map (new File(_))
+                        println(s"section '$section'  [tmpdir=${tmpdirVal map (x=>s"'$x'")}]")
+                        ui.Config.Sources.jsonStream = Some(new ui.Config.JsonStreamConfig {
+                          val tmpdir = overridden("tmpdir", tmpdirVal)
+                        })
+                      case _ =>
+                        println(s"section '$section'")
+                    }
+                    cc.map()
+                  case _ =>
+                    new BasicDBObject("error", "unrecognized JSON element") append ("json", json)
+                }
+              }
             }
           }
         }
@@ -106,15 +152,17 @@ object CLI {
     
     def serialize(state: State) =
       cc.map(Map("term" -> state.program,
-                 "display" -> Rich.display(state.ex)))
+                 "display" -> Rich.display(extrude(OptimizationPass.foldAllCalls(state.program)))))
 
     def serialize(program: Term) =
       cc.map(Map("term" -> program,
                  "display" -> Rich.display(extrude(program))))
     
     def reportProgress(json: DBObject)(implicit out: PrintStream) {
-      out.println(cc.map("progress" -> json))
-      out.println()
+      if (!ui.Config.config.debugOnly()) {
+        out.println(cc.map("progress" -> json))
+        out.println()
+      }
     }
     
     def repl(blocks: Stream[String]): Unit = {
@@ -168,7 +216,7 @@ object CLI {
       }
     }
     
-    type InvokeProver = examples.Paren.BreakDown.InvokeProver
+    type InvokeProver = examples.Accordion.InvokeProver   // TODO generalize prover selection
     
     class Interpreter(routines: Map[Any, DefnSubroutine])(implicit scope: Scope, env: Environment) extends TacticApplicationEngine with PodFactory with InvokeProver with CollectStats {
       import TacticApplicationEngine._
@@ -181,9 +229,15 @@ object CLI {
             case x => throw new SerializationError(s"malformed routine ${x}", routinesJson);
           })
       
+      override lazy val outf = Session.outf;  
+      override lazy val logf = Session.logf;
+          
       def fac: Map[Any,Subroutine[Term,Pod] with Arity] = routines
     }
 
+    /* TODO seems like this should be part of Session class? */
+    lazy val outf: AppendLog = new FileLog(new File("/tmp/prog.json"), new DisplayContainer)
+    lazy val logf: AppendLog = new FileLog(new File("/tmp/bell.json"), new DisplayContainer)
   }
 
   def stack(e: Throwable) = {

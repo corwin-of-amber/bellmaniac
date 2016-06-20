@@ -106,12 +106,12 @@ object SlicePod {
 
 /**
  * Combines Slice, SlashDistrib, and SlashToReduce (indirectly).
- * e(f) = reduce < e(f1), e(f2), ... >
+ * e(f) = combine < e(f1), e(f2), ... >
  *   where fi = f :: (Xi -> ?)
  * @param e
  * @param f
  * @param subdomains X1 ... Xn
- * @param combine term list combinator (e.g. x => min:@
+ * @param combine term list combinator (e.g.  x => min:@`⟨ ⟩`(x)  or  x => /::(x))
  */
 class SliceAndDicePod(val e: TermWithHole, val f: Term, val subdomains: List[Term],
                       val combine: Iterable[Term] => Term) extends Pod

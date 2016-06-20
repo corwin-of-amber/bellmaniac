@@ -43,7 +43,7 @@ class Extrude(val ops: Set[Identifier]) {
   }
   
   def smallEnough(e: Term) = {
-    if (e.isLeaf) Some(e)
+    if (e.isLeaf && e.root.kind != "routine") Some(e)   // routine calls (e.g. A[J]) are considered "not small"
     else if (e =~ ("↦", 2) && e.subtrees.forall(_.isLeaf) && e.subtrees(0).root == "?") Some(T(dotAbove(e.subtrees(1).root)))
     else None
   }

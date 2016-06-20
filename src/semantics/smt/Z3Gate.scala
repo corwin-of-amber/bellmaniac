@@ -139,6 +139,10 @@ class Z3Gate(implicit guidelines: SmtGuidelines=SmtGuidelines.default) {
       val List(l, r) = recurse
       l =:= r
     }
+    else if ((r == "|!") && arity == 2) {
+      val List(l, r) = recurse    // @@@ TODO this very much depends on the context (positive or negative)
+      r & l                       //  arguably this should be done at a higher level
+    }
     else {
       declarations get r match {
         case Some(decl) => decl(recurse:_*)
@@ -180,7 +184,7 @@ class Z3Gate(implicit guidelines: SmtGuidelines=SmtGuidelines.default) {
     if (!guidelines.fullSaturate)
       p.add("smt.mbqi", false)
     
-    p.add("soft_timeout", 10 * 60 * 1000 /*ms*/)
+    //p.add("soft_timeout", 10 * 60 * 1000 /*ms*/)
     //p.add("smt.macro_finder", true)
     s.setParameters(p)
     s
@@ -314,7 +318,7 @@ object Z3Gate {
       
   var benchmarkCounter = 0
   def benchmarkNext(nparts: Int) = {
-    val dir = ui.Config.config.tmpdir() |-- (_.mkdirs())
+    val dir = ui.Config.combinator.tmpdir() |-- (_.mkdirs())
     0 until nparts map (i => new File(dir, s"benchmark$benchmarkCounter-$i.smt2"))
   } |-- { _ => benchmarkCounter += 1 }
 
