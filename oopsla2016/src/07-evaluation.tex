@@ -68,7 +68,7 @@ We compare the sizes of these diagrams, which we call ``conceptual size'', with 
 required to derive the respective implementation in Bellmania.
 The results of the comparison are given in \Cref{evaluation:user effort}, where ``\# phases''
 indicates how many recursive subroutines are included in the algorithm description 
-(and in the respective development) and the two other column give the development size and conceptual size
+(and in the respective development) and the two other columns give the development size and conceptual size
 of each benchmark.
 The development size is within $2\times$ of the conceptual size in most cases.
 
@@ -80,7 +80,7 @@ IDE using HTML5 and AngularJS, which communicates with the engine by sending
 and receiving program terms serialized as JSON. Our system supports using either
 Z3 or CVC4 as the back-end SMT solver for discharging proof obligations required
 for soundness proofs. Synthesis of recursive calls is done by translating the
-program to \Sketch{}, which solves a the correct assignment to type parameters.
+program to \Sketch{}, which solves a correct assignment to type parameters.
 To argue for the feasibility of our system, we include
 SMT solver running time for the verification of the three most used tactics (figures are for CVC4),
 as well as time required for \Sketch{} synthesis, in \Cref{evaluation:solving time}.
@@ -160,7 +160,7 @@ as a function of problem size, and shows the scalability of the generated code.
   \hline
 \end{tabular}
 \caption{\label{evaluation:solving time}
-  Average proof search time for proof obligations and avegrage synthesis
+  Average proof search time for proof obligations and average synthesis
   time for {\sf Synth} parameters (seconds).}
 \end{table}
 
