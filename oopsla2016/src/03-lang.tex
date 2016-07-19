@@ -139,12 +139,14 @@ We also adopt some syntactic sugar to make complex terms more manageable:
 \subsection{Types and Type Qualifiers}
 \label{lang:types}
 
+\cbstart%
 We extend the type system with predicate abstraction in the form of logically qualified data types 
 (Liquid Types~\cite{PLDI08/Rondon}). 
 These are refinement types that provide a natural encoding of predicate abstraction
 by restricting refinements to set of abstraction predicates,
 called \newterm{qualifiers}, which are defined over the base types.
-Contrary to their general use, the purpose of these qualifiers in Bellmania is not to
+\cbend{}
+Contrary to their general use, the purpose of these qualiiers in Bellmania is not to
 check a program for safety and reject ill-typed programs, but rather to serve as annotations for
 tactics, to convey information to the solver for use in proofs, and later to help the compiler
 properly emit memory access and parallelization primitives.
@@ -163,7 +165,7 @@ limit the use of qualifiers, allowing only the following forms:
 
 \begin{itemize}
   \item $\{v:\T ~|~ P(v)\}$, abbreviated as $\T\cap P$. When the signature of $P$ is known (which is
-  usually the case), it is enough to write the type as $P$.
+  usually the case), it is enough to write \cbstart the type as\cbend{} $P$.
   \item $\{v:\T ~|~ P(v)\land Q(v)\}$, abbreviated as $\T\cap P\cap Q$, or just $P\cap Q$. This extends
   to any number of conjuncts of the same form.
   \item $(x : \T_1) \to \{v:\T_2 ~|~ R(x,v)\} \to \T_3$, abbreviated as $\big((\T_1\times\T_2)\cap R\big)\to\T_3$.
@@ -174,7 +176,7 @@ limit the use of qualifiers, allowing only the following forms:
 
 
 \medskip  
-The type refinement constructors $\cap$ and $\times$ may be composed to create \newterm{droplets} (tiny bits of liquid),
+The type refinement constructors $\cap$ and $\times$ may be composed to create \newterm{droplets} \cbstart\diffnote{reason for the name}(tiny bits of liquid)\cbend,
 using the abstract syntax in \Cref{lang:droplets}.
 Note that the language does not include tuple types; hence all function types are
 implicitly curried, even when using $\times$.
@@ -193,6 +195,7 @@ To this end, we trade off some expressive power for succinctness.
 \exampleTitle
 
 \noindent
+\cbstart\diffnote{this example has been moved up, replacing a shorter example and showcasing types inside terms}%
 The specification of the Parenthesis problem (\Cref{overview:paren spec}) will be written as
 
 \vspace{-5mm}
@@ -220,6 +223,7 @@ $\theta$:
 
 \vspace{-.5em}
 \hrule
+\cbend
 \medskip
 
 \iffalse
@@ -259,7 +263,7 @@ as it is still a partial function.
 As mentioned earlier, annotations are ignored when typechecking a term.
 This gives a simple characterization of type safety without the need to
 explictly write any new typing rules. It also means that for $f:\T_1\to\T_2$, $x:\T_3$, we obtain $f\,x:\T_2$ whenever
-$\T_1$ and $\T_3$ have the same \newterm{shape} (the raw type obtained by removing all qualifiers).
+$\T_1$ and $\T_3$ have the same \newterm{shape} \cbstart(the raw type obtained by removing all qualifiers)\cbend.
 This requires some explanation.
 
 Considering a (partial) function $\T\to\S$ to be a set of pairs of elements $\langle x,y\rangle$ 
@@ -376,6 +380,7 @@ The resulting types are eventually converted back to droplet form (expressed via
 qualifiers that cannot be expressed in droplets are discarded.
 
 \medskip
+\cbstart\diffnote{added some justification for the type refinement rules.}%
 The top three rules apply to ordinary constructs of typed $\lambda$-calculus:
 the first rule propagates qualifiers from the environment to leaf expressions that use a declared variable;
 the next two rules propagate information across application and refinement terms.
@@ -395,6 +400,7 @@ A condition $[x]_{_\square}\,$ ties the sub-term type in the same way, but witho
 adding any qualifiers. The rule for $\fix$ is the only one that requires some thought:
 the type of $\fix f$ cannot be forced down on $f$; but since, by definition, $\fix f = f\,(\fix f)$
 must hold, then any restrictions imposed by the range of $f$ can be asserted for $\fix f$.
+\cbend
 
 Note that two syntactically identical terms in different sub-trees may be assigned
 different types by this method. This is a desirable property, as (some) context information

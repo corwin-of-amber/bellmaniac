@@ -29,15 +29,23 @@ which were proved to be more effective by \cite{IPDPS15/Tithi}.
 
 Autogen~\cite{PPoPP16/Chowdhury} is a most recent advance that employs dynamic analysis to discover
 a program's access pattern and learn a decomposition that can be used to generate a divide-and-conquer
-implementation. The two methods are complementary, since Autogen does not provide correctness guarantees:
+implementation. The two methods are complementary,
+\cbstart\diffnote{this seemed to have been unclear and it is a crucial difference between the two methods}
+since Autogen does not provide correctness guarantees:
 it works for a class of problems that obey a ``small world assumption'', meaning that all possible behaviors are demonstrated by traces of bounded, known size.
 Crucially, in Autogen it is the user's responsibility to determine whether the input problem falls within this category;
 if it does not, Autogen will not fail but instead generate an incorrect implementation.
+This is a fundamental difference stemming from Autogen's use of dynamic traces \textit{vs.} purely deductive reasoning in Bellmania.
 Still, the user might be able to use insights from Autogen to develop verified code in Bellmania,
 where size bounds are not required.
+\cbend
 
 Pu \etal{}~\cite{OOPSLA11/Pu} have shown that recurrences for DP can be generated automatically from a non-recursive specification of the optimization problem.
 This is orthogonal; in Bellmania, the recurrence is the input, and the output is an efficient divide-and-conquer implementation.
+\cbstart
+Obviously, the recurrence produced by \cite{OOPSLA11/Pu} can be used as input to Bellmania,
+providing an even higher-level end-to-end reasoning.
+\cbend
 
 \begin{comment}
 Our ``$\big/$'' operator can be compared to the separating disjunction ``$\ast$'' of Separation Logic~\cite{LICS02/Reynolds},

@@ -5,7 +5,7 @@ We implemented our technique and used it to generate ca\-che-oblivious
 divide-and-conquer implementations of three algorithms that were used as
 benchmarks in \cite{IPDPS15/Tithi}, and a few others.
 
-\begin{figure}[b!]
+\begin{figure}[t!]
 \vspace{-5mm}
 \[
   \renewcommand\arraystretch{1.2}
@@ -56,9 +56,11 @@ up.
 We also exercised our system on a number of textbook problems:
 the Longest Common Subsequence (LCS) problem, the Knapsack problem,
 and the Bitonic Traveling Salesman problem.
+\cbdelete\diffnote{\raggedright usability estimation moved to later}
 
 \subsection{Implementation Details}
-The tactic application engine is implemented in Scala. We implemeted a prototype
+\cbstart\diffnote{separated implementation details from experiments}
+The tactic application engine is implemented in Scala. We implemented a prototype
 IDE using HTML5 and AngularJS, which communicates with the engine by sending
 and receiving program terms serialized as JSON. Our system supports using either
 Z3 or CVC4 as the back-end SMT solver for discharging proof obligations required
@@ -68,19 +70,21 @@ To argue for the feasibility of our system, we include
 SMT solver running time for the verification of the three most used tactics (figures are for CVC4),
 as well as time required for \Sketch{} synthesis, in \Cref{evaluation:solving time}.
 We consider an average delay of \textasciitilde 10 seconds to be reasonable, even for an interactive
-environment such as Bellmania.
+environment such as Bellmania.\cbend
 
 Tactics are implemented as small Scala classes. It is possible for
 the more advanced user to extend the library by writing such classes.
 To give an idea, on top of the generic TAE the {\sf Stratify} tactic was coded in 12 lines of Scala,
 including the functionality that breaks a function $h$ into two functions $f$ and $g$.
 
-The compiler backend is implemented as another component in
-Scala, processes ASTs and generates C++ code containing Intel Cilk constructs for parallelization.
+The compiler back-end is implemented as another component in
+\cbstart\diffnoteup{\vspace{-1cm}as part of AE, the compiler back-end was ported to Scala}Scala\cbend, processing ASTs and generating C++ code containing Intel Cilk constructs for parallelization.
 It employs a thin intermediate representation layer at which the optimizations of \Cref{codegen} are applied.
 
+\cbstart\diffnote{separated implementation details from experiments}\vspace{-1em}% the neg vspace is only needed because of \marginpar (introduced by \diffnote)
 \subsection{Experimental Results}
 \label{evaluation:experimental}
+\cbend
 
 Table~\ref{evaluation:cppruntimes} shows performance improvement for our 
 auto-generated implementation (AUTO) on the state-of-the-art optimized parallel
@@ -92,7 +96,7 @@ optimization of using Z-order layout of the array,
 which is out of scope for this paper. %pointer arithmetics for loop traversal? 
 %Explicit vectorization of loops?
 $N$ is the problem size and $B$ is the base case size for using loops 
-instead of recursion. It can be seen from the table that our implementation 
+instead of recursion. It can be seen from the table that our \cbdelete\diffnote{removed remark about further optimizing by hand} implementation 
 performs close to the manually optimized code.
 Figure~\ref{fig:gap} depicts the performance of these implementations on one sample instance
 as a function of problem size, and shows the scalability of the generated code. 
@@ -193,19 +197,20 @@ To get an idea of how domain experts think about the problem, we consult~\cite{P
 where descriptions are conveniently provided in the form of data-flow diagrams for each step of computation.
 An example for such a diagram, corresponding to our \Cref{overview:recursive-A}, is shown in \Cref{evaluation:par-A-diag}; in this case, we count it as 4 steps.
 
-\pagebreak
+%\pagebreak
 %\begingroup  % want to do it but causes fig to move to the end :/
 \setlength{\columnsep}{3mm}% anyway it's too late for \columnsep to affect anything at this point
-\setlength{\intextsep}{1mm}
+\setlength{\intextsep}{3mm}
 %
 \begin{wrapfigure}{r}{2.8cm}
-\includegraphics[width=.15\textwidth,trim=0mm 0mm 2mm 15mm]{img/par-A.pdf}
+\includegraphics[width=.15\textwidth,trim=0mm 0mm 2mm 0mm]{img/par-A.pdf}
 \caption[An example diagram]{\label{evaluation:par-A-diag}\\
   An example \\diagram (from~\cite{PPoPP16/Chowdhury})}
 \end{wrapfigure}
 %
 %\endgroup
 
+\cbstart\diffnote{\vspace{2mm}explained the numbers, and admitted the need for a more thorough study}%
 We compare the sizes of these diagrams, which we label ``\# steps'', with the number of tactic
 applications required to derive the respective implementation in Bellmania.
 The results of the comparison are given in \Cref{evaluation:user effort}, where ``\# phases''
@@ -214,6 +219,19 @@ indicates how many recursive subroutines are included in the algorithm descripti
 The development size is within $2\times$ of the diagrams' size in most cases, peaking at $3\times$.
 
 Diagrams and complete Bellmania transcript for the running example are included in \Cref{annex:example:paren}.
+
+Admittedly, the measured volume ratio provides a crude proxy for usability.
+A controlled user study should be run to provide true evidence,
+but that goes beyond the scope of this paper.
+Still, the results are reassuring since through the course of developing the
+tool we were able to reduce the number of reasoning steps from hundreds to
+a few dozens, and also make them high-level.
+We were also able to detect mistakes in existing (hand written) formulations
+of divide-and-conquer algorithms, that eluded discovery by experts.
+The additional examples in the appendix and the in accompanying technical report
+should furnish sufficient intuition to conceive a qualitative opinion on
+the efficacy of the approach and the prototype.
+\cbend
 
 %~\\~  % waste to lines to get to the end of the wrapfig
 % (\vspace doesn't work because wrapfig only counts actual lines)
