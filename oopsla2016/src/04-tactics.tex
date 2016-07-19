@@ -16,10 +16,12 @@ We associate with each tactic some \newterm{proof obligations}, listed after the
 in the following paragraphs.
 When applying a tactic instance, these obligations are also instantiated and given to an automated prover. 
 If verified successfully, they entail the validity of the instance.
+\cbstart\diffnoteup{\vspace{-.5cm}a note about incompleteness, and also where the obligations come from}%
 In some cases, the obligations are strictly stronger than the validity of the rewrite,
 which means the TAE is not complete and may fail to apply a valid transformation.
 It is important to note that the user does not have to specify, or in fact be aware of,
 any proof obligations; they are defined as part of the tactic library.
+\cbend
 
 The following are the major tactics provided by our framework. 
 More tactic definitions are given in \Cref{annex:more tactics}.
@@ -38,10 +40,13 @@ More tactic definitions are given in \Cref{annex:more tactics}.
 $f ~=~ \big[f\big]_{X_1} ~\Big/~ \big[f\big]_{X_2} ~\Big/ ~\cdots~ \Big/~ \big[f\big]_{X_r}$\hspace{2mm}
 
 This tactic partitions a mapping into sub-regions. Each $X_i$ may be a cross product ($\times$)
-according to the arity of $f$.
+according to the arity of $f$.%
+\cbstart\diffnote{example for $X_i$'s}
 For example, $X_1=J_0\times J_0$, $X_2=J_0\times J_1$, $X_3=J_1\times J_1$.
+\cbend
 
-\Obligations just the above equality.
+\Obligations \cbstart\diffnote{removed the confusing "Obligations: tactic."}just the equality above.
+\cbend
 
 Informally, the recombination expression is equal to $f$
 when $X_{1..r}$ ``cover'' all the defined points of $f$ (also known as the \newterm{support} of $f$).
@@ -52,6 +57,7 @@ $\fix (f\applt g) ~=~ (\fix f) ~\applt~ \big(\psi\mapsto \fix (\widehat\psi\appl
 \\
 where $\widehat\psi$ abbreviates $\theta\mapsto\psi$, with fresh variable $\theta$.
 
+\cbstart\diffnote{made this clearer with a concrete example and an illustration}%
 This tactic is used to break a long (recursive) computation into steps. $\psi$ is bound the result of the first computation ($f$), and then used as the input for the second step ($g$).
 Typically, we apply \textsf{Stratify} to a computation that has previously been \textsf{Slice}d (although that does not have to be the case); to understand the efficacy of \textsf{Stratify}, we present a minimal example.
 
@@ -97,6 +103,7 @@ On the one hand, $f\applt g = \theta\mapsto\big[[t]_{I_0}\big/[\psi]_{I_1}\big]_
 modulo some simplification, is equivalent to the original term $\theta\mapsto[t]_{I_0}\big/[t]_{I_1}$.
 On the other hand, when instantiating \textsf{Stratify}, $f\,\theta$ becomes $\widehat\psi\,\theta$, 
 which is equivalent to $\psi$, giving the term for the second phase.
+\cbend
 
 $\psi$ may be fresh, or it may reuse a variable already occurring in $g$, rebinding those occurrences.
 This precisely encodes our intuition of computing the first fixed point \textit{in situ},
@@ -254,15 +261,16 @@ As mentioned in \Cref{overview}, the first step Richard does is to apply
 
 With repeated applications of {\sf Slice}, a program may grow to become
 quite large; to make large program terms easy to read and refer to, we provide
-boxed numerals \qbox1, \qbox2, etc. as labels for sub-terms, using them as abbreviations for these terms where they
+boxed numerals \cbstart\qbox1, \qbox2, etc.\cbend{} as labels for sub-terms, using them as abbreviations for these terms where they
 occur in the containing expression.
 
 In addition, to allude to the reader's intuition, expressions of the form
 $a/b/c/d$ will be written as $\quadrants*{a}{b}{c}{d}$ when the slices
-represent quadrants. The types of the quadrants should be clear from the context;
-here, their types are 
+represent quadrants. \cbstart The types of the quadrants should be clear from the context;
+here, their types are\cbend\diffnoteup{\vspace{-1cm}emphasized the role of boxed literals in the development}%
 \vspace{-.5em}
-\[\htypednp{\qbox1}{\_{\times}J_0{\times}J_0\to\R},~ \htypednp{\qbox2}{\_{\times}J_0{\times}J_1\to\R},~ \htypednp{\qbox4}{\_{\times}J_1{\times}J_1\to\R}\]
+\[\htypednp{\qbox1}{\_{\times}J_0{\times}J_0\to\R},~ \htypednp{\qbox2}{\_{\times}J_0{\times}J_1\to\R},~ \htypednp{\qbox4}{\_{\times}J_1{\times}J_1\to\R}\]%
+%
 
 The type of $\theta$ in \Cref{tactics:A sliced} is still
 $\Jsquaredlt\to\R$. In order to avoid too much clutter caused by type terms,
@@ -381,7 +389,9 @@ Richard defines a new routine $B^{J_0J_1}$ by carving the respective
 subexpression from the developed program $A^J$.
 Notice that $B$ has two parameters, because it depends not only on the index
 range, but also on the particular partitioning.
+\cbstart\diffnote{was not clear before}%
 Next, Richard will carry on developing $B$ in a similar manner.
+\cbend
 
 \medskip
 \hrule

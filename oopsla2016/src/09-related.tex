@@ -1,0 +1,59 @@
+\section{Related Work}
+\label{related}
+
+Classical work by Smith \etal~\cite{AI85/Smith} presents rule-based transformation, stringing it
+tightly with program verification. This lay the foundation for semi-automatic programming~\cite{CPS91/Blaine,TSE90/Smith,TPHOLs96/Butler}.
+More recently, a similar approach was introduced into Leon~\cite{OOPSLA13/Kneuss}, leveraging deductive
+tools as a way to boost {\cegis}, thereby covering more programs. Bellmania takes a dual approach, where
+automated techniques based on SMT are leveraged to support and improve deductive synthesis.
+
+Inductive synthesis has been the focus of renewed interest thanks to the discovery of techniques that leverage SAT/SMT solvers to symbolically represent and search very large spaces of possible programs~\cite{APLAS09/Solar-Lezama, PLDI11/Gulwani, Onward13/Torlak},
+and the use of counterexample-guided inductive synthesis ({\cegis}), which allows one to leverage inductive techniques to find programs that satisfy more general specifications. 
+Our work is also inspired by the StreamBit project~\cite{PLDI05/Solar-Lezama}, which
+introduced the idea of transformation rules with missing details that can be inferred by a symbolic search procedure.
+
+Fiat~\cite{POPL15/Delaware} is another recent system that admits stepwise transformation of specifications
+into programs via a refinement calculus. While Bellmania offloads proofs to SMT and \Sketch{},
+Fiat uses decision procedures in Coq,
+reling heavily on deductive reasoning and uses Ltac scripts for automation.
+The intended users of Fiat is regular software developers who invoke pre-packaged scripts,
+whereas Bellmania targets domain experts who exercise more control over the generated code.
+
+Broadly speaking, the Bellmania system could have been implemented as a library on top of a framework
+such as Coq or Why3~\cite{ESOP13/Filliatre} using binding to SMT solvers provided by these frameworks.
+The decision not to do so was merely a design choice, to facilitate easier integration with our UI and with \Sketch{}.
+
+Polyhedral compilers offer some optimizations for the same domain of problem via tiling~\cite{HPC10/Pouchet,PLDI08/Bondhugula}.
+While showing significant speedups, these compilers cannot produce divide-and-conquer optimizations,
+which were proved to be more effective by \cite{IPDPS15/Tithi}.
+
+Autogen~\cite{PPoPP16/Chowdhury} is a most recent advance that employs dynamic analysis to discover
+a program's access pattern and learn a decomposition that can be used to generate a divide-and-conquer
+implementation. The two methods are complementary,
+\cbstart\diffnote{this seemed to have been unclear and it is a crucial difference between the two methods}
+since Autogen does not provide correctness guarantees:
+it works for a class of problems that obey a ``small world assumption'', meaning that all possible behaviors are demonstrated by traces of bounded, known size.
+Crucially, in Autogen it is the user's responsibility to determine whether the input problem falls within this category;
+if it does not, Autogen will not fail but instead generate an incorrect implementation.
+This is a fundamental difference stemming from Autogen's use of dynamic traces \textit{vs.} purely deductive reasoning in Bellmania.
+Still, the user might be able to use insights from Autogen to develop verified code in Bellmania,
+where size bounds are not required.
+\cbend
+
+Pu \etal{}~\cite{OOPSLA11/Pu} have shown that recurrences for DP can be generated automatically from a non-recursive specification of the optimization problem.
+This is orthogonal; in Bellmania, the recurrence is the input, and the output is an efficient divide-and-conquer implementation.
+\cbstart
+Obviously, the recurrence produced by \cite{OOPSLA11/Pu} can be used as input to Bellmania,
+providing an even higher-level end-to-end reasoning.
+\cbend
+
+\begin{comment}
+Our ``$\big/$'' operator can be compared to the separating disjunction ``$\ast$'' of Separation Logic~\cite{LICS02/Reynolds},
+used to frame parts of the dynamic heap (which can be thought of as one large array),
+in particular while checking that a program only accesses the parts allocated to it in its precondition.
+While $\ast$ has the semantics of an existentially quantified predicate, Bellmania uses type qualifiers
+to explicitly specify a formula defining each part. In this sense, it is more closely related to
+Region Logic~\cite{ECOOP08/Banerjee}. These formulas make encoding in first-order logic straightforward,
+and the use of Liquid Types allows for any number of dimensions and for decidable checking of domain inclusion
+and disjointness.
+\end{comment}

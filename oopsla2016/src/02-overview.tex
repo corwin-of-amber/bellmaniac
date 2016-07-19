@@ -13,7 +13,7 @@ $\Pi(a_{i..(k-1)})$ by $\Pi(a_{k..(j-1)})$ is given by $w_{ikj}$. The specificat
 the values $x_i$ and  $w_{ikj}$ are inputs to the algorithm, and the output is a table $G$, where each element $G_{ij}$ is the lowest cost for parenthesizing $a_{i..(j-1)}$, with $G_{0n}$ being the overall optimum.
 
 \begin{figure}[b]
-\begin{tabular}{@{\hspace{-4pt}}r@{~}l@{}}
+\begin{tabular}{@{\hspace{-4pt}}r@{~~~}p{5cm}@{\hspace{-4pt}}}
 \begin{tikzpicture}[x=4.1mm,y=4.1mm,baseline=(center), remember picture]
   \coordinate(center) at (3,3);
   \def\n{7}  % actually n+1 but let's not be nitpicky
@@ -36,10 +36,11 @@ the values $x_i$ and  $w_{ikj}$ are inputs to the algorithm, and the output is a
   \draw[->] (G.south) -- +(0,-1.5) node[anchor=north] {\small $i$};
 \end{tikzpicture}
 &
+\vspace{-1.5cm}
 \small
 $
-\begin{array}{l@{}}
-	\tikz[overlay, remember picture]{\draw[BrickRed] (-.5mm,.1) -- (Gij);}
+\begin{array}{@{}l@{}}
+	\tikz[overlay, remember picture]{\draw[BrickRed] (-.5mm,0) -- (Gij);}
 	G_{ij} ~=~ \\
 	~
 	\begin{cases}
@@ -48,6 +49,16 @@ $
 	\end{cases}
 \end{array}
 $
+
+\vspace{6mm}
+% legend
+\cbstart
+\begin{tikzpicture}
+  \node(base)[draw,fill=black!10!white,label=right:{\fontsize{8}{8}\selectfont base case}] {};
+  \node(dep)[right=1.5cm of base,draw,fill=blue!20!white,label=right:{\fontsize{8}{8}\selectfont dependencies}] {};
+  \node(emp)[right=1.8cm of dep,draw=black!25!white,label=right:{\fontsize{8}{8}\selectfont empty}] {};
+\end{tikzpicture}
+\cbend
 \end{tabular}
 \caption{Recurrence equation and cell-level dependencies.}
 \label{overview:paren spec}
@@ -210,8 +221,8 @@ This is handled automatically by the code generator.
     \EndFor
   \EndFor
 \end{algorithmic}
-\caption{\label{overview:breakdown}
-   Parenthesis --- Sliced and Stratified}
+\caption[t]{\label{overview:breakdown}
+   \cbstart Parenthesis\cbend{} --- Sliced and Stratified}
 \end{algorithm}
 
 
@@ -337,19 +348,21 @@ tactic applications represent valid rewritings of the program. Finally, the
 programs created this way are transferred to a compilation back-end, where
 some automatic static analysis is applied and then executable (C++) code is emitted.
 
+\cbstart\diffnote{made the point clear regarding verification vs. certification, and what is missing}%
 The trusted core is small, comprising of:
 \begin{enumerate*}[label=(\textit{\alph*})]
  \item a type checker (see \Cref{lang:types}), 
  \item a term substitution procedure (see \Cref{tactics}),
  \item a formula simplifier (see \Cref{automated:simplification}),
  \item the SMT solver, and
- \item the compiler.
+ \item the compiler (see \Cref{codegen}).
 \end{enumerate*}
 In its current version, Bellmania does not emit machine-checkable
 proofs; to the extent that SMT solvers can emit such proofs,
 these could be adapted to a proof of refinement (in the sense of \cite{POPL15/Delaware}).
 The compiler has to be formally verified separately.
 These two tasks require considerable engineering effort and are left for the future.
+\cbend
 
 \begin{figure}
 \vspace{-.5em}% why is there extra space above lstlisting?
@@ -389,6 +402,7 @@ in \Cref{annex:example:paren}.
   Interaction workflow in Bellmania.}
 \end{figure}
 
+\cbstart\diffnote{added subsection (incl. figure)}%
 The intended use pattern for Bellmania is by repeatedly issuing
 commands to apply tactics inside a REPL that keeps showing to the
 user the resulting \newterm{program term} (\Cref{overview:flow}).
@@ -398,6 +412,8 @@ by the system, producing a term.
 This term then becomes the focus of the development, and further transformations
 apply to it; the user issues \newterm{apply tactic} commands, one at a time,
 using a syntax similar to \Cref{overview:script}.
+Tactic applications are also typechecked, as well as the resulting program,
+since type information can be refined by including the context (see \Cref{lang:types}).
 During the development, sub-computations may be discovered that require
 further drilling down (such as ``B'' in the last example).
 These result in \newterm{derived} terms that take the focus until they, too,
@@ -406,3 +422,8 @@ When the program and all its sub-computations are fully developed and
 expressed as a divide-and-conquer algorithm, the user invokes the compiler
 back-end that emits C++ code.
 
+In the following sections, we describe the programming language and
+formally define the tactics that were used in the example above.
+We then show how to formalize the same intuition as we had there,
+using this new instrument.
+\cbend

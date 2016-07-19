@@ -1,0 +1,37 @@
+\medskip\cbstart
+\section{Further Improvements}
+\label{further}
+
+\diffnote{section added in response to questions about possible extensions}%
+Overall usability can be greatly enhanced with some syntactic sugar
+for program terms and tactic application commands.
+The current syntax is part of a proof-of-concept UI.
+User experience can also be enriched with direct manipulation gestures,
+such as pointing to a sub-term in the program rather than using boxed
+literals to refer to them, and ``carving'' sub-computations from the
+current term by selecting and dragging.
+
+The tactic library can be extended with a number of important optimization
+for this domain. \newterm{Dimensionality reduction} is a technique that
+allows to lower an $n$-dimensional DP problem to $n-1$ dimensions by
+computing layer by layer.
+This has an acute difference from merely buffering the most recent layer;
+without going too much into details, we point out that intermediate layers
+computed this way may differ from the corresponding projection of the
+$n$-dimensional table, while the final layer is identical.
+This tactic can enable a whole sub-class of high dimension DP problems.
+
+Some low-level tactics can boost performance as well: the Protein benchmark
+runs faster using the hand-coded version due to a subtle case splitting
+around the innermost loop, that reduces an expression of the form
+$min(k,2j-i+1)$ to just $2j-i+1$, allowing in turn to factor an addend
+out of the loop ($k$ is the innermost loop variable).
+Doing the same optimization by hand on the code produced by Bellmania leads
+to the same speedup, but this boost cannot be claimed until it is automated.
+
+Z-ordering of the array is also a general technique and can be automated
+as part of the compiler back-end. However, this and other optimizations (such
+as vectorization and copy optimization mentioned in \Cref{codegen}) are
+delicate and sometimes even degrade performance, so they better be auto-tuned
+rather than applied heuristically.
+\cbend
