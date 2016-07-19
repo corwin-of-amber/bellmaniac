@@ -41,7 +41,7 @@
   \draw (e) -- (\columnwidth,0);
 \end{tikzpicture}%
 \nopagebreak%
-\medskip%
+\vspace{.3em}%
 }
 
 \newenvironment{transcript}{\bgroup\sf\setlength{\parskip}{2mm}}{\egroup}
@@ -53,6 +53,49 @@
 \newcommand{\lbox@tiny}[1]{ {\setlength{\fboxsep}{1pt}\fbox{\rm\tiny #1}} }
 \newcommand\lbox{\@ifstar\lbox@tiny\lbox@small}
 \makeatother
+
+% Bellmania code listings
+\lstdefinelanguage{bellmania}{
+  literate=*%
+    {->}{$\rightarrow$}2
+    {|->}{$\mapsto$}1
+    {(small)|->}{$\scriptstyle\mapsto$}1
+    {\\theta}{$\theta$}1
+    {\\psi}{$\psi$}1
+    {<|}{$\langle$}1
+    {|>}{$\rangle$}1
+    {*}{{\raisebox{1pt}{\scalebox{0.75}{$\times\,$}}}}1
+    {_0}{{\textsubscript{0}}}1
+    {_1}{{\textsubscript{1}}}1
+    {_2}{{\textsubscript{2}}}1
+    {_3}{{\textsubscript{3}}}1
+    {_4}{{\textsubscript{4}}}1
+    {_5}{{\textsubscript{5}}}1
+    {[A]}{{$\lbox A$}}2
+    {[B]}{{$\lbox B$}}2
+    {[C]}{{$\lbox C$}}2
+    {[D]}{{$\lbox D$}}2
+    {[E]}{{$\lbox E$}}2
+    ,
+  keepspaces,
+  basewidth = {.48em},
+  columns=fixed,
+  basicstyle=\ttfamily
+}
+
+
+\lstset{
+  columns=flexible,
+  basicstyle=\fontfamily{lmss}\selectfont\small,
+  numbers=none,
+  numbersep=3pt,
+  numberstyle=\tiny,
+  stepnumber=1,
+  tabsize=2,
+  breaklines=false,
+  breakatwhitespace=true,
+  mathescape=true
+}
 
 \pgfdeclarelayer{background layer}
 \pgfdeclarelayer{foreground layer}
@@ -196,31 +239,6 @@
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
 \definecolor{mauve}{rgb}{0.58,0,0.82}
 \definecolor{light-gray}{gray}{0.80}
-
-\usepackage{listings}
-\lstdefinelanguage{sketch}{
-  morekeywords = {
-       bool, harness, data, int, bool, adt, new, return, assert , assume, let, case, switch},
-  morecomment=[s]{/*}{*/},
-}
-
-
-\lstset{
-  language=sketch,
-  columns=flexible,
-  basicstyle=\fontfamily{lmss}\selectfont\small,
-  numbers=none,
-  numbersep=3pt,
-  numberstyle=\tiny,
-  stepnumber=1,
-  tabsize=2,
-  breaklines=false,
-  breakatwhitespace=true,
-  commentstyle=\color{cyan},
-  mathescape=true,
-  escapeinside={\%*}{*)}
-}
-
 
 
 

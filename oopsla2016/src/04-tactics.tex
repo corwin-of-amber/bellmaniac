@@ -15,9 +15,11 @@ be equivalent to the previous one. We refer to this sequence by the name \newter
 We associate with each tactic some \newterm{proof obligations}, listed after the word \textbf{\textit{Obligations}}
 in the following paragraphs.
 When applying a tactic instance, these obligations are also instantiated and given to an automated prover. 
-If verified successfully, they entail the validity of the instance. 
-Note that the equality itself can be used as the tactic's proof obligation, if it is easy enough to prove automatically; 
-in such cases we write ``\textbf{\textit{Obligations}:} tactic.''
+If verified successfully, they entail the validity of the instance.
+In some cases, the obligations are strictly stronger than the validity of the rewrite,
+which means the TAE is not complete and may fail to apply a valid transformation.
+It is important to note that the user does not have to specify, or in fact be aware of,
+any proof obligations; they are defined as part of the tactic library.
 
 The following are the major tactics provided by our framework. 
 More tactic definitions are given in \Cref{annex:more tactics}.
@@ -37,8 +39,9 @@ $f ~=~ \big[f\big]_{X_1} ~\Big/~ \big[f\big]_{X_2} ~\Big/ ~\cdots~ \Big/~ \big[f
 
 This tactic partitions a mapping into sub-regions. Each $X_i$ may be a cross product ($\times$)
 according to the arity of $f$.
+For example, $X_1=J_0\times J_0$, $X_2=J_0\times J_1$, $X_3=J_1\times J_1$.
 
-\Obligations tactic.
+\Obligations just the above equality.
 
 Informally, the recombination expression is equal to $f$
 when $X_{1..r}$ ``cover'' all the defined points of $f$ (also known as the \newterm{support} of $f$).
@@ -49,26 +52,58 @@ $\fix (f\applt g) ~=~ (\fix f) ~\applt~ \big(\psi\mapsto \fix (\widehat\psi\appl
 \\
 where $\widehat\psi$ abbreviates $\theta\mapsto\psi$, with fresh variable $\theta$.
 
-This tactic is used to break a long (recursive) computation into simpler sub-computations.
+This tactic is used to break a long (recursive) computation into steps. $\psi$ is bound the result of the first computation ($f$), and then used as the input for the second step ($g$).
+Typically, we apply \textsf{Stratify} to a computation that has previously been \textsf{Slice}d (although that does not have to be the case); to understand the efficacy of \textsf{Stratify}, we present a minimal example.
+
+Suppose the program $\fix \theta{\,\mapsto\,}\big([t]_{I_0}\big/[t]_{I_1}\big)$, where $t=i\mapsto\theta_{i-1}+1$.
+We would like to obtain a program that computes the lower half $I_0$ first, then the upper half $I_1$; that is, 
+$\big(\fix\theta\mapsto[t]_{I_0}\big/[\psi]_{I_1}\big) \applt
+  \big(\psi \mapsto \fix\theta\mapsto[\psi]_{I_0}\big/[t]_{I_1}\big)$.
+
+\begin{center}
+\begin{tikzpicture}[node distance=.5cm, >=latex,
+  array/.style={rectangle,draw,
+                minimum width=2cm, minimum height=5mm},
+  div/.style={shorten <=.5pt,shorten >=.5pt},
+  block/.style={rectangle,fill=Orange, fill opacity=0.1, inner sep=0pt},
+  src/.style={rounded corners=3pt,draw,dotted,fill=Orange, fill opacity=0.1, inner sep=1.5pt}]
+  \node(s0)[array] {};
+  \draw[div] (s0.north) -- (s0.south);
+  
+  \node(applt)[right=of s0] {$\applt$};
+  
+  \node(s1)[array,right=of applt] {};
+  \draw[div] (s1.north) -- (s1.south);
+  
+  % labels
+  \node(s0lbl)[below=0mm of s0] {$\fix\theta\mapsto[t]_{I_0}\big/[\psi]_{I_1}$};
+  \node(s1lbl)[below=0mm of s1,anchor=140] {$\psi \mapsto \fix\theta\mapsto[\psi]_{I_0}\big/[t]_{I_1}$};
+  
+  % decoration
+  \node(s0blk)[block,src,fit={(s0.north west) (s0.south)}] {};
+  \node(s1blk)[block,fit={(s1.north) (s1.south east)}] {};
+  
+  \draw (s0blk.20) edge[->,out=10,in=160] (s1blk.center);
+\end{tikzpicture}
+\end{center}
+
+This can be obtained by choosing 
+$f=\theta\mapsto[t]_{I_0}\big/[\psi]_{I_1}$
+and
+$g=f\,\theta \mapsto [f\,\theta]_{I_0}\big/[t]_{I_1}$.
+
+Notice how $f\,\theta$ is used as a placeholder for the sub-computation $f$ in $g$.
+On the one hand, $f\applt g = \theta\mapsto\big[[t]_{I_0}\big/[\psi]_{I_1}\big]_{I_0}\big/[t]_{I_1}$, which,
+modulo some simplification, is equivalent to the original term $\theta\mapsto[t]_{I_0}\big/[t]_{I_1}$.
+On the other hand, when instantiating \textsf{Stratify}, $f\,\theta$ becomes $\widehat\psi\,\theta$, 
+which is equivalent to $\psi$, giving the term for the second phase.
+
 $\psi$ may be fresh, or it may reuse a variable already occurring in $g$, rebinding those occurrences.
-An example is required to understand why this is useful.
-
-Let $h=\theta\mapsto\big([t_0]_{I_0}\big/[t_1]_{I_1}\big)$, where $t_{0,1}$ are terms with free variable $\theta$.
-Stratification is done by setting $f=\theta\mapsto t_0$ and
- $g=f\,\theta\mapsto [f\,\theta]_{I_0}\big/[t_1]_{I_1}$. We get $\fix h=\fix(f\applt g)$; {\sf~Stratify}
-breaks it into $\fix f$ and $\psi\mapsto \fix (\widehat\psi\applt g)$,
-which get simplified with $\beta$-reduction, giving the expression the form:
-
-\vspace{-5mm}
-\[\big(\fix(\theta\mapsto t_0)\big) ~\applt~ 
-  \Big(\psi\mapsto \fix \big(\theta\mapsto[\psi]_{I_0}\big/[t_1]_{I_1}\big)\Big)\]
-
-\vspace{-2mm}
-This precisely encodes our intuition of computing the fixed point of $t_0$ first,
-then $t_1$ based on the result of $t_0$.
+This precisely encodes our intuition of computing the first fixed point \textit{in situ},
+then the second one based on the result of the first.
 
 \Obligations Let $h=f\applt g$ and $g'=\psi\mapsto\widehat\psi\applt g$. Let $\theta,\zeta$ be
-fresh variables.
+fresh variables; then,\vspace{-.3em}
 \begin{equation}
 \renewcommand\arraystretch{1.5}
 \begin{array}{l@{\qquad}l}
@@ -80,6 +115,7 @@ g'\,(f\,\theta)\,\theta ~=~ h\,\theta
 
 %Proof is given in \Cref{tactics:soundness}.
 
+\vspace{.1em}
 \tacticdefcompact{Synth} \label{tactics:Synth}
 $\fix\big(h_1 ~\big/~ \cdots ~\big/~ h_r\big) ~=~ 
   f_1 :: \T_1 ~\big/~ \cdots ~\big/~ f_r :: \T_r$
@@ -129,6 +165,7 @@ Proof is given in \Cref{annex:proof}.
 
 \newcommand\vtyped[2]{\underset{\scriptscriptstyle ( #2 )}{ #1 }}
 \newcommand\htyped[2]{({#1} : {\scriptstyle{#2}})}
+\newcommand\htypednp[2]{{#1} : {\scriptstyle{#2}}}
 
 % \quadrants{A}{B}{C}{D}   -- normal sized quadrants
 % \quadrants*{A}{B}{C}{D}  -- small quadrants
@@ -155,6 +192,7 @@ Proof is given in \Cref{annex:proof}.
 The na\"ive implementation of \Cref{intro:naive}
 can be written as
 %
+\newcommand\Jsquaredltsml{J^2_{\mbox{\fontsize{6}{6}\selectfont \hspace{.5pt}<}}}
 \begin{equation}
   \renewcommand\arraystretch{1.2}
   \begin{array}{@{}r@{}l@{}}
@@ -163,7 +201,7 @@ can be written as
 %
     A^{^{J}} ~=~ 
 	      & \psi\mapsto \fix 
-	        \htyped{\theta}{J^2_{\fontsize{20}{22}\selectfont <}\to\R}~ \htyped{i}{J} ~ \htyped{j}{J}
+	        \htyped{\theta}{\Jsquaredltsml\to\R}~ \htyped{i}{J} ~ \htyped{j}{J}
 	        ~\mapsto \\
 	      &
           ~~
@@ -216,22 +254,25 @@ As mentioned in \Cref{overview}, the first step Richard does is to apply
 
 With repeated applications of {\sf Slice}, a program may grow to become
 quite large; to make large program terms easy to read and refer to, we provide
-boxed numerals as labels for sub-terms, using them as abbreviations where they
+boxed numerals \qbox1, \qbox2, etc. as labels for sub-terms, using them as abbreviations for these terms where they
 occur in the containing expression.
 
 In addition, to allude to the reader's intuition, expressions of the form
 $a/b/c/d$ will be written as $\quadrants*{a}{b}{c}{d}$ when the slices
-represent quadrants.
+represent quadrants. The types of the quadrants should be clear from the context;
+here, their types are 
+\vspace{-.5em}
+\[\htypednp{\qbox1}{\_{\times}J_0{\times}J_0\to\R},~ \htypednp{\qbox2}{\_{\times}J_0{\times}J_1\to\R},~ \htypednp{\qbox4}{\_{\times}J_1{\times}J_1\to\R}\]
 
 The type of $\theta$ in \Cref{tactics:A sliced} is still
-$J^2{\cap}{<}\to\R$. In order to avoid too much clutter caused by type terms,
+$\Jsquaredlt\to\R$. In order to avoid too much clutter caused by type terms,
 the Bellmania UI uses a heuristic and only displays some of them. By hovering,
 the user can inspect types that are not shown.
 
 The result is a functional representation of \Cref{overview:logical-slice-stratify}$(a)$;
-with the added term $\psi_{ij}$ it allows $A$ to accept an input array as a parameter
+with the added term $\psi_{ij}$ it allows $A$ to accept an input array as an argument
 and minimize values that are already stored in it; not quite crucial for this particular
-instance where the input is just $\Psi$, but in some cases it will become necessary
+instance where the input is just $\Psi$, but very useful in cases where it is necessary
 to split a minimization operation into several sub-ranges, to achieve the desired
 memory locality.
 
@@ -336,13 +377,15 @@ let us assume he chooses the former.
 
 For $\qbox2$\,, the situation is slightly more complicated because no instance of the routine
 $A$ matches the specification and there are no other routines to choose from.
-Richard first defines a new routine $B^{J_0J_1}$ by carving the respective
+Richard defines a new routine $B^{J_0J_1}$ by carving the respective
 subexpression from the developed program $A^J$.
 Notice that $B$ has two parameters, because it depends not only on the index
 range, but also on the particular partitioning.
+Next, Richard will carry on developing $B$ in a similar manner.
 
 \medskip
 \hrule
+\medskip
 
 \subsection{Synthesis-powered {\sf Synth} Tactic}
 \label{tactics:synthesis}

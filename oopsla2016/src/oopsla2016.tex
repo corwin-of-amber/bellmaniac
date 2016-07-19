@@ -1,5 +1,5 @@
 \documentclass[10pt,numbers]{sigplanconf}
-\usepackage[1stsubmission]{oopsla2016}
+\usepackage[2ndsubmission]{oopsla2016}
 
 % The following oopsla2016 options are available:
 %
@@ -17,19 +17,38 @@
 \usepackage{graphicx}
 \usepackage[usenames,dvipsnames]{xcolor}
 \usepackage{verbatim}
+\usepackage{listings}
+\usepackage[inline]{enumitem}
 \usepackage{relsize}
-\usepackage{ifluatex}
 \usepackage{xspace}
 \usepackage{fix-cm}  % this is for math inside \scriptsize text
+\usepackage{wrapfig}
+\usepackage{mychangebar}
+
+%%%  diff hacks  %%%
+% configure changebar
+\setlength\changebarsep{1mm}
+% configure marginpar
+\setlength\marginparsep{2mm}
+\setlength\marginparwidth{1.5cm}
+\newcommand\diffnote[1]{\hspace{0pt}\marginpar{\hbadness=10000\small #1}}
+\newcommand\diffnoteup[1]{\marginpar{\hbadness=10000\small #1}}
+
+
+%\makeatletter
+%\def\@cb@firstcolumntrue{}
+%\def\@cb@firstcolumnfalse{}
+%\makeatother
 
 \usepackage{tikz}
-\usetikzlibrary{fit,positioning,patterns,shapes,shapes.multipart}
+\usetikzlibrary{fit,positioning,patterns,shapes,shapes.multipart,calc}
 \usepackage{pgfplots}
 \usepackage{pgfplotstable}
 \pgfplotsset{compat=1.12} 
 
 \include{macros}
 
+\newif\iftr
 
 \begin{document}
 
@@ -49,12 +68,17 @@
 \title{Deriving Divide-and-Conquer Dynamic Programming Algorithms Using 
   Solver-Aided Transformations}
 
-\authorinfo{Name1}
-           {Affiliation1}
-           {Email1}
-\authorinfo{Name2\and Name3}
-           {Affiliation2/3}
-           {Email2/3}
+\authorinfo{Shachar Itzhaky\and 
+            Rohit Singh\and
+            \makebox[6cm][c]{Armando Solar-Lezama}\and 
+            Kuat Yessenov\and 
+            Yongquan Lu\and
+            Charles Lieserson}
+           {MIT}
+           {\vspace{-2em}}
+\authorinfo{Rezaul Chowdhury}
+           {Stony Brook University, NY}
+           {}
 
 \maketitle
 
@@ -68,7 +92,7 @@ Semantic information is encoded into program terms through the use of refinement
 
 In this paper, we develop the technique in the context of a system called Bellmania that uses solver-aided tactics to derive parallel divide-and-conquer implementations of dynamic programming algorithms that have better locality and are significantly more efficient than traditional loop-based implementations. Bellmania includes a high-level language for specifying dynamic programming algorithms and a calculus that facilitates gradual transformation of these specifications into efficient implementations.
 These transformations formalize the divide-and-conquer technique; a visualization interface helps users to interactively guide the process,
-while an SMT-based back-end certifies each step
+while an SMT-based back-end verifies each step
 and takes care of low-level reasoning required for parallelism.
 
 We have used the system to generate provably correct implementations of several algorithms, including some important algorithms from computational biology, and show that the performance is comparable to that of the best manually optimized code.

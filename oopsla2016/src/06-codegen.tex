@@ -10,13 +10,18 @@ and figures out the direction of each loop (ascending or descending).
 In addition, inter-quadrant dependencies can be used to determine which computations can be run in parallel (at the granularity of
 function calls) based on a fork-join model;
 two calls are considered non-conflicting if each write region is disjoint from the others' read and write regions.
+Type information is heavily utilized here: occurrences of array variables signify reads,
+so their types denote (an over-approximation of) the region being ``read from'',
+whereas return types denote the region being ``written to''.
 Disjointness can be decided using propositional logic through the predicate abstraction induced by type qualifiers.
 
 The compiler also employs more traditional optimization techniques
 to further simplify the code and improve its running time:
 (1) lifts conditionals to loop bounds via simple interval analysis, %to optimize the loop bounds and performs some traditional compiler %transformations to reduce the number of iterations and comparisons,
 (2) eliminates redundant iterations and comparisons that can be resolved at compile time,
-and (3) identifies loops that read non-contiguous memory blocks and applies copy optimization~\cite{ASPLOS91/Lam} automatically to better utilize caches. Examples of generated code are included in the supplemental material with this submission.
+(3) identifies loops that read non-contiguous memory blocks and applies copy optimization~\cite{ASPLOS91/Lam} automatically to better utilize caches. Examples of generated code are included in the supplemental material with this submission,
+and 
+(4) follows a simple heuristic that inserts loop vectorization directives.
 
  
 %Use Cilk for parallelization - references later

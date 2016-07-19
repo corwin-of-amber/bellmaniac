@@ -140,11 +140,13 @@ We also adopt some syntactic sugar to make complex terms more manageable:
 \label{lang:types}
 
 We extend the type system with predicate abstraction in the form of logically qualified data types 
-(Liquid Types~\cite{PLDI08/Rondon}). These are refinement types restricted via a set of abstraction predicates,
+(Liquid Types~\cite{PLDI08/Rondon}). 
+These are refinement types that provide a natural encoding of predicate abstraction
+by restricting refinements to set of abstraction predicates,
 called \newterm{qualifiers}, which are defined over the base types.
-Contrary to the general use of refinement types, the purpose of these qualifiers is not to
+Contrary to their general use, the purpose of these qualifiers in Bellmania is not to
 check a program for safety and reject ill-typed programs, but rather to serve as annotations for
-tactics, to convey information to the solver for use in the proof, and later to help the compiler
+tactics, to convey information to the solver for use in proofs, and later to help the compiler
 properly emit memory access and parallelization primitives.
 
 More specifically, typing $f : \{v:\T_1 ~|~ P(v)\}\to\T_2$ would mean that $f\,x$
@@ -161,7 +163,7 @@ limit the use of qualifiers, allowing only the following forms:
 
 \begin{itemize}
   \item $\{v:\T ~|~ P(v)\}$, abbreviated as $\T\cap P$. When the signature of $P$ is known (which is
-  usually the case), it is enough to write $P$.
+  usually the case), it is enough to write the type as $P$.
   \item $\{v:\T ~|~ P(v)\land Q(v)\}$, abbreviated as $\T\cap P\cap Q$, or just $P\cap Q$. This extends
   to any number of conjuncts of the same form.
   \item $(x : \T_1) \to \{v:\T_2 ~|~ R(x,v)\} \to \T_3$, abbreviated as $\big((\T_1\times\T_2)\cap R\big)\to\T_3$.
@@ -172,7 +174,7 @@ limit the use of qualifiers, allowing only the following forms:
 
 
 \medskip  
-The type refinement constructors $\cap$ and $\times$ may be composed to create \newterm{droplets},
+The type refinement constructors $\cap$ and $\times$ may be composed to create \newterm{droplets} (tiny bits of liquid),
 using the abstract syntax in \Cref{lang:droplets}.
 Note that the language does not include tuple types; hence all function types are
 implicitly curried, even when using $\times$.
@@ -182,9 +184,45 @@ for example, \[x:\{v:\T_1~|~P(v)\}\to \{v:\T_2~|~Q(v)\land R(x,v)\}\to\T_3\] can
 $\big((P\times Q)\cap R\big)\to\T_3$, but \[x:\T_1\to y:\{v:\T_2~|~R(x,v)\} \to \{v:\T_3~|~R(y,v)\}\to\T_4\]
 cannot be represented as a droplet, except by extending the vocabulary of qualifiers.
 
-As with any refinement type system, we define the \newterm{shape} of a droplet to be the raw type
-obtained from it by removing all qualifiers.
+\cbstart\diffnote{motivate droplets}%
+Through the use of droplets, we manage to harness refinement types without being to 
+cumbersome and requiring the user to write verbose annotations.
+To this end, we trade off some expressive power for succinctness.
+\cbend
 
+\exampleTitle
+
+\noindent
+The specification of the Parenthesis problem (\Cref{overview:paren spec}) will be written as
+
+\vspace{-5mm}
+\newcommand\Jsquaredlt{J^2\!\!\!{\scriptscriptstyle _{<}}}
+\[
+  \renewcommand\arraystretch{1.2}
+  \begin{array}{@{}l@{}l@{}l@{}}
+    \lspan2{x : J \to \R} \\
+    \lspan2{w : J^3 \to \R} \\
+    G ~=~ \fix~(\theta:\Jsquaredlt\to\R)\,i\,j \mapsto{}
+      & \big[x_i\big]_{i+1=j} ~\Big/ \\
+      & \min k\mapsto\theta_{ik}+\theta_{kj}+w_{ikj}
+  \end{array}
+\]
+
+$\Jsquaredlt$ is used here as an abbreviation for $(J{\times}J)\,{\cap}\,{<}$.
+We also use $f_{xy}$
+as a more readable typographic alternative for $f\,x\,y$,
+where $f$ is a function and $x$, $y$ are its arguments.
+
+Note that the range for $k$ in $\min k\mapsto\cdots$ is implicit, given the type of
+$\theta$: 
+\vspace{-.5em}
+\[\theta_{ik}\neq\bot\implies i<k \quad \mbox{and} \quad \theta_{kj}\neq\bot\implies k<j\]
+
+\vspace{-.5em}
+\hrule
+\medskip
+
+\iffalse
 \newcommand\examplePar{%
 \vspace{1pt}\noindent\hspace{-2pt}%
 \tikz[baseline=(E.base)]\node(E)[rectangle,draw=black!40!white,rounded corners=.7em] {\bf Example.};
@@ -199,6 +237,7 @@ The array $G$ computed in the Parenthesis example (\Cref{overview:paren spec}) c
 
 This states that $G\,i\,j$ is only defined for $i<j$. It doesn't {\em force} it to be defined,
 as it is still a partial function.
+\fi
 
 \subsubsection*{Typing Rules}
 
@@ -220,7 +259,8 @@ as it is still a partial function.
 As mentioned earlier, annotations are ignored when typechecking a term.
 This gives a simple characterization of type safety without the need to
 explictly write any new typing rules. It also means that for $f:\T_1\to\T_2$, $x:\T_3$, we obtain $f\,x:\T_2$ whenever
-$\T_1$ and $\T_3$ have the same shape. This requires some explanation.
+$\T_1$ and $\T_3$ have the same \newterm{shape} (the raw type obtained by removing all qualifiers).
+This requires some explanation.
 
 Considering a (partial) function $\T\to\S$ to be a set of pairs of elements $\langle x,y\rangle$ 
 from its domain $\T$ and range $\S$, respectively, it is clear to see that any function of type $\T_1\to\S_1$,
@@ -252,48 +292,11 @@ $t::\T$ following this semantics. Notice that this is not the same as $t:\T$, wh
 
 \subsubsection*{Type Inference}
 
-Base types are inferred normally as in a classical Hindley-Milner type system~\cite{78/Milner}.
-The operators (\Cref{lang:operators}) behave like polymorphic
-constants with the following types:
-\[\renewcommand\arraystretch{1.5}
-  \begin{array}{c}
-    {\fix} ~:~ \forallT ~(\T\to\T)\to\T \qquad 
-    {/} ~:~ \forallT ~\T\to\T\to\T \\
-    (::\T) ~:~ \mathrm{shape}[\T]\to\mathrm{shape}[\T]
-  \end{array}\]
-
-As for $[\,]_{_\square}$, for all typing purposes the first variant is a no-op, and the second variant
-is just syntactic sugar for $:: \square\to\_$\,,
-where \,$\_$\, is a fresh type variable.
-
-Any type variables occurring in type expressions are resolved at that
-stage through unification. In particular, it means that type variables are always assigned raw types.
-
-Qualifiers are also inferred by propagating them up and down the syntax tree.
-Since the program already typechecks once the base types are in place, the problem is no longer
-one of finding {\em valid} annotations, but rather of {\em tightening} them as much as possible
-without introducing semantics-changing coercions. For example, the term $(f :: I\to(I\cap P))\,i$ may
-be assigned the type $I$, but it can also be assigned $I\cap P$ without changing its semantics.
-
-Qualifiers are propagated by defining a \newterm{type intersection} operator $\sqcap$ that
-takes two droplets of the same shape $\T_1$, $\T_2$ and returns a droplet with a conjunction of all the qualifiers
-occuring in either $\T_1$ or $\T_2$. The operator is defined in terms of the corresponding liquid types:
-\begin{itemize}
-  \item If $\T_1=\{v:\T ~|~ \varphi_1\}$ and $\T_2=\{v:\T ~|~ \varphi_2\}$,
-	\[\T_1\sqcap\T_2 ~=~ \{v:\T ~|~ \varphi_1\land\varphi_2\}\]
-  \item If $\T_1=x:\S_1\to\S_2$, $\T_2=x:\S_3\to\S_4$ (named arguments are normalized so that $\T_1$ and $\T_2$ use the same names),
-    \[\T_1\sqcap\T_2 ~=~ x:(\S_1\sqcap\S_3)\to(\S_2\sqcap\S_4)\]
-\end{itemize}
-
-We then define the \newterm{type refinement} steps for terms. They are listed in \Cref{lang:type refinement rules}.
-These rules are applied continuously until a fixed point is reached.
-The resulting types are eventually converted back to droplet form (expressed via $\cap$ and $\times$);
-qualifiers that cannot be expressed in droplets are discarded.
-
 \begin{figure*}
+\vspace{-8mm}
 \newcommand\typerule[2]{{\renewcommand\arraystretch{1.5}\begin{array}[t]{c} #1 \\ \hline #2 \end{array}}}
 \[
-\renewcommand\arraystretch{3}
+\renewcommand\arraystretch{2.8}
 \begin{array}{cccp{1cm}}
   \multirow{2}{1cm}[-2em]{\begin{tikzpicture}\draw (0,0) -- ++(-1mm,0) -- ++(0,-10.2em) {} node[midway,anchor=base,xshift=-3mm,rotate=90] {Core language} -- ++(1mm,0);\end{tikzpicture}} &
   \typerule{e=v \qquad \Gamma,v:\T_1\vdash e:\T_0}
@@ -333,6 +336,65 @@ qualifiers that cannot be expressed in droplets are discarded.
   Type refinement rules, for inferring qualifiers in sub-expressions.}
   \vspace{2mm}
 \end{figure*}
+
+Base types are inferred normally as in a classical Hindley-Milner type system~\cite{78/Milner}.
+The operators (\Cref{lang:operators}) behave like polymorphic
+constants with the following types:
+\[\renewcommand\arraystretch{1.5}
+  \begin{array}{c}
+    {\fix} ~:~ \forallT ~(\T\to\T)\to\T \qquad 
+    {/} ~:~ \forallT ~\T\to\T\to\T \\
+    (::\T) ~:~ \mathrm{shape}[\T]\to\mathrm{shape}[\T]
+  \end{array}\]
+
+As for $[\,]_{_\square}$, for all typing purposes the first variant is a no-op, and the second variant
+is just syntactic sugar for $:: \square\to\_$\,,
+where \,$\_$\, is a fresh type variable.
+
+Any type variables occurring in type expressions are resolved at that
+stage through unification. In particular, it means that type variables are always assigned raw types.
+
+Qualifiers are also inferred by propagating them up and down the syntax tree.
+Since the program already typechecks once the base types are in place, the problem is no longer
+one of finding {\em valid} annotations, but rather of {\em tightening} them as much as possible
+without introducing semantics-changing coercions. For example, the term $(f :: I\to(I\cap P))\,i$ may
+be assigned the type $I$, but it can also be assigned $I\cap P$ without changing its semantics.
+
+Qualifiers are propagated by defining a \newterm{type intersection} operator $\sqcap$ that
+takes two droplets of the same shape $\T_1$, $\T_2$ and returns a droplet with a conjunction of all the qualifiers
+occuring in either $\T_1$ or $\T_2$. The operator is defined in terms of the corresponding liquid types:
+\begin{itemize}
+  \item If $\T_1=\{v:\T ~|~ \varphi_1\}$ and $\T_2=\{v:\T ~|~ \varphi_2\}$,
+	\[\T_1\sqcap\T_2 ~=~ \{v:\T ~|~ \varphi_1\land\varphi_2\}\]
+  \item If $\T_1=x{\,:\,}\S_1\to\S_2$, $\T_2=x{\,:\,}\S_3\to\S_4$ (normalized so that $\T_1$ and $\T_2$ use the same names for arguments),
+    \[\T_1\sqcap\T_2 ~=~ x{\,:\,}(\S_1\sqcap\S_3)\to(\S_2\sqcap\S_4)\]
+\end{itemize}
+
+We then define the \newterm{type refinement} steps for terms. They are listed in \Cref{lang:type refinement rules}.
+These rules are applied continuously until a fixed point is reached.
+The resulting types are eventually converted back to droplet form (expressed via $\cap$ and $\times$);
+qualifiers that cannot be expressed in droplets are discarded.
+
+\medskip
+The top three rules apply to ordinary constructs of typed $\lambda$-calculus:
+the first rule propagates qualifiers from the environment to leaf expressions that use a declared variable;
+the next two rules propagate information across application and refinement terms.
+For an application $f\,i$, both the type of $i$ and the domain of $f$ can be refined
+via the other, e.g. if $f:I_0\to\R$ and $i:I$, then $i$ can be refined to $I_0$; 
+symmetrically, if $f:I\to\R$ and $i:I_0$, then $f$ can be refined to $I_0\to\R$.
+Similarly, the range of $f$ and the type of $f\,i$ can refine each other.
+The rule for abstraction terms is analogous, except that information about the type
+of the argument $v$ is passed through the environment.
+
+The bottom rules pertain to language extensions defined previously in this section.
+For $/$, qualifiers can safely seep down to sub-expressions (but not back up), e.g. if $x/y:I_0$,
+it is safe to assert $x:I_0$, $y:I_0$ without changing the semantics of the expression.
+For casts, $x$ and $x::\T$ are tied to have the same refinements, and those
+of $\T$ are appended. 
+A condition $[x]_{_\square}\,$ ties the sub-term type in the same way, but without
+adding any qualifiers. The rule for $\fix$ is the only one that requires some thought:
+the type of $\fix f$ cannot be forced down on $f$; but since, by definition, $\fix f = f\,(\fix f)$
+must hold, then any restrictions imposed by the range of $f$ can be asserted for $\fix f$.
 
 Note that two syntactically identical terms in different sub-trees may be assigned
 different types by this method. This is a desirable property, as (some) context information
@@ -378,30 +440,3 @@ inferences:
 In this case, the type variable $\S$ has been assigned $I\to T$.
 \end{comment}
 
-\exampleTitle  \begin{comment}\subsection{Example}\end{comment}
-
-\noindent
-The specification of the Parenthesis problem (\Cref{overview:paren spec}) will be written as
-
-\vspace{-5mm}
-\[
-  \renewcommand\arraystretch{1.2}
-  \begin{array}{@{}l@{}l@{}l@{}}
-    \lspan2{x : J \to \R} \\
-    \lspan2{w : J^3 \to \R} \\
-    G ~=~ \fix~(\theta:J^2_<\to\R)\,i\,j \mapsto{}
-      & \big[x_i\big]_{i+1=j} ~\Big/ \\
-      & \min k\mapsto\theta_{ik}+\theta_{kj}+w_{ikj}
-  \end{array}
-\]
-
-$J^2_{<}$ is used here as an abbreviation for $(J{\times}J)\,{\cap}\,{<}$.
-We also use $f_{xy}$
-as a more readable alternative typography for $f\,x\,y$,
-where $f$ is a function and $x$, $y$ are its arguments.
-
-Note that the range for $k$ in $\min k\mapsto\cdots$ is implicit, given the type of
-$\theta$: 
-\[\theta_{ik}\neq\bot\implies i<k \quad \mbox{and} \quad \theta_{kj}\neq\bot\implies k<j\]
-
-\hrule

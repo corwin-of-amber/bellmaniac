@@ -5,11 +5,13 @@
 \newcommand\Head[1]{\Comment{ {\it #1} ~~}}
 
 Software synthesis aims to close the gap between descriptions of software components, such as algorithms and systems, and their implementations as computer programs. Dynamic Programming (DP) algorithms offer a prominent example of how large this gap can be. For instance, consider  
-\Cref{intro:naive}, which correspond to the well known DP algorithm to compute the optimal parenthesization for a chain of matrix multiplications. 
+\Cref{intro:naive}, which correspond to the well known DP algorithm to compute the optimal parenthesization for a chain of matrix multiplications.\footnote{\fontsize{6}{6}\selectfont\url{https://en.wikipedia.org/wiki/Matrix_chain_multiplication}}
+The first loop fills the diagonal of an array with some initial values,
+and the second loop computes off-diagonal elements by reading existing elements.
 
-The algorithm computes an $n\times n$ region of a DP table $G$ via a simple row-major order. This algorithm is simple, but a direct C implementation of it will be 
-$50\times$ slower than the best manually optimized implementation. 
-One reason for this poor performance is the high rate of cache misses incurred by reading the ranges $G_{ik}$ and $G_{kj}$, $i<k<j$, repeatedly for every iteration of the loops on $i$ and $j$. Memory reads dominate the running time of this algorithm, so high speedups can be gained by localizing memory access.
+The algorithm computes an $n\times n$ region of a DP table $G$ via a standard row-major order. This algorithm is simple, but a direct C implementation of it will be 
+$50\times$ slower than the best manually optimized implementation (as we will see in \Cref{evaluation:experimental}). 
+One reason for this poor performance is the high rate of cache misses incurred by reading the ranges $G_{ik}$ and $G_{kj}$, for $i<k<j$, repeatedly on every iteration of the loops over $i$ and $j$. Memory reads dominate the running time of this algorithm, so high speedups can be gained by localizing memory access.
 
 
 \begin{algorithm}[t]
@@ -70,7 +72,7 @@ The state-of-the-art implementation uses a \newterm{divide and conquer} approach
 
 
 
-In this paper, we present a new system called Bellmania\footnote{Named so as a tribute to Richard Bellman.}, which allows an expert to interactively generate parallel divide-and-conquer implementations of dynamic programming algorithms, which are provably correct relative to a high-level specification of the code in \Cref{intro:naive}. We show that the resulting implementations are, on average, $16\times$ faster than the original versions and within $22\%$ from a high-performance hand crafted implementation, with speedups as high as $46\times$.
+In this paper, we present a new system called Bellmania\footnote{Named so as a tribute to Richard Bellman.}, which allows an expert to interactively generate parallel divide-and-conquer implementations of dynamic programming algorithms, which are provably correct relative to a high-level specification of the code in \Cref{intro:naive}. We show that the resulting implementations are 1.4--46$\times$ faster than the original versions and within 22\% of a high-performance hand crafted implementation.
 Their structure will also make them \newterm{cache oblivious}~\cite{FOCS99/Frigo} and \newterm{cache adaptive}~\cite{SODA14/Bender}, just like the hand crafted implementations are.
 
 

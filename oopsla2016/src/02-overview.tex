@@ -163,6 +163,7 @@ This is handled automatically by the code generator.
 
 
 \begin{figure}
+\vspace{-.5em}
 \[\renewcommand\arraystretch{1.3}
   \begin{array}{@{}l@{}}
     \textsf{Slice} \quad i,j:\langle J_0\times J_0 \,|\, J_0\times J_1 \,|\, J_1\times J_1\rangle     \hfill (a)\\
@@ -177,6 +178,7 @@ This is handled automatically by the code generator.
     ~~\forall i,j\in\qbox4.~ G_{ij} = \underset{i<k<j}\min ~ (G^{\tinyqbox1}\!/G)_{ik} + (G^{\tinyqbox1}\!/G)_{kj} + w_{ikj} \\
   \end{array}
 \]
+\vspace{-.75em}
 \caption{\label{overview:logical-slice-stratify}
   The first two steps in the development, represented as logical specifications.}
 \end{figure}
@@ -209,7 +211,7 @@ This is handled automatically by the code generator.
   \EndFor
 \end{algorithmic}
 \caption{\label{overview:breakdown}
-   Simplified Arbiter --- Sliced and Stratified}
+   Parenthesis --- Sliced and Stratified}
 \end{algorithm}
 
 
@@ -335,19 +337,28 @@ tactic applications represent valid rewritings of the program. Finally, the
 programs created this way are transferred to a compilation back-end, where
 some automatic static analysis is applied and then executable (C++) code is emitted.
 
-The trusted core is small, comprising of: (a) a type checker (see \Cref{lang:types}), 
-(b) a term substitution procedure (see \Cref{tactics}),
-(c) a formula simplifier (see \Cref{automated:simplification}),
-(d) the SMT solver, and
-(e) the compiler.
+The trusted core is small, comprising of:
+\begin{enumerate*}[label=(\textit{\alph*})]
+ \item a type checker (see \Cref{lang:types}), 
+ \item a term substitution procedure (see \Cref{tactics}),
+ \item a formula simplifier (see \Cref{automated:simplification}),
+ \item the SMT solver, and
+ \item the compiler.
+\end{enumerate*}
+In its current version, Bellmania does not emit machine-checkable
+proofs; to the extent that SMT solvers can emit such proofs,
+these could be adapted to a proof of refinement (in the sense of \cite{POPL15/Delaware}).
+The compiler has to be formally verified separately.
+These two tasks require considerable engineering effort and are left for the future.
 
 \begin{figure}
-\begin{transcript}
-Slice (find ($\theta \mapsto {?}$)) ($?$ $\langle J_0\times J_0, J_0\times J_1, J_1\times J_1\rangle$)\\
-Stratify "/" (fixee $\lbox A$) $\lbox A$ $\psi$ \\
-Stratify "/" (fixee $\lbox A$) $\lbox A$ $\psi$ \\
-$\lbox A$ $\lbox B$ $\lbox C$ $\mapsto$ SynthAuto . ... $\psi$
-\end{transcript}
+\vspace{-.5em}% why is there extra space above lstlisting?
+\begin{lstlisting}[language=bellmania]
+Slice (find (\theta |-> ?)) (? <|J_0*J_0, J_0*J_1, J_1*J_1|>)
+Stratify "/" (fixee [A]) [A] \psi
+Stratify "/" (fixee [A]) [A] \psi
+[A] [B] [C] |-> SynthAuto . ... \psi
+\end{lstlisting}
 \caption{\label{overview:script}
   Bellmania script used to generate \Cref{overview:recursive-A}.}
 \end{figure}
@@ -356,3 +367,42 @@ An example for the concrete syntax is shown in \Cref{overview:script}.
 A full listing of the scripts for our running examples,
 as well as screenshots of the UI, can be found
 in \Cref{annex:example:paren}.
+
+\subsection*{Interaction Model}
+
+\begin{figure}[b!]
+\begin{tikzpicture}[>=latex,
+     blk/.style={draw,rectangle,align=center,inner sep=5pt,minimum height=8mm}]
+  \node(spec)[blk]{Specification};
+  \node(prog)[blk,below right=8mm of spec]{Program Term};
+  \node(deriv)[blk,above=of prog]{Derived\\Definition};
+  \node(impl)[blk,above right=8mm of prog]{Implementation};
+  \draw[->,rounded corners=5mm] (spec) |- node[below]{\textit{typecheck}} (prog);
+  \draw[->] (prog) edge[out=112,in=-105] (deriv);
+  \draw[->] (deriv) edge[out=-73,in=70] (prog);
+  \draw[->,rounded corners=5mm] (prog) -| node[below]{\textit{compile}} (impl);
+  % Loop over (prog)
+  \draw[->,rounded corners=3mm] (prog.-10) -| ++(.3,-.6) -| ($(prog.190) + (-.3,0)$) -- (prog.190);
+  \node[below=6mm of prog]{\textit{apply tactic}};
+\end{tikzpicture}
+\caption{\label{overview:flow}
+  Interaction workflow in Bellmania.}
+\end{figure}
+
+The intended use pattern for Bellmania is by repeatedly issuing
+commands to apply tactics inside a REPL that keeps showing to the
+user the resulting \newterm{program term} (\Cref{overview:flow}).
+To begin the interaction, the user types in a \newterm{specification} written
+in the Bellmania language (as defined in \Cref{lang}), which is typechecked
+by the system, producing a term.
+This term then becomes the focus of the development, and further transformations
+apply to it; the user issues \newterm{apply tactic} commands, one at a time,
+using a syntax similar to \Cref{overview:script}.
+During the development, sub-computations may be discovered that require
+further drilling down (such as ``B'' in the last example).
+These result in \newterm{derived} terms that take the focus until they, too,
+have been fully transformed.
+When the program and all its sub-computations are fully developed and
+expressed as a divide-and-conquer algorithm, the user invokes the compiler
+back-end that emits C++ code.
+

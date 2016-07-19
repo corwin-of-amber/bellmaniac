@@ -1,12 +1,17 @@
 \section{More Tactics}
 \label{annex:more tactics}
 
+\newcommand\self{$\star$}
+
+For most of the tactics below, the proof obligation is exactly the equality that that
+expresses the rewrite. We signify this with the notation \Obligations \self.
+
 \tacticdef{Shrink} \label{tactics:Shrink}
 \[f ~=~ f :: \T\] 
 
 Used to specify tighter qualifiers for the type of a sub-term.
 
-\Obligations tactic.
+\Obligations \self.
 
 For arrow-typed terms, this essentially requires to prove that $f$ 
 is only defined for arguments in the domain of $\T$, and that the values are in the range of $\T$.
@@ -44,7 +49,7 @@ where this tactic is applicable.
          \min\left\langle \min [f]_{J_0} ~,~ \min [f]_{J_1}\right\rangle$
 \end{itemize}
 
-\Obligations tactic.
+\Obligations \self.
 
 \tacticdef{Elimination}
 \[e[t] ~=~ e[\bot]\]
@@ -52,7 +57,7 @@ where this tactic is applicable.
 Used to eliminate a sub-term that is either always undefined or has no effect
 in the context in which it occurs.
 
-\Obligations tactic.
+\Obligations \self.
 
 \tacticdef{Let Insertion}\vspace{3mm}
 Let $e$ be an expression with a hole, $e[\square] = (\cdots x_1 \mapsto \cdots x_k\mapsto \cdots \square \cdots)$, 
@@ -80,7 +85,7 @@ $\min,\max,\Sigma$ all happen to be commutative.\footnote{If non-commutative fun
 %
 where $\overline{x}=x_{1..k}$, and $z$ a fresh variable.
 
-\Obligations tactic, if $z$ occurs free in $e$; otherwise none.
+\Obligations \self, if $z$ occurs free in $e$; otherwise none.
 
 \tacticdef{Padding}
 \[t ~=~ \big(t~/~f_1/\cdots/f_r\big) :: \T\]
@@ -88,7 +93,7 @@ where $\overline{x}=x_{1..k}$, and $z$ a fresh variable.
 where $\T$ is the type of $t$. This tactic is commonly used with Let insertion,
 to make the type of a sub-computation match the type of the entire term.
 
-\Obligations tactic.
+\Obligations \self.
 
 \tacticdef{Pull Out}\vspace{3mm}
 For $e[\square]$ as defined previously:

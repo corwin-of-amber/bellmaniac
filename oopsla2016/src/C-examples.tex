@@ -28,12 +28,12 @@ The supplementary material contains some screenshots of an interactive session.
 \includegraphics[width=.15\textwidth]{img/par-A.pdf}
 \end{center}
 %
-\begin{transcript}
-Slice (find ($\theta \mapsto {?}$)) ($?$ $\langle J_0\times J_0, J_0\times J_1, J_1\times J_1\rangle$)\\
-Stratify "/" (fixee $\lbox A$) $\lbox A$ $\psi$ \\
-Stratify "/" (fixee $\lbox A$) $\lbox A$ $\psi$ \\
-$\lbox A$ $\lbox B$ $\lbox C$ $\mapsto$ SynthAuto . ... $\psi$
-\end{transcript}
+\begin{lstlisting}[language=bellmania]
+Slice (find (\theta |-> ?)) (? <|J_0*J_0, J_0*J_1, J_1*J_1|>)
+Stratify "/" (fixee [A]) [A] \psi
+Stratify "/" (fixee [A]) [A] \psi
+[A] [B] [C] |-> SynthAuto . ... \psi
+\end{lstlisting}
 \caption{\label{annex:Paren-A}
 Development of subroutine A of the Parenthesis problem as conceptually described in~\cite{PPoPP16/Chowdhury} (top) and using Bellmania (bottom).}
 \end{figure}
@@ -43,32 +43,26 @@ Development of subroutine A of the Parenthesis problem as conceptually described
 \includegraphics[width=.3\textwidth]{img/par-B.pdf}
 \end{center}
 %
-\begin{transcript}
-Slice f $\langle?\times K_0\times K_2, ?\times K_0\times K_3, ?\times K_1\times K_2, ?\times K_1\times K_3\rangle$ \\
-$\lbox D$ $\mapsto$ Stratify "/" (fixee .) . $\psi$ \\
-$\lbox C$ $\mapsto$ Stratify "/" (fixee .) . $\psi$ \\
-$\lbox E$ $\mapsto$ Stratify "/" (fixee .) . $\psi$
+\begin{lstlisting}[language=bellmania]
+Slice f (? <|K_0*K_2, K_0*K_3, K_1*K_2, K_1*K_3|>)
+[D] |-> Stratify "/" (fixee .) . \psi
+[C] |-> Stratify "/" (fixee .) . \psi
+[E] |-> Stratify "/" (fixee .) . \psi
 
-\begin{tabular}{@{}l@{~}l@{}}
-$\langle$ & Slice (find  ($k \mapsto {?}$)) $\langle K_0, K_1, K_2, K_3\rangle$, \\
-& Slice (find  ($k \mapsto {?}$)) $\langle K_1, K_2, K_3\rangle$, \\
-& Slice (find  ($k \mapsto {?}$)) $\langle K_0, K_1, K_2\rangle$ $\rangle$
-\end{tabular}
+<|Slice (find  (k |-> ?)) <|K_0, K_1, K_2, K_3|>,
+ Slice (find  (k |-> ?)) <|K_1, K_2, K_3|>,
+ Slice (find  (k |-> ?)) <|K_0, K_1, K_2|> |>
 
-Distrib min \\
+Distrib min
 Assoc min
 
-\begin{tabular}{@{}l@{~}l@{}}
-$\langle$ & Stratify min (fixee $\lbox A$) $\langle \lbox G, \lbox J\rangle$ $\psi$, \\
-& Stratify min (fixee $\lbox B$) $\langle \lbox M, \lbox O\rangle$ $\psi$, \\
-& Stratify min (fixee $\lbox C$) $\langle \lbox R, \lbox T\rangle$ $\psi$ $\rangle$
-\end{tabular}\\
+<|Stratify min (fixee $\lbox A$) <|$\lbox G$, $\lbox J$|> \psi,
+ Stratify min (fixee $\lbox B$) <|$\lbox M$, $\lbox O$|> \psi,
+ Stratify min (fixee $\lbox C$) <|$\lbox R$, $\lbox T$|> \psi |>
 Stratify min (fixee $\lbox A$) $\langle \lbox{\,I\,}, \lbox K\rangle$ $\psi$
 
-$\lbox{\,I\,}$ $\lbox S$ $\lbox Z$ $\underline{\lbox G}$ 
-$\lbox M$ $\lbox P$ $\lbox W$ $\underline{\lbox D}$
-$\mapsto$ SynthAuto . ... $\psi$
-\end{transcript}
+$\lbox{\,I\,}$ $\lbox S$ $\lbox Z$ $\underline{\lbox G}$ $\lbox M$ $\lbox P$ $\lbox W$ $\underline{\lbox D}$ |-> SynthAuto . ... \psi
+\end{lstlisting}
 \caption{\label{annex:Paren-B}
 Same, for subroutine B of Parenthesis.}
 \end{figure}
@@ -78,27 +72,23 @@ Same, for subroutine B of Parenthesis.}
 \includegraphics[width=.3\textwidth]{img/par-B.pdf}
 \end{center}
 %
-\begin{transcript}
-Slice (find ($i \mapsto {?}$)) $\langle L_0\times L_4, L_0\times L₅, L_1\times L_4, L_1\times L_5\rangle$ \\
-Let "/" (slasher $\lbox A$) $\lbox A$ $\psi$ \\
-Let "/" (slasher $\lbox A$) $\lbox A$ $\psi$ \\
-Let "/" (slasher $\lbox A$) $\lbox A$ $\psi$ \\
+\begin{lstlisting}[language=bellmania]
+Slice (find (i |-> ?)) <|L_0*L_4,L_0*L_5,L_1*L_4,L_1*L_5|>
+Let "/" (slasher $\lbox A$) $\lbox A$ $\psi$
+Let "/" (slasher $\lbox A$) $\lbox A$ $\psi$
+Let "/" (slasher $\lbox A$) $\lbox A$ $\psi$
 Slice (findAll ($k \mapsto {?}$)) $\langle L_2, L_3\rangle$
 
-Distrib min \\
+Distrib min
 Assoc min
 
-\begin{tabular}{@{}l@{~}l@{}}
-$\langle$ & Let min (slasher $\lbox A$) $\langle\lbox E, \lbox G\rangle$ $\psi$, \\
-& Let min (slasher $\lbox B$) $\langle\lbox H,\lbox J\rangle$ $\psi$, \\
-& Let min (slasher $\lbox C$) $\langle\lbox K,\lbox M\rangle$ $\psi$, \\
-& Let min (slasher $\lbox D$) $\langle\lbox N,\lbox P\rangle$ $\psi$ $\rangle$
-\end{tabular}
+<|Let min (slasher $\lbox A$) $\langle\lbox E, \lbox G\rangle$ $\psi$,
+ Let min (slasher $\lbox B$) $\langle\lbox H,\lbox {\,J\,}\rangle$ $\psi$,
+ Let min (slasher $\lbox C$) $\langle\lbox K,\lbox M\rangle$ $\psi$,
+ Let min (slasher $\lbox D$) $\langle\lbox N,\lbox P\rangle$ $\psi$ $\rangle$
 
-$\lbox A$ $\lbox B$ $\lbox C$ $\lbox D$
-$\lbox E$ $\lbox F$ $\lbox G$ $\lbox H$ 
-$\mapsto$ SynthAuto . ... $\psi$
-\end{transcript}
+$\lbox A$ $\lbox B$ $\lbox C$ $\lbox D$ $\lbox E$ $\lbox F$ $\lbox G$ $\lbox H$ |-> SynthAuto . ... $\psi$
+\end{lstlisting}
 \caption{Same, for subroutine C of Parenthesis}
 \end{figure}
 
@@ -221,6 +211,7 @@ After applying the typing rules similarly to all the sub-terms, we get the infer
 \hrule
 \vfill
 
+\iftr % The Simplified Arbiter example overflows the page limit (20) and will appear in the TR
 \pagebreak
 \subsection{Simplified Arbiter}
 
@@ -683,3 +674,4 @@ The read and write regions are already encoded in the types of $A$, $B$, $C$ in
 \hrule
 \bigskip
 
+\fi% end of \iftr
