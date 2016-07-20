@@ -1,0 +1,61 @@
+\documentclass{article}
+
+\usepackage[letterpaper, margin=1in]{geometry}
+\pagenumbering{gobble}
+
+\begin{document}
+
+\section*{Deriving Divide-and-Conquer Dynamic Programming Algorithms Using 
+  Solver-Aided Transformations}
+\subsection*{Preface for revised version}
+
+\hrule
+
+\bigskip
+
+We are pleased to provide you with the updated version of our submission to the OOPSLA track at SPLASH~2016,
+containing required changes and revisions.
+
+\bigskip
+Following is a list of requests that were addressed in this revision.
+
+\begin{enumerate}
+  \item To clarify the user interaction workflow and prepare the reader
+    for what is to come, we added a subsection ``Interaction Model''
+    following the design overview (end of Section 2).
+    The last paragraph outlines the next two sections.
+  \item Per the request of the reviewers, we separated implementation details
+    from the result of the experiments (Section 7).
+  \item To make for a more appealing evaluation, we refined the description
+    of our chosen metric for usability. We made clear that we admit it is
+    a crude proxy and is no substitute for a more disciplined user study.
+  \item To make it more in line with the rest of the paper, we changed
+    the narrative in the conclusion (Section 10).
+  \item We expanded the discussion of refinement types and refinement rules
+    (Section 3.4) explaining why the format of droplet was chosen.
+  \item We filled in missing details that were unclear to the reviewers,
+    such as the used of boxed numerals to designate sub-terms, the notorious
+    ``Obligations: tactic,'' and where obligations come from.
+  \item To make up for the terseness of formal definitions of tactics (Section 4),
+    esp. \textsf{Stratify}, we expanded the discussion of it in text and
+    added an example and a small illustration.
+  \item We extended our comparison with Autogen (Section 9). We hope that
+    the benefits of a deductive approach are clearer now.
+  \item To answer questions about possible extensions, we added a section
+    titled Further Improvements (Section 8), and also expanded the conclusion
+    with some future outlook.
+  \item To address the questions about certification, we made it clear in the
+    design overview (Section 2) that the system verifies every step using SMT,
+    but does not generate machine-checkable proofs in the style of Coq
+    (although this should be conceptually easy, assuming SMT-generated proofs are themselves checkable).
+\end{enumerate}
+
+We marked the revised version with change bars and margin notes to highlight
+the location of the above changes and a few smaller ones.
+Since a \texttt{latexdiff} is virtually impossible to obtain for any nontrivial \TeX{} document,
+we attach the source diff in hope that it will complement the inline markup.
+
+\bigskip\noindent
+Regards,\\
+the authors
+\end{document}
