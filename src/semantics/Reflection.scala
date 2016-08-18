@@ -139,7 +139,9 @@ class Reflection(val env: Environment, val typedecl: Map[Identifier, Term])(impl
       else if (fun =~ ("↦", 2)) {    /* beta reduction */
         consolidate1(TypedLambdaCalculus.beta(fun, arg))
       }
-      else throw new Exception(s"application term cannot be consolidated: '${fun toPretty} @ ${arg toPretty}'")
+      else {
+        throw new Exception(s"application term cannot be consolidated: '${fun toPretty} @ ${arg toPretty}'")
+      }
     }
     else if (term =~ ("=", 2)) {
       val List(lhs, rhs) = sub

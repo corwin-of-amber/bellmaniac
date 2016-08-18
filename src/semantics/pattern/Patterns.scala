@@ -9,6 +9,10 @@ import semantics.TypePrimitives
 
 
 
+trait Pattern {
+  def find(term: Term): Stream[Matched]
+}
+
 class ExactMatch(val pattern: Term)(implicit val env: Environment) {
   
   implicit val scope = env.scope
@@ -51,7 +55,7 @@ trait DownCastCoercion extends ExactMatch {
   def isCompatible(term: Term) = (env.typeOf(term) map TypePrimitives.shape) == shape  
 }
 
-class SimplePattern(val pattern: Term) {
+class SimplePattern(val pattern: Term) extends Pattern {
     
   def find(term: Term) =
     term.nodes flatMap (n => this(n))
@@ -101,8 +105,17 @@ class SimplePattern(val pattern: Term) {
 
 object SimplePattern {
   def apply(pattern: Term) = new SimplePattern(pattern)
+  def apply(pattern1: Term, pattern2: Term, patterns: Term*) = new SimplePatterns(Seq(pattern1, pattern2) ++ patterns)
 }
 
+class SimplePatterns(val patterns: Iterable[SimplePattern]) extends Pattern {
+  
+  def this(patterns: Iterable[Term])(implicit d: DummyImplicit) = 
+    this(patterns map (SimplePattern(_)))
+  
+  def find(term: Term) =
+    patterns.toStream flatMap (_.find(term))
+}
 
 class SimpleTypedPattern(pattern: Term)(implicit scope: Scope) extends SimplePattern(pattern) {
   override def filter(pattern: Term, term: Term) = (pattern, term) match {

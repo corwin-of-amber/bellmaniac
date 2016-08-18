@@ -21,7 +21,7 @@ import com.microsoft.z3.Params
  */
 object Z3Sugar {
 
-  val ctx = new Context  // main context
+  lazy val ctx = new Context  // main context
 
   def !!(e: Expr) = try e.asInstanceOf[BoolExpr]
     catch { case _: ClassCastException => throw new Z3Exception(s"expected BoolExpr, found '$e'") }

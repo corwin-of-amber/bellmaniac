@@ -150,7 +150,7 @@ class Prover(val pods: List[Pod], val verbose: Prover.Verbosity=Prover.Verbosity
   }
   
   
-  import semantics.pattern.{SimplePattern,ExactMatch}
+  import semantics.pattern.{Pattern,ExactMatch}
   import collection.mutable.ListBuffer
   
   case class Subexpression(term: Term, enclosure: List[Term]) {
@@ -160,13 +160,13 @@ class Prover(val pods: List[Pod], val verbose: Prover.Verbosity=Prover.Verbosity
   
   class CommonSubexpressionElimination {
     
-    def this(formulas: Iterable[Term], pattern: SimplePattern) = {
+    def this(formulas: Iterable[Term], pattern: Pattern) = {
       this; scan(formulas, pattern)
     }
     
     val cabinet = ListBuffer[ListBuffer[Subexpression]]()
     
-    def scan(formulas: Iterable[Term], pattern: SimplePattern) {
+    def scan(formulas: Iterable[Term], pattern: Pattern) {
       for (a <- formulas) {
         pattern.find(a) foreach { mo => 
           def subexpr = Subexpression(mo.subterm, TypedLambdaCalculus.enclosure(a, mo.subterm) get)

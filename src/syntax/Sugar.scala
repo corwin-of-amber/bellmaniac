@@ -80,11 +80,6 @@ object AstSugar {
     def :@(that: Term*) = @:(term)(that:_*).foldLeft
     def :@(these: List[Term]) = @:(term)(these:_*).foldLeft
 
-    def conjuncts = term split I("∧")
-    def disjuncts = term split I("∨")
-
-    def |!!(that: List[Term]) = if (that.isEmpty) term else this |! &&(that)
-
     def ~>[A](that: A) = term.leaf -> that
     
     def =~(root: Any, arity: Int) =
@@ -114,6 +109,15 @@ object AstSugar {
     def >> : Term =
       if (term.subtrees.length == 1 && term.subtrees(0).root == `...`.root) term
       else term.foldRight
+
+    def conjuncts = term split I("∧")
+    def disjuncts = term split I("∨")
+
+    def isLiteral: Boolean = 
+      if (term =~ ("¬", 1)) term.subtrees(0).isLiteral
+      else term.root.kind != "connective"
+    
+    def |!!(that: List[Term]) = if (that.isEmpty) term else this |! &&(that)
   }
   
   def &&(conjuncts: Term*): Term = &&(conjuncts.toList)

@@ -97,13 +97,27 @@ class Explicate(includePreconditions: Boolean=true, masterGuards: Boolean=false)
     else List()
    
   def neg(literal: Term) = if (literal =~ ("¬", 1)) literal.subtrees(0) else ~literal
-    
+  
   def simplify(asserts: List[Term])(implicit assumptions: List[Term]) = {
-    val truth = assumptions ++ (assumptions flatMap implied)
-    val lies  = truth map neg
-    val subst = new TypedSubstitution((truth map ((_, Prelude.TRUE))) ++ (lies map ((_, Prelude.FALSE))))
-    asserts flatMap (subst(_).conjuncts map TypedFolSimplify.simplify) filter (Prelude.TRUE !=) distinct
+    simplify0(asserts flatMap (_.conjuncts)) map TypedFolSimplify.simplify filter (Prelude.TRUE !=) distinct
   }
+  
+  def simplify0(assertConjuncts: List[Term])(implicit assumptions: List[Term]): List[Term] = assertConjuncts match {
+    case List() => List()
+    case conj :: conjs =>
+      val truth = assumptions ++ (assumptions flatMap implied)
+      val lies  = truth map neg
+      val subst = new TypedSubstitution((truth map ((_, Prelude.TRUE))) ++ (lies map ((_, Prelude.FALSE))))
+      val sconj = subst(conj)
+      sconj :: simplify0(conjs)(assumptions ++ (if (isLiteral(sconj)) List(sconj) else List()))
+    //assertConjuncts flatMap (subst(_).conjuncts map TypedFolSimplify.simplify) filter (Prelude.TRUE !=) distinct
+  }
+  
+  def isLiteral(phi: Term): Boolean = {
+    if (phi =~ ("¬", 1)) isLiteral(phi.subtrees(0))
+    else phi.root.kind != "connective"
+  }
+
 }
 
 object Explicate {
