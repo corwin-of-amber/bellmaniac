@@ -22,6 +22,7 @@ import semantics.transform.Explicate
 import semantics.pattern.Expansion
 import semantics.pattern.MacroMap
 import semantics.smt.SmtGuidelines
+import synth.pods.TotalOrderPod
 
 
 
@@ -90,7 +91,7 @@ object OptimizationPass {
   val `:` = I(":")
 
   def foldAllCalls(t: Term): Term = t match {
-    case T(`:`, List(lbl@L(txt), x)) if txt.toString contains '[' => preserve(t, lbl)
+    case T(`:`, List(lbl@L(txt), x)) if txt.toString contains '[' => preserve(t, T(new Identifier(txt, "routine", lbl.root.kind)))
     case _ => preserve(t, T(t.root, t.subtrees map foldAllCalls))
   }
 
@@ -247,8 +248,12 @@ object OptimizationPass {
     
     implicit val scope = rec.scope
     
-    // TODO eventually this should also call inferLoopDirections
     override def apply(program: Term) = inferReadGuards(program)
+    
+    def apply_+(program: Term) = {
+      val guarded = Explicate.explicateHoist(program)
+      (apply(program), try { inferLoopDirections(guarded) } catch { case e => println(e); Map() })
+    }
     
     //------------------
     // Read-Guards Part
@@ -275,11 +280,11 @@ object OptimizationPass {
                 (v, TypedTerm(v, qualifyRegion(typeOf_!(v), Q)))
             }
           (Qdef, Qswitch)
-        } unzip
+        } unzip ;
       // Turn qualifiers into guards using Explicate, and expand the definition
-      val explicate = new Explicate()
+      val explicate = new Explicate(masterGuards=true)
       val guarded = explicate(TypedTerm.replaceDescendants(program, qswitches.flatten.toIterable))
-      val expansion = new Expansion( MacroMap(qdefs:_*) )
+      val expansion = new Expansion( MacroMap(qdefs.toList:_*) )
       explicate.hoist(expansion(guarded))
     }
     
@@ -293,25 +298,44 @@ object OptimizationPass {
     //---------------------
 
     def possibleDirections(x: Term, y: Term) = {
-      val < = TV("<")
+      val < = TotalOrderPod.?<
       List((Dir.FWD, ~(< :@(y,x))), (Dir.BWD, ~(< :@(x,y))))
     }
       
-    // TODO currently just prints the results
-    def inferLoopDirections(program: Term) {
+    def inferLoopDirections(program: Term) = {
       
-      program.nodes find (_ =~ ("fix", 1)) map (_.subtrees.head) map LambdaCalculus.isAbs foreach {
+      println(program toPretty)
+
+      def getAbs(term: Term) =  // get abstraction term(s), but remember it can be nested in "/"
+        term.subtrees flatMap (TypedTerm.split(_, I("/"))) map LambdaCalculus.isAbs
+      
+      program.nodes filter (_ =~ ("fix", 1)) flatMap getAbs flatMap {
         case Some((theta :: vars, body)) => 
           println(s"$theta    $vars")
           val queries =
             body.nodes map (LambdaCalculus.isAppOf(_, theta)) collect {
               case Some(args) if args.length == vars.length =>
-                println(args)
+                //println(args)
                 val aenv = 
                   TypeTranslation.decl(rec.scope, args flatMap (TypedLambdaCalculus.contextDecl(program, _)) toMap)
                 val dirAttempts: List[Attempt] = args zip vars flatMap { 
                   case (x,y) => possibleDirections(x,y) map {
-                   case (dir, goal) => Attempt(y, dir, Compound(surroundingGuards(program, x).get, goal)) 
+                   case (dir, goal) => Attempt(y, dir, 
+                     {
+                       println(List(dir,goal.toPretty, surroundingGuards(program, x).get.map(_.toPretty)))
+                       /* This should be done in prover @@@ */
+                       val goaled = {
+                         val (vassign, typed) = TypeInference.infer(Binding.prebind(goal), prover.typedecl)
+                         prover.expand(typed)
+                       }
+                       val guardsed = surroundingGuards(program, x).get.map { guard =>
+                         //val (vassign, typed) = TypeInference.infer(Binding.prebind(guard), prover.typedecl)
+                         prover.expand(guard) //typed)
+                       }
+                         
+                       Compound(guardsed map new Explicate().hoist,
+                           new Explicate().hoist(goaled))
+                     })
                   } 
                 }
                 (aenv, dirAttempts)
@@ -321,16 +345,20 @@ object OptimizationPass {
           val attempts = queries flatMap (_._2)
   
           val results =
-            new pa.Transaction().commit(List(), attempts map (_.goal) toList).toList zip 
+            new pa.Transaction(verbose=Prover.Verbosity.None)
+              .commit(List(), attempts map (_.goal) toList).toList zip 
               attempts map { case (status, attempt) => attempt ! (status.root == "valid") }
   
-          for (v <- vars; dir <- List(Dir.FWD, Dir.BWD)) {
-            if (results filter (r => r.v == v && r.dir == dir) forall (_.success==Some(true)))
+          for (v <- vars; dir <- List(Dir.FWD, Dir.BWD)
+               if (results filter (r => r.v == v && r.dir == dir) forall (_.success==Some(true))))
+            yield {
               println(s"${v}   ${dir} ")
+              (v, dir)
           }
           
-        case _ =>
-      }
+        case _ => Seq()
+        
+      } toMap
     }
     
     override def link(expr: Term)(implicit ctx: Context) = nonleaf(expr)

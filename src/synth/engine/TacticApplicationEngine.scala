@@ -31,7 +31,7 @@ import syntax.transform.GenTreeSubstitution
 
 
 
-class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
+class TacticApplicationEngine(implicit val scope: Scope, val env: Environment) {
   import TacticApplicationEngine._
 
   implicit val extrude = Extrude(Set(I("/"), cons.root))
@@ -167,7 +167,6 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
         new StratifyReducePod(TermWithHole.puncture(h, x.subterm), reduce, elements, subelements, ψ) with PodOrigin { override val tactic = command }))
     case Some((L("Synth"), List(~(h), ~(subterm), synthed, ~(ψ_), ~~(areaTypes)))) =>
       val ψ = ctx_?(subterm, ψ_)
-      //List(SynthPod(h, subterm, encaps(synthed), evalTerm(synthed), ψ, areaTypes))
       val impl = Synth.Alignment.stripProg(evalTerm(synthed))
       List(new SynthPod(h, subterm, encaps(synthed) :- impl, impl, ψ, areaTypes) with PodOrigin { override val tactic = command })
     case Some((L("Let"), List(L("/"), ~(h), ~(quadrant), ~(ψ_)))) =>
@@ -201,10 +200,14 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
             }
           })
         case _ =>
-          val (synthed, _) = invokeSynthesis(h, h, templates, fix=false)
-          val impl = Synth.Alignment.stripProg(evalTerm(synthed))
-          def fillin(command: Term) = command.replaceDescendants(command.nodes collect { case t if t =~ (".",0) => (t,s.cursor) case t if t =~ ("...",0) => (t,encaps(synthed)) }  toList)
-          List(new LetSynthPod(h, encaps(synthed) :- impl, impl, ψ) with PodOrigin { override val tactic = fillin(command) })
+          List(new LetSynthPod.Placeholder(h, ψ) {
+            def compute() = {
+              val (synthed, _) = invokeSynthesis(h, h, templates, fix=false)
+              val impl = Synth.Alignment.stripProg(evalTerm(synthed))
+              def fillin(command: Term) = command.replaceDescendants(command.nodes collect { case t if t =~ (".",0) => (t,s.cursor) case t if t =~ ("...",0) => (t,encaps(synthed)) }  toList)
+              new LetSynthPod(h, encaps(synthed) :- impl, impl, ψ) with PodOrigin { override val tactic = fillin(command) }
+            }
+          })
       }
 
     case Some((L("Distrib"), List(L("/"), ~(f)))) =>
@@ -222,9 +225,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
       List(new SlashToReducePod(elements, reduce) with PodOrigin { override val tactic = command })
 
     case Some((L("SaveAs"), List(prog, L(style)))) =>
-      val sout = emit(s)
-      outf += Map("program" -> encaps(prog).toString, "style" -> style.toString, 
-                  "text" -> sdisplay(sout.ex), "term" -> sout.program, "scope" -> scope)
+      emit(s, encaps(prog).toString, style.toString)
       List()
 
     case Some((L("Opt"), Nil)) =>
@@ -235,7 +236,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     case _ =>
       throw new TranslationError("not a valid command syntax") at command
   }
-
+  
   def initial(term: Term): State = {
     implicit val empty = State.empty
     val A = evalTerm(term) match {
@@ -288,9 +289,12 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   def fulfill(pod: Instantiated[Pod]) = {
     pod.it match {
       case promise: PromisePod => 
-        val pod = promise.compute() |> instapod
-        if (cert_?(pod.it) && pod.obligations != TRUE) invokeProver(pod)
-        pod
+        try {
+          val pod = promise.compute() |> instapod
+          if (cert_?(pod.it) && pod.obligations != TRUE) invokeProver(pod)
+          pod
+        }
+        catch { case e: Exception => println(e); new Instantiated(new Pod { }) }
       case _ => pod
     }
   }
@@ -323,6 +327,11 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
   }
   
   def mkState(term: Term) = State(term, extrude(term))
+  
+  def mkState[Tag](tagged: (Term, Tag)) = {
+    val (term, tag_) = tagged
+    new State(term, extrude(term)) with Tagged[Tag] { override val tag = tag_ }
+  }
 
   def display(program: Term) { display(extrude(program)) }
   def display(ex: ExtrudedTerms) { report.console.Console.display(ex) }
@@ -335,6 +344,7 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
    */
 
   implicit lazy val prover: Prover = new Prover(List.empty)(Environment.empty)
+  def prover(forProgram: Term): Prover = prover
   
   def invokeProver(pod: Pod) { }
   
@@ -375,8 +385,12 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
     (synthed, footprint)
   }
 
+  /**
+   * Called by the "Opt" command; should be deperecated.
+   */
   def invokeOptimize(implicit s: State) = {
     if (ui.Config.config.opt()) {
+      val prover = this.prover(s.program)
       val rec = new OptimizationPass.Recorder()(prover.env)
       s.program |> (new DependencyAnalysis()(rec, prover) apply)
     }
@@ -388,9 +402,19 @@ class TacticApplicationEngine(implicit scope: Scope, env: Environment) {
    */
 
   def emit(s: State) = {
+    val prover = this.prover(s.program)
     val rec = new OptimizationPass.Recorder()(prover.env)
-    s.program |> OptimizationPass.foldAllCalls |> (new FixpointLoopAnalysis()(rec, prover) apply) |>
-      (Explicate.explicateHoist(_, masterGuards=true)) |> mkState
+    val fpe = new FixpointLoopAnalysis()(rec, prover)
+    val opt =
+      invokeOptimize(s)/*.program*/ |> OptimizationPass.foldAllCalls |> (fpe.apply_+)
+    mkState(opt)
+  }
+
+  def emit(s: State, name: String, style: String): State = {
+    val sout = emit(s)
+    outf += Map("program" -> name, "style" -> style,
+                "text" -> sdisplay(sout.ex), "term" -> sout.program, "scope" -> scope, "tag" -> sout.tag)
+    sout
   }
 
   /*
@@ -449,6 +473,8 @@ object TacticApplicationEngine {
   }
   object State { val empty = State(program, new ExtrudedTerms(new Tree(program), Map.empty)) }
 
+  trait Tagged[A] extends State { val tag: A }
+  
   object L { def unapply(t: Term) = if (t.isLeaf) Some(t.root.literal) else None }
 
   /* Pod instantiation */
