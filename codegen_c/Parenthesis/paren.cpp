@@ -27,6 +27,7 @@ void parenthesis() {
 		cilk_for (int i = 0; i < N - t; i++) {
 			int j = t + i;
 			TYPE D_ij = Ddist(i,j);
+//#pragma ivdep
 			for (int k = i + 1; k <= j; k++) {
 				D_ij = min(D_ij, Ddist(i,k) + Ddist(k,j) + w(i,k,j));
 			}
@@ -96,24 +97,34 @@ inline void init_dist(){
 }
 int main(int argc, char *argv[]) {
 
-	if (argc < BNEEDED + NNEEDED + 1){
-		cout<<"not enough arguments"<<endl;
-		exit(1);
-	}
+	//if (argc < BNEEDED + NNEEDED + 1){
+	//	cout<<"not enough arguments"<<endl;
+	//	exit(1);
+	//}
 	argv++;
 	argc--;
 #ifndef NNUM
 	if (argc > 0){
 		N = atoi(argv[0]);
-		argv++;
-		argc--;
+		//argv++;
+		//argc--;
 	}
 #endif
 #ifndef B
-	if (argc > 0){
-		B = atoi(argv[0]);
+	if (argc > 1){
+		B = atoi(argv[1]);
+		//argv++;
+		//argc--;
 	}
 #endif
+	if (argc > 2){
+		if (0!= __cilkrts_set_param("nworkers",argv[2])) {
+                	cout<<"Failed to set worker count\n";
+                	return 1;
+        	}
+                //argv++;
+                //argc--;
+        }
 
 #ifdef _DEBUG
 	if (0!= __cilkrts_set_param("nworkers","1")) {

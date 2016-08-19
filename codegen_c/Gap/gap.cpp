@@ -12,11 +12,7 @@
 #include "input.h"
 
 int *X, *Y;
-/*
-* Auto-generated Code
-*/
 
-//#include "..\gap-new2-all.cpp"
 void funcA_rec(DEFINTERVALFUNC(I), DEFINTERVALFUNC(J));
 
 
@@ -198,6 +194,14 @@ int main(int argc, char *argv[]) {
 #ifndef B
 	if (argc > 0){
 		B = atoi(argv[0]);
+	}
+#endif
+#ifndef _DEBUG
+	if (argc > 1){
+		if (0!= __cilkrts_set_param("nworkers",argv[1])) {
+			cout<<"Failed to set worker count\n";
+			return 1;
+		}
 	}
 #endif
 
