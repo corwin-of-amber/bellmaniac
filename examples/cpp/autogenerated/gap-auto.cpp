@@ -1,26 +1,26 @@
 
-#include "preface.h"
 #include "input.h"
+#include "preface.h"
 
 
 void funcA_loop(DEFINTERVALFUNC(I),DEFINTERVALFUNC(J)){
-	__declspec(align(ALIGNMENT)) TYPE V[B * B];
-
-	copy_dist_part(V,PARAM(I),PARAM(J));
 	FOR_FWD(i,DEFBEGIN(I),DEFEND(I)){
 		FOR_FWD(j,DEFBEGIN(J),DEFEND(J)){
-			int tmp1;
+			TYPE tmp1;
 			tmp1 = INITMIN;
 			FOR_FWD(q,DEFBEGIN(J),min(j,DEFEND(J))){
 				tmp1 = min(tmp1,(psi(i,q) + w(q,j)));
 			}
-			int tmp2;
+			TYPE tmp2;
 			tmp2 = INITMIN;
 			FOR_FWD(p,DEFBEGIN(I),min(i,DEFEND(I))){
-				tmp2 = min(tmp2,(psiCopyOpt(p,j,I,J) + w_(p,i)));
+				tmp2 = min(tmp2,(psi(p,j) + w_(p,i)));
 			}
 			tmp2 = min(tmp1,tmp2);
-			tmp2 = min(GUARDED((In(PARAM(I),(i - 1)) && In(PARAM(J),(j - 1))),(psi((i - 1),(j - 1)) + S(i,j))),tmp2);
+			if((In(PARAM(I),(i - 1)) && In(PARAM(J),(j - 1)))){
+				tmp2 = min((psi((i - 1),(j - 1)) + S(i,j)),tmp2);
+			}
+
 			tmp2 = min(psi(i,j),tmp2);
 			psi(i,j) = tmp2;
 		}
@@ -32,13 +32,16 @@ void funcB_loop(DEFINTERVALFUNC(I),DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
 	DEFINTERVALSTMT_LOWER(I0, I);
 	DEFINTERVALSTMT_UPPER(I1, I);
 	FOR_FWD(i,DEFBEGIN(I),DEFEND(I)){
-		FOR_FWD(j,max(DEFBEGIN(J1),DEFBEGIN(J1)),min(DEFEND(J1),DEFEND(J1))){
-			int tmp3;
+		FOR_FWD(j,DEFBEGIN(J1),DEFEND(J1)){
+			TYPE tmp3;
 			tmp3 = INITMIN;
-			FOR_FWD(q,max(DEFBEGIN(J0),DEFBEGIN(J0)),min(DEFEND(J0),DEFEND(J0))){
+			FOR_FWD(q,DEFBEGIN(J0),DEFEND(J0)){
 				tmp3 = min(tmp3,(psi(i,q) + w(q,j)));
 			}
-			tmp3 = min(GUARDED((In(PARAM(J0),(j - 1)) && In(PARAM(I),(i - 1))),(psi((i - 1),(j - 1)) + S(i,j))),tmp3);
+			if((In(PARAM(J0),(j - 1)) && In(PARAM(I),(i - 1)))){
+				tmp3 = min((psi((i - 1),(j - 1)) + S(i,j)),tmp3);
+			}
+
 			tmp3 = min(psi(i,j),tmp3);
 			psi(i,j) = tmp3;
 		}
@@ -52,31 +55,40 @@ void funcC_loop(DEFINTERVALFUNC(I0),DEFINTERVALFUNC(I1),DEFINTERVALFUNC(J)){
 	__declspec(align(ALIGNMENT)) TYPE V[B * B];
 
 	copy_dist_part(V,PARAM(I0),PARAM(J));
-	FOR_FWD(i,max(DEFBEGIN(I1),DEFBEGIN(I1)),min(DEFEND(I1),DEFEND(I1))){
+	FOR_FWD(i,DEFBEGIN(I1),DEFEND(I1)){
 		FOR_FWD(j,DEFBEGIN(J),DEFEND(J)){
-			int tmp4;
+			TYPE tmp4;
 			tmp4 = INITMIN;
-			FOR_FWD(p,max(DEFBEGIN(I0),DEFBEGIN(I0)),min(DEFEND(I0),DEFEND(I0))){
+			FOR_FWD(p,DEFBEGIN(I0),DEFEND(I0)){
 				tmp4 = min(tmp4,(psiCopyOpt(p,j,I0,J) + w_(p,i)));
 			}
-			tmp4 = min(GUARDED((In(PARAM(I0),(i - 1)) && In(PARAM(J),(j - 1))),(psi((i - 1),(j - 1)) + S(i,j))),tmp4);
+			if((In(PARAM(I0),(i - 1)) && In(PARAM(J),(j - 1)))){
+				tmp4 = min((psi((i - 1),(j - 1)) + S(i,j)),tmp4);
+			}
+
 			tmp4 = min(psi(i,j),tmp4);
 			psi(i,j) = tmp4;
 		}
 	}    /*bazinga 0*/
 }
 
-void func(DEFINTERVALFUNC(I0),DEFINTERVALFUNC(K2),DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
+void func(DEFINTERVALFUNC(K2),DEFINTERVALFUNC(I0),DEFINTERVALFUNC(J1),DEFINTERVALFUNC(J0)){
 	FOR_FWD(i,max((DEFBEGIN(I0) + 1),DEFBEGIN(K2)),min((DEFEND(I0) + 1),DEFEND(K2))){
-		FOR_FWD(j,max((DEFBEGIN(J0) + 1),max(DEFBEGIN(J1),DEFBEGIN(J1))),min((DEFEND(J0) + 1),min(DEFEND(J1),DEFEND(J1)))){
-			psi(i,j) = min(psi(i,j),(psi((i - 1),(j - 1)) + S(i,j)));
+		FOR_FWD(j,max((DEFBEGIN(J0) + 1),DEFBEGIN(J1)),min((DEFEND(J0) + 1),DEFEND(J1))){
+			TYPE tmp5;
+			tmp5 = psi(i,j);
+			tmp5 = min(tmp5,(psi((i - 1),(j - 1)) + S(i,j)));
+			psi(i,j) = tmp5;
 		}
 	}
 }
-void func0(DEFINTERVALFUNC(I0),DEFINTERVALFUNC(K3),DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
+void func0(DEFINTERVALFUNC(I0),DEFINTERVALFUNC(J1),DEFINTERVALFUNC(J0),DEFINTERVALFUNC(K3)){
 	FOR_FWD(i,max((DEFBEGIN(I0) + 1),DEFBEGIN(K3)),min((DEFEND(I0) + 1),DEFEND(K3))){
-		FOR_FWD(j,max((DEFBEGIN(J0) + 1),max(DEFBEGIN(J1),DEFBEGIN(J1))),min((DEFEND(J0) + 1),min(DEFEND(J1),DEFEND(J1)))){
-			psi(i,j) = min(psi(i,j),(psi((i - 1),(j - 1)) + S(i,j)));
+		FOR_FWD(j,max((DEFBEGIN(J0) + 1),DEFBEGIN(J1)),min((DEFEND(J0) + 1),DEFEND(J1))){
+			TYPE tmp6;
+			tmp6 = psi(i,j);
+			tmp6 = min(tmp6,(psi((i - 1),(j - 1)) + S(i,j)));
+			psi(i,j) = tmp6;
 		}
 	}
 }
@@ -92,9 +104,9 @@ void funcC_rec(DEFINTERVALFUNC(I0),DEFINTERVALFUNC(I1),DEFINTERVALFUNC(J)){
 		DEFINTERVALSTMT_LOWER(J0, J);
 		DEFINTERVALSTMT_UPPER(J1, J);
 		cilk_spawn funcC_rec(PARAM(K0),PARAM(K2),PARAM(J0));;
-		cilk_spawn func(PARAM(I0),PARAM(K2),PARAM(J0),PARAM(J1));;
+		cilk_spawn func(PARAM(K2),PARAM(I0),PARAM(J1),PARAM(J0));;
 		cilk_spawn funcC_rec(PARAM(K0),PARAM(K3),PARAM(J0));;
-		func0(PARAM(I0),PARAM(K3),PARAM(J0),PARAM(J1));
+		func0(PARAM(I0),PARAM(J1),PARAM(J0),PARAM(K3));
 		cilk_sync;
 
 		cilk_spawn funcC_rec(PARAM(K1),PARAM(K2),PARAM(J0));;
@@ -111,17 +123,23 @@ void funcC_rec(DEFINTERVALFUNC(I0),DEFINTERVALFUNC(I1),DEFINTERVALFUNC(J)){
 
 }
 
-void func1(DEFINTERVALFUNC(I0),DEFINTERVALFUNC(I1),DEFINTERVALFUNC(J0),DEFINTERVALFUNC(L2)){
+void func1(DEFINTERVALFUNC(I1),DEFINTERVALFUNC(I0),DEFINTERVALFUNC(L2),DEFINTERVALFUNC(J0)){
 	FOR_FWD(i,max((DEFBEGIN(I0) + 1),DEFBEGIN(I1)),min((DEFEND(I0) + 1),DEFEND(I1))){
-		FOR_FWD(j,max((DEFBEGIN(J0) + 1),max(DEFBEGIN(L2),DEFBEGIN(L2))),min((DEFEND(J0) + 1),min(DEFEND(L2),DEFEND(L2)))){
-			psi(i,j) = min(psi(i,j),(psi((i - 1),(j - 1)) + S(i,j)));
+		FOR_FWD(j,max((DEFBEGIN(J0) + 1),DEFBEGIN(L2)),min((DEFEND(J0) + 1),DEFEND(L2))){
+			TYPE tmp7;
+			tmp7 = psi(i,j);
+			tmp7 = min(tmp7,(psi((i - 1),(j - 1)) + S(i,j)));
+			psi(i,j) = tmp7;
 		}
 	}
 }
-void func2(DEFINTERVALFUNC(I0),DEFINTERVALFUNC(I1),DEFINTERVALFUNC(J0),DEFINTERVALFUNC(L3)){
+void func2(DEFINTERVALFUNC(L3),DEFINTERVALFUNC(I1),DEFINTERVALFUNC(I0),DEFINTERVALFUNC(J0)){
 	FOR_FWD(i,max((DEFBEGIN(I0) + 1),DEFBEGIN(I1)),min((DEFEND(I0) + 1),DEFEND(I1))){
-		FOR_FWD(j,max((DEFBEGIN(J0) + 1),max(DEFBEGIN(L3),DEFBEGIN(L3))),min((DEFEND(J0) + 1),min(DEFEND(L3),DEFEND(L3)))){
-			psi(i,j) = min(psi(i,j),(psi((i - 1),(j - 1)) + S(i,j)));
+		FOR_FWD(j,max((DEFBEGIN(J0) + 1),DEFBEGIN(L3)),min((DEFEND(J0) + 1),DEFEND(L3))){
+			TYPE tmp8;
+			tmp8 = psi(i,j);
+			tmp8 = min(tmp8,(psi((i - 1),(j - 1)) + S(i,j)));
+			psi(i,j) = tmp8;
 		}
 	}
 }
@@ -137,9 +155,9 @@ void funcB_rec(DEFINTERVALFUNC(I),DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
 		DEFINTERVALSTMT_LOWER(L2, J1);
 		DEFINTERVALSTMT_UPPER(L3, J1);
 		cilk_spawn funcB_rec(PARAM(I0),PARAM(L0),PARAM(L2));;
-		cilk_spawn funcB_rec(PARAM(I0),PARAM(L0),PARAM(J1));;
-		cilk_spawn func1(PARAM(I0),PARAM(I1),PARAM(J0),PARAM(L2));;
-		func2(PARAM(I0),PARAM(I1),PARAM(J0),PARAM(L3));
+		cilk_spawn funcB_rec(PARAM(I0),PARAM(L0),PARAM(L3));;
+		cilk_spawn func1(PARAM(I1),PARAM(I0),PARAM(L2),PARAM(J0));;
+		func2(PARAM(L3),PARAM(I1),PARAM(I0),PARAM(J0));
 		cilk_sync;
 
 		cilk_spawn funcB_rec(PARAM(I0),PARAM(L1),PARAM(L2));;
@@ -149,17 +167,20 @@ void funcB_rec(DEFINTERVALFUNC(I),DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
 		cilk_sync;
 
 		cilk_spawn funcB_rec(PARAM(I1),PARAM(L1),PARAM(L2));;
-		funcB_rec(PARAM(I1),PARAM(L1),PARAM(J1));
+		funcB_rec(PARAM(I1),PARAM(L1),PARAM(L3));
 		cilk_sync;
 
 	}
 
 }
 
-void func3(DEFINTERVALFUNC(I0),DEFINTERVALFUNC(I1),DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
+void func3(DEFINTERVALFUNC(I1),DEFINTERVALFUNC(I0),DEFINTERVALFUNC(J1),DEFINTERVALFUNC(J0)){
 	FOR_FWD(i,max((DEFBEGIN(I0) + 1),DEFBEGIN(I1)),min((DEFEND(I0) + 1),DEFEND(I1))){
-		FOR_FWD(j,max((DEFBEGIN(J0) + 1),max(DEFBEGIN(J1),DEFBEGIN(J1))),min((DEFEND(J0) + 1),min(DEFEND(J1),DEFEND(J1)))){
-			psi(i,j) = min(psi(i,j),(psi((i - 1),(j - 1)) + S(i,j)));
+		FOR_FWD(j,max((DEFBEGIN(J0) + 1),DEFBEGIN(J1)),min((DEFEND(J0) + 1),DEFEND(J1))){
+			TYPE tmp9;
+			tmp9 = psi(i,j);
+			tmp9 = min(tmp9,(psi((i - 1),(j - 1)) + S(i,j)));
+			psi(i,j) = tmp9;
 		}
 	}
 }
@@ -172,11 +193,9 @@ void funcA_rec(DEFINTERVALFUNC(I),DEFINTERVALFUNC(J)){
 		DEFINTERVALSTMT_LOWER(J0, J);
 		DEFINTERVALSTMT_UPPER(J1, J);
 		funcA_rec(PARAM(I0),PARAM(J0));
-		cilk_sync;
-
 		cilk_spawn funcB_rec(PARAM(I0),PARAM(J0),PARAM(J1));;
 		cilk_spawn funcC_rec(PARAM(I0),PARAM(I1),PARAM(J0));;
-		func3(PARAM(I0),PARAM(I1),PARAM(J0),PARAM(J1));
+		func3(PARAM(I1),PARAM(I0),PARAM(J1),PARAM(J0));
 		cilk_sync;
 
 		cilk_spawn funcA_rec(PARAM(I0),PARAM(J1));;
@@ -184,14 +203,8 @@ void funcA_rec(DEFINTERVALFUNC(I),DEFINTERVALFUNC(J)){
 		cilk_sync;
 
 		funcC_rec(PARAM(I0),PARAM(I1),PARAM(J1));
-		cilk_sync;
-
 		funcB_rec(PARAM(I1),PARAM(J0),PARAM(J1));
-		cilk_sync;
-
 		funcA_rec(PARAM(I1),PARAM(J1));
-		cilk_sync;
-
 	}
 
 }

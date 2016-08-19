@@ -151,7 +151,7 @@ void bitonicLoop(TYPE* BTSPL){
 	}
 	BL(1,2) = d(1,2);
 	for(int j=2;j<=N;j++){
-		for(int i=1;i<=j-1;i++){
+		cilk_for( int i=1 ; i<=j-1 ; i++ ){
 			if (i<j-1){
 				BL(i,j) = BL(i,j-1) + d(i,j-1);
 			}
@@ -233,16 +233,26 @@ int main(int argc, char *argv[]) {
 	DEFINTERVALSTMT(K0);
 	DEFBEGIN(K0) = 1;
 	DEFEND(K0) = N+1;
-
-
-	unsigned long long tstart = cilk_getticks();
-	funcA_rec(PARAM(K0));
-	unsigned long long tend = cilk_getticks();
 	cout<<"VERSION\tN\tB\tTime(s)"<<endl;
+	unsigned long long tstart;
+	unsigned long long tend;
+#ifdef CO
+	tstart = cilk_getticks();
+	funcA_rec(PARAM(K0));
+	tend = cilk_getticks();
 	cout<<"AUTO\t"<<N<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
+#endif
+
 	//May check LOOPDP later here
 #ifdef DEBUG
 	bitonicCheck();
+#else
+#ifdef LOOPDP
+	tstart = cilk_getticks();
+	bitonicLoop(BTSP);
+	tend = cilk_getticks();
+	cout<<"LOOPDP\t"<<N<<"\t"<<B<<"\t"<<cilk_ticks_to_seconds(tend-tstart)<<endl;
+#endif
 #endif
 #ifndef NNUM
 	_mm_free(BTSP);

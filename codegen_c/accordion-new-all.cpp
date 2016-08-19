@@ -1,84 +1,21 @@
 
-/*
- * CAPTAIN'S LOG
- *
- * funcD has been hand-tweaked to try and match the performance of PF_CO from IPDPS2015.
- * The most important optimization is case-splitting by 2*j-i+1 < max(DEFBEGIN(K2), j+2).
- * If the condition is true, min(k,2*j-i+1) can be replaced with 2*j-i+1.
- * Consequently, the expression SOF[j+1, 2*j-i+1] can be factored out of the loop (I think
- * icc is doing it for us).
- *
- * Copy optimization gives another small improvement; to test the effect of different
- * layers of optimization, three flags control whether to copy the read-region of 'dist',
- * the read-region of 'SOF', or the write-region of 'dist' (and then copy it back at the end).
- * The first is the most important, other two give another ~5%.
- *
- * Copy optimization without case splitting does not seem to help that much.
- *
- * Parallelization and vectorization directives have no effect in this case.
- */
-
-#define D_CO_read
-#define D_CO_SOF
-#define D_CO_write
-
 void funcD_loop(DEFINTERVALFUNC(K0),DEFINTERVALFUNC(K1),DEFINTERVALFUNC(K2)){
-#ifdef D_CO_read
 	__declspec(align(ALIGNMENT)) TYPE V[B * B];
 	copy_dist_part(V,PARAM(K1),PARAM(K2));
-#define Ddist_read(i,j) DdistSimpleV(i,j,K1,K2)
-#else
-#define Ddist_read DDLdist
-#endif
-#ifdef D_CO_SOF
-	__declspec(align(ALIGNMENT)) TYPE F[B * B];
-	copy_SOF_part(F,PARAM(K1),PARAM(K2));
-#define DDELTA(i,j,k) F[((j)+1 - DEFBEGIN(K1))*B + min((k),2*(j)-(i)+1) - DEFBEGIN(K2) ]
-#else
-#define DDELTA DELTA
-#endif
-#define DSOF2(i,j) SOF[(i)*N + (j)] // cannot use CO for this (will go outside K1 x K2)
-#ifdef D_CO_write
-	__declspec(align(ALIGNMENT)) TYPE X[B * B];
-	copy_dist_part(X,PARAM(K0),PARAM(K1));
-#define Ddist_write(i,j) DdistSimpleX(i,j,K0,K1)
-#else
-#define Ddist_write DDLdist
-#endif
+	
+
 
 	FOR_D_loop_2(i,DEFBEGIN(K0),DEFEND(K0)){
-//#pragma parallel
 		FOR_D_loop_3(j,DEFBEGIN(K1),DEFEND(K1)-1){
 
-			TYPE t21= /*DdistSimpleX(i,j,K0,K1)*/Ddist_write(i,j);
-            if (2*j-i+1 < max(DEFBEGIN(K2), j+2)) {
-                //TYPE tval = 0;
-//#pragma ivdep
-                FOR_D_loop_1(k,DEFBEGIN(K2),DEFEND(K2)) {
-                    // optimization; k > 2*j-i+1, so min(k,2*j-i+1)=2*j-i+1
-                    t21 = max(t21, /*DdistSimpleV((j+1),k,K1,K2*)*/Ddist_read(j+1,k) + DSOF2(j+1, 2*j-i+1));
-                }
-                //t21 = max(t21, tval);  
-            }
-            else {
-//#pragma ivdep
-                FOR_D_loop_1(k,DEFBEGIN(K2),DEFEND(K2)){
-                /*
-                    assert(DEFBEGIN(K1) <= j+1 && j+1 < DEFEND(K1));
-                    assert(DEFBEGIN(K2) <= min((k),2*(j)-(i)+1) && min((k),2*(j)-(i)+1) < DEFEND(K2));
-                    assert(DDELTA(i,j,k) == DELTA(i,j,k));
-                    */
-                    t21 = max(t21,Ddist_read(j+1,k)/*DdistSimpleV((j+1),k,K1,K2)*/+DDELTA(i,j,k)/* INSET(j+1,K1) && INSET(k,K2) */);
-                }
-            }
+			TYPE t21= DDLdist(i,j);
+			FOR_D_loop_1(k,DEFBEGIN(K2),DEFEND(K2)){
+				t21 = max(t21,/*DDLdist(j+1,k)*/DdistSimpleV((j+1),k,K1,K2)+DELTA(i,j,k)/* INSET(j+1,K1) && INSET(k,K2) */);
+			}
 
-			/*DdistSimpleX(i,j,K0,K1)*/Ddist_write(i,j) = t21/* INSET(i,K0) && INSET(j,K1) */;
+			DDLdist(i,j) = t21/* INSET(i,K0) && INSET(j,K1) */;
 		}
 	}
-
-#ifdef D_CO_write
-    copy_to_dist(X, PARAM(K0), PARAM(K1));
-#endif
 
 }
 void funcD_1(DEFINTERVALFUNC(K2),DEFINTERVALFUNC(L2),DEFINTERVALFUNC(L3),DEFINTERVALFUNC(L0)){
