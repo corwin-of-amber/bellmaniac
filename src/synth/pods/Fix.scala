@@ -269,6 +269,19 @@ class LetSynthPod(val h: Term, val synthed: Term, val impl: Term, val ψ: Term)(
 
 object LetSynthPod {
   def apply(h: Term, synthed: Term, impl: Term, ψ: Term)(implicit scope: Scope) = new LetSynthPod(h, synthed, impl, ψ)
+
+  /**
+   * Placeholder pod is used while synthesis is running.
+   * It uses a question mark to denote the hole that will be filled by synthesis.
+   */
+  abstract class Placeholder(h: Term, ψ: Term)(implicit scope: Scope) extends PromisePod {
+    val new_h =  ? -: (TI("..."))
+  
+    override val program =
+      h =:= (new_h :@ ψ)
+      
+    override val obligations = Prelude.TRUE
+  }
 }
 
 

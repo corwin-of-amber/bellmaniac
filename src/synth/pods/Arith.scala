@@ -33,8 +33,8 @@ object NatPod extends Pod {
   val _4 = TyTV("4", N)
   val z =  TyTV("z", N -> B)
   val nz = TyTV("~z", N -> B)
-  val s =  TyTV("s", N -> N)
-  val p =  TyTV("p", N -> N) //(N ∩ nz) -> N)
+  val s =  $TyTV("s", N -> N)
+  val p =  $TyTV("p", N -> N) //(N ∩ nz) -> N)
   
   private val i = $TyTV("i", N)
   
@@ -59,7 +59,14 @@ object RealPod {
 }
 
 
-class TotalOrderPod(val D: Term, val < : Term) extends Pod {
+class TotalOrderPod(val D: Term, val < : Term)(implicit scope: Scope) extends Pod {
+  
+  import Prelude.B
+  import TotalOrderPod.?<
+  
+  val LTPAT = SimpleTypedPattern(TypedTerm(?<, D ->: D ->: B))
+  
+  override val macros = MacroMap(?< ~> (x => LTPAT(x) map (_ => <)))
   
   override val decl = new Declaration(<) where (
       ∀:(D, (i, j) => (< :@ i :@ j) -> ~(< :@ j :@ i)),                           // anti-symmetry
@@ -71,8 +78,10 @@ class TotalOrderPod(val D: Term, val < : Term) extends Pod {
 object TotalOrderPod {
   import Prelude.B
 
-  def apply(D: Term) = new TotalOrderPod(D, $TyTV("<", D ->: D ->: B))
-  def apply(D: Term, < : Term) = new TotalOrderPod(D, TypedTerm(<, D ->: D ->: B))
+  val ?< = $TV("?<")  // untyped "overloaded" <
+  
+  def apply(D: Term)(implicit scope: Scope) = new TotalOrderPod(D, $TyTV("<", D ->: D ->: B))
+  def apply(D: Term, < : Term)(implicit scope: Scope) = new TotalOrderPod(D, TypedTerm(<, D ->: D ->: B))
 }
 
 
