@@ -104,7 +104,8 @@ object Synth {
     val baseDir = new File(System.getenv("BELLMANIA_HOME").opt getOrElse ".")
     val fe_inc = incdirs flatMap (x => Seq("--fe-inc", new File(baseDir, x).getPath))
     val fe_codegen = Seq("--fe-custom-codegen", new File(baseDir, CODEGEN).getPath)
-    val slv = Seq("--slv-lightverif", "--slv-simiters", "50", "--beopt:simstopsize", "200")
+    val slv = System.getenv("BELLMANIA_SKETCH_FLAGS") andThen_ ((s:String) => s.split(" ").toSeq,
+      Seq("--slv-lightverif", "--slv-simiters", "50", "--beopt:simstopsize", "200"))
     
     val command =
       Seq(SKETCH) ++ slv ++ fe_inc ++ fe_codegen ++ Seq(skfile.getPath)
@@ -113,6 +114,7 @@ object Synth {
       cached getOrElse (hash, {
         import scala.sys.process._
         println("# Sketch...")
+        println(command)
         try {
           (new ReadSketchResults() apply command.lineStream) |-- save
         }
@@ -120,8 +122,6 @@ object Synth {
       })
     }
 
-    def incdir(dir: String) = new Sketch(skfile, dir :: incdirs)
-      
     def hash = {
       // Can someone explain to me why it is so cumbersome to compute MD5 sum of a file in Java
       import java.security._
@@ -137,7 +137,7 @@ object Synth {
 
   object Sketch {
     val SKETCH = "sketch"
-    val INCPATH = List("src/synth/tactics/sketch", "examples/intermediates/sketch/generic")
+    val INCPATH = List("inc")
     val CODEGEN = "ccg.jar"
 
     import report.data.Deserialize._
@@ -409,7 +409,9 @@ object Synth {
     def defn(f: Term, vars: List[Term], body: Term) =  def_(f)(`()`(vars))(body)
     def defn(entry: (Identifier, (List[Term], Term))): Term = entry match { case (f, (vars, body)) => defn(T(f), vars, body) }
 
-    def decl(vars: List[Term]) = vars map { va =>
+    def cmp(a: Term, b: Term) = a.leaf.literal.toString < b.leaf.literal.toString
+    
+    def decl(vars: List[Term]) = vars.sortWith(cmp) map { va =>
       val typ = shape(typeOf_!(va))(new Scope)  // scope is irrelevant
       val args = targs(typ)
       if (args.isEmpty)
@@ -505,6 +507,8 @@ object Synth {
     def nonnegative(i: Int) = if (i >= 0) Some(i) else None
     def nonnegative_!(i: Int) = assume(i >= 0)
     
+    def zoomFactor(leaves: List[Identifier]) = if (leaves.length <= 2) 2 else 1  // @@@ Magic number?!
+    
     def decl(sort: Identifier) = {
       val i = TyTV("i", N)
 
@@ -514,12 +518,14 @@ object Synth {
       val leafIdx = leaves.indexOf(sort) |> nonnegative
       val partIdx = parts.indexOf(sort) |> nonnegative
       
+      val zoom = zoomFactor(parts)
+      
       val head = def_(TypedTerm(T(sort), B), `()`(i))
       val body = if (scope.sorts.isMaster(sort)) TI(1)
         else partIdx match {
           case Some(idx) => &&(
-            ((idx > 0)               -->  TI("≥")(i, d(TI(masterIdx), TI(idx))))  ++
-            ((idx < parts.length-1)  -->  TI("<")(i, d(TI(masterIdx), TI(idx+1)))) ++
+            ((idx > 0)               -->  TI("≥")(i, d(TI(masterIdx), TI(idx*zoom))))  ++
+            ((idx < parts.length-1)  -->  TI("<")(i, d(TI(masterIdx), TI((idx+1)*zoom)))) ++
             ((idx == parts.length-1) -->  TI("<")(i, sizeCutoffExpr))
           )
           case _ => scope.sorts.findSortHie(sort) match {
@@ -594,7 +600,9 @@ object Synth {
     def sizeCutoffExpr = {
       val max2i = TyTV("max2i", N ->: N ->: N)
       (leavesByMaster map {
-        case (master, leaves) => d(TypedTerm(TI(masters.indexOf(master)), N), TypedTerm(TI(leaves.length), N))
+        case (master, leaves) => 
+          val zoom = zoomFactor(leaves)
+          d(TypedTerm(TI(masters.indexOf(master)), N), TypedTerm(TI(leaves.length*zoom), N))
       }
       reduce (max2i(_, _)))
     }
