@@ -773,7 +773,7 @@ object Main {
       case Block(l) => Block(l map simplifyExprInStmt)
       case Fork(l) => Fork(l map simplifyExprInStmt)
       case Parallel(i, s) => Parallel(i, simplifyExprInStmt(s))
-      case For(v,lb,ub,dir,stmts)  => For(v,simplifyExpr(lb),simplifyExpr(ub),dir,simplifyExprInStmt(stmts))
+      case For(v,lb,ub,dir,stmts)  => For(v,simplifyExpr(lb),simplifyExpr(ub),dir,simplifyExprInStmt(stmts)(loopBounds :+ (v,simplifyExpr(lb),simplifyExpr(ub))))
       case If(cond,caseThen,caseElse) => If(simplifyExpr(cond), simplifyExprInStmt(caseThen), simplifyExprInStmt(caseElse))
       case FunctionCallWithBody(name,params,Block(l)) => FunctionCallWithBody(name,params,Block(l map simplifyExprInStmt))
       case DefIntervalSplit(ii, superset, whichPart)  => DefIntervalSplit(ii, superset, whichPart) 
@@ -810,7 +810,7 @@ object Main {
       case FunApp(f1,List(a,b)) if (simplifyExpr(a) == simplifyExpr(b)) && (reduceFnsStr contains f1) => simplifyExpr(a)
       case FunApp(f1,List(FunApp(f2,List(x,y)),b)) if ( (simplifyExpr(x) == simplifyExpr(b)) || (simplifyExpr(y) == simplifyExpr(b))) && f1==f2 && (reduceFnsStr contains f1) => 
         simplifyExpr(FunApp(f1,List(x,y)))
-      //case FunApp("In",List(Interval(jj),Var(i,Interval(ii)))) if ii == jj => Var("true",Interval("B")) - This is not sound, Cannot rely on the interval with Variable as being already enforced
+      //NOT SOUND! case FunApp("In",List(Interval(jj),Var(i,Interval(ii)))) if ii == jj => Var("true",Interval("B")) - This is not sound, Cannot rely on the interval with Variable as being already enforced
       //This interval should be found from loop level
       case FunApp("min",List(a,b)) if leq(a,b) => a
       case FunApp("min",List(a,b)) if leq(b,a) => b
@@ -818,6 +818,7 @@ object Main {
       case FunApp("max",List(a,b)) if leq(b,a) => a        
       case FunApp("&&",List(Var("true",_),b)) => simplifyExpr(b)
       case FunApp("&&",List(a,Var("true",_))) => simplifyExpr(a)
+      case FunApp("In",List(inti@Interval(ii),Var(i,_))) if (loopBounds contains ((i,GetBound(inti,LOWER),GetBound(inti,UPPER)))) => Var("true",Interval("B"))
       case Num(value) => e
       case Interval(name) => e
       case GetBound(i,sel) => e
@@ -834,9 +835,25 @@ object Main {
   def simplifyStmtN(n:Int,stmt:Stmt): Stmt = {
     Function.chain(List.fill(n)(simplifyOverallStmt _))(stmt)
   }
-  
+  def makeBigAnd(conds: Seq[Expr]) = {
+    conds reduceOption ((a,b) => FunApp("&&",List(a,b))) getOrElse Var("true",Interval("B"))
+  }
   def simplifyStmt(stmt: Stmt): Stmt = {
     stmt match {
+      case Block(List(If(cond1,t1,Block(List())),If(cond2,t2,Block(List())))) 
+        if (getAndPreds(cond1).toSet intersect getAndPreds(cond2).toSet).size > 0 =>
+        val preds1 = getAndPreds(cond1).toSet
+        val preds2 = getAndPreds(cond2).toSet
+        val commonCond = makeBigAnd((preds1 intersect preds2).toList)
+        val rest1 = makeBigAnd((preds1 diff preds2).toList)
+        val rest2 = makeBigAnd((preds2 diff preds1).toList)
+        If(commonCond,Block(List(If(rest1,t1,Block(List())),If(rest2,t2,Block(List())))),Block(List()))
+      case Block(List(DefVar(v1, "TYPE"), Assign(v2, MemRead(an1,ind1)),If(cond,tc,Block(List())),MemWrite(an2,ind2,Var(v3,typ)))) 
+        if v1 == v2 && v1 == v3 && an1 == an2 && ind1 == ind2 && (getAndPreds(cond) filter (x => !(getVariablesUsed(x) contains v1))).length > 0 =>
+        val genPreds =  makeBigAnd(getAndPreds(cond) filter (x => !(getVariablesUsed(x) contains v1)))
+        val rest =   makeBigAnd(getAndPreds(cond) filter (x => (getVariablesUsed(x) contains v1)))
+        If(genPreds,Block(List(DefVar(v1, "TYPE"), Assign(v2, MemRead(an1,ind1)),If(rest,tc,Block(List())),MemWrite(an2,ind2,Var(v3,typ)))),Block(List()))
+        
       case Block(l) => 
         //look at each child - if its a Block itself just lift it up
         val blockList = l map simplifyStmt flatMap (_.toList)
@@ -851,16 +868,18 @@ object Main {
         If(cond,For(i,lb,ub,dir,simplifyStmt(caseThen)),Block(List()))
       case For(i,lb,ub,dir,If(cond,caseThen,Block(List()))) =>
         val spBounds = getSplitBounds(cond,i) map (lu => mergeBounds(lu,(lb,ub,Seq())))
-        def makeBigAnd(conds: Seq[Expr]) = {
-          conds reduceOption ((a,b) => FunApp("&&",List(a,b))) getOrElse Var("true",Interval("B"))
-        }
         Block(spBounds map {case (l,u,conds) => 
           val ifStmt = if (conds.isEmpty) simplifyStmt(caseThen) else If(makeBigAnd(conds),simplifyStmt(caseThen),Block(List()))
           For(i,l,u,dir,simplifyStmt(ifStmt)) }) 
       case For(v,lb,ub,dir,Block(stmts :+ MemWrite(an,indices,Guarded(cond,e)))) =>
         For(v,lb,ub,dir,If(cond,Block((stmts map simplifyStmt) :+ MemWrite(an,indices,e)),Block(List())))
       case For(v,lb,ub,dir,stmts)  => For(v,lb,ub,dir,simplifyStmt(stmts))
-      case If(cond,caseThen,caseElse) => If(cond, simplifyStmt(caseThen), simplifyStmt(caseElse))
+      case If(c1,If(c2,t2,Block(List())),Block(List())) => If(FunApp("&&",List(c1,c2)),t2,Block(List()))
+      case If(cond1,Assign(v1,Guarded(cond2,e)),ce@Block(List())) if (!(getVariablesUsed(cond2) contains v1)) =>
+        If(FunApp("&&",List(cond1,cond2)),Assign(v1,e),ce)
+      case Assign(v1,Guarded(cond2,e)) =>
+        If(cond2,Assign(v1,e),Assign(v1,Var("UNDEFINED",Interval("R"))))
+      case If(cond,caseThen,caseElse) => If(makeBigAnd(getAndPreds(cond)), simplifyStmt(caseThen), simplifyStmt(caseElse))
       //TODO: reduce min(min to two mins using temp
       case  MemWrite(arrayName,indices,FunApp(f1,List(FunApp(f2,args :+ Var(t,tt))))) if ((reduceFnsStr contains f1)  && (f2 == "[]") && args.length >= 2 && t.startsWith("tmp")) =>
         val assignments = args.reverse map (a => Assign(t,FunApp(f1,List(a,Var(t,tt)))))
@@ -869,6 +888,15 @@ object Main {
         If(cond,Assign(v1,FunApp(f,List(Var(v2,ii),e))),Block(List()))
       case Assign(v1,FunApp(f,List(Guarded(cond,e),Var(v2,ii)))) if ((v1 == v2) &&  (reduceFnsStr contains f))=>
         If(cond,Assign(v1,FunApp(f,List(e,Var(v2,ii)))),Block(List()))
+      case MemWrite(arrayName1,indices1,Slash(true,List(init@MemRead(arrayName2,indices2),a,b))) if (arrayName1 == arrayName2) && (indices1 == indices2)  =>
+        //Can be extended to more than two elements a,b
+        val tmpName = createTempName()
+        val tmpVar = Var(tmpName,Interval("R"))
+        val tmpPre = List(DefVar(tmpName, "TYPE"), Assign(tmpName, init))
+        val innerIf = If(FunApp("IS_UNDEFINED",List(tmpVar)),Assign(tmpName,b),Block(List()))
+        val outerIf = If(FunApp("IS_UNDEFINED",List(tmpVar)),Block(List(Assign(tmpName,a),innerIf)),Block(List()))
+        val finalMemWrite = MemWrite(arrayName1,indices1,tmpVar)
+        Block(tmpPre ++ List(outerIf,finalMemWrite))
       case MemWrite(arrayName,indices,Guarded(cond,e)) =>
         If(cond,MemWrite(arrayName,indices,e),Block(List()))
       case MemWrite(arrayName1,indices1,FunApp(f1,List(MemRead(arrayName2,indices2),Guarded(cond,e)))) if ((reduceFnsStr contains f1) && (arrayName1 == arrayName2) && (indices1 == indices2)) => 
@@ -886,13 +914,6 @@ object Main {
           }))) :+ MemWrite(arrayName1,indices1,tmpVar))
         //If(g,MemWrite(arrayName1,indices1,FunApp(f1,List(FunApp("[]",List(z,y))))),MemWrite(arrayName,indices,z))
         /* If last stmt of a for loop is array write then lift the guard*/
-      /*case MemWrite(arrayName,indices,rhs) =>
-        rhs match {
-          case FuncPre(f) =>
-            if (f==arrayName) Block(List())
-            else stmt
-          case _ => stmt
-        }*/
       case FunctionCallWithBody(name,params,Block(l)) =>
          FunctionCallWithBody(name,params,Block(l map simplifyStmt))
       case DefIntervalSplit(ii, superset, whichPart)  => DefIntervalSplit(ii, superset, whichPart) 

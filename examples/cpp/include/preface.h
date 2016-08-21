@@ -55,7 +55,7 @@ inline bool In(DEFINTERVALFUNC(I), int val) {
 #ifndef UNDEFINED
 #define UNDEFINED MAXVAL
 #endif
-
+#define IS_UNDEFINED(x) ((x) == UNDEFINED) 
 #define GUARDED(cond,val) ((cond) ? (val) : UNDEFINED) 
 //inline int GUARDED(bool cond, int val) { return ((cond) ? (val) : UNDEFINED); }
 inline int SLASH(int x, int y) { return (x != UNDEFINED) ? x : y; }
