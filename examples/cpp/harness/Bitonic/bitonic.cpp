@@ -32,7 +32,7 @@ void bitonicLoop(TYPE* BTSPL){
 	}
 	BL(1,2) = d(1,2);
 	for(int j=2;j<=N;j++){
-		for(int i=1;i<=j-1;i++){
+		cilk_for(int i=1;i<=j-1;i++){
 			if (i<j-1){
 				BL(i,j) = BL(i,j-1) + d(i,j-1);
 			}

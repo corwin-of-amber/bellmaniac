@@ -74,13 +74,13 @@ void funcC_loop(DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
 	}    /*bazinga 0*/
 }
 
-void func(DEFINTERVALFUNC(K2),DEFINTERVALFUNC(J0),DEFINTERVALFUNC(K0),DEFINTERVALFUNC(K3)){
+void func(DEFINTERVALFUNC(K2),DEFINTERVALFUNC(K3),DEFINTERVALFUNC(K0),DEFINTERVALFUNC(J0)){
 	FOR_FWD(i,DEFBEGIN(K2),DEFEND(K2)){
 		FOR_FWD(j,max((i + 1),DEFBEGIN(K3)),DEFEND(K3)){
 			TYPE tmp6;
 			tmp6 = INITMIN;
 			if(((i < j) && succ(i,j))){
-				FOR_FWD(k,DEFBEGIN(J0),min(i,DEFEND(J0))){
+				FOR_FWD(k,DEFBEGIN(K0),min(min(DEFEND(K0),i),DEFEND(J0))){
 					tmp6 = min(tmp6,(psi(k,i) + d(k,i)));
 				}
 			}
@@ -95,13 +95,13 @@ void func(DEFINTERVALFUNC(K2),DEFINTERVALFUNC(J0),DEFINTERVALFUNC(K0),DEFINTERVA
 		}
 	}
 }
-void func0(DEFINTERVALFUNC(K2),DEFINTERVALFUNC(K1),DEFINTERVALFUNC(J0),DEFINTERVALFUNC(K3)){
+void func0(DEFINTERVALFUNC(K2),DEFINTERVALFUNC(K3),DEFINTERVALFUNC(K1),DEFINTERVALFUNC(J0)){
 	FOR_FWD(i,DEFBEGIN(K2),DEFEND(K2)){
 		FOR_FWD(j,max((i + 1),DEFBEGIN(K3)),DEFEND(K3)){
 			TYPE tmp7;
 			tmp7 = INITMIN;
 			if(((i < j) && succ(i,j))){
-				FOR_FWD(k,DEFBEGIN(J0),min(i,DEFEND(J0))){
+				FOR_FWD(k,DEFBEGIN(K1),min(min(DEFEND(K1),i),DEFEND(J0))){
 					tmp7 = min(tmp7,(psi(k,i) + d(k,i)));
 				}
 			}
@@ -126,12 +126,12 @@ void funcC_rec(DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
 		DEFINTERVALSTMT_LOWER(K2, J1);
 		DEFINTERVALSTMT_UPPER(K3, J1);
 		cilk_spawn funcC_rec(PARAM(K0),PARAM(K2));;
-		cilk_spawn func(PARAM(K2),PARAM(J0),PARAM(K0),PARAM(K3));;
+		cilk_spawn func(PARAM(K2),PARAM(K3),PARAM(K0),PARAM(J0));;
 		funcC_rec(PARAM(K0),PARAM(K3));
 		cilk_sync;
 
 		cilk_spawn funcC_rec(PARAM(K1),PARAM(K2));;
-		cilk_spawn func0(PARAM(K2),PARAM(K1),PARAM(J0),PARAM(K3));;
+		cilk_spawn func0(PARAM(K2),PARAM(K3),PARAM(K1),PARAM(J0));;
 		funcC_rec(PARAM(K1),PARAM(K3));
 		cilk_sync;
 
@@ -139,7 +139,7 @@ void funcC_rec(DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
 
 }
 
-void func1(DEFINTERVALFUNC(K2),DEFINTERVALFUNC(K0),DEFINTERVALFUNC(K3)){
+void func1(DEFINTERVALFUNC(K0),DEFINTERVALFUNC(K2),DEFINTERVALFUNC(K3)){
 	FOR_FWD(i,DEFBEGIN(K0),DEFEND(K0)){
 		FOR_FWD(j,max((DEFBEGIN(K2) + 1),max((i + 1),DEFBEGIN(K3))),min((DEFEND(K2) + 1),DEFEND(K3))){
 			if((i < (j - 1))){
@@ -152,7 +152,7 @@ void func1(DEFINTERVALFUNC(K2),DEFINTERVALFUNC(K0),DEFINTERVALFUNC(K3)){
 		}
 	}
 }
-void func2(DEFINTERVALFUNC(K2),DEFINTERVALFUNC(K1),DEFINTERVALFUNC(K3)){
+void func2(DEFINTERVALFUNC(K1),DEFINTERVALFUNC(K2),DEFINTERVALFUNC(K3)){
 	FOR_FWD(i,DEFBEGIN(K1),DEFEND(K1)){
 		FOR_FWD(j,max((DEFBEGIN(K2) + 1),max((i + 1),DEFBEGIN(K3))),min((DEFEND(K2) + 1),DEFEND(K3))){
 			if((i < (j - 1))){
@@ -178,8 +178,8 @@ void funcB_rec(DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
 		funcB_rec(PARAM(K1),PARAM(K2));
 		cilk_sync;
 
-		cilk_spawn func1(PARAM(K2),PARAM(K0),PARAM(K3));;
-		func2(PARAM(K2),PARAM(K1),PARAM(K3));
+		cilk_spawn func1(PARAM(K0),PARAM(K2),PARAM(K3));;
+		func2(PARAM(K1),PARAM(K2),PARAM(K3));
 		cilk_sync;
 
 		cilk_spawn funcB_rec(PARAM(K0),PARAM(K3));;
@@ -190,13 +190,13 @@ void funcB_rec(DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
 
 }
 
-void func3(DEFINTERVALFUNC(J),DEFINTERVALFUNC(J1),DEFINTERVALFUNC(J0)){
+void func3(DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1),DEFINTERVALFUNC(J)){
 	FOR_FWD(i,DEFBEGIN(J0),DEFEND(J0)){
 		FOR_FWD(j,max((i + 1),DEFBEGIN(J1)),DEFEND(J1)){
 			TYPE tmp12;
 			tmp12 = INITMIN;
 			if(((i < j) && succ(i,j))){
-				FOR_FWD(k,max(DEFBEGIN(J0),DEFBEGIN(J)),min(min(i,DEFEND(J0)),DEFEND(J))){
+				FOR_FWD(k,DEFBEGIN(J0),min(min(i,DEFEND(J0)),DEFEND(J))){
 					tmp12 = min(tmp12,(psi(k,i) + d(k,i)));
 				}
 			}
@@ -222,7 +222,7 @@ void funcA_rec(DEFINTERVALFUNC(J)){
 		DEFINTERVALSTMT_LOWER(J0, J);
 		DEFINTERVALSTMT_UPPER(J1, J);
 		funcA_rec(PARAM(J0));
-		func3(PARAM(J),PARAM(J1),PARAM(J0));
+		func3(PARAM(J0),PARAM(J1),PARAM(J));
 		funcB_rec(PARAM(J0),PARAM(J1));
 		funcC_rec(PARAM(J0),PARAM(J1));
 		funcA_rec(PARAM(J1));
