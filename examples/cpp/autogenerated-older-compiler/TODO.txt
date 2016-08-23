@@ -1,0 +1,1 @@
+Make codegen_c/$EXAMPLE/$EXAMPLE.cpp compile with the current $EXAMPLE main in harness folder similar to gap-auto.cpp in this folder

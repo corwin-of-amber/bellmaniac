@@ -98,11 +98,19 @@ class CppOutput (implicit scope: Scope) {
     
     getLambdas(fd.body,indent) + s"\nvoid ${fd.name}(${fd.args map exprToFormalParam mkString ","}){\n${apply(fd.body,indent+1)}\n}"
   }
+  def isFunctionCall(stmt: Stmt) = {
+    stmt match {
+      case FunctionCallWithBody (name, params,body) => true
+      case FunctionCall(name,params) => true
+      case _ => false
+    }
+  }
   def cilkForkCode(stmts: List[Stmt],indent: Int) : String = {
     stmts match {
       case stmt :: Nil => apply(stmt,indent) + "\n"+ addIndent(indent,"cilk_sync;\n")
-      case stmt :: rest => addIndent(indent,s"cilk_spawn ${apply(stmt,0)};\n") + cilkForkCode(rest,indent)
-      case Nil => ???
+      case stmt :: rest if isFunctionCall(stmt) => addIndent(indent,s"cilk_spawn ${apply(stmt,0)};\n") + cilkForkCode(rest,indent)
+      case _ => 
+        ???
     }
   }
   def apply(s: Stmt, indent: Int): String = {
@@ -130,8 +138,8 @@ class CppOutput (implicit scope: Scope) {
       case If(cond,caseThen,caseElse) =>
         addIndent(indent,s"if(${exprToCode(cond)}){\n") + apply(caseThen,indent+1) + "\n" + addIndent(indent,"} else {\n") + apply(caseElse,indent+1) + "\n" + addIndent(indent,"}\n")
       case Fork(stmts) => //TODO: not here, but get parallel number of each stmt and re-organize AST
-        cilkForkCode(stmts,indent)
-        //??? //TODO: use cilk primitives as needed 
+        if (stmts.length == 1) apply(stmts.head,indent)
+        else cilkForkCode(stmts,indent)
       case Block(stmts) =>
         (stmts.map(x =>  apply(x,indent))).mkString("\n")
       case Parallel(i, stmt) =>
@@ -162,8 +170,8 @@ object CppOutput {
   }
   
   val PREFACE = """
-#include "preface.h"
 #include "input.h"
+#include "preface.h"
 """
   
   def writePrefaceTo(w: BufferedWriter) = {

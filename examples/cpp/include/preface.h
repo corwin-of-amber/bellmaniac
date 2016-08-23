@@ -25,7 +25,7 @@ using namespace std;
 
 #ifdef STRUCTINTERVAL
 struct interval {
-	TYPE begin;TYPE end;
+	int begin;int end;
 };
 #define DEFINTERVALFUNC(I) interval I
 #define DEFINTERVALSTMT(I) interval I
@@ -33,22 +33,32 @@ struct interval {
 #define DEFEND(I) I.end
 #define PARAM(I) I
 #else
-#define DEFINTERVALFUNC(I) TYPE I##_begin, TYPE I##_end
-#define DEFINTERVALSTMT(I) TYPE I##_begin, I##_end
+#define DEFINTERVALFUNC(I) int I##_begin, int I##_end
+#define DEFINTERVALSTMT(I) int I##_begin, I##_end
 #define DEFBEGIN(I) I##_begin
 #define DEFEND(I) I##_end
 #define PARAM(I) I##_begin, I##_end
 
 #endif
 
+#ifndef MAXVAL
 #define MAXVAL int(1e9)
+#endif
+
 #define INITMIN MAXVAL
-#define UNDEFINED MAXVAL
+
+#define MINVAL -MAXVAL
+#define INITMAX MINVAL
+
+
 
 inline bool In(DEFINTERVALFUNC(I), int val) {
 	return ((val) >= DEFBEGIN(I) && (val) < DEFEND(I));
 }
-
+#ifndef UNDEFINED
+#define UNDEFINED MAXVAL
+#endif
+#define IS_UNDEFINED(x) ((x) == UNDEFINED) 
 #define GUARDED(cond,val) ((cond) ? (val) : UNDEFINED) 
 //inline int GUARDED(bool cond, int val) { return ((cond) ? (val) : UNDEFINED); }
 inline int SLASH(int x, int y) { return (x != UNDEFINED) ? x : y; }
@@ -88,49 +98,19 @@ extern long long B;
 #else
 #define BNEEDED 0
 #endif
-
-#define Ddist(i,j) dist[i*N + j]
-#define DCLdist(i,j) Ddist(i,j)
-#define DBLdist(i,j) Ddist(i,j)
-#define DALdist(i,j) Ddist(i,j)
+#ifndef Ddist
+#define Ddist(i,j) dist[(i)*N + (j)]
+#endif
 #define psi(i,j) Ddist(i,j)
 #define theta(i,j) Ddist(i,j)
 
 
 #define LET(i,v) int i = v;
 
-#define FOR_VAR_FWD(i,n,m) for(TYPE i=n;i<m;i++)
-#define FOR_VAR_BWD(i,n,m) for(TYPE i=m-1;i>=n;i--)
-
 #define SIZE(I) (DEFEND(I)-DEFBEGIN(I))
-#define FOR_FORWARD(i,K) for(TYPE i=DEFBEGIN(K);i<DEFEND(K);i++)
-#define FOR_BACKWARD(i,K) for(TYPE i=DEFEND(K)-1;i>=DEFBEGIN(K);i--)
-#define FOR_FWD(i,b,e) for(TYPE i=b;i<e;i++)
-#define FOR_BWD(i,b,e) for(TYPE i=e-1;i>=b;i--)
-#define FOR_FWD_FWD(i,j,I,J,ZZ) FOR_FORWARD(i,I){FOR_FORWARD(j,J){ZZ}}
-#define FOR_FWD_BWD(i,j,I,J,ZZ) FOR_FORWARD(i,I){FOR_BACKWARD(j,J){ZZ}}
-#define FOR_BWD_FWD(i,j,I,J,ZZ) FOR_BACKWARD(i,I){FOR_FORWARD(j,J){ZZ}}
-#define FOR_BWD_BWD(i,j,I,J,ZZ) FOR_BACKWARD(i,I){FOR_BACKWARD(j,J){ZZ}}
+#define FOR_FWD(i,b,e) for(int i=b;i<e;i++)
+#define FOR_BWD(i,b,e) for(int i=e-1;i>=b;i--)
 
-//SIZE(I) == SIZE(J)
-//#define FOR_DIAG_I_LT_J_FWD_FWD(i,j,I,J,ZZ) FOR_VAR_FWD(of,0,SIZE(I)){FOR_VAR_FWD(ci,0,SIZE(J)-of){TYPE i = ci+DEFBEGIN(I); TYPE j = DEFBEGIN(J)+ci+of; ZZ}}
-
-//#define FOR_A_loop_2(i,j,I,J,ZZ) FOR_BWD_FWD(i,j,I,J,ZZ)
-#define FOR_A_loop_1(i,n,m) FOR_VAR_FWD(i,n,m)
-#define FOR_A_loop_2(i,n,m) FOR_VAR_BWD(i,n,m)
-#define FOR_A_loop_3(i,n,m) FOR_VAR_FWD(i,n,m)
-#define FOR(i,J) 
-#define PSI(i,j) 
-#define FOR_B_loop_3(i,n,m) FOR_VAR_BWD(i,n,m)
-#define FOR_B_loop_4(i,n,m) FOR_VAR_FWD(i,n,m)
-#define FOR_B_loop_2(i,n,m) FOR_VAR_FWD(i,n,m)
-#define FOR_B_loop_1(i,n,m) FOR_VAR_FWD(i,n,m)
-//#define FOR_B_loop_1(i,j,I,J,ZZ) FOR_BWD_FWD(i,j,I,J,ZZ)
-
-#define FOR_C_loop_1(i,n,m) FOR_VAR_FWD(i,n,m)
-#define FOR_C_loop_2(i,n,m) FOR_VAR_FWD(i,n,m)
-#define FOR_C_loop_3(i,n,m) FOR_VAR_FWD(i,n,m)
-//#define FOR_C_loop_2(i,j,I,J,ZZ) FOR_FWD_FWD(i,j,I,J,ZZ)
 
 #define FORUNION(i,nK,mK,nL,mL,ZZ) FOR_VAR_FWD(i,nK,mK){ZZ};FOR_VAR_FWD(i,nL,mL){ZZ}
 
@@ -149,9 +129,46 @@ inline bool BASE_CONSTRAINT(DEFINTERVALFUNC(a),DEFINTERVALFUNC(b),DEFINTERVALFUN
 inline void copy_dist_part(TYPE* V,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
 	for(int i=DEFBEGIN(II);i<DEFEND(II);i++){
 		for(int j=DEFBEGIN(JJ);j<DEFEND(JJ);j++){
-			//cout<<i<<" "<<j<<" "<<(j)-DEFBEGIN(JJ)<<" "<<((i)-DEFBEGIN(II))<<endl;
 			psiCopyOpt(i,j,II,JJ) = psi(i,j);
+		}
+	}
+}
+
+//Plain Copy Optimization is without transpose
+#define psiCopyOptPlain(i,j,I,J) V[((j)-DEFBEGIN(J)) + ((i)-DEFBEGIN(I))*B]
+
+inline void copy_dist_part_plain(TYPE* V,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
+	for(int i=DEFBEGIN(II);i<DEFEND(II);i++){
+		for(int j=DEFBEGIN(JJ);j<DEFEND(JJ);j++){
+			psiCopyOptPlain(i,j,II,JJ) = Ddist(i,j);
 
 		}
 	}
+}
+
+#define succ(i,j) ((j) == (i+1))
+
+inline void argParser(int argc, char *argv[]){
+	argv++;
+	argc--;
+	if (argc > 0){
+		N = atoi(argv[0]);
+	}
+#ifndef B
+	if (argc > 1){
+		B = atoi(argv[1]);
+	}
+#else
+	if (B != atoi(argv[1])){
+		cout<<"B has been pre-set to "<<B<<endl;
+		exit(1);
+	}
+#endif
+	if (argc > 2){
+		if (0!= __cilkrts_set_param("nworkers",argv[2])) {
+            cout<<"Failed to set worker count\n";
+            exit(1);
+		}
+	}
+
 }

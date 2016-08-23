@@ -451,7 +451,12 @@ int main(int argc, char ** argv) {
 		N = atoi(argv[1]);
 	if (argc > 2)
 		B = atoi(argv[2]);
-	//
+	if (argc > 3) {
+		if (0!= __cilkrts_set_param("nworkers",argv[3])) {
+			printf("Failed to set worker count\n");
+			return 1;
+		}
+	}
 	N = N;
 	cout << N << "," << B << ",";
 	if (B > N)

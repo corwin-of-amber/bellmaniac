@@ -129,6 +129,7 @@ interval J;
 #define BASE_CONSTRAINT_D(a,b,c) BASE_CONSTRAINT3(a,b,c)
 
 #define DdistCO(i,j,I,J) V[((j)-DEFBEGIN(J))*B + ((i)-DEFBEGIN(I))]
+#define DdistSimpleX(i,j,I,J) X[((j)-DEFBEGIN(J)) + ((i)-DEFBEGIN(I))*B]
 #define DdistSimpleV(i,j,I,J) V[((j)-DEFBEGIN(J)) + ((i)-DEFBEGIN(I))*B]
 #define DdistSimpleW(i,j,I,J) W[((j)-DEFBEGIN(J)) + ((i)-DEFBEGIN(I))*B]
 inline void copy_dist_part(TYPE* V,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
@@ -147,6 +148,15 @@ inline void copy_to_dist(TYPE* W,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
 			//cout<<i<<" "<<j<<" "<<(j)-DEFBEGIN(JJ)<<" "<<((i)-DEFBEGIN(II))<<endl;
 			Ddist(i,j)=DdistSimpleW(i,j,II,JJ);
 
+		}
+	}
+}
+
+inline void copy_SOF_part(TYPE* V,DEFINTERVALFUNC(II),DEFINTERVALFUNC(JJ)){
+	for(int i=DEFBEGIN(II);i<DEFEND(II);i++){
+		for(int j=DEFBEGIN(JJ);j<DEFEND(JJ);j++){
+			//cout<<i<<" "<<j<<" "<<(j)-DEFBEGIN(JJ)<<" "<<((i)-DEFBEGIN(II))<<endl;
+			DdistSimpleV(i,j,II,JJ) = SOF[i*N+j];
 		}
 	}
 }
@@ -278,6 +288,14 @@ int main(int argc, char ** argv) {
 	N = N;
 #endif
 	
+    if (argc > 3) {
+        if (0!= __cilkrts_set_param("nworkers",argv[3])) {
+            printf("Failed to set worker count\n");
+            return 1;
+        }
+    }
+
+
 #ifdef HACKJ
 	//HACK
 	DEFBEGIN(J) = 0;
