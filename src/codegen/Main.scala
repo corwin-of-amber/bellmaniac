@@ -878,7 +878,8 @@ object Main {
       case If(cond1,Assign(v1,Guarded(cond2,e)),ce@Block(List())) if (!(getVariablesUsed(cond2) contains v1)) =>
         If(FunApp("&&",List(cond1,cond2)),Assign(v1,e),ce)
       case Assign(v1,Guarded(cond2,e)) =>
-        If(cond2,Assign(v1,e),Assign(v1,Var("UNDEFINED",Interval("R"))))
+        if (v1.startsWith("_slash_")) If(cond2,Assign(v1,e),Block(List()))
+        else If(cond2,Assign(v1,e),Assign(v1,Var("UNDEFINED",Interval("R"))))
       case If(cond,caseThen,caseElse) => If(makeBigAnd(getAndPreds(cond)), simplifyStmt(caseThen), simplifyStmt(caseElse))
       //TODO: reduce min(min to two mins using temp
       case  MemWrite(arrayName,indices,FunApp(f1,List(FunApp(f2,args :+ Var(t,tt))))) if ((reduceFnsStr contains f1)  && (f2 == "[]") && args.length >= 2 && t.startsWith("tmp")) =>
@@ -890,7 +891,7 @@ object Main {
         If(cond,Assign(v1,FunApp(f,List(e,Var(v2,ii)))),Block(List()))
       case MemWrite(arrayName1,indices1,Slash(true,List(init@MemRead(arrayName2,indices2),a,b))) if (arrayName1 == arrayName2) && (indices1 == indices2)  =>
         //Can be extended to more than two elements a,b
-        val tmpName = createTempName()
+        val tmpName = "_slash_" + createTempName()
         val tmpVar = Var(tmpName,Interval("R"))
         val tmpPre = List(DefVar(tmpName, "TYPE"), Assign(tmpName, init))
         val innerIf = If(FunApp("IS_UNDEFINED",List(tmpVar)),Assign(tmpName,b),Block(List()))

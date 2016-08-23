@@ -4,24 +4,22 @@
 
 
 void funcA_loop(DEFINTERVALFUNC(I),DEFINTERVALFUNC(J)){
-	FOR_FWD(i,DEFBEGIN(I),DEFEND(I)){
-		FOR_FWD(j,DEFBEGIN(J),DEFEND(J)){
-			TYPE tmp1;
-			tmp1 = psi(i,j);
-			if(IS_UNDEFINED(tmp1)){
-				if(((delta(i,j) && In(PARAM(I),(i - 1))) && In(PARAM(J),(j - 1)))){
-					tmp1 = (psi((i - 1),(j - 1)) + 1);
-				} else {
-					tmp1 = UNDEFINED;
+	FOR_FWD(i,max((DEFBEGIN(I) + 1),DEFBEGIN(I)),min((DEFEND(I) + 1),DEFEND(I))){
+		FOR_FWD(j,max((DEFBEGIN(J) + 1),DEFBEGIN(J)),min((DEFEND(J) + 1),DEFEND(J))){
+			TYPE _slash_tmp1;
+			_slash_tmp1 = psi(i,j);
+			if(IS_UNDEFINED(_slash_tmp1)){
+				if(delta(i,j)){
+					_slash_tmp1 = (psi((i - 1),(j - 1)) + 1);
 				}
 
-				if((((IS_UNDEFINED(tmp1) && (!delta(i,j))) && In(PARAM(J),(j - 1))) && In(PARAM(I),(i - 1)))){
-					tmp1 = oplus(psi(i,(j - 1)),psi((i - 1),j));
+				if((IS_UNDEFINED(_slash_tmp1) && (!delta(i,j)))){
+					_slash_tmp1 = oplus(psi(i,(j - 1)),psi((i - 1),j));
 				}
 
 			}
 
-			psi(i,j) = tmp1;
+			psi(i,j) = _slash_tmp1;
 		}
 	}    /*bazinga 0*/
 }
