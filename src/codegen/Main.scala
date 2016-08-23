@@ -530,7 +530,7 @@ object Main {
           //A[I,J] etc
           val style = "rec";
           val name :: params = f.root.literal.toString().split(raw"[\[,\]]").toList;
-          FunctionCall(s"func${name}_${style}",(params map (Interval(_))))
+          FunctionCall(s"func${name}_${style}",(params.sorted.toList map (Interval(_))))
         }
         else {
           f match {
@@ -756,10 +756,10 @@ object Main {
             def forceFunctionCall(sprime: Stmt) = { 
               //Wraps sprime statement in a function if it is not a function call
               sprime match {
-                    case FunctionCall(f,_) => sprime
+                    case FunctionCall(f,args) => sprime
                     case _ => //Wrap it in a function
                       FunctionCallWithBody($I("func"),
-                          getIntervalsUsed(sprime).toList map (a => Interval(a)),sprime.toBlock)
+                          (getIntervalsUsed(sprime)).toSeq.sorted.toList map (a => Interval(a)),sprime.toBlock)
                   }
             }
             Fork(parsi map forceFunctionCall) ::  cilkParallelize(newrest)
