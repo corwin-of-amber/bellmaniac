@@ -32,7 +32,7 @@ void funcA_loop(DEFINTERVALFUNC(J)){
 void funcB_loop(DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
 	DEFINTERVALSTMT_UNION(J, J0, J1);
 	FOR_FWD(i,DEFBEGIN(J0),DEFEND(J0)){
-		FOR_FWD(j,max((DEFBEGIN(J1) + 1),max((i + 1),DEFBEGIN(J1))),min((DEFEND(J1) + 1),DEFEND(J1))){
+		FOR_FWD(j,max((DEFBEGIN(J1) + 1),max((i + 1),DEFBEGIN(J1))),DEFEND(J1)){
 			if((i < (j - 1))){
 				TYPE tmp3;
 				tmp3 = psi(i,j);

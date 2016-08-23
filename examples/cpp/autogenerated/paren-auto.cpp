@@ -28,15 +28,12 @@ void funcB_loop(DEFINTERVALFUNC(J0),DEFINTERVALFUNC(J1)){
 		FOR_FWD(j,DEFBEGIN(J1),DEFEND(J1)){
 			TYPE tmp3;
 			tmp3 = INITMIN;
-			if((In(PARAM(J0),i) && In(PARAM(J1),j))){
-				FOR_FWD(k,max(max((i + 1),DEFBEGIN(J0)),DEFBEGIN(J)),min(min(DEFEND(J0),j),DEFEND(J))){
-					tmp3 = min(tmp3,((psi(i,k) + psi(k,j)) + w(i,k,j)));
-				}
-				FOR_FWD(k,max(max((i + 1),DEFBEGIN(J1)),DEFBEGIN(J)),min(min(DEFEND(J1),j),DEFEND(J))){
-					tmp3 = min(tmp3,((psi(i,k) + psi(k,j)) + w(i,k,j)));
-				}
+			FOR_FWD(k,max(max((i + 1),DEFBEGIN(J0)),DEFBEGIN(J)),min(min(DEFEND(J0),j),DEFEND(J))){
+				tmp3 = min(tmp3,((psi(i,k) + psi(k,j)) + w(i,k,j)));
 			}
-
+			FOR_FWD(k,max(max((i + 1),DEFBEGIN(J1)),DEFBEGIN(J)),min(min(DEFEND(J1),j),DEFEND(J))){
+				tmp3 = min(tmp3,((psi(i,k) + psi(k,j)) + w(i,k,j)));
+			}
 			TYPE tmp4;
 			tmp4 = psi(i,j);
 			tmp4 = min(tmp4,tmp3);
@@ -53,12 +50,9 @@ void funcC_loop(DEFINTERVALFUNC(K0),DEFINTERVALFUNC(K1),DEFINTERVALFUNC(K2)){
 		FOR_FWD(j,DEFBEGIN(K2),DEFEND(K2)){
 			TYPE tmp5;
 			tmp5 = INITMIN;
-			if((In(PARAM(K0),i) && In(PARAM(K2),j))){
-				FOR_FWD(k,DEFBEGIN(K1),DEFEND(K1)){
-					tmp5 = min(tmp5,((psi(i,k) + psiCopyOpt(k,j,K1,K2)) + w(i,k,j)));
-				}
+			FOR_FWD(k,DEFBEGIN(K1),DEFEND(K1)){
+				tmp5 = min(tmp5,((psi(i,k) + psiCopyOpt(k,j,K1,K2)) + w(i,k,j)));
 			}
-
 			TYPE tmp6;
 			tmp6 = psi(i,j);
 			tmp6 = min(tmp6,tmp5);
