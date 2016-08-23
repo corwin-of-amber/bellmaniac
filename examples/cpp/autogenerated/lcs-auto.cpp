@@ -32,8 +32,9 @@ void funcA_rec(DEFINTERVALFUNC(I),DEFINTERVALFUNC(J)){
 		DEFINTERVALSTMT_LOWER(J0, J);
 		DEFINTERVALSTMT_UPPER(J1, J);
 		funcA_rec(PARAM(I0),PARAM(J0));
-		funcA_rec(PARAM(I0),PARAM(J___J1_J1minus1));
+		cilk_spawn funcA_rec(PARAM(I0),PARAM(J___J1_J1minus1));
 		funcA_rec(PARAM(I___I1_I1minus1),PARAM(J0));
+        cilk_sync;
 		funcA_rec(PARAM(I___I1_I1minus1),PARAM(J___J1_J1minus1));
 	}
 

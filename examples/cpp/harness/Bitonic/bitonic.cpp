@@ -46,11 +46,11 @@ void bitonicLoop(TYPE* BTSPL){
 	}
 }
 #ifdef DEBUG
-#define pp(x) ((x>MAXVAL/2)?-1:x)
+#define pp(x) x //((x>MAXVAL/2)?-1:x)
 void printBTSP(TYPE* btsp){
-	cout<<endl;
 	if (N>20) return;
-	cout.precision(4);
+	cout<<endl;
+    cout.precision(4);
 	for(int i=1;i<=N;i++){
 		for(int j=1;j<=N;j++){
 			cout<<(pp(btsp[(i-1)*N+(j-1)]))<<"\t";

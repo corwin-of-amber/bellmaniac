@@ -41,7 +41,10 @@ struct interval {
 
 #endif
 
+#ifndef MAXVAL
 #define MAXVAL int(1e9)
+#endif
+
 #define INITMIN MAXVAL
 
 #define MINVAL -MAXVAL
