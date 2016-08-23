@@ -795,6 +795,12 @@ object Main {
     //if a is known to be less than or equal to b return true
     //else return false
     (a,b) match {
+      case (FunApp("+",List(a1,Num(n))),_) if (a1 == b && n >0) => false
+      case (FunApp("+",List(Num(n),a1)),_) if (a1 == b && n >0) => false
+      
+      case (_,FunApp("+",List(b1,Num(n)))) if (a == b1 && n >0) => true
+      case (_,FunApp("+",List(Num(n),b1))) if (a == b1 && n >0) => true
+
       case (GetBound(Interval(i1), LOWER),GetBound(Interval(i2), LOWER)) =>
         if (isSubset(i2,i1)) true
         else false
@@ -838,6 +844,13 @@ object Main {
   def makeBigAnd(conds: Seq[Expr]) = {
     conds reduceOption ((a,b) => FunApp("&&",List(a,b))) getOrElse Var("true",Interval("B"))
   }
+  def isNegOf(a: Expr, b: Expr) = {
+    (a,b) match {
+      case (FunApp("!",List(a1)),b) if (a1 == b) => true
+      case (a,FunApp("!",List(b1))) if (a == b1) => true
+      case _ => false
+    }
+  }
   def simplifyStmt(stmt: Stmt): Stmt = {
     stmt match {
       case Block(List(If(cond1,t1,Block(List())),If(cond2,t2,Block(List())))) 
@@ -874,8 +887,10 @@ object Main {
       case For(v,lb,ub,dir,Block(stmts :+ MemWrite(an,indices,Guarded(cond,e)))) =>
         For(v,lb,ub,dir,If(cond,Block((stmts map simplifyStmt) :+ MemWrite(an,indices,e)),Block(List())))
       case For(v,lb,ub,dir,stmts)  => For(v,lb,ub,dir,simplifyStmt(stmts))
+      case If(a,Block(List(If(b,s1,emp@Block(List())),If(FunApp("&&",List(c,d)),s2,Block(List())))),Block(List())) 
+             if ((a==c && isNegOf(b,d)) || ((a==d) && isNegOf(b,c))) => If(a,If(b,s1,s2),emp)
       case If(c1,If(c2,t2,Block(List())),Block(List())) => If(FunApp("&&",List(c1,c2)),t2,Block(List()))
-      case If(cond1,Assign(v1,Guarded(cond2,e)),ce@Block(List())) if (!(getVariablesUsed(cond2) contains v1)) =>
+      case If(cond1,Assign(v1,Guarded(cond2,e)),ce@Block(List())) if (!(getVariablesUsed(cond2) contains v1) && v1.startsWith("_slash_")) =>
         If(FunApp("&&",List(cond1,cond2)),Assign(v1,e),ce)
       case Assign(v1,Guarded(cond2,e)) =>
         if (v1.startsWith("_slash_")) If(cond2,Assign(v1,e),Block(List()))
