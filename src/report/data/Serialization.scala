@@ -18,6 +18,7 @@ trait SerializationContainer {
     case s: String => s
     case o: DBObject => o
     case l: List[_] => list(l)
+    case m: Map[_,_] => mapAny(m map { case (k,v) => key(k) -> v })
     case _ => value.toString
   }
   def byRef(value: AnyRef): AnyRef = anyRef(value)
@@ -30,6 +31,10 @@ trait SerializationContainer {
     (new BasicDBObject /: elements) { case (d, (k,v)) => d.append(k, anyRef(v)) }
   }
   def map[A <: AnyRef](elements: (String,A)*): BasicDBObject = map(elements)
+  def mapAny[A <: Any](elements: Iterable[(String,A)]) = {
+    (new BasicDBObject /: elements) { case (d, (k,v)) => d.append(k, any(v)) }
+  }
+  def key(value: Any) = value.toString
   def flatten(jsons: Stream[DBObject]) = jsons flatMap {
     case l: BasicDBList => l map (_.asInstanceOf[DBObject])
     case item => Some(item)
@@ -63,10 +68,15 @@ class DisplayContainer extends SerializationContainer with Numerator {
     case _ => super.anyRef(value)
   }
 
+  override def key(value: Any) = value match {
+    case Term_:(t) => t.toPretty
+    case _ => super.key(value)
+  }
+  
   override def byRef(value: AnyRef): AnyRef = -->?(value)
 
   def termTag(tag: Formula.TermTag) = {
-    val json = new BasicDBObject("term", -->?(tag.term))
+    val json = new BasicDBObject //("term", -->?(tag.term))
     tag.term match {
       case typed: TypedTerm => json.append("type", typed.typ.toPretty)
       case _ => json

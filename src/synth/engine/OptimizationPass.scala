@@ -56,8 +56,9 @@ object OptimizationPass {
               
       //inferLoopDirections(program)
       
-      val rdg = new FixpointLoopAnalysis apply program
-      println(rdg toPretty)
+      val (newProg, loopdirs) = new FixpointLoopAnalysis apply_+ program
+      println(newProg toPretty)
+      println(loopdirs)
     }
   }
  

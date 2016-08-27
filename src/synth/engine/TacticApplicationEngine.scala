@@ -400,18 +400,25 @@ class TacticApplicationEngine(implicit val scope: Scope, val env: Environment) {
    */
 
   def emit(s: State) = {
-    val prover = this.prover(s.program)
-    val rec = new OptimizationPass.Recorder()(prover.env)
-    val fpe = new FixpointLoopAnalysis()(rec, prover)
-    val opt =
-      invokeOptimize(s)/*.program*/ |> OptimizationPass.foldAllCalls |> (fpe.apply_+)
-    mkState(opt)
+    if (ui.Config.config.opt()) {
+      val prover = this.prover(s.program)
+      val rec = new OptimizationPass.Recorder()(prover.env)
+      val fpe = new FixpointLoopAnalysis()(rec, prover)
+      val opt =
+        invokeOptimize(s)/*.program*/ |> OptimizationPass.foldAllCalls |> (fpe.apply_+)
+      mkState(opt)
+    }
+    else s
   }
 
   def emit(s: State, name: String, style: String): State = {
     val sout = emit(s)
-    outf += Map("program" -> name, "style" -> style,
-                "text" -> sdisplay(sout.ex), "term" -> sout.program, "scope" -> scope, "tag" -> sout.tag)
+    val m = Map("program" -> name, "style" -> style,
+                "text" -> sdisplay(sout.ex), "term" -> sout.program, "scope" -> scope)
+    sout match {
+      case sout: State with Tagged[_] => outf += m + ("tag" -> sout.tag.asInstanceOf[AnyRef])
+      case _ => outf += m
+    }
     sout
   }
 
