@@ -22,6 +22,10 @@ import synth.engine.TacticApplicationEngine.Instantiated
 import synth.engine.TacticApplicationEngine.PodOrigin
 import synth.engine.CollectStats
 import synth.engine.PodFactory
+import semantics.TypedIdentifier
+import semantics.TypedTerm
+import semantics.TypeTranslation.Environment
+import syntax.Identifier
 
 
 
@@ -127,11 +131,47 @@ object Accordion {
 
   
   trait InvokeProver extends TacticApplicationEngine {
-    override lazy val prover: Prover = prover(List())
+    override lazy val prover: Prover = prover(List(), Set(max), Set(T(I("∪", "predicate"))))
     
-    def prover(pods: List[Pod]) = {
+    def prover(pods: List[Pod], fv: Set[Term], ty: Set[Term], env: Environment=this.env) = {
       import synth.pods._
 
+      def when[A](trig: Term, pods: => List[A]) =
+        if (fv contains trig) pods else List()
+      
+      def when2[A,B](trig: Term, pods: => Map[A,B]) =
+        if (fv contains trig) pods else Map()
+        
+      def when3[A](trig: Char, pods: => Iterable[A]) =
+        if (ty exists (x => x.root.kind == "predicate" && 
+            x.root.literal.toString.contains(trig))) pods else List()
+
+      val gen = new synth.tactics.Synth.ScopeGen(scope)
+      
+      val base = List(NatPod, TuplePod)
+      val totalOrders = Map(R ~> TotalOrderPod(R)) ++ (gen.masters match {
+        case List() => Map()
+        case List(j) => Map(j -> TotalOrderPod(T(j), <))   // single master sort
+        case l =>                                     // more than one master sort
+          l.zipWithIndex map { case (sort, idx) =>  // yeah kind of a hack :\
+            sort -> TotalOrderPod(T(sort), TV(Strip.subscriptIndexed("<")(idx+1)))
+          }
+      })      
+      val indexAriths = gen.masters map (sort => sort -> IndexArithPod(T(sort), totalOrders(sort).<)) toMap
+      val parts = gen.partitions map { case (sup, sub1, sub2) => 
+        val m = scope.sorts.getMasterOf(sup)
+        PartitionPod(T(sup), totalOrders(m).<, T(sub1), T(sub2))
+      } toList
+      val maxes = when2(max, (List(N.leaf) ++ gen.masters) map (sort => sort -> MaxPod(T(sort), R, totalOrders(R.leaf).<)) toMap)
+      val mins = when2(min, (List(N.leaf) ++ gen.masters) map (sort => sort -> MinPod(T(sort), R, totalOrders(R.leaf).<)) toMap)
+      val offsets = when3('∪', gen.sortsByMaster flatMap { case (master, subsorts) =>
+        subsorts filterNot (_ == master) map (x => OffsetsPod(T(x), indexAriths(master)))
+      })
+      
+      val allPods = base ++ totalOrders.values ++ indexAriths.values ++ parts ++ maxes.values ++ mins.values ++ offsets toList
+            
+      new Prover(allPods ++ pods, Prover.Verbosity.ResultsOnly)(env)
+      /*
       val toR = TotalOrderPod(R)
       val toJ = TotalOrderPod(J, <)
       val idxJ = IndexArithPod(J, toJ.<)
@@ -145,17 +185,37 @@ object Accordion {
       val maxNR = MaxPod(N, R, toR.<)
 
       new Prover(List(NatPod, TuplePod, toR, toJ, idxJ, partJ, partJ0, partJ1, partK0, partK1, partK2, maxJR, maxNR) ++ pods, Prover.Verbosity.ResultsOnly)
+      */
     }
 
+    def mkEnv(fv: Iterable[Term]) = {
+      val decls = fv flatMap { v => TypedTerm.typeOf(v) map (v ~> _) } toMap;
+      val declKeys = List(V("δ"), V("succ"))  // @@@
+      TypeTranslation.decl(scope, declKeys flatMap (δ => decls.get(δ) map (δ -> _)) toMap)
+    }
+    
+    def collectTypes(term: Term) =
+      term.nodes flatMap { v => TypedTerm.typeOf(v).toSeq flatMap (_.leaves) } toSet
+    
+    override def prover(program: Term) = {
+      val fv = LambdaCalculus.freevars(program)
+      val ty = collectTypes(program)
+      implicit val env = this.env ++ mkEnv(fv)
+      prover(List(), fv, ty, env)
+    }
+      
     def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
-      (new Assistant).invokeProver(assumptions, goals, new SimplePattern(max :@ ?))(prover(pods))
+      val fv = goals flatMap LambdaCalculus.freevars toSet
+      val ty = goals flatMap collectTypes toSet
+      implicit val env = this.env ++ mkEnv(fv)
+      (new Assistant()).invokeProver(assumptions, goals, SimplePattern(min :@ ?, max :@ ?))(prover(pods, fv, ty, env))
     }
 
     override def invokeProver(pod: Pod) { 
       invokeProver(List(), pod.obligations.conjuncts, List(pod))
     }
   }
-  
+
   class Interpreter(implicit scope: Scope) extends TacticApplicationEngine with PodFactory with InvokeProver with CollectStats {
     import TacticApplicationEngine._
     import syntax.Subroutine
@@ -167,5 +227,5 @@ object Accordion {
         "C" -> Subroutine(CPod), 
         "D" -> Subroutine(DPod))
   }  
-  
+
 }
