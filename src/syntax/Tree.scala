@@ -22,6 +22,8 @@ class Tree[T](val root: T, val subtrees: List[Tree[T]] = List()) extends AsJson 
   def leaves = nodes filter (_.isLeaf)
   def terminals = leaves map (_.root)
   
+  def size: Int = 1 + (0 /: (subtrees map (_.size)))(_ + _)
+  
   def bfs: Stream[Tree[T]] = {
     def tbf(l: Stream[Tree[T]]): Stream[Tree[T]] = 
       if (l.isEmpty) Stream.empty else l ++ tbf(l flatMap (_.subtrees))

@@ -126,7 +126,7 @@ object Formula {
 
   def M(ops: InfixOperator*) = ops map (x => (x.literal, x)) toMap
 
-  val INFIX = M(O("->", 1, Assoc.Right), O("<->", 1), O("∧", 1), O("∨", 1), O("<", 1), O("=", 1),
+  val INFIX = M(O("->", 1, Assoc.Right), O("<->", 1), O("∧", 1, Assoc.Left), O("∨", 1, Assoc.Left), O("<", 1), O("=", 1),
     O(":", 1, Assoc.Right), O("::", 1), O("/", 2, Assoc.Both), O("|_", 1), O("∩", 1), O("×", 1),
     O("+", 1), O("-", 1), O("⨁", 1), O("⨀", 1)) ++
     Map("@" -> new AppOperator("", 1, Assoc.Left),

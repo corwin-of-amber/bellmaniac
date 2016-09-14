@@ -27,8 +27,14 @@ object Scheme {
     def apply(args: Term*) = AstSugar.TreeBuild(P)(args:_*)
   }
 
-  class Template(val vars: List[Identifier], val template: Term) extends Scheme {
+  trait Arity { val arity: Int }
+
+  class Template(val vars: List[Identifier], val template: Term) extends Scheme with Arity {
     import AstSugar._
+    
+    override val arity = vars.length
+    
+    def this(vars: Term*)(template: Term) = this(vars.toList map (_.leaf), template)
     
     def apply(args: Term*): Term = {
       val subst = new TreeSubstitution(vars map (T(_)) zip args)

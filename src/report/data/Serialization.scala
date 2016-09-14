@@ -52,7 +52,25 @@ trait Numerator {
   def <-- (index: Int): AnyRef
 }
 
-class DisplayContainer extends SerializationContainer with Numerator {
+trait NumeratorWithMap extends Numerator {
+
+  val mapped: collection.mutable.Map[AnyRef,Int] = collection.mutable.Map.empty
+  var max = 0
+
+  def --> (value: AnyRef) = mapped get value match {
+    case Some(idx) => idx
+    case _ => max = max + 1 ; mapped += (value -> max) ; max
+  }
+
+  def <-- (index: Int) = mapped find (_._2 == index) match {
+    case Some((ns, _)) => ns
+    case _ => val ns = new syntax.AstSugar.Uid
+      mapped += (ns -> index) ; max = Math.max(max, index) ; ns
+  }
+
+}
+
+class DisplayContainer extends SerializationContainer with NumeratorWithMap {
   import syntax.AstSugar._
   import syntax.Formula
   import semantics.{TypedTerm, Id}
@@ -81,20 +99,6 @@ class DisplayContainer extends SerializationContainer with Numerator {
       case typed: TypedTerm => json.append("type", typed.typ.toPretty)
       case _ => json
     }
-  }
-
-  val mapped: collection.mutable.Map[AnyRef,Int] = collection.mutable.Map.empty
-  var max = 0
-
-  def --> (value: AnyRef) = mapped get value match {
-    case Some(idx) => idx
-    case _ => max = max + 1 ; mapped += (value -> max) ; max
-  }
-
-  def <-- (index: Int) = mapped find (_._2 == index) match {
-    case Some((ns, _)) => ns
-    case _ => val ns = new Uid
-      mapped += (ns -> index) ; max = Math.max(max, index) ; ns
   }
 
   def -->? (value: AnyRef) = mapped get value match {
