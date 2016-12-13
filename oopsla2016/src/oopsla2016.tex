@@ -1,5 +1,7 @@
 \documentclass[10pt,numbers]{sigplanconf}
-\usepackage[2ndsubmission]{oopsla2016}
+\pdfpagewidth=8.5in 
+\pdfpageheight=11in 
+\usepackage[final]{oopsla2016}
 
 % The following oopsla2016 options are available:
 %
@@ -9,6 +11,8 @@
 
 \usepackage{amsmath,amssymb,amsopn,amsthm}
 \usepackage{mathtools}
+%\usepackage{float}
+\usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{algorithmicx,algorithm}
 \usepackage[noend]{algpseudocode}
@@ -24,8 +28,14 @@
 \usepackage{fix-cm}  % this is for math inside \scriptsize text
 \usepackage{wrapfig}
 \usepackage{mychangebar}
+\usepackage{microtype}
+%\usepackage[firstpage]{draftwatermark}
+%\SetWatermarkText{{\hspace*{8in}\includegraphics[scale=0.1]{img/aec-badge}}}
+%\SetWatermarkAngle{0}
+\newif\ifdiff
 
 %%%  diff hacks  %%%
+\ifdiff
 % configure changebar
 \setlength\changebarsep{1mm}
 % configure marginpar
@@ -33,9 +43,13 @@
 \setlength\marginparwidth{1.5cm}
 \newcommand\diffnote[1]{\hspace{0pt}\marginpar{\hbadness=10000\small #1}}
 \newcommand\diffnoteup[1]{\marginpar{\hbadness=10000\small #1}}
+\else
+\nochangebars
+\newcommand\diffnote[1]{}
+\newcommand\diffnoteup[1]{}
+\fi
 
-
-%\makeatletter
+%\makeatletter 
 %\def\@cb@firstcolumntrue{}
 %\def\@cb@firstcolumnfalse{}
 %\makeatother
@@ -49,7 +63,9 @@
 \include{macros}
 
 \newif\iftr
-
+ \clubpenalty = 10000
+ \widowpenalty = 10000
+ \displaywidowpenalty = 10000
 \begin{document}
 
 \copyrightdata{978-1-nnnn-nnnn-n/yy/mm} 
@@ -65,7 +81,7 @@
                                   % (paid open-access papers, 
                                   % short abstracts)
 
-\title{Deriving Divide-and-Conquer Dynamic Programming Algorithms Using 
+\title{Deriving Divide-and-Conquer Dynamic Programming Algorithms using 
   Solver-Aided Transformations}
 
 \authorinfo{Shachar Itzhaky\and 
@@ -73,12 +89,14 @@
             \makebox[6cm][c]{Armando Solar-Lezama}\and 
             Kuat Yessenov\and 
             Yongquan Lu\and
-            Charles Lieserson}
-           {MIT}
+            \makebox[6cm][c]{Charles Leiserson}}
+           {MIT, USA}
            {\vspace{-2em}}
 \authorinfo{Rezaul Chowdhury}
-           {Stony Brook University, NY}
+           {Stony Brook University, NY, USA}
            {}
+
+\toappear{}
 
 \maketitle
 
@@ -99,14 +117,18 @@ We have used the system to generate provably correct implementations of several 
 \end{abstract}
 
 \category{D.1.2}{Programming Techniques}{Automatic Programming}
-
+ 
 % general terms are not compulsory anymore, 
 % you may leave them out
 %\terms
 %term1, term2
-
+\keywords{Divide-and-conquer, Dynamic Programming, Program Synthesis, Verification, Refinement Types, SMT}
 %\keywords
 %keyword1, keyword2
+
+\begin{wrapfigure}{R}{3cm}
+\vspace{-1.35in}\includegraphics[scale=0.1]{img/aec-badge}
+\end{wrapfigure}
 
 \input{01-intro}
 \input{02-overview}
@@ -141,5 +163,6 @@ We have used the system to generate provably correct implementations of several 
 \input{B-more-tactics}
 \vfill\pagebreak
 \input{C-examples}
+
 
 \end{document}

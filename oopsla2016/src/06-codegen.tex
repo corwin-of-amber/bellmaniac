@@ -21,7 +21,7 @@ The compiler also employs more traditional optimization techniques
 to further simplify the code and improve its running time:
 (1) lifts conditionals to loop bounds via simple interval analysis, %to optimize the loop bounds and performs some traditional compiler %transformations to reduce the number of iterations and comparisons,
 (2) eliminates redundant iterations and comparisons that can be resolved at compile time,
-(3) identifies loops that read non-contiguous memory blocks and applies copy optimization~\cite{ASPLOS91/Lam} automatically to better utilize caches. Examples of generated code are included in the supplemental material with this submission,
+(3) identifies loops that read non-contiguous memory blocks and applies copy optimization~\cite{ASPLOS91/Lam} automatically to better utilize caches. Examples of generated code are included in the Bellmania repository~\cite{bellmaniarepo},
 and
 \cbstart
 (4) follows a simple heuristic that inserts loop vectorization directives.

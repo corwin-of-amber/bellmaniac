@@ -81,15 +81,16 @@ The compiler back-end is implemented as another component in
 \cbstart\diffnoteup{\vspace{-1cm}as part of AE, the compiler back-end was ported to Scala}Scala\cbend, processing ASTs and generating C++ code containing Intel Cilk constructs for parallelization.
 It employs a thin intermediate representation layer at which the optimizations of \Cref{codegen} are applied.
 
-\cbstart\diffnote{separated implementation details from experiments}\vspace{-1em}% the neg vspace is only needed because of \marginpar (introduced by \diffnote)
+\cbstart\diffnote{separated implementation details from experiments}%\vspace{-1em}% the neg vspace is only needed because of \marginpar (introduced by \diffnote)
 \subsection{Experimental Results}
 \label{evaluation:experimental}
 \cbend
 
 Table~\ref{evaluation:cppruntimes} shows performance improvement for our 
 auto-generated implementation (AUTO) on the state-of-the-art optimized parallel
-loop implementation (LOOPDP) from~\cite{IPDPS15/Tithi}. It also compares AUTO with manually 
-optimized recursive implementations CO\_Opt and COZ for the three problems from~\cite{IPDPS15/Tithi}. 
+loop implementation (LOOPDP) that was used by~\cite{IPDPS15/Tithi}. It also compares AUTO with manually 
+optimized recursive implementations CO\_Opt and COZ for the three problems from~\cite{IPDPS15/Tithi}\footnote{Speedups in the table are lower than in~\cite{IPDPS15/Tithi}; this should be attributed to improvement done to the
+baseline LOOPDP.}. 
 Our compiler automatically does \textit{copy optimization} 
 as done in CO\_Opt and COZ. COZ also incorporates a low-level 
 optimization of using Z-order layout of the array,
@@ -135,21 +136,21 @@ as a function of problem size, and shows the scalability of the generated code.
 \centering
 \begin{tabular}{|l|c|c|c|c|}
     \cline{2-5}
-  \multicolumn{1}{c|}{} & \multicolumn{4}{c|}{\scriptsize Speedup w.r.t parallel LOOPDP on 6 cores}  \\
-  \multicolumn{1}{c|}{} & \multicolumn{4}{c|}{\scriptsize   CPU (12 workers), B=64}  \\
+  \multicolumn{1}{c|}{} & \multicolumn{4}{c|}{\scriptsize Speedup w.r.t parallel LOOPDP on 16 cores}  \\
+  \multicolumn{1}{c|}{} & \multicolumn{4}{c|}{\scriptsize   CPU (16 workers), B=64}  \\
   \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{~~N~~} & \multicolumn{1}{c|}{CO\_Opt} & \multicolumn{1}{c|}{~~COZ~~} & \multicolumn{1}{c|}{AUTO}  \\
   \hline
-  {\bf Parenthesis}  & 16384  & 32x & 50x & 46x\\
+  {\bf Parenthesis}  & 16384  & 9.8x & 11.4x & 11.1x\\
   \hline
-  {\bf Gap}  & 16384 & 21x & 34x & 30x\\
+  {\bf Gap}  & 16384 & 6.6x & 8.4x & 8.5x\\
   \hline
-  {\bf Protein} & 16384  & 2.2x & 2.6x & 1.4x \\
+  {\bf Protein} & 16384  & 5.1x & 5.5x & 3.1x \\  % LOOPDP 136.579  CO 34.1431  COZ 32.1264  Bellmania (w/o manual opts) 50.986
   \hline
-  {\bf LCS}  & 45000 & $-$ & $-$ & 1.5x \\
+  {\bf LCS}  & 45000 & $-$ & $-$ & 3.9x \\
   \hline
   %{\bf Knapsack} & $-$ & $-$ & ?x\\
   %\hline
-  {\bf Bitonic}  & 45000  & $-$ & $-$ & 4.2x\\
+  {\bf Bitonic}  & 45000  & $-$ & $-$ & 3.8x\\
   \hline
 \end{tabular}
 \caption{\label{evaluation:cppruntimes}
@@ -159,7 +160,7 @@ as a function of problem size, and shows the scalability of the generated code.
 \begin{figure}
 \resizebox{8cm}{!}{
 \input{gfx/charts}}
-\caption{\label{fig:gap} Performance comparison for parallelized implementations for Gap problem on 6-core Intel i7 CPU}
+\caption{\label{fig:gap} Performance comparison for parallelized implementations for Gap problem on 16-core Intel Xeon 2.4GHz CPU}
 \end{figure}
 
 \newcommand\isum[1]{\pgfmathparse{int(#1)}\pgfmathresult}
@@ -228,7 +229,7 @@ tool we were able to reduce the number of reasoning steps from hundreds to
 a few dozens, and also make them high-level.
 We were also able to detect mistakes in existing (hand written) formulations
 of divide-and-conquer algorithms, that eluded discovery by experts.
-The additional examples in the appendix and the in accompanying technical report
+The additional examples in the appendix
 should furnish sufficient intuition to conceive a qualitative opinion on
 the efficacy of the approach and the prototype.
 \cbend

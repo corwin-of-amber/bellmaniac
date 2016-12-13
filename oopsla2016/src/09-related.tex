@@ -3,6 +3,18 @@
 
 Classical work by Smith \etal~\cite{AI85/Smith} presents rule-based transformation, stringing it
 tightly with program verification. This lay the foundation for semi-automatic programming~\cite{CPS91/Blaine,TSE90/Smith,TPHOLs96/Butler}.
+\cbstart\diffnote{incorporated additional references from review}
+Later, these concepts have been applied to divide-and-conquer in a disciplined way
+in \cite{PASCO97/Teo,EuroPar96/Chin}; these address divide-and-conquer in the
+classical sense of \cite{09/CLRS} (Chapter 4), focusing on parallelism.
+In Bellmania, more focus is put on re-ordering of array reads and writes, following
+and mechanizing techniques related to DP from \cite{SODA06/Chowdhury,SPAA08/Chowdhury}.
+In fact, traditional parallelism is taking ``for granted'' for our aggregation
+operators, since they are associative and methods such as \cite{PLDI94/Fisher} apply rather trivially, and translated into the tactics \textsf{Slice}, \textsf{Assoc}, and \textsf{Distrib}.
+On top of these algebraic transformations, Bellmania allows clever re-orderings,
+especially through \textsf{Stratify} and \textsf{Let}.
+(Some of the these tactics appear in the appendix.)
+\cbend
 More recently, a similar approach was introduced into Leon~\cite{OOPSLA13/Kneuss}, leveraging deductive
 tools as a way to boost {\cegis}, thereby covering more programs. Bellmania takes a dual approach, where
 automated techniques based on SMT are leveraged to support and improve deductive synthesis.
@@ -23,9 +35,9 @@ Broadly speaking, the Bellmania system could have been implemented as a library 
 such as Coq or Why3~\cite{ESOP13/Filliatre} using binding to SMT solvers provided by these frameworks.
 The decision not to do so was merely a design choice, to facilitate easier integration with our UI and with \Sketch{}.
 
-Polyhedral compilers offer some optimizations for the same domain of problem via tiling~\cite{HPC10/Pouchet,PLDI08/Bondhugula}.
-While showing significant speedups, these compilers cannot produce divide-and-conquer optimizations,
-which were proved to be more effective by \cite{IPDPS15/Tithi}.
+%Polyhedral compilers offer some optimizations for the same domain of problem via tiling~\cite{HPC10/Pouchet,PLDI08/Bondhugula}.
+%While showing significant speedups, these compilers cannot produce divide-and-conquer optimizations,
+%which were proved to be more effective by \cite{IPDPS15/Tithi}.
 
 Autogen~\cite{PPoPP16/Chowdhury} is a most recent advance that employs dynamic analysis to discover
 a program's access pattern and learn a decomposition that can be used to generate a divide-and-conquer

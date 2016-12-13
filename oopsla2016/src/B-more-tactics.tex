@@ -68,7 +68,8 @@ in addition to these abstractions.
   \begin{array}{@{}r@{}c@{}l@{}}
   e[t] & ~=~ & (\overline{x}\mapsto t) ~\applt~ z\mapsto e[z\,\overline{x}] \\
   e[\reduce \langle\overline{a},\overline{b}\rangle] & ~=~ &
-     (\overline{x}\mapsto \reduce\langle\overline{a}\rangle) ~\applt~ z\mapsto e[\reduce\langle z\,\overline{x}, \overline{b}\rangle]
+     (\overline{x}\mapsto \reduce\langle\overline{a}\rangle) \\ 
+     ~&~&~~~~~~~\applt~ z\mapsto e[\reduce\langle z\,\overline{x}, \overline{b}\rangle]
   \end{array}\]
 %
 where $\overline{x}=x_{1..k}$, and $z$ is a fresh variable.
@@ -80,9 +81,18 @@ $\min,\max,\Sigma$ all happen to be commutative.\footnote{If non-commutative fun
 
 \tacticdef{Let Insertion [$\reduce$]}
 %
-\[e[\reduce \langle\overline{a},\overline{b}\rangle] ~=~ 
-  (\overline{x}\mapsto \reduce\langle\overline{a}\rangle) ~\applt~ z\mapsto e[\reduce\langle z\,\overline{x}, \overline{b}\rangle]\]
+%\[e[\reduce \langle\overline{a},\overline{b}\rangle] ~=~ 
+%  (\overline{x}\mapsto \reduce\langle\overline{a}\rangle) ~\applt~ z\mapsto e[\reduce\langle z\,\overline{x}, \overline{b}\rangle]
+%  \]
 %
+\[\renewcommand\arraystretch{1.2}
+  \begin{array}{@{}r@{}c@{}l@{}}
+  e[\reduce \langle\overline{a},\overline{b}\rangle] & ~=~ &
+     (\overline{x}\mapsto \reduce\langle\overline{a}\rangle) \\ 
+     ~&~&~~~~~~~\applt~ z\mapsto e[\reduce\langle z\,\overline{x}, \overline{b}\rangle]
+  \end{array}\]
+%
+
 where $\overline{x}=x_{1..k}$, and $z$ a fresh variable.
 
 \Obligations \self, if $z$ occurs free in $e$; otherwise none.

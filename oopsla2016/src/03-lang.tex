@@ -192,14 +192,16 @@ cumbersome and requiring the user to write verbose annotations.
 To this end, we trade off some expressive power for succinctness.
 \cbend
 
-\exampleTitle
+\newcommand\Jsquaredlt{J^2\!\!\!{\scriptscriptstyle _{<}}}
+
+%\exampleTitle
+\begin{example}
 
 \noindent
 \cbstart\diffnote{this example has been moved up, replacing a shorter example and showcasing types inside terms}%
 The specification of the Parenthesis problem (\Cref{overview:paren spec}) will be written as
 
 \vspace{-5mm}
-\newcommand\Jsquaredlt{J^2\!\!\!{\scriptscriptstyle _{<}}}
 \[
   \renewcommand\arraystretch{1.2}
   \begin{array}{@{}l@{}l@{}l@{}}
@@ -221,10 +223,12 @@ $\theta$:
 \vspace{-.5em}
 \[\theta_{ik}\neq\bot\implies i<k \quad \mbox{and} \quad \theta_{kj}\neq\bot\implies k<j\]
 
-\vspace{-.5em}
-\hrule
-\cbend
-\medskip
+\end{example}
+
+%\vspace{-.5em}
+%\hrule
+%\cbend
+%\medskip
 
 \iffalse
 \newcommand\examplePar{%
@@ -243,7 +247,7 @@ This states that $G\,i\,j$ is only defined for $i<j$. It doesn't {\em force} it 
 as it is still a partial function.
 \fi
 
-\subsubsection*{Typing Rules}
+\subsubsection{Typing Rules}
 
 \begin{figure}
 \[
@@ -294,7 +298,7 @@ Where $::$ is defined as follows:
 We extend our abstract syntax with an explicit \newterm{cast operator}
 $t::\T$ following this semantics. Notice that this is not the same as $t:\T$, which is a \emph{type judgement}.
 
-\subsubsection*{Type Inference}
+\subsubsection{Type Inference}
 
 \begin{figure*}
 \vspace{-8mm}

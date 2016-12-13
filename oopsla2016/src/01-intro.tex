@@ -11,12 +11,11 @@ The first loop fills the diagonal of an array with some initial values,
 and the second loop computes off-diagonal elements by reading existing elements.
 \cbend
 
-The algorithm computes an $n\times n$ region of a DP table $G$ via a standard row-major order. This algorithm is simple, but a direct C implementation of it turns out to be 
-$50\times$ slower than the best manually optimized implementation \cbstart(as we will see in \Cref{evaluation:experimental})\cbend. 
+The algorithm computes an $n\times n$ region of a DP table $G$ via a standard row-major order. This algorithm is simple, but a direct C implementation of it turns out to be about
+$10\times$ slower than the best manually optimized implementation \cbstart(as we will see in \Cref{evaluation:experimental})\cbend. 
 One reason for this poor performance is the high rate of cache misses incurred by reading the ranges $G_{ik}$ and $G_{kj}$, for $i<k<j$, repeatedly on every iteration of the loops over $i$ and $j$. Memory reads dominate the running time of this algorithm, so high speedups can be gained by localizing memory access.
 
-
-\begin{algorithm}[t]
+\begin{algorithm}[b]
 \renewcommand\arraystretch{1.3}
 \begin{algorithmic}
   \ForLine{$i=1..n$}  $G_{i(i+1)} := x_i$    \Head{Initialize}
@@ -74,11 +73,11 @@ The state-of-the-art implementation uses a \newterm{divide and conquer} approach
 
 
 
-In this paper, we present a new system called Bellmania\footnote{Named so as a tribute to Richard Bellman.}, which allows an expert to interactively generate parallel divide-and-conquer implementations of dynamic programming algorithms, which are provably correct relative to a high-level specification of the code in \Cref{intro:naive}. We show that the resulting implementations are \cbstart\diffnote{use range}1.4--46$\times$\cbend{} faster than the original versions and within 22\% of a high-performance hand crafted implementation.
+In this paper, we present a new system called Bellmania\footnote{Named so as a tribute to Richard Bellman.}, which allows an expert to interactively generate parallel divide-and-conquer implementations of dynamic programming algorithms, which are provably correct relative to a high-level specification of the code in \Cref{intro:naive}. We show that the resulting implementations are \cbstart\diffnote{use ranges}1.4--46$\times$ faster than the original versions and within 2--60\%\cbend{} of a high-performance hand crafted implementation.
 Their structure will also make them \newterm{cache oblivious}~\cite{FOCS99/Frigo} and \newterm{cache adaptive}~\cite{SODA14/Bender}, just like the hand crafted implementations are.
 
 
-Bellmania is a deductive synthesis system in the tradition of systems like Kids~\cite{TSE90/Smith}, and more recently Fiat~\cite{POPL15/Delaware}. 
+Bellmania is a deductive synthesis system in the tradition of systems like KIDS~\cite{TSE90/Smith}, and more recently Fiat~\cite{POPL15/Delaware}. 
 These systems derive an implementation from a specification in a correct-by-construction manner by applying a sequence of deductive reasoning steps. Thanks to the correct-by-construction approach, the potentially complex final artifact does not have to be independently verified, making the approach ideal for potentially complex implementations like the ones we target. 
 
 Traditionally, the major shortcoming of deductive synthesis has been the effort required of the user in order to guide the derivation process towards a correct solution. In this work, we reduce this effort using three core techniques. 
