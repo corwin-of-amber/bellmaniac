@@ -46,10 +46,15 @@ object AstSugar {
   val ↦ = I("↦", "operator")
   val ∧ = I("∧", "connective")
   val ∨ = I("∨", "connective")
+  val <-> = I("<->", "connective")
   val ¬ = I("¬", "connective")
+  val `=` = I("=", "operator")
+  val / = I("/", "operator")
 
+  val `_∀` = I("∀", "quantifier")
+  
   def ∀(vars: Term*)(body: Term): Term = ∀(vars.toList)(body)
-  def ∀(vars: List[Term])(body: Term) = TI("∀")(vars)(body).foldRight
+  def ∀(vars: List[Term])(body: Term) = T(`_∀`)(vars)(body).foldRight
 
   implicit class DSL(private val term: Term) extends AnyVal {
     def ::(that: Term) = TI("::")(that, term)
@@ -62,7 +67,7 @@ object AstSugar {
     def ->:(that: Term) = TI("->")(that, term)
     def ↦(that: Term) = T(AstSugar.↦)(term, that)
     def ↦:(that: Term) = T(AstSugar.↦)(that, term)
-    def ↦:(args: List[Term]) = T(AstSugar.↦)(args :+ term)>>
+    def ↦:(args: Seq[Term]) = T(AstSugar.↦)(args.toList :+ term)>>
     def &(that: Term) = T(∧)(term, that)
     def |(that: Term) = T(∨)(term, that)
     def <->(that: Term) = TI("<->")(term, that)
@@ -74,11 +79,11 @@ object AstSugar {
     def *(that: Term) = TI("⋅"):@(term, that)
     def ⨁(that: Term) = TI("⨁"):@(term, that)
     def ⨀(that: Term) = TI("⨀"):@(term, that)
-    def =:=(that: Term) = TI("=")(term, that)
+    def =:=(that: Term) = T(`=`)(term, that)
     def <(that: Term) = TI("<"):@(term, that)
     
     def :@(that: Term*) = @:(term)(that:_*).foldLeft
-    def :@(these: List[Term]) = @:(term)(these:_*).foldLeft
+    def :@(these: Seq[Term])(implicit d: DummyImplicit) = @:(term)(these:_*).foldLeft
 
     def ~>[A](that: A) = term.leaf -> that
     

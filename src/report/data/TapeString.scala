@@ -30,6 +30,8 @@ class TapeString(val text: String, val markup: Map[(Int, Int), Any]=Map.empty) e
 object TapeString {
   def apply(text: String, markup: Map[(Int, Int), Any]=Map.empty) = new TapeString(text, markup)
   
+  val empty = new TapeString("")
+  
   implicit def fromAny(text: Any): TapeString = text match {
     case x: TapeString => x
     case _ => TapeString(text.toString)
@@ -47,7 +49,10 @@ object TapeString {
   }
     
   implicit class TapeJoin(val tapes: List[TapeString]) extends AnyVal {
-    def mkTapeString(sep: TapeString) = (tapes.head /: tapes.tail)(_ + sep + _)
+    def mkTapeString(sep: TapeString) = tapes match {
+      case Nil => empty
+      case head :: tail => (head /: tail)(_ + sep + _)
+    }
   }
 
 }

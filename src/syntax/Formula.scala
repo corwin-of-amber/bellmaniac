@@ -5,6 +5,7 @@ import report.data._
 import Nullable._
 import semantics.TypedTerm
 import syntax.AstSugar.Uid
+import semantics.LambdaCalculus
 
 
 /**
@@ -31,6 +32,8 @@ class Identifier (val literal: Any, val kind: String = "?", val ns: AnyRef = nul
 
   override def hashCode = (literal, ns).hashCode  // 'kind' cannot be part of the hashCode, because "?" is a wildcard
 
+  def unapply = Some((literal, kind, ns))
+  
   override def asJson(container: SerializationContainer): BasicDBObject = {
     val j = new BasicDBObject("$", "Identifier").append("literal", container.any(literal)).append("kind", kind)
     if (ns != null)
@@ -43,6 +46,7 @@ class Identifier (val literal: Any, val kind: String = "?", val ns: AnyRef = nul
 }
 
 object Identifier {
+  def unapply(id: Identifier) = id.unapply
   def fromJson(json: DBObject)(implicit container: SerializationContainer): Identifier = {
     // TODO typed identifier
     new Identifier(
@@ -71,26 +75,37 @@ object Formula {
   }
   import Assoc.Assoc
 
-  class InfixOperator(val literal: String, val priority: Int, val assoc: Assoc=Assoc.None) {
+  trait Notation {
+    def format(term: AstSugar.Term): TapeString
+    val precedence : Int
+    val assoc : Assoc = Assoc.None
+    val arity : Int = 2
+  }
+
+  class InfixOperator(val literal: String, val precedence: Int, override val assoc: Assoc=Assoc.None) extends Notation {
     def format(term: AstSugar.Term) = {
       /**/ assume(term.subtrees.length == 2) /**/
       val op = if (literal == null) display(term.root) else literal
-      tape"${display(term.subtrees(0), priority, Assoc.Left)} ${op |-| new TermTag(term)} ${display(term.subtrees(1), priority, Assoc.Right)}"
+      tape"${display(term.subtrees(0), precedence, Assoc.Left)} ${op |-| new TermTag(term)} ${display(term.subtrees(1), precedence, Assoc.Right)}"
     }
   }
 
-  class AppOperator(literal: String, priority: Int, assoc: Assoc=Assoc.Left) extends InfixOperator(literal, priority, assoc) {
+  class AppOperator(literal: String, precedence: Int, assoc: Assoc=Assoc.Left) extends InfixOperator(literal, precedence, assoc) {
     override def format(term: AstSugar.Term) = {
       /**/ assume(term.subtrees.length == 2) /**/
-      val List(fun, arg) = term.subtrees
-      if (fun.isLeaf && (INFIX contains fun.root.literal.toString))
-        tape"${display(arg, if (isOp(arg, fun.leaf)) priority else 0, Assoc.Left)} ${fun.leaf}"
-      else {
-        val lst = splitOp(term, "cons")
-        if (lst.length > 1 && lst.last =~ ("nil", 0))
-          tape"⟨${lst dropRight 1 map display mkTapeString ", "}⟩"
-        else
-          tape"${display(fun, priority, Assoc.Left)} ${display(arg, priority, Assoc.Right)}"
+      val (fun, args) = LambdaCalculus.isApp(term) getOrElse { assert(false, "term has to be an application"); throw new RuntimeException }
+      // TODO move this functionality to getNotation and use it here
+      (if (fun.isLeaf) INFIX get fun.root else None) match {
+        case Some(op) if args.length == op.arity =>  /* special form for (fully applied) infix operators and other notations */
+          INFIX(fun.root) format (new Tree(fun.leaf, args))
+          //tape"${display(arg, if (isOp(arg, fun.leaf)) precedence else 0, Assoc.Left)} ${fun.leaf}"
+        case _ =>          
+          /* Special form for list notation */
+          val lst = splitOp(term, "cons")
+          if (lst.length > 1 && lst.last =~ ("nil", 0))
+            tape"⟨${lst dropRight 1 map display mkTapeString ", "}⟩"
+          else
+            tape"${display(fun, precedence, Assoc.Left)} ${args map (display(_, precedence, Assoc.Right)) mkString " "}"
       }
     }
 
@@ -102,36 +117,52 @@ object Formula {
       else List(term)
   }
   
-  class AbsOperator(literal: String, priority: Int, assoc: Assoc=Assoc.Right) extends InfixOperator(literal, priority, assoc) {
+  class AbsOperator(literal: String, precedence: Int, assoc: Assoc=Assoc.Right) extends InfixOperator(literal, precedence, assoc) {
     override def format(term: AstSugar.Term) = {
-      /**/ assume(term.subtrees.length == 2) /**/
+      /**/ assume(term.subtrees.length == 2, s"term does not have exactly 2 subtrees: '${term}'") /**/
       val List(va, body) = term.subtrees
       if (body.root == literal)  // display i ↦ j ↦ __ as i j ↦ __
-        tape"${display(va, priority, Assoc.Left)} ${display(body, priority, Assoc.Right)}"
+        tape"${display(va, precedence, Assoc.Left)} ${display(body, precedence, Assoc.Right)}"
       else
         super.format(term)
     }
   }
   
-  class GuardOperator(literal: String, priority: Int, assoc: Assoc=Assoc.None) extends InfixOperator(literal, priority, assoc) {
+  class GuardOperator(literal: String, precedence: Int, assoc: Assoc=Assoc.None) extends InfixOperator(literal, precedence, assoc) {
     override def format(term: AstSugar.Term) = {
       /**/ assume(term.subtrees.length == 2) /**/
       val op = if (literal == null) display(term.root) else literal
-      tape"${display(term.subtrees(0), priority, Assoc.Left)} ${op |-| new TermTag(term)}{${display(term.subtrees(1))}}"
+      tape"${display(term.subtrees(0), precedence, Assoc.Left)} ${op |-| new TermTag(term)}{${display(term.subtrees(1))}}"
     }
   }
   
-  def O(literal: String, priority: Int, assoc: Assoc=Assoc.None) =
-    new InfixOperator(literal, priority, assoc)
+  def O(literal: String, precedence: Int, assoc: Assoc=Assoc.None) =
+    new InfixOperator(literal, precedence, assoc)
 
-  def M(ops: InfixOperator*) = ops map (x => (x.literal, x)) toMap
+  import collection.mutable
+  
+  class OperatorMap[B] extends mutable.HashMap[Any, B] {
+    def get(id: Identifier) = super.get(id) match {
+      case None => super.get(id.literal)
+      case some => some
+    }
+    
+    def apply(id: Identifier) = get(id) getOrElse default(id)
+    def contains(id: Identifier) = get(id).isDefined
+  }
+  
+  object OperatorMap {
+    def empty[B] = new OperatorMap[B]
+  }
+  
+  def M(ops: InfixOperator*) = OperatorMap.empty[Notation] ++= (ops map (x => (x.literal, x)))
 
-  val INFIX = M(O("->", 1, Assoc.Right), O("<->", 1), O("∧", 1, Assoc.Left), O("∨", 1, Assoc.Left), O("<", 1), O("=", 1),
-    O(":", 1, Assoc.Right), O("::", 1), O("/", 2, Assoc.Both), O("|_", 1), O("∩", 1), O("×", 1),
-    O("+", 1), O("-", 1), O("⨁", 1), O("⨀", 1)) ++
-    Map("@" -> new AppOperator("", 1, Assoc.Left),
-        "↦" -> new AbsOperator("↦", 1, Assoc.Right),
-        "|!" -> new GuardOperator("|_", 1))
+  val INFIX = M(O("->", 5, Assoc.Right), O("<->", 5), O("∧", 5, Assoc.Left), O("∨", 5, Assoc.Left), O("<", 5), O("=", 5),
+    O(":", 5, Assoc.Right), O("::", 5), O("/", 7, Assoc.Both), O("|_", 5), O("∩", 5), O("×", 5),
+    O("+", 5, Assoc.Left), O("-", 5, Assoc.Left), O("⨁", 5), O("⨀", 5)) ++=
+    Map("@" -> new AppOperator("", 2, Assoc.Left),
+        AstSugar.↦ -> new AbsOperator("↦", 10, Assoc.Right),
+        "|!" -> new GuardOperator("|_", 5))
   val QUANTIFIERS = Set("forall", "∀", "exists", "∃")
 
   class TermTag(val term: Term) extends AnyVal
@@ -140,14 +171,14 @@ object Formula {
     symbol.literal.toString //|-| symbol
 
   def display(term: AstSugar.Term): TapeString =
-    if (QUANTIFIERS contains term.root.toString)
+    if ((QUANTIFIERS contains term.root.toString) && !term.isLeaf)
       displayQuantifier(term.unfold)
     else if (term =~ (":", 2) && term.subtrees(0) =~ ("let", 0) && term.subtrees(1) =~ ("@", 2) && term.subtrees(1).subtrees(0) =~ ("↦", 2))
       tape"let ${display(term.subtrees(1).subtrees(0).subtrees(0))} := ${display(term.subtrees(1).subtrees(1))} in ${display(term.subtrees(1).subtrees(0).subtrees(1))}"
     else if (term =~ (":", 2) && term.subtrees(0) =~ ("...", 0))
       display(term.subtrees(0))  // hidden term
     else
-      (if (term.subtrees.length == 2) INFIX get term.root.toString else None)
+      (if (term.subtrees.length == 2) INFIX get term.root else None)
       match {
         case Some(op) =>
           op.format(term)
@@ -156,21 +187,26 @@ object Formula {
           else tape"${display(term.root)}(${term.subtrees map display mkTapeString ", "})"
       }
 
-  def display(term: AstSugar.Term, pri: Int, side: Assoc): TapeString = {
-    if (term.subtrees.length != 2) display(term)
-    else {
-      val d = display(term)
-      INFIX get term.root.toString match {
-        case Some(op) =>
-          if (op.priority < pri || op.priority == pri && (side == op.assoc || op.assoc == Assoc.Both)) d else tape"($d)"
-        case _ => d
-      }
+  def display(term: AstSugar.Term, pre: Int, side: Assoc): TapeString = {
+    val d = display(term)
+    getNotation(term) match {
+      case Some(op) =>
+        if (op.precedence < pre || op.precedence == pre && (side == op.assoc || op.assoc == Assoc.Both)) d else tape"($d)"
+      case _ => d
     }
   }
 
   def displayQuantifier(term: AstSugar.Term) =
     tape"${display(term.root)}${term.subtrees dropRight 1 map display mkTapeString " "} (${display(term.subtrees.last)})"
 
+  def getNotation(term: AstSugar.Term) = {
+    LambdaCalculus.isApp(term) match {
+      case Some((f, _)) if f.isLeaf => 
+        (Seq(f.root, term.root) flatMap (INFIX get _)).headOption
+      case _ => INFIX get term.root
+    }
+  }
+  
   // Perhaps this should not be here
   def fromJson(json: DBObject)(implicit container: SerializationContainer): Term = {
     def term(any: AnyRef) = fromJson(any.asInstanceOf[DBObject])

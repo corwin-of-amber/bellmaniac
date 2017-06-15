@@ -109,8 +109,9 @@ class DisplayContainer extends SerializationContainer with NumeratorWithMap {
   def ref(refid: Any) = new BasicDBObject("ref", refid)
 
   def withRefid(json: DBObject, value: AnyRef) = {
-    max = max + 1 ; mapped += (value -> max)
-    json.put("_id", max)
+    /*max = max + 1 ; mapped += (value -> max)
+    json.put("_id", max)*/
+    json.put("_id", -->(value))
     json
   }
 }
