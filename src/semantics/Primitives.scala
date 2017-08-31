@@ -238,7 +238,8 @@ object LambdaCalculus {
     else if (t =~ (":", 2)) isAbs(t.subtrees(1))
     else None
 
-  // syntax sugar for isAbs
+  // syntax sugar for isApp, isAbs
+  object @: { def unapply(t: Term) = isApp(t) }
   object ↦⁺ { def unapply(t: Term) = isAbs(t) }
   
   def freevars(t: Term): Set[Term] =

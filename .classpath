@@ -7,6 +7,6 @@
 	<classpathentry kind="lib" path="lib/mongo-java-driver-2.13.1.jar" sourcepath="lib/mongo-java-driver-2.13.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/scallop_2.11-0.9.5.jar"/>
 	<classpathentry kind="var" path="SKETCH_FE"/>
-	<classpathentry kind="lib" path="/Users/corwin/var/ext/z3/z3-4.4.1/bin/com.microsoft.z3.jar"/>
+	<classpathentry kind="var" path="Z3_JAVA"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
