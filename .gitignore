@@ -6,3 +6,7 @@
 .DS_Store
 .cache*
 /*.jar
+/build
+/gradle
+/.gradle
+
