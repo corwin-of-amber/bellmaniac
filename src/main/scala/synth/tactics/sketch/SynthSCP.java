@@ -7,7 +7,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.io.PrintWriter;
 
-import sketch.compiler.ast.core.FEReplacer;
+import sketch.compiler.ast.corea.FEReplacer;
 import sketch.compiler.ast.core.Annotation;
 import sketch.compiler.ast.core.FieldDecl;
 import sketch.compiler.ast.core.Function;

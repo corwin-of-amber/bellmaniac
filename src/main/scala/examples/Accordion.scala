@@ -30,7 +30,7 @@ import syntax.Identifier
 
 
 object Accordion {
- 
+
   val J = TS("J")
   val J0 = TS("J₀")
   val J1 = TS("J₁")
@@ -44,16 +44,16 @@ object Accordion {
   val L3 = TS("L₃")
   val L4 = TS("L₄")
   val L5 = TS("L₅")
-  
+
   val δ = TyTV("δ", J ->: J ->: J ->: R)
-  
+
   import IndexArithPod._1
   val < = TV("<")
-  
+
   case class APod(val J: Term) extends Pod {
 
     val (ψ, θ, i, j, k) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), $TV("k"))
-    
+
     override val program = Prelude.program(
         ψ ↦ fix((θ ↦: i ↦: j ↦: (
             max:@ `⟨ ⟩`(
@@ -67,7 +67,7 @@ object Accordion {
   case class BPod(val J0: Term, val J1: Term) extends Pod {
 
     val (ψ, θ, i, j, k) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), $TV("k"))
-    
+
     override val program = Prelude.program(
         (ψ :: ((? x J1) ∩ <) ->: ?) ↦ /::(
             (i ↦: j ↦: (
@@ -83,7 +83,7 @@ object Accordion {
   case class CPod(val J0: Term, val J1: Term) extends Pod {
 
     val (ψ, θ, i, j, k) = ($TV("ψ"), $TV("θ"), $TV("i"), $TV("j"), $TV("k"))
-    
+
     override val program = Prelude.program(
         (ψ :: ((J0 x ?) ∩ <) ->: ?) ↦ /::(
             ψ :: ((J0 x J1) ∩ <) ->: R,
@@ -99,7 +99,7 @@ object Accordion {
   case class DPod(val J0: Term, val J1: Term, val J2: Term) extends Pod {
 
     val (ψ, i, j, k) = ($TV("ψ"), $TV("i"), $TV("j"), $TV("k"))
-    
+
     override val program = Prelude.program(
         ψ ↦ /::(
             ψ :: (J1 x J2) ->: R,
@@ -116,7 +116,7 @@ object Accordion {
   import semantics.TypedTerm.typeOf_!
 
   implicit val scope = new Scope(R, N, J)(J0 :<: J, J1 :<: J,
-      K0 :<: J0, K1 :<: J0, K2 :<: J1, K3 :<: J1, 
+      K0 :<: J0, K1 :<: J0, K2 :<: J1, K3 :<: J1,
       L0 :<: K0, L1 :<: K0, L2 :<: K1, L3 :<: K1, L4 :<: K2, L5 :<: K2)
 
   implicit val env = TypeTranslation.subsorts(scope) ++
@@ -129,25 +129,25 @@ object Accordion {
     new Interpreter().executeFile(ui.Config.config.filename())
   }
 
-  
+
   trait InvokeProver extends TacticApplicationEngine {
     override lazy val prover: Prover = prover(List(), Set(max), Set(T(I("∪", "predicate"))))
-    
+
     def prover(pods: List[Pod], fv: Set[Term], ty: Set[Term], env: Environment=this.env) = {
       import synth.pods._
 
       def when[A](trig: Term, pods: => List[A]) =
         if (fv contains trig) pods else List()
-      
+
       def when2[A,B](trig: Term, pods: => Map[A,B]) =
         if (fv contains trig) pods else Map()
-        
+
       def when3[A](trig: Char, pods: => Iterable[A]) =
-        if (ty exists (x => x.root.kind == "predicate" && 
+        if (ty exists (x => x.root.kind == "predicate" &&
             x.root.literal.toString.contains(trig))) pods else List()
 
       val gen = new synth.tactics.Synth.ScopeGen(scope)
-      
+
       val base = List(NatPod, TuplePod)
       val totalOrders = Map(R ~> TotalOrderPod(R)) ++ (gen.masters match {
         case List() => Map()
@@ -156,9 +156,9 @@ object Accordion {
           l.zipWithIndex map { case (sort, idx) =>  // yeah kind of a hack :\
             sort -> TotalOrderPod(T(sort), TV(Strip.subscriptIndexed("<")(idx+1)))
           }
-      })      
+      })
       val indexAriths = gen.masters map (sort => sort -> IndexArithPod(T(sort), totalOrders(sort).<)) toMap
-      val parts = gen.partitions map { case (sup, sub1, sub2) => 
+      val parts = gen.partitions map { case (sup, sub1, sub2) =>
         val m = scope.sorts.getMasterOf(sup)
         PartitionPod(T(sup), totalOrders(m).<, T(sub1), T(sub2))
       } toList
@@ -167,9 +167,9 @@ object Accordion {
       val offsets = when3('∪', gen.sortsByMaster flatMap { case (master, subsorts) =>
         subsorts filterNot (_ == master) map (x => OffsetsPod(T(x), indexAriths(master)))
       })
-      
+
       val allPods = base ++ totalOrders.values ++ indexAriths.values ++ parts ++ maxes.values ++ mins.values ++ offsets toList
-            
+
       new Prover(allPods ++ pods, Prover.Verbosity.ResultsOnly)(env)
       /*
       val toR = TotalOrderPod(R)
@@ -193,17 +193,17 @@ object Accordion {
       val declKeys = List(V("δ"), V("succ"))  // @@@
       TypeTranslation.decl(scope, declKeys flatMap (δ => decls.get(δ) map (δ -> _)) toMap)
     }
-    
+
     def collectTypes(term: Term) =
       term.nodes flatMap { v => TypedTerm.typeOf(v).toSeq flatMap (_.leaves) } toSet
-    
+
     override def prover(program: Term) = {
       val fv = LambdaCalculus.freevars(program)
       val ty = collectTypes(program)
       implicit val env = this.env ++ mkEnv(fv)
       prover(List(), fv, ty, env)
     }
-      
+
     def invokeProver(assumptions: List[Term], goals: List[Term], pods: List[Pod]=List()) {
       val fv = goals flatMap LambdaCalculus.freevars toSet
       val ty = goals flatMap collectTypes toSet
@@ -211,7 +211,7 @@ object Accordion {
       (new Assistant()).invokeProver(assumptions, goals, SimplePattern(min :@ ?, max :@ ?))(prover(pods, fv, ty, env))
     }
 
-    override def invokeProver(pod: Pod) { 
+    override def invokeProver(pod: Pod) {
       invokeProver(List(), pod.obligations.conjuncts, List(pod))
     }
   }
@@ -220,12 +220,12 @@ object Accordion {
     import TacticApplicationEngine._
     import syntax.Subroutine
     import syntax.Subroutine.Arity
-    
+
     def fac: Map[Any,Subroutine[Term,Pod] with Arity] = ListMap(
-        "A" -> Subroutine(APod), 
-        "B" -> Subroutine(BPod), 
-        "C" -> Subroutine(CPod), 
+        "A" -> Subroutine(APod),
+        "B" -> Subroutine(BPod),
+        "C" -> Subroutine(CPod),
         "D" -> Subroutine(DPod))
-  }  
+  }
 
 }
