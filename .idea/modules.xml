@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/bellmaniac.iml" filepath="$PROJECT_DIR$/.idea/modules/bellmaniac.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/bellmaniac_main.iml" filepath="$PROJECT_DIR$/.idea/modules/bellmaniac_main.iml" group="bellmaniac" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/bellmaniac_test.iml" filepath="$PROJECT_DIR$/.idea/modules/bellmaniac_test.iml" group="bellmaniac" />
+    </modules>
+  </component>
+</project>
