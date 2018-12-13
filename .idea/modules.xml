@@ -3,8 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/bellmaniac.iml" filepath="$PROJECT_DIR$/.idea/modules/bellmaniac.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/bellmaniac_main.iml" filepath="$PROJECT_DIR$/.idea/modules/bellmaniac_main.iml" group="bellmaniac" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/bellmaniac_test.iml" filepath="$PROJECT_DIR$/.idea/modules/bellmaniac_test.iml" group="bellmaniac" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/bellmaniac-build.iml" filepath="$PROJECT_DIR$/.idea/modules/bellmaniac-build.iml" />
     </modules>
   </component>
 </project>
