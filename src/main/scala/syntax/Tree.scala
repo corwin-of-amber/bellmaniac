@@ -63,11 +63,11 @@ class Tree[T](val root: T, val subtrees: List[Tree[T]] = List()) extends AsJson 
   def hasDescendant(descendant: Tree[T]) = nodes exists (_ eq descendant)
   
   def replaceDescendant(switch: (Tree[T], Tree[T])): Tree[T] =
-    if (switch._1 eq this) switch._2
+    if (switch._1 == this) switch._2
     else new Tree(root, subtrees map (_.replaceDescendant(switch))) 
   
   def replaceDescendants(switch: List[(Tree[T], Tree[T])]): Tree[T] =
-    switch find (_._1 eq this) match {
+    switch find (_._1 == this) match {
       case Some(sw) => sw._2
       case _ => new Tree(root, subtrees map (_.replaceDescendants(switch)))
     }
